@@ -1,0 +1,41 @@
+.topBar {
+  display: none;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--spacing-md) var(--spacing-lg);
+  background-color: var(--bg-white);
+  border-bottom: 1px solid var(--border-light);
+  position: sticky;
+  top: 0;
+  z-index: 40;
+}
+
+.logoSection {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-black);
+  margin: 0;
+}
+
+.menuButton {
+  background: none;
+  border: none;
+  color: var(--text-black);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm);
+}
+
+/* Show on mobile */
+@media (max-width: 768px) {
+  .topBar {
+    display: flex;
+  }
+}

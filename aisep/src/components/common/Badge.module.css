@@ -1,0 +1,36 @@
+.badge {
+  display: inline-block;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  white-space: nowrap;
+  transition: all var(--transition-fast);
+}
+
+.badge--industry,
+.badge--stage {
+  background-color: var(--bg-light-gray);
+  color: var(--text-black);
+  border: 1px solid var(--border-light);
+}
+
+.badge--industry:hover,
+.badge--stage:hover {
+  background-color: var(--border-light);
+}
+
+.badge--score-good {
+  background-color: var(--score-good);
+  color: white;
+}
+
+.badge--score-medium {
+  background-color: var(--score-medium);
+  color: white;
+}
+
+.badge--score-poor {
+  background-color: var(--score-poor);
+  color: white;
+}
