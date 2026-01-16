@@ -13,7 +13,7 @@ import mockStartups from '../../data/mockStartups';
  * Handles responsive 3-column flex layout (desktop) vs single column (mobile)
  * Includes sticky sidebars and scrollable feed
  */
-function MainLayout() {
+function MainLayout({ onShowRegister }) {
   const [isPremium] = useState(false); // Hardcoded as false - shows blur overlay
 
   return (
@@ -26,7 +26,7 @@ function MainLayout() {
         <div className={styles.mainGrid}>
           {/* Left Sidebar - Desktop Only */}
           <div className={styles.leftColumn}>
-            <Sidebar />
+            <Sidebar onShowRegister={onShowRegister} />
           </div>
 
           {/* Center Feed Column */}

@@ -7,7 +7,7 @@ import Button from '../common/Button';
  * Sidebar Component - Left navigation panel (Desktop only)
  * Contains navigation links and authentication buttons
  */
-function Sidebar() {
+function Sidebar({ onShowRegister }) {
   const [activeItem, setActiveItem] = useState('Home');
 
   const navItems = [
@@ -53,6 +53,7 @@ function Sidebar() {
         <Button
           variant="primary"
           className={styles.registerBtn}
+          onClick={onShowRegister}
         >
           Register
         </Button>
