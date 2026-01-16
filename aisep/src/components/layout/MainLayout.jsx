@@ -15,18 +15,27 @@ import mockStartups from '../../data/mockStartups';
  */
 function MainLayout({ onShowRegister }) {
   const [isPremium] = useState(false); // Hardcoded as false - shows blur overlay
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile menu state
+
+  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   return (
     <div className={styles.layoutContainer}>
       {/* Mobile Top Bar */}
-      <TopBar />
+      <TopBar onMenuClick={toggleMobileMenu} />
+
+      {/* Mobile Menu Overlay - Close menu when clicking overlay */}
+      {isMobileMenuOpen && (
+        <div className={styles.mobileMenuOverlay} onClick={closeMobileMenu} />
+      )}
 
       {/* Main 3-Column Flex Layout - Centered Container */}
       <div className={styles.centeredWrapper}>
         <div className={styles.mainGrid}>
-          {/* Left Sidebar - Desktop Only */}
-          <div className={styles.leftColumn}>
-            <Sidebar onShowRegister={onShowRegister} />
+          {/* Left Sidebar - Desktop Only / Mobile with Toggle */}
+          <div className={`${styles.leftColumn} ${isMobileMenuOpen ? styles.mobileMenuVisible : ''}`}>
+            <Sidebar onShowRegister={onShowRegister} onMenuItemClick={closeMobileMenu} />
           </div>
 
           {/* Center Feed Column */}

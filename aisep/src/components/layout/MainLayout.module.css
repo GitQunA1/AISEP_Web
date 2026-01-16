@@ -139,6 +139,29 @@
 
   .leftColumn {
     display: none;
+    position: fixed;
+    left: 0;
+    top: 53px;
+    height: calc(100vh - 53px);
+    width: 275px;
+    z-index: 50;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+
+  .leftColumn.mobileMenuVisible {
+    display: flex;
+  }
+
+  .mobileMenuOverlay {
+    position: fixed;
+    top: 53px;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 40;
+    display: block;
   }
 
   .rightColumn {

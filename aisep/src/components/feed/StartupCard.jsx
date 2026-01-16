@@ -42,17 +42,20 @@ function StartupCard({ startup, isPremium = false }) {
     <article className={styles.card}>
       {/* Card Header with Avatar, Name, Username, Timestamp */}
       <div className={styles.header}>
-        <Avatar src={startup.logo} alt={startup.name} name={startup.name} size="md" />
+        <Avatar src={startup.logo} alt={startup.name} name={startup.name} size="sm" />
         <div className={styles.headerInfo}>
           <div className={styles.nameRow}>
             <h3 className={styles.name}>{startup.name}</h3>
             <Badge
-              label={`AI Score: ${startup.aiScore}`}
+              label={`${startup.aiScore}`}
               variant={getScoreBadgeVariant()}
             />
           </div>
-          <p className={styles.username}>{startup.username}</p>
-          <p className={styles.timestamp}>{startup.timestamp}</p>
+          <div className={styles.metadataRow}>
+            <span>{startup.username}</span>
+            <span>·</span>
+            <span>{startup.timestamp}</span>
+          </div>
         </div>
       </div>
 
@@ -65,7 +68,7 @@ function StartupCard({ startup, isPremium = false }) {
       {/* Pitch Description */}
       <p className={styles.description}>{startup.description}</p>
 
-      {/* Premium Zone - Sensitive Data with Blur Overlay */}
+      {/* Premium Zone - Sensitive Data with Blur Tease */}
       <div className={styles.premiumZone}>
         {/* Fake blurred data - always shown but blurred if not premium */}
         <div className={`${styles.dataGrid} ${!isPremium ? styles.dataGridBlurred : ''}`}>
@@ -83,14 +86,14 @@ function StartupCard({ startup, isPremium = false }) {
           </div>
         </div>
 
-        {/* Blur Overlay - Only visible if not premium */}
+        {/* Blur Overlay with Gradient Fade - Only visible if not premium */}
         {!isPremium && (
           <div className={styles.blurOverlay}>
             <div className={styles.overlayContent}>
-              <Lock size={32} color="var(--text-black)" strokeWidth={2.5} />
-              <p className={styles.overlayText}>Subscribe to View</p>
+              <Lock size={24} color="var(--text-black)" strokeWidth={2.5} />
+              <p className={styles.overlayText}>Unlock Premium</p>
               <Button variant="primary">
-                Unlock Premium
+                Subscribe
               </Button>
             </div>
           </div>
@@ -103,31 +106,35 @@ function StartupCard({ startup, isPremium = false }) {
           className={`${styles.actionBtn} ${isLiked ? styles.liked : ''}`}
           onClick={handleLike}
           aria-label="Like startup"
+          title="Like"
         >
           <Heart size={18} />
-          <span>Like</span>
+          <span className={styles.actionLabel}>Like</span>
         </button>
         <button
           className={styles.actionBtn}
           aria-label="Comment"
+          title="Message"
         >
           <MessageCircle size={18} />
-          <span>Message</span>
+          <span className={styles.actionLabel}>Message</span>
         </button>
         <button
           className={styles.actionBtn}
           aria-label="Share"
+          title="Share"
         >
           <Share2 size={18} />
-          <span>Share</span>
+          <span className={styles.actionLabel}>Share</span>
         </button>
         <button
           className={`${styles.actionBtn} ${isBookmarked ? styles.bookmarked : ''}`}
           onClick={handleBookmark}
           aria-label="Bookmark startup"
+          title="Save"
         >
           <Bookmark size={18} />
-          <span>Save</span>
+          <span className={styles.actionLabel}>Save</span>
         </button>
       </div>
     </article>

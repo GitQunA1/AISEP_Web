@@ -7,7 +7,7 @@ import styles from './RegisterSelection.module.css';
  * Allows users to select their role (Founder, Investor, Advisor).
  * Responsive Design: Stacked on Mobile, Grid on Desktop.
  */
-function RegisterSelection({ onBack }) {
+function RegisterSelection({ onBack, onRoleSelect }) {
   
   // Role Data definition
   const roles = [
@@ -32,9 +32,9 @@ function RegisterSelection({ onBack }) {
   ];
 
   // Handler for card click
-  const handleRoleSelect = (roleName) => {
-    console.log('Selected role:', roleName);
-    // Future logic: navigate('/register/' + roleName)
+  const handleRoleSelect = (roleId) => {
+    console.log('Selected role:', roleId);
+    onRoleSelect && onRoleSelect(roleId);
   };
 
   return (
@@ -74,7 +74,7 @@ function RegisterSelection({ onBack }) {
               <button 
                 key={role.id} 
                 className={styles.card}
-                onClick={() => handleRoleSelect(role.title)}
+                onClick={() => handleRoleSelect(role.id)}
                 type="button"
               >
                 <div className={styles.iconWrapper}>

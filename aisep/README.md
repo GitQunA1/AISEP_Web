@@ -1,53 +1,695 @@
-# Getting Started with Create React App
+# AISEP Web Application
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+A modern React web platform for startup ecosystem management, enabling startups, investors, and advisors to register, connect, and collaborate.
+
+## Project Overview
+
+**Status:** Active development  
+**Framework:** React 19.2.3 with CSS Modules  
+**Build Tool:** Create React App / React Scripts 5.0.1  
+**Styling System:** CSS Variables + CSS Modules for scoped component styles  
+
+### Key Features
+- **Multi-role registration system** (Startup, Investor, Advisor) with validation
+- **Dynamic theme system** with light/dark mode toggle and localStorage persistence
+- **Mobile-first responsive design** optimized for 640px tablets and 768px+ desktops
+- **High-density information display** inspired by modern social platforms (Twitter/X aesthetic)
+- **Flat, minimal design** with no gradients or glows—clean focus on content
+- **Accessibility-first component architecture** with proper semantic HTML
+
+---
+
+## Project Structure
+
+```
+aisep/
+├── public/                          # Static files served by dev server
+│   ├── index.html
+│   ├── manifest.json
+│   └── robots.txt
+│
+├── src/
+│   ├── App.jsx                      # Main app component with routing
+│   ├── App.css                      # App-level styles
+│   ├── index.js                     # React DOM entry point
+│   ├── index.css                    # Global HTML element styles
+│   ├── setupTests.js                # Jest test configuration
+│   ├── reportWebVitals.js           # CWV tracking
+│   │
+│   ├── assets/                      # Images, icons, media (future)
+│   │
+│   ├── components/
+│   │   ├── auth/                    # Authentication & registration
+│   │   │   ├── RegisterSelection.jsx           # Role selection screen
+│   │   │   ├── RegisterSelection.module.css    # Role card styles
+│   │   │   ├── RegisterLayout.jsx              # Registration form container
+│   │   │   ├── RegisterLayout.module.css       # Layout styles
+│   │   │   ├── RegisterForms.module.css        # Shared form styling (fixed-height desktop card)
+│   │   │   ├── StartupRegisterForm.jsx         # Startup registration form
+│   │   │   ├── InvestorRegisterForm.jsx        # Investor registration form
+│   │   │   ├── AdvisorRegisterForm.jsx         # Advisor registration form
+│   │   │   ├── RegistrationSuccess.jsx         # Post-registration confirmation screen
+│   │   │   └── [RegistrationSuccess.module.css]# Success screen styles
+│   │   │
+│   │   ├── feed/                   # Content feed & cards
+│   │   │   ├── FeedHeader.jsx
+│   │   │   ├── FeedHeader.module.css
+│   │   │   ├── StartupCard.jsx                 # Startup profile card (mobile-optimized)
+│   │   │   └── StartupCard.module.css
+│   │   │
+│   │   ├── layout/                 # Page layout structure
+│   │   │   ├── MainLayout.jsx                  # Primary layout wrapper
+│   │   │   ├── MainLayout.module.css
+│   │   │   ├── Sidebar.jsx                     # Left navigation sidebar
+│   │   │   ├── Sidebar.module.css
+│   │   │   ├── TopBar.jsx                      # Header with theme toggle
+│   │   │   ├── TopBar.module.css
+│   │   │   ├── RightPanel.jsx                  # Right-side info panel
+│   │   │   ├── RightPanel.module.css
+│   │   │   ├── BottomNav.jsx                   # Mobile bottom navigation
+│   │   │   └── BottomNav.module.css
+│   │   │
+│   │   └── common/                 # Reusable UI components
+│   │       ├── Avatar.jsx                      # User avatar with fallback
+│   │       ├── Avatar.module.css
+│   │       ├── Badge.jsx                       # Status/tag badges
+│   │       ├── Badge.module.css
+│   │       ├── Button.jsx                      # Styled button variants
+│   │       ├── Button.module.css
+│   │       ├── FileUpload.jsx                  # File upload input
+│   │       └── FileUpload.module.css
+│   │
+│   ├── context/
+│   │   └── ThemeContext.jsx                    # Global theme state & provider
+│   │
+│   ├── data/
+│   │   └── mockStartups.js                     # Sample startup data for development
+│   │
+│   ├── config/
+│   │   └── config.js                           # Environment variable configuration
+│   │
+│   ├── pages/
+│   │   └── RegisterPage.jsx                    # Registration flow orchestrator
+│   │
+│   └── styles/
+│       ├── global.css                          # CSS resets & base element styles
+│       └── variables.css                       # Design tokens (34+ CSS variables)
+│
+├── build/                           # Production build output (generated by `npm run build`)
+│   ├── index.html
+│   ├── manifest.json
+│   └── static/
+│       ├── css/
+│       └── js/
+│
+├── package.json                     # Dependencies and scripts
+├── package-lock.json
+├── .env                             # Environment variables (local only, not committed)
+├── .gitignore
+├── README.md                        # This file
+│
+└── [LAYOUT_REFINEMENT.md, COMPONENT_REFERENCE.md, etc.]  # Development guides
+```
+
+---
+
+## Technology Stack
+
+| Layer | Technology | Version | Purpose |
+|-------|-----------|---------|---------|
+| **UI Framework** | React | 19.2.3 | Component-based UI library |
+| **Build Tool** | React Scripts | 5.0.1 | Webpack-based build pipeline |
+| **Icons** | Lucide React | 0.562.0 | 1000+ SVG icons as React components |
+| **Styling** | CSS Modules + CSS Variables | native | Scoped styles + design tokens |
+| **State Management** | React Context API | native | Theme + app state |
+| **Testing** | Jest + React Testing Library | built-in | Unit and integration tests |
+| **Dev Server** | Webpack Dev Server | built-in | Hot module replacement (HMR) |
+
+---
+
+## Core Features & Screens
+
+### 1. **RegisterSelection Screen**
+**File:** [src/pages/RegisterPage.jsx](src/pages/RegisterPage.jsx)  
+**Component:** [src/components/auth/RegisterSelection.jsx](src/components/auth/RegisterSelection.jsx)
+
+Users choose their role (Startup, Investor, or Advisor) to proceed with registration.
+
+**Features:**
+- Three role cards with icons and descriptions
+- Mobile-responsive grid layout
+- Transitions to RegisterLayout on role selection
+- Role data stored in React state via `RegisterPage`
+
+**Navigation Flow:** RegisterSelection → RegisterLayout → RegistrationSuccess
+
+---
+
+### 2. **Registration Forms (Multi-step)**
+**Files:**
+- [src/components/auth/StartupRegisterForm.jsx](src/components/auth/StartupRegisterForm.jsx)
+- [src/components/auth/InvestorRegisterForm.jsx](src/components/auth/InvestorRegisterForm.jsx)
+- [src/components/auth/AdvisorRegisterForm.jsx](src/components/auth/AdvisorRegisterForm.jsx)
+
+Each role has a tailored multi-step form with role-specific fields.
+
+**Desktop Optimization (Added in Recent Sessions):**
+- Fixed-height card container: `max-height: 85vh`
+- Flex layout with three sections:
+  - **Header:** Step indicator (flex-shrink: 0)
+  - **Content:** Form fields in scrollable region (overflow-y: auto) with custom scrollbar styling
+  - **Footer:** Action buttons pinned at bottom (flex-shrink: 0)
+- 2-column grid layout on desktop (`@media (min-width: 768px)`)
+- Textarea fields span full width in multi-column layouts
+- Ensures buttons stay visible without scrolling on desktop
+
+**Mobile Experience:**
+- Single-column layout
+- Full-width buttons
+- Scrollable content area for tall forms
+
+---
+
+### 3. **RegistrationSuccess Screen**
+**File:** [src/components/auth/RegistrationSuccess.jsx](src/components/auth/RegistrationSuccess.jsx)
+
+Post-registration confirmation screen confirming successful application submission.
+
+**Features:**
+- Role-specific messaging and icons (Startup Shield icon, Investor Zap icon, Advisor Clock icon)
+- Dynamic 3-step process timeline:
+  1. **Verification:** Confirm account details (5-10 minutes)
+  2. **Blockchain Hashing:** Secure application records (10-30 minutes)
+  3. **AI Analysis:** Operation Staff review (24-48 hours)
+- Email confirmation section with retry capability
+- "Back to Homepage" button with left arrow
+- 100vh viewport optimization (compact spacing throughout)
+- Flat design with no gradients or shadows
+
+**UI Optimization Details:**
+- Icon size: 64px (optimized from initial 80px)
+- Gaps: 16px between sections (reduced from 32px)
+- All padding compressed to fit within viewport
+- Process steps use proper border styling for timeline effect
+
+---
+
+### 4. **StartupCard Component (Mobile-Optimized)**
+**File:** [src/components/feed/StartupCard.jsx](src/components/feed/StartupCard.jsx)
+
+Displays startup profiles in a high-density feed format inspired by Twitter/X.
+
+**Recent Mobile Optimizations (Current Session):**
+
+**Compact Header Section:**
+- Avatar (40px) + name, headline as single row
+- Metadata row below: `@handle · time ago · verified badge` (icon-only on mobile)
+- Eliminated extra padding—consolidated information density
+
+**Financial Data Section:**
+- Blurred visual: `filter: blur(7px)` with `opacity: 0.85`
+- Locked overlay with semi-transparent Lock icon from Lucide
+- Teases premium content without revealing actual values
+- Encourages user interaction
+
+**Redesigned Footer (Icon-Only on Mobile):**
+- 4 interactive icons: Heart (likes), MessageCircle (comments), Share2 (share), Bookmark (save)
+- Labels hidden on mobile; shown on tablet+ 
+- Hover effects with color transitions
+- Responsive breakpoint at 640px shows labels on larger devices
+
+**CSS Implementation:**
+- Padding: 12px (mobile), increased on tablet/desktop
+- Avatar container: 40px × 40px
+- Footer icons: 18px size with gap spacing
+- Media queries at 640px and 768px breakpoints
+
+---
+
+## Theme System
+
+### Architecture
+
+The theme system uses **React Context + CSS Variables + localStorage** for a seamless light/dark mode experience.
+
+**Components Involved:**
+- [src/context/ThemeContext.jsx](src/context/ThemeContext.jsx) — Theme state and toggle logic
+- [src/styles/variables.css](src/styles/variables.css) — All design tokens
+- [src/components/layout/TopBar.jsx](src/components/layout/TopBar.jsx) — Theme toggle button
+
+### How It Works
+
+#### 1. **ThemeContext.jsx**
+```javascript
+// Provides theme state and toggle function to entire app
+const ThemeContext = createContext();
+
+export function ThemeProvider({ children }) {
+  const [theme, setTheme] = useState(() => {
+    // Load saved theme from localStorage or default to light
+    const saved = localStorage.getItem('aisep-theme');
+    return saved || 'light';
+  });
+
+  useEffect(() => {
+    applyTheme(theme); // Update DOM and localStorage
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(prev => prev === 'light' ? 'dark' : 'light');
+  
+  return <ThemeContext.Provider value={{ theme, toggleTheme }}>{children}</ThemeContext.Provider>;
+}
+
+// Custom hook for consuming theme
+export function useTheme() {
+  return useContext(ThemeContext);
+}
+
+// Apply theme by setting data-theme attribute on document root
+function applyTheme(themeName) {
+  if (themeName === 'dark') {
+    document.documentElement.setAttribute('data-theme', 'dark');
+  } else {
+    document.documentElement.removeAttribute('data-theme');
+  }
+  localStorage.setItem('aisep-theme', themeName);
+}
+```
+
+#### 2. **CSS Variables (variables.css)**
+All 34+ design tokens are defined with light mode defaults:
+```css
+:root {
+  /* Colors */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f7f9fa;
+  --text-primary: #0f1419;
+  --text-secondary: #536471;
+  --primary-blue: #1d9bf0;
+  --border-color: #eff3f4;
+  
+  /* Score Colors */
+  --score-good: #17bf63;
+  --score-medium: #ffad1f;
+  --score-poor: #e74c3c;
+  
+  /* Typography */
+  --font-main: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  --font-size-sm: 13px;
+  --font-size-base: 15px;
+  --font-size-lg: 17px;
+  --font-size-xl: 20px;
+  
+  /* Spacing */
+  --spacing-xs: 4px;
+  --spacing-sm: 8px;
+  --spacing-md: 12px;
+  --spacing-lg: 16px;
+  --spacing-xl: 24px;
+  
+  /* Radius & Shadows */
+  --border-radius: 12px;
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 1px 8px rgba(0, 0, 0, 0.12);
+}
+
+/* Dark Mode Overrides */
+[data-theme='dark'] {
+  --bg-primary: #000000;
+  --bg-secondary: #16181c;
+  --text-primary: #e7e9ea;
+  --text-secondary: #71767b;
+  --border-color: #2f3336;
+  /* ...all other tokens redefined for dark mode... */
+}
+```
+
+#### 3. **Component Usage**
+```javascript
+// In TopBar.jsx, toggle button
+const { theme, toggleTheme } = useTheme();
+
+<button onClick={toggleTheme}>
+  {theme === 'light' ? <Moon /> : <Sun />}
+</button>
+
+// In any component's CSS
+.card {
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+}
+
+// Dark mode automatically applies when [data-theme='dark'] is set
+```
+
+**Theme Persistence:** User's theme preference is saved to localStorage with key `'aisep-theme'` and automatically restored on app reload.
+
+---
+
+## Environment Configuration
+
+### Setup
+
+Environment variables are managed through a **config.js** file that provides a single source of truth for all API endpoints and settings.
+
+**File:** [src/config/config.js](src/config/config.js)
+
+```javascript
+const config = {
+  // API Configuration
+  API_URL: process.env.REACT_APP_API_URL || 'http://localhost:3001',
+  API_TIMEOUT: parseInt(process.env.REACT_APP_API_TIMEOUT || '30000'),
+  
+  // Authentication
+  AUTH_TOKEN_KEY: 'aisep_auth_token',
+  
+  // Feature Flags
+  ENABLE_MOCK_DATA: process.env.REACT_APP_ENABLE_MOCK_DATA === 'true',
+  
+  // Analytics
+  GA_ID: process.env.REACT_APP_GA_ID || '',
+};
+
+export default config;
+```
+
+### Using Environment Variables
+
+Create a `.env` file in the **project root** (same level as `package.json`):
+
+```bash
+# API Configuration
+REACT_APP_API_URL=http://localhost:3001
+REACT_APP_API_TIMEOUT=30000
+
+# Feature Flags
+REACT_APP_ENABLE_MOCK_DATA=true
+
+# Analytics
+REACT_APP_GA_ID=G-XXXXXXXXXX
+```
+
+**Important:** All env variables must be prefixed with `REACT_APP_` to be injected into the client-side bundle.
+
+### Accessing Configuration in Components
+
+```javascript
+import config from '../config/config';
+
+const apiUrl = config.API_URL; // 'http://localhost:3001' or custom value
+const fetchData = async () => {
+  const response = await fetch(`${config.API_URL}/startups`);
+};
+```
+
+**Non-Committed:** The `.env` file is in `.gitignore` and not committed to version control. Each developer creates their own `.env` locally with appropriate values for their environment.
+
+---
+
+## Design System & CSS Variables
+
+All color, spacing, typography, and layout decisions are centralized in [src/styles/variables.css](src/styles/variables.css).
+
+### Color Palette
+
+**Light Mode:**
+- `--bg-primary: #ffffff` — Main background
+- `--bg-secondary: #f7f9fa` — Secondary backgrounds (cards, sidebars)
+- `--text-primary: #0f1419` — Primary text (headings, body)
+- `--text-secondary: #536471` — Secondary text (meta, timestamps)
+- `--primary-blue: #1d9bf0` — Brand color for links, highlights
+- `--border-color: #eff3f4` — Dividers, borders
+
+**Dark Mode:** All colors automatically adjust when `[data-theme='dark']` is set
+
+### Score Color Indicators
+- `--score-good: #17bf63` — Green for positive metrics
+- `--score-medium: #ffad1f` — Amber for neutral/medium
+- `--score-poor: #e74c3c` — Red for negative/at-risk
+
+### Typography Tokens
+- `--font-main:` System font stack (San Francisco, Segoe UI, Helvetica)
+- `--font-size-sm: 13px`
+- `--font-size-base: 15px`
+- `--font-size-lg: 17px`
+- `--font-size-xl: 20px`
+
+### Spacing Scale
+- `--spacing-xs: 4px`
+- `--spacing-sm: 8px`
+- `--spacing-md: 12px`
+- `--spacing-lg: 16px`
+- `--spacing-xl: 24px`
+
+### Layout
+- `--border-radius: 12px` — Border radius for cards and buttons
+- `--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.12)` — Subtle shadows
+- `--shadow-md: 0 1px 8px rgba(0, 0, 0, 0.12)` — Medium shadows
+
+---
 
 ## Available Scripts
 
-In the project directory, you can run:
+### Development
+```bash
+npm start
+```
+Runs the app in development mode on [http://localhost:3000](http://localhost:3000). The app reloads when you save changes.
 
-### `npm start`
+### Testing
+```bash
+npm test
+```
+Launches Jest test runner in interactive watch mode.
 
-Runs the app in the development mode.\
-Open [http://localhost:3000](http://localhost:3000) to view it in your browser.
+### Production Build
+```bash
+npm run build
+```
+Builds the app for production to the `build/` folder. Minifies and optimizes all assets.
 
-The page will reload when you make changes.\
-You may also see any lint errors in the console.
+### Eject (Not Recommended)
+```bash
+npm run eject
+```
+**⚠️ One-way operation.** Exposes all build configuration. Only use if you need deep customization.
 
-### `npm test`
+---
 
-Launches the test runner in the interactive watch mode.\
-See the section about [running tests](https://facebook.github.io/create-react-app/docs/running-tests) for more information.
+## Development Patterns & Best Practices
 
-### `npm run build`
+### Component Structure
+All UI components follow a consistent pattern:
 
-Builds the app for production to the `build` folder.\
-It correctly bundles React in production mode and optimizes the build for the best performance.
+```javascript
+// ComponentName.jsx
+import styles from './ComponentName.module.css';
 
-The build is minified and the filenames include the hashes.\
-Your app is ready to be deployed!
+export default function ComponentName({ prop1, prop2 }) {
+  return <div className={styles.container}>{/* JSX */}</div>;
+}
+```
 
-See the section about [deployment](https://facebook.github.io/create-react-app/docs/deployment) for more information.
+**Styling:** Always use CSS Modules (`ComponentName.module.css`) for scoped styles to avoid naming conflicts.
 
-### `npm run eject`
+### Theme Usage in Components
+```javascript
+import { useTheme } from '../context/ThemeContext';
 
-**Note: this is a one-way operation. Once you `eject`, you can't go back!**
+export default function MyComponent() {
+  const { theme, toggleTheme } = useTheme();
+  
+  return (
+    <button onClick={toggleTheme}>
+      Switch to {theme === 'light' ? 'dark' : 'light'} mode
+    </button>
+  );
+}
+```
 
-If you aren't satisfied with the build tool and configuration choices, you can `eject` at any time. This command will remove the single build dependency from your project.
+### Icon Implementation (Lucide React)
+```javascript
+import { Heart, MessageCircle, Share2, Bookmark, Lock } from 'lucide-react';
 
-Instead, it will copy all the configuration files and the transitive dependencies (webpack, Babel, ESLint, etc) right into your project so you have full control over them. All of the commands except `eject` will still work, but they will point to the copied scripts so you can tweak them. At this point you're on your own.
+export default function PostActions() {
+  return (
+    <>
+      <Heart size={18} />
+      <MessageCircle size={18} />
+      <Share2 size={18} />
+      <Bookmark size={18} />
+      <Lock size={18} />
+    </>
+  );
+}
+```
 
-You don't have to ever use `eject`. The curated feature set is suitable for small and middle deployments, and you shouldn't feel obligated to use this feature. However we understand that this tool wouldn't be useful if you couldn't customize it when you are ready for it.
+### Responsive Design Pattern
+Use CSS Media Queries at established breakpoints:
 
-## Learn More
+```css
+/* Mobile First (default) */
+.card {
+  padding: var(--spacing-md);
+  display: flex;
+  flex-direction: column;
+}
 
-You can learn more in the [Create React App documentation](https://facebook.github.io/create-react-app/docs/getting-started).
+/* Tablet (640px and up) */
+@media (min-width: 640px) {
+  .card {
+    padding: var(--spacing-lg);
+  }
+}
 
-To learn React, check out the [React documentation](https://reactjs.org/).
+/* Desktop (768px and up) */
+@media (min-width: 768px) {
+  .card {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+```
 
-### Code Splitting
+### Form Handling Pattern
+All forms use `useState` for field management and validation:
 
-This section has moved here: [https://facebook.github.io/create-react-app/docs/code-splitting](https://facebook.github.io/create-react-app/docs/code-splitting)
+```javascript
+const [formData, setFormData] = useState({
+  name: '',
+  email: '',
+  companyName: '',
+});
+
+const [errors, setErrors] = useState({});
+
+const handleChange = (e) => {
+  setFormData({ ...formData, [e.target.name]: e.target.value });
+};
+
+const handleSubmit = (e) => {
+  e.preventDefault();
+  // Validate and submit
+};
+```
+
+---
+
+## Component Reference
+
+### Common Components
+
+#### Button (`src/components/common/Button.jsx`)
+Reusable button with variants and sizes.
+
+```javascript
+<Button variant="primary" size="lg">Click me</Button>
+<Button variant="secondary" size="md">Secondary</Button>
+```
+
+#### Avatar (`src/components/common/Avatar.jsx`)
+User avatar with fallback to initials.
+
+```javascript
+<Avatar src={userImage} alt="User" fallback="JD" />
+```
+
+#### Badge (`src/components/common/Badge.jsx`)
+Status badges with color coding.
+
+```javascript
+<Badge status="verified">Verified</Badge>
+<Badge status="pending">Pending</Badge>
+```
+
+#### FileUpload (`src/components/common/FileUpload.jsx`)
+File input component with drag-and-drop.
+
+```javascript
+<FileUpload accept=".pdf,.doc" onUpload={handleUpload} />
+```
+
+---
+
+## Getting Started
+
+### Prerequisites
+- Node.js 14+ and npm 6+
+- A code editor (VS Code recommended)
+
+### Installation
+
+1. **Clone the repository:**
+   ```bash
+   git clone <repository-url>
+   cd aisep
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Create `.env` file in project root:**
+   ```bash
+   REACT_APP_API_URL=http://localhost:3001
+   REACT_APP_ENABLE_MOCK_DATA=true
+   ```
+
+4. **Start the development server:**
+   ```bash
+   npm start
+   ```
+
+5. **Open [http://localhost:3000](http://localhost:3000) in your browser.**
+
+---
+
+## Troubleshooting
+
+### Port 3000 Already in Use
+```bash
+PORT=3001 npm start
+```
+
+### Cache Issues
+```bash
+rm -rf node_modules package-lock.json
+npm install
+npm start
+```
+
+### Theme Not Persisting
+Check browser localStorage (DevTools → Application → Local Storage) for `aisep-theme` key.
+
+### Build Errors
+```bash
+npm run build
+```
+Review error messages for missing dependencies or syntax errors.
+
+---
+
+## Future Enhancements
+
+- [ ] Backend API integration for user registration and authentication
+- [ ] Startup feed with real data fetching
+- [ ] User profile pages with edit capability
+- [ ] Messaging/notifications system
+- [ ] Advanced filtering and search
+- [ ] Analytics dashboard
+- [ ] Mobile app (React Native)
+- [ ] Internationalization (i18n)
+
+---
+
+## Resources
+
+- [React Documentation](https://react.dev)
+- [CSS Modules](https://github.com/css-modules/css-modules)
+- [Lucide React Icons](https://lucide.dev)
+- [Create React App Docs](https://create-react-app.dev)
 
 ### Analyzing the Bundle Size
 

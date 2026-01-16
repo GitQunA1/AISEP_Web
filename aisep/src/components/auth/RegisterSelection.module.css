@@ -179,10 +179,8 @@
 
 /* --- DESKTOP BACK BUTTON (The Outline Fix) --- */
 .desktopBackButton {
-  display: none; /* Hidden on mobile */
-  
-  /* Flexbox for Perfect Centering */
-  display: flex; 
+  /* Hidden on Mobile - Shown only on Desktop */
+  display: none;
   align-items: center;
   justify-content: center;
   gap: 10px;
