@@ -6,7 +6,7 @@ A modern React web platform for startup ecosystem management, enabling startups,
 
 **Status:** Active development  
 **Framework:** React 19.2.3 with CSS Modules  
-**Build Tool:** Create React App / React Scripts 5.0.1  
+**Build Tool:** Vite 6.0.7 (migrated from Create React App)  
 **Styling System:** CSS Variables + CSS Modules for scoped component styles  
 
 ### Key Features
@@ -118,12 +118,12 @@ aisep/
 | Layer | Technology | Version | Purpose |
 |-------|-----------|---------|---------|
 | **UI Framework** | React | 19.2.3 | Component-based UI library |
-| **Build Tool** | React Scripts | 5.0.1 | Webpack-based build pipeline |
+| **Build Tool** | Vite | 6.0.7 | Next-generation build tool with HMR |
 | **Icons** | Lucide React | 0.562.0 | 1000+ SVG icons as React components |
 | **Styling** | CSS Modules + CSS Variables | native | Scoped styles + design tokens |
 | **State Management** | React Context API | native | Theme + app state |
-| **Testing** | Jest + React Testing Library | built-in | Unit and integration tests |
-| **Dev Server** | Webpack Dev Server | built-in | Hot module replacement (HMR) |
+| **Testing** | Vitest + React Testing Library | 2.1.8 | Unit and integration tests |
+| **Dev Server** | Vite Dev Server | built-in | Hot module replacement (HMR) |
 
 ---
 
@@ -145,7 +145,33 @@ Users choose their role (Startup, Investor, or Advisor) to proceed with registra
 
 ---
 
-### 2. **Registration Forms (Multi-step)**
+### 2. **Login Page**
+**File:** [src/pages/LoginPage.jsx](src/pages/LoginPage.jsx)  
+**Styles:** [src/pages/LoginPage.module.css](src/pages/LoginPage.module.css)
+
+Modernized login interface with Twitter/X-inspired minimalist design.
+
+**Features:**
+- **Responsive Header**:
+  - Mobile: Fixed top bar with logo and back arrow
+  - Desktop: Centered logo with "Back to Home" button at bottom
+- **Demo Account Dropdown**: Quick login via dropdown on email field (desktop only)
+- **Clean Form Design**: 
+  - Centered layout with pill-shaped buttons
+  - Password visibility toggle
+  - Primary blue (`#1d9bf0`) focus states
+- **No-Scroll Desktop Layout**: All content fits viewport without scrolling
+- **Authentication**: Mock login with role-based routing
+
+**UI Components:**
+- Email/password inputs with focus ring styling
+- Dropdown menu for demo account selection (🚀 Startup, 💰 Investor, 👨‍💼 Advisor)
+- Sign up prompt with link to registration
+- Forgot password button
+
+---
+
+### 3. **Registration Forms (Multi-step)**
 **Files:**
 - [src/components/auth/StartupRegisterForm.jsx](src/components/auth/StartupRegisterForm.jsx)
 - [src/components/auth/InvestorRegisterForm.jsx](src/components/auth/InvestorRegisterForm.jsx)
@@ -170,7 +196,7 @@ Each role has a tailored multi-step form with role-specific fields.
 
 ---
 
-### 3. **RegistrationSuccess Screen**
+### 4. **RegistrationSuccess Screen**
 **File:** [src/components/auth/RegistrationSuccess.jsx](src/components/auth/RegistrationSuccess.jsx)
 
 Post-registration confirmation screen confirming successful application submission.
@@ -194,7 +220,7 @@ Post-registration confirmation screen confirming successful application submissi
 
 ---
 
-### 4. **StartupCard Component (Mobile-Optimized)**
+### 5. **StartupCard Component (Mobile-Optimized)**
 **File:** [src/components/feed/StartupCard.jsx](src/components/feed/StartupCard.jsx)
 
 Displays startup profiles in a high-density feed format inspired by Twitter/X.
@@ -358,17 +384,8 @@ Environment variables are managed through a **config.js** file that provides a s
 ```javascript
 const config = {
   // API Configuration
-  API_URL: process.env.REACT_APP_API_URL || 'http://localhost:3001',
-  API_TIMEOUT: parseInt(process.env.REACT_APP_API_TIMEOUT || '30000'),
-  
-  // Authentication
-  AUTH_TOKEN_KEY: 'aisep_auth_token',
-  
-  // Feature Flags
-  ENABLE_MOCK_DATA: process.env.REACT_APP_ENABLE_MOCK_DATA === 'true',
-  
-  // Analytics
-  GA_ID: process.env.REACT_APP_GA_ID || '',
+  apiUrl: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  env: import.meta.env.VITE_ENV || 'development',
 };
 
 export default config;
@@ -380,26 +397,20 @@ Create a `.env` file in the **project root** (same level as `package.json`):
 
 ```bash
 # API Configuration
-REACT_APP_API_URL=http://localhost:3001
-REACT_APP_API_TIMEOUT=30000
-
-# Feature Flags
-REACT_APP_ENABLE_MOCK_DATA=true
-
-# Analytics
-REACT_APP_GA_ID=G-XXXXXXXXXX
+VITE_API_URL=http://localhost:3001
+VITE_ENV=development
 ```
 
-**Important:** All env variables must be prefixed with `REACT_APP_` to be injected into the client-side bundle.
+**Important:** All env variables must be prefixed with `VITE_` and are accessed via `import.meta.env` in Vite (not `process.env`).
 
 ### Accessing Configuration in Components
 
 ```javascript
 import config from '../config/config';
 
-const apiUrl = config.API_URL; // 'http://localhost:3001' or custom value
+const apiUrl = config.apiUrl; // 'http://localhost:3001' or custom value
 const fetchData = async () => {
-  const response = await fetch(`${config.API_URL}/startups`);
+  const response = await fetch(`${config.apiUrl}/startups`);
 };
 ```
 
@@ -455,25 +466,25 @@ All color, spacing, typography, and layout decisions are centralized in [src/sty
 ```bash
 npm start
 ```
-Runs the app in development mode on [http://localhost:3000](http://localhost:3000). The app reloads when you save changes.
+Runs the app in development mode on [http://localhost:3000](http://localhost:3000) using Vite's dev server. Features instant HMR (Hot Module Replacement).
 
 ### Testing
 ```bash
 npm test
 ```
-Launches Jest test runner in interactive watch mode.
+Launches Vitest test runner.
 
 ### Production Build
 ```bash
 npm run build
 ```
-Builds the app for production to the `build/` folder. Minifies and optimizes all assets.
+Builds the app for production to the `build/` folder using Vite. Minifies and optimizes all assets with Lightning CSS.
 
-### Eject (Not Recommended)
+### Preview Production Build
 ```bash
-npm run eject
+npm run preview
 ```
-**⚠️ One-way operation.** Exposes all build configuration. Only use if you need deep customization.
+Serves the production build locally to test before deployment.
 
 ---
 
@@ -633,8 +644,8 @@ File input component with drag-and-drop.
 
 3. **Create `.env` file in project root:**
    ```bash
-   REACT_APP_API_URL=http://localhost:3001
-   REACT_APP_ENABLE_MOCK_DATA=true
+   VITE_API_URL=http://localhost:3001
+   VITE_ENV=development
    ```
 
 4. **Start the development server:**
@@ -687,26 +698,7 @@ Review error messages for missing dependencies or syntax errors.
 ## Resources
 
 - [React Documentation](https://react.dev)
+- [Vite Documentation](https://vitejs.dev)
 - [CSS Modules](https://github.com/css-modules/css-modules)
 - [Lucide React Icons](https://lucide.dev)
-- [Create React App Docs](https://create-react-app.dev)
-
-### Analyzing the Bundle Size
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size](https://facebook.github.io/create-react-app/docs/analyzing-the-bundle-size)
-
-### Making a Progressive Web App
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app](https://facebook.github.io/create-react-app/docs/making-a-progressive-web-app)
-
-### Advanced Configuration
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/advanced-configuration](https://facebook.github.io/create-react-app/docs/advanced-configuration)
-
-### Deployment
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/deployment](https://facebook.github.io/create-react-app/docs/deployment)
-
-### `npm run build` fails to minify
-
-This section has moved here: [https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify](https://facebook.github.io/create-react-app/docs/troubleshooting#npm-run-build-fails-to-minify)
+- [Vitest Testing Framework](https://vitest.dev)

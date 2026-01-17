@@ -77,21 +77,22 @@ function App() {
   return (
     <>
       {currentView === 'login' ? (
-        <LoginPage 
+        <LoginPage
           onLoginSuccess={handleLoginSuccess}
           onShowRegister={handleShowRegister}
+          onBack={handleBackToMain}
         />
       ) : currentView === 'main' ? (
         <>
-          <MainLayout 
-            onShowRegister={handleShowRegister} 
+          <MainLayout
+            onShowRegister={handleShowRegister}
             onShowLogin={handleShowLogin}
             user={user}
             onLogout={handleLogout}
             onOpenDashboard={handleOpenDashboard}
           />
           {user && (
-            <DashboardPanel 
+            <DashboardPanel
               user={user}
               isOpen={isDashboardOpen}
               onClose={handleCloseDashboard}
@@ -100,7 +101,7 @@ function App() {
           )}
         </>
       ) : currentView === 'roleSelection' ? (
-        <RegisterSelection 
+        <RegisterSelection
           onBack={handleBackToMain}
           onRoleSelect={handleRoleSelect}
         />
