@@ -13,7 +13,7 @@ import mockStartups from '../../data/mockStartups';
  * Handles responsive 3-column flex layout (desktop) vs single column (mobile)
  * Includes sticky sidebars and scrollable feed
  */
-function MainLayout({ onShowRegister }) {
+function MainLayout({ onShowRegister, onShowLogin, user, onLogout, onOpenDashboard }) {
   const [isPremium] = useState(false); // Hardcoded as false - shows blur overlay
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile menu state
 
@@ -35,7 +35,7 @@ function MainLayout({ onShowRegister }) {
         <div className={styles.mainGrid}>
           {/* Left Sidebar - Desktop Only / Mobile with Toggle */}
           <div className={`${styles.leftColumn} ${isMobileMenuOpen ? styles.mobileMenuVisible : ''}`}>
-            <Sidebar onShowRegister={onShowRegister} onMenuItemClick={closeMobileMenu} />
+            <Sidebar onShowRegister={onShowRegister} onMenuItemClick={closeMobileMenu} onShowLogin={onShowLogin} />
           </div>
 
           {/* Center Feed Column */}
@@ -54,7 +54,11 @@ function MainLayout({ onShowRegister }) {
 
           {/* Right Panel - Desktop Only */}
           <div className={styles.rightColumn}>
-            <RightPanel />
+            <RightPanel 
+              user={user}
+              onLogout={onLogout}
+              onOpenDashboard={onOpenDashboard}
+            />
           </div>
         </div>
       </div>
