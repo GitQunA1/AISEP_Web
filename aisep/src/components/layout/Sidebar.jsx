@@ -12,6 +12,7 @@ function Sidebar({
   isOpen = false, 
   onClose, 
   onShowRegister, 
+  onShowLogin,
   onMenuItemClick 
 }) {
   const [activeItem, setActiveItem] = useState('Home');
@@ -31,6 +32,12 @@ function Sidebar({
 
   const handleRegisterClick = () => {
     onShowRegister();
+    onMenuItemClick?.();
+    onClose?.();
+  };
+
+  const handleLoginClick = () => {
+    onShowLogin?.();
     onMenuItemClick?.();
     onClose?.();
   };
@@ -91,7 +98,7 @@ function Sidebar({
 
         {/* Auth Buttons */}
         <div className={styles.authSection}>
-          <button className={styles.signInBtn}>
+          <button className={styles.signInBtn} onClick={handleLoginClick}>
             Sign In
           </button>
           

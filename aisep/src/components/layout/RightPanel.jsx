@@ -2,12 +2,13 @@ import React from 'react';
 import { TrendingUp, Zap } from 'lucide-react';
 import styles from './RightPanel.module.css';
 import Badge from '../common/Badge';
+import UserProfilePanel from '../common/UserProfilePanel';
 
 /**
  * RightPanel Component - Right sidebar with trending/featured content (Desktop only)
- * Shows top AI-rated startups and trending sectors
+ * Shows user profile when logged in, otherwise shows trending content
  */
-function RightPanel() {
+function RightPanel({ user, onLogout, onOpenDashboard }) {
   const topRatedStartups = [
     { id: 1, name: 'GreenChain', score: 91 },
     { id: 2, name: 'FinFlow', score: 87 },
@@ -29,6 +30,19 @@ function RightPanel() {
   const handleSectorClick = (sector) => {
     console.log(`Clicked on ${sector}`);
   };
+
+  // If user is logged in, show user profile panel
+  if (user) {
+    return (
+      <aside className={styles.rightPanel}>
+        <UserProfilePanel 
+          user={user} 
+          onLogout={onLogout}
+          onOpenDashboard={onOpenDashboard}
+        />
+      </aside>
+    );
+  }
 
   return (
     <aside className={styles.rightPanel}>
