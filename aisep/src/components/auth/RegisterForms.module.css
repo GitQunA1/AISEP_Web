@@ -130,7 +130,7 @@
     right: 0;
     padding: 16px;
     gap: 12px;
-    flex-direction: column-reverse; /* Stack buttons */
+    flex-direction: row; /* Keep buttons side by side */
     border-top: 1px solid var(--border-color);
     box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
     z-index: 100;
@@ -262,6 +262,13 @@
 }
 .primaryButton:hover { background-color: #1a91da; }
 
+@media (max-width: 767px) {
+  .primaryButton {
+    height: 56px;
+    font-size: 1.0625rem;
+  }
+}
+
 .secondaryButton {
   flex: 1;
   display: flex;
@@ -278,6 +285,13 @@
   cursor: pointer;
 }
 .secondaryButton:hover { background-color: var(--bg-hover); }
+
+@media (max-width: 767px) {
+  .secondaryButton {
+    height: 56px;
+    font-size: 1.0625rem;
+  }
+}
 
 /* Select Arrow Fix */
 .select {
