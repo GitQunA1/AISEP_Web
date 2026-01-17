@@ -4,13 +4,12 @@ import MainLayout from './components/layout/MainLayout';
 import RegisterSelection from './components/auth/RegisterSelection';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
-import DashboardPanel from './components/common/DashboardPanel';
+import ProfilePage from './pages/ProfilePage';
 
 function App() {
-  const [currentView, setCurrentView] = useState('main'); // 'login', 'main', 'roleSelection', 'register'
+  const [currentView, setCurrentView] = useState('main'); // 'login', 'main', 'roleSelection', 'register', 'profile'
   const [selectedRole, setSelectedRole] = useState(null);
   const [user, setUser] = useState(null);
-  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
 
   // Load user from localStorage on mount
   useEffect(() => {
@@ -33,8 +32,8 @@ function App() {
     localStorage.removeItem('aisep_user');
     localStorage.removeItem('aisep_token');
     setUser(null);
-    setCurrentView('login');
     setIsDashboardOpen(false);
+    // Stay on main page, don't redirect to login
   };
 
   const handleShowRegister = () => {
@@ -66,12 +65,21 @@ function App() {
     setCurrentView('login');
   };
 
-  const handleOpenDashboard = () => {
-    setIsDashboardOpen(true);
+
+  const handleShowProfile = () => {
+    setCurrentView('profile');
   };
 
-  const handleCloseDashboard = () => {
-    setIsDashboardOpen(false);
+  const handleShowHome = () => {
+    setCurrentView('main');
+  };
+
+  const handleShowAdvisors = () => {
+    setCurrentView('advisors');
+  };
+
+  const handleShowInvestors = () => {
+    setCurrentView('investors');
   };
 
   return (
@@ -83,27 +91,56 @@ function App() {
           onBack={handleBackToMain}
         />
       ) : currentView === 'main' ? (
-        <>
-          <MainLayout
-            onShowRegister={handleShowRegister}
-            onShowLogin={handleShowLogin}
-            user={user}
-            onLogout={handleLogout}
-            onOpenDashboard={handleOpenDashboard}
-          />
-          {user && (
-            <DashboardPanel
-              user={user}
-              isOpen={isDashboardOpen}
-              onClose={handleCloseDashboard}
-              onLogout={handleLogout}
-            />
-          )}
-        </>
+        <MainLayout
+          onShowRegister={handleShowRegister}
+          onShowLogin={handleShowLogin}
+          onShowProfile={handleShowProfile}
+          onShowHome={handleShowHome}
+          onShowAdvisors={handleShowAdvisors}
+          onShowInvestors={handleShowInvestors}
+          user={user}
+          onLogout={handleLogout}
+        />
       ) : currentView === 'roleSelection' ? (
         <RegisterSelection
           onBack={handleBackToMain}
           onRoleSelect={handleRoleSelect}
+        />
+      ) : currentView === 'profile' ? (
+        <MainLayout
+          onShowRegister={handleShowRegister}
+          onShowLogin={handleShowLogin}
+          onShowProfile={handleShowProfile}
+          onShowHome={handleShowHome}
+          onShowAdvisors={handleShowAdvisors}
+          onShowInvestors={handleShowInvestors}
+          user={user}
+          onLogout={handleLogout}
+          showProfile={true}
+        />
+      ) : currentView === 'advisors' ? (
+        <MainLayout
+          onShowRegister={handleShowRegister}
+          onShowLogin={handleShowLogin}
+          onShowProfile={handleShowProfile}
+          onShowHome={handleShowHome}
+          onShowAdvisors={handleShowAdvisors}
+          onShowInvestors={handleShowInvestors}
+          user={user}
+          onLogout={handleLogout}
+          showAdvisors={true}
+        />
+      ) : currentView === 'investors' ? (
+        <MainLayout
+          onShowRegister={handleShowRegister}
+          onShowLogin={handleShowLogin}
+          onShowProfile={handleShowProfile}
+          onShowHome={handleShowHome}
+          onShowAdvisors={handleShowAdvisors}
+          onShowInvestors={handleShowInvestors}
+          user={user}
+          onLogout={handleLogout}
+          showInvestors={true}
         />
       ) : (
         <RegisterPage

@@ -49,6 +49,7 @@ function StartupCard({ startup, isPremium = false }) {
             <Badge
               label={`${startup.aiScore}`}
               variant={getScoreBadgeVariant()}
+              showIcon={true}
             />
           </div>
           <div className={styles.metadataRow}>

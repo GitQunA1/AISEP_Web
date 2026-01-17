@@ -8,7 +8,7 @@ import styles from './RegisterSelection.module.css';
  * Responsive Design: Stacked on Mobile, Grid on Desktop.
  */
 function RegisterSelection({ onBack, onRoleSelect }) {
-  
+
   // Role Data definition
   const roles = [
     {
@@ -39,7 +39,7 @@ function RegisterSelection({ onBack, onRoleSelect }) {
 
   return (
     <div className={styles.container}>
-      
+
       {/* 1. Mobile Header (Fixed Top - Only visible on Mobile) */}
       <header className={styles.header}>
         <button className={styles.mobileBackButton} onClick={onBack} aria-label="Back">
@@ -50,12 +50,12 @@ function RegisterSelection({ onBack, onRoleSelect }) {
           <span className={styles.headerLogoText}>AISEP</span>
         </div>
         {/* Dummy spacer to balance the flex header */}
-        <div style={{ width: 40 }}></div> 
+        <div style={{ width: 40 }}></div>
       </header>
 
       {/* 2. Main Content Area */}
       <div className={styles.contentWrapper}>
-        
+
         {/* Desktop Logo (Only visible on Desktop) */}
         <div className={styles.desktopLogo}>
           <Rocket size={36} className={styles.logoIcon} />
@@ -71,8 +71,8 @@ function RegisterSelection({ onBack, onRoleSelect }) {
           {roles.map((role) => {
             const IconComponent = role.icon;
             return (
-              <button 
-                key={role.id} 
+              <button
+                key={role.id}
                 className={styles.card}
                 onClick={() => handleRoleSelect(role.id)}
                 type="button"
@@ -90,7 +90,7 @@ function RegisterSelection({ onBack, onRoleSelect }) {
         {/* 4. Desktop Back Button (Only visible on Desktop) */}
         <button className={styles.desktopBackButton} onClick={onBack}>
           <ArrowLeft size={20} />
-          <span>Back to Homepage</span>
+          <span>Back to Home</span>
         </button>
 
       </div>

@@ -1,6 +1,8 @@
 .rightPanel {
-  width: 100%;
-  height: 100%;
+  width: 350px;
+  max-width: 350px;
+  flex: 0 0 350px;
+  height: 100vh;
   background-color: var(--bg-primary);
   padding: var(--spacing-lg);
   position: sticky;

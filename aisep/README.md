@@ -12,6 +12,9 @@ A modern React web platform for startup ecosystem management, enabling startups,
 ### Key Features
 - **Multi-role registration system** (Startup, Investor, Advisor) with validation
 - **Dynamic theme system** with light/dark mode toggle and localStorage persistence
+- **Investors discovery feed** with AI match scoring and verified badges
+- **Advisors marketplace** with booking and review system
+- **Twitter/X-inspired profile pages** with role-specific tabs
 - **Mobile-first responsive design** optimized for 640px tablets and 768px+ desktops
 - **High-density information display** inspired by modern social platforms (Twitter/X aesthetic)
 - **Flat, minimal design** with no gradients or glows—clean focus on content
@@ -57,6 +60,14 @@ aisep/
 │   │   │   ├── StartupCard.jsx                 # Startup profile card (mobile-optimized)
 │   │   │   └── StartupCard.module.css
 │   │   │
+│   │   ├── investors/                # Investor discovery
+│   │   │   ├── InvestorDiscovery.jsx            # Investors feed with filters
+│   │   │   └── InvestorDiscovery.module.css
+│   │   │
+│   │   ├── profile/                  # Profile management
+│   │   │   ├── StartupAdvisorsList.jsx          # Advisor booking system
+│   │   │   └── StartupAdvisorsList.module.css
+│   │   │
 │   │   ├── layout/                 # Page layout structure
 │   │   │   ├── MainLayout.jsx                  # Primary layout wrapper
 │   │   │   ├── MainLayout.module.css
@@ -89,7 +100,13 @@ aisep/
 │   │   └── config.js                           # Environment variable configuration
 │   │
 │   ├── pages/
-│   │   └── RegisterPage.jsx                    # Registration flow orchestrator
+│   │   ├── RegisterPage.jsx                   # Registration flow orchestrator
+│   │   ├── LoginPage.jsx                      # Login page
+│   │   ├── LoginPage.module.css
+│   │   ├── ProfilePage.jsx                    # User profile with role tabs
+│   │   ├── ProfilePage.module.css
+│   │   ├── AdvisorsPage.jsx                   # Advisors marketplace
+│   │   └── AdvisorsPage.module.css
 │   │
 │   └── styles/
 │       ├── global.css                          # CSS resets & base element styles
@@ -249,6 +266,86 @@ Displays startup profiles in a high-density feed format inspired by Twitter/X.
 - Avatar container: 40px × 40px
 - Footer icons: 18px size with gap spacing
 - Media queries at 640px and 768px breakpoints
+
+---
+
+### 6. **Investors Discovery Feed**
+**File:** [src/components/investors/InvestorDiscovery.jsx](src/components/investors/InvestorDiscovery.jsx)
+
+Twitter/X-style feed for discovering and connecting with investors.
+
+**Features:**
+- **Search & Filters:**
+  - Search bar for funds and angels
+  - Scrollable industry pills (AI/ML, Blockchain, Fintech, HealthTech, SaaS, E-commerce, EdTech)
+  - Stage filters (Pre-Seed, Seed, Series A, B, C)
+- **Investor Cards:**
+  - Avatar with verified blue checkmark
+  - Investment thesis and target tags
+  - Location, portfolio size, ticket size
+  - AI Match Score badge with color coding (green for high match)
+  - "Pitch" primary button and "View Profile" ghost button
+- **Responsive Design:** Full-width feed layout with mobile optimization
+
+**Navigation:**
+- Accessible via "Investors" tab in sidebar (TrendingUp icon)
+- Included in mobile bottom navigation
+
+---
+
+### 7. **Advisors Marketplace**
+**File:** [src/pages/AdvisorsPage.jsx](src/pages/AdvisorsPage.jsx)
+
+Marketplace for finding and booking advisor sessions.
+
+**Features:**
+- Search by name or expertise
+- Filter by expertise area
+- Premium lock overlay for non-paying users
+- Advisor cards with:
+  - Avatar, name, verified badge
+  - Expertise tags
+  - Hourly rate
+  - Rating and review count
+  - Availability status
+  - "Book Session" / "View Profile" actions
+
+---
+
+### 8. **ProfilePage with Role-Specific Tabs**
+**File:** [src/pages/ProfilePage.jsx](src/pages/ProfilePage.jsx)
+
+Twitter/X-inspired profile page with tabbed navigation.
+
+**Universal Tabs:**
+- **Overview:** Profile header with bio, location, join date, followers
+- **Profile:** Detailed information display
+
+**Startup-Specific Tabs:**
+- **Documents:** File management (Coming Soon)
+- **AI Score:** Potential score metrics and evaluation
+- **Advisors:** Appointment booking system
+
+**Advisors Tab Features** ([StartupAdvisorsList.jsx](src/components/profile/StartupAdvisorsList.jsx)):
+- **Three tabs:** Upcoming, Completed, Pending
+- **Upcoming appointments:**
+  - Meeting details with date/time
+  - "Join Meeting" and "Reschedule" buttons
+- **Completed sessions:**
+  - "Review" button with star rating modal
+  - "Report" button for issues
+- **Pending requests:**
+  - "Cancel Request" button
+- **Modal systems:**
+  - Review modal with 5-star rating
+  - Report modal with reason selection
+
+**UI Optimizations:**
+- Enhanced button border visibility for light mode
+- Unique CSS class names (`.rescheduleBtn`, `.cancelRequestBtn`)
+- Darker borders (1.5px solid) for better contrast
+
+---
 
 ---
 
@@ -685,8 +782,10 @@ Review error messages for missing dependencies or syntax errors.
 ## Future Enhancements
 
 - [ ] Backend API integration for user registration and authentication
-- [ ] Startup feed with real data fetching
-- [ ] User profile pages with edit capability
+- [ ] Real-time AI matching algorithm for investors
+- [ ] Payment integration for advisor bookings
+- [ ] Video conferencing integration
+- [ ] Document upload with blockchain verification
 - [ ] Messaging/notifications system
 - [ ] Advanced filtering and search
 - [ ] Analytics dashboard

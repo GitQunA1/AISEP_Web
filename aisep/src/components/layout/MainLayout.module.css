@@ -1,181 +1,40 @@
 .layoutContainer {
   display: flex;
-  flex-direction: column;
-  height: 100vh;
   width: 100%;
-  overflow: hidden;
+  min-height: 100vh;
   background-color: var(--bg-primary);
-  transition: background-color var(--transition-base);
+  position: relative;
 }
 
-/* Centered wrapper for the entire 3-column layout */
-.centeredWrapper {
+/* Main Content Area */
+.mainContent {
+  flex: 1 1 600px;
+  max-width: 600px;
+  min-width: 0;
   display: flex;
-  justify-content: center;
-  align-items: stretch;
-  flex: 1;
+  flex-direction: column;
   width: 100%;
-  overflow: hidden;
-  background-color: var(--bg-primary);
-  transition: background-color var(--transition-base);
-}
-
-/* Main flex container for 3-column layout */
-.mainGrid {
-  display: flex;
-  flex: 1;
-  max-width: 1265px;
-  width: 1265px;
-  overflow: hidden;
-  gap: 0;
-}
-
-/* Left Column - Navigation Sidebar */
-.leftColumn {
-  flex: 0 0 275px;
-  width: 275px;
-  background-color: var(--bg-primary);
-  border-right: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: background-color var(--transition-base), border-color var(--transition-base);
-}
-
-/* Center Column - Main Feed */
-.centerColumn {
-  flex: 0 0 600px;
-  width: 600px;
-  display: flex;
-  flex-direction: column;
   border-left: 1px solid var(--border-color);
   border-right: 1px solid var(--border-color);
-  overflow-y: auto;
-  background-color: var(--bg-primary);
-  transition: background-color var(--transition-base), border-color var(--transition-base);
 }
 
 .feedContainer {
   flex: 1;
-  overflow-y: auto;
 }
 
-/* Right Column - Widgets Sidebar */
-.rightColumn {
-  flex: 0 0 350px;
-  width: 350px;
-  background-color: var(--bg-primary);
-  border-left: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
-  transition: background-color var(--transition-base), border-color var(--transition-base);
-}
-
-/* Desktop View - Full 3 Column Layout (> 1024px) */
-@media (min-width: 1025px) {
-  .mainGrid {
-    display: flex;
-    width: 100%;
-    gap: 0;
-  }
-
-  .leftColumn {
-    flex: 0 0 275px;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .centerColumn {
-    flex: 0 0 600px;
-    border-left: 1px solid rgb(239, 243, 244);
-    border-right: 1px solid rgb(239, 243, 244);
-  }
-
-  .rightColumn {
-    flex: 0 0 350px;
-    display: flex;
-    flex-direction: column;
-  }
-}
-
-/* Tablet/Transitional View (769px - 1024px) */
-@media (max-width: 1024px) {
-  .leftColumn {
-    display: none;
-  }
-
-  .rightColumn {
-    display: none;
-  }
-
-  .centerColumn {
-    flex: 1;
-    width: 100%;
-    border-left: none;
-    border-right: none;
-  }
-
-  .mainGrid {
-    width: 100%;
-  }
-}
-
-/* Mobile View (< 768px) */
-@media (max-width: 768px) {
+/* Desktop: 3-column layout */
+@media (min-width: 769px) {
   .layoutContainer {
-    display: flex;
-    flex-direction: column;
-    height: 100vh;
-    width: 100%;
+    justify-content: center;
   }
+}
 
-  .mainGrid {
-    flex: 1;
-    width: 100%;
-    overflow-y: auto;
-    padding-bottom: 60px;
-  }
-
-  .leftColumn {
-    display: none;
-    position: fixed;
-    left: 0;
-    top: 53px;
-    height: calc(100vh - 53px);
-    width: 275px;
-    z-index: 50;
-    overflow-y: auto;
-    box-sizing: border-box;
-  }
-
-  .leftColumn.mobileMenuVisible {
-    display: flex;
-  }
-
-  .mobileMenuOverlay {
-    position: fixed;
-    top: 53px;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 40;
-    display: block;
-  }
-
-  .rightColumn {
-    display: none;
-  }
-
-  .centerColumn {
-    flex: 1;
-    width: 100%;
+/* Mobile: Stack content, hide borders, add bottom nav spacing */
+@media (max-width: 768px) {
+  .mainContent {
+    max-width: none;
     border: none;
-    overflow-y: visible;
-  }
-
-  .feedContainer {
-    overflow-y: visible;
+    padding-bottom: 60px;
+    /* Space for bottom nav */
   }
 }

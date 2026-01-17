@@ -7,39 +7,53 @@ import BottomNav from './BottomNav';
 import FeedHeader from '../feed/FeedHeader';
 import StartupCard from '../feed/StartupCard';
 import mockStartups from '../../data/mockStartups';
+import ProfilePage from '../../pages/ProfilePage';
+import AdvisorsPage from '../../pages/AdvisorsPage';
+import InvestorDiscovery from '../investors/InvestorDiscovery';
 
 /**
  * MainLayout Component - Main application layout
  * Handles responsive 3-column flex layout (desktop) vs single column (mobile)
  * Includes sticky sidebars and scrollable feed
  */
-function MainLayout({ onShowRegister, onShowLogin, user, onLogout, onOpenDashboard }) {
+function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, onShowAdvisors, onShowInvestors, user, onLogout, showProfile = false, showAdvisors = false, showInvestors = false }) {
   const [isPremium] = useState(false); // Hardcoded as false - shows blur overlay
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // Mobile menu state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile sidebar state
 
-  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
-  const closeMobileMenu = () => setIsMobileMenuOpen(false);
+  const openSidebar = () => setIsSidebarOpen(true);
+  const closeSidebar = () => setIsSidebarOpen(false);
 
   return (
     <div className={styles.layoutContainer}>
-      {/* Mobile Top Bar */}
-      <TopBar onMenuClick={toggleMobileMenu} />
+      {/* Sidebar - Desktop always visible, Mobile slide-out */}
+      <Sidebar
+        isOpen={isSidebarOpen}
+        onClose={closeSidebar}
+        onShowRegister={onShowRegister}
+        onShowLogin={onShowLogin}
+        onShowProfile={onShowProfile}
+        onShowHome={onShowHome}
+        onShowAdvisors={onShowAdvisors}
+        onShowInvestors={onShowInvestors}
+        onMenuItemClick={closeSidebar}
+        user={user}
+        onLogout={onLogout}
+      />
 
-      {/* Mobile Menu Overlay - Close menu when clicking overlay */}
-      {isMobileMenuOpen && (
-        <div className={styles.mobileMenuOverlay} onClick={closeMobileMenu} />
-      )}
+      {/* Main Content Area */}
+      <div className={styles.mainContent}>
+        {/* Mobile Top Bar */}
+        <TopBar onMenuClick={openSidebar} />
 
-      {/* Main 3-Column Flex Layout - Centered Container */}
-      <div className={styles.centeredWrapper}>
-        <div className={styles.mainGrid}>
-          {/* Left Sidebar - Desktop Only / Mobile with Toggle */}
-          <div className={`${styles.leftColumn} ${isMobileMenuOpen ? styles.mobileMenuVisible : ''}`}>
-            <Sidebar onShowRegister={onShowRegister} onMenuItemClick={closeMobileMenu} onShowLogin={onShowLogin} />
-          </div>
-
-          {/* Center Feed Column */}
-          <main className={styles.centerColumn}>
+        {/* Feed Content or Profile Page */}
+        {showProfile ? (
+          <ProfilePage user={user} onShowAdvisors={onShowAdvisors} />
+        ) : showAdvisors ? (
+          <AdvisorsPage />
+        ) : showInvestors ? (
+          <InvestorDiscovery />
+        ) : (
+          <>
             <FeedHeader />
             <div className={styles.feedContainer}>
               {mockStartups.map((startup) => (
@@ -50,21 +64,22 @@ function MainLayout({ onShowRegister, onShowLogin, user, onLogout, onOpenDashboa
                 />
               ))}
             </div>
-          </main>
-
-          {/* Right Panel - Desktop Only */}
-          <div className={styles.rightColumn}>
-            <RightPanel 
-              user={user}
-              onLogout={onLogout}
-              onOpenDashboard={onOpenDashboard}
-            />
-          </div>
-        </div>
+          </>
+        )}
       </div>
 
+      {/* Right Panel - Desktop Only */}
+      <RightPanel />
+
       {/* Mobile Bottom Navigation */}
-      <BottomNav />
+      <BottomNav
+        user={user}
+        onShowProfile={onShowProfile}
+        onShowHome={onShowHome}
+        onShowAdvisors={onShowAdvisors}
+        onShowInvestors={onShowInvestors}
+        activeTab={showProfile ? 'Profile' : showAdvisors ? 'Advisors' : showInvestors ? 'Investors' : 'Home'}
+      />
     </div>
   );
 }

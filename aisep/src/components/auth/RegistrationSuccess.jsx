@@ -129,7 +129,7 @@ function RegistrationSuccess({ userRole, email, onBackHome }) {
         {/* Info Message */}
         <div className={styles.infoBox}>
           <p className={styles.infoText}>
-            💡 You'll receive an email notification once the review is complete. 
+            💡 You'll receive an email notification once the review is complete.
             Check your inbox for updates.
           </p>
         </div>
@@ -137,7 +137,7 @@ function RegistrationSuccess({ userRole, email, onBackHome }) {
         {/* Action Button */}
         <Button variant="primary" onClick={onBackHome} className={styles.actionButton}>
           <ArrowLeft size={16} />
-          <span>Back to Homepage</span>
+          <span>Back to Home</span>
         </Button>
       </div>
     </div>

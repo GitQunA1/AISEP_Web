@@ -1,0 +1,282 @@
+import { useState } from 'react';
+import { Calendar, MapPin } from 'lucide-react';
+import styles from './ProfilePage.module.css';
+import StartupAdvisorsList from '../components/profile/StartupAdvisorsList';
+
+/**
+ * ProfilePage - Twitter/X-style profile page with role-specific tabs
+ */
+export default function ProfilePage({ user, onShowAdvisors }) {
+    const [activeTab, setActiveTab] = useState('overview');
+
+    if (!user) {
+        return (
+            <div className={styles.container}>
+                <div className={styles.message}>Please log in to view your profile</div>
+            </div>
+        );
+    }
+
+    // Role-specific tabs
+    const getTabs = () => {
+        const baseTabs = [
+            { id: 'overview', label: 'Overview' },
+            { id: 'profile', label: 'Profile' },
+        ];
+
+        if (user.role === 'startup') {
+            return [
+                ...baseTabs,
+                { id: 'documents', label: 'Documents' },
+                { id: 'evaluation', label: 'AI Score' },
+                { id: 'advisors', label: 'Advisors' },
+            ];
+        }
+
+        return baseTabs;
+    };
+
+    const tabs = getTabs();
+
+    // Generate @handle from name or email
+    const handle = user.email ? `@${user.email.split('@')[0]}` : `@${user.name.toLowerCase().replace(/\s+/g, '')}`;
+
+    // Mock data
+    const joinDate = 'February 2024';
+    const following = 42;
+    const followers = 128;
+
+    return (
+        <div className={styles.container}>
+            {/* Cover Banner */}
+            <div className={styles.coverBanner}></div>
+
+            {/* Profile Header */}
+            <div className={styles.profileHeader}>
+                <div className={styles.avatarSection}>
+                    <div className={styles.avatar}>
+                        <span>{user.name.charAt(0).toUpperCase()}</span>
+                    </div>
+                </div>
+
+                <div className={styles.profileInfo}>
+                    <div className={styles.nameSection}>
+                        <h1 className={styles.name}>{user.name}</h1>
+                        <div className={styles.handle}>{handle}</div>
+                    </div>
+
+                    <div className={styles.bio}>
+                        {user.role === 'startup' && user.companyName && (
+                            <p>Building {user.companyName} | Innovating in AI-powered solutions</p>
+                        )}
+                        {user.role === 'investor' && <p>Investor | Looking for promising AI startups</p>}
+                        {user.role === 'advisor' && <p>Advisor | Helping startups scale and succeed</p>}
+                    </div>
+
+                    <div className={styles.metadata}>
+                        <div className={styles.metaItem}>
+                            <Calendar size={16} />
+                            <span>Joined {joinDate}</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Tabs */}
+            <div className={styles.tabs}>
+                {tabs.map((tab) => (
+                    <button
+                        key={tab.id}
+                        className={`${styles.tab} ${activeTab === tab.id ? styles.active : ''}`}
+                        onClick={() => setActiveTab(tab.id)}
+                    >
+                        {tab.label}
+                    </button>
+                ))}
+            </div>
+
+            {/* Tab Content */}
+            <div className={styles.tabContent}>
+                {activeTab === 'overview' && <OverviewTab user={user} />}
+                {activeTab === 'profile' && <ProfileTab user={user} />}
+                {activeTab === 'documents' && <DocumentsTab user={user} />}
+                {activeTab === 'evaluation' && <EvaluationTab user={user} />}
+                {activeTab === 'advisors' && <AdvisorsTab user={user} onShowAdvisors={onShowAdvisors} />}
+            </div>
+        </div>
+    );
+}
+
+// Tab Components (inline for now, can be split later)
+
+function OverviewTab({ user }) {
+    return (
+        <div className={styles.overview}>
+            <div className={styles.statsGrid}>
+                <div className={styles.statCard}>
+                    <div className={styles.cardValue}>42</div>
+                    <div className={styles.cardLabel}>Profile Views</div>
+                </div>
+                <div className={styles.statCard}>
+                    <div className={styles.cardValue}>8</div>
+                    <div className={styles.cardLabel}>Interests</div>
+                </div>
+                {user.role === 'startup' && (
+                    <>
+                        <div className={styles.statCard}>
+                            <div className={styles.cardValue}>3</div>
+                            <div className={styles.cardLabel}>Requests</div>
+                        </div>
+                        <div className={styles.statCard}>
+                            <div className={styles.cardValue}>75</div>
+                            <div className={styles.cardLabel}>AI Score</div>
+                        </div>
+                    </>
+                )}
+                {user.role === 'investor' && (
+                    <>
+                        <div className={styles.statCard}>
+                            <div className={styles.cardValue}>12</div>
+                            <div className={styles.cardLabel}>Investments</div>
+                        </div>
+                        <div className={styles.statCard}>
+                            <div className={styles.cardValue}>$2.5M</div>
+                            <div className={styles.cardLabel}>Invested</div>
+                        </div>
+                    </>
+                )}
+                {user.role === 'advisor' && (
+                    <>
+                        <div className={styles.statCard}>
+                            <div className={styles.cardValue}>15</div>
+                            <div className={styles.cardLabel}>Active Clients</div>
+                        </div>
+                        <div className={styles.statCard}>
+                            <div className={styles.cardValue}>98%</div>
+                            <div className={styles.cardLabel}>Success Rate</div>
+                        </div>
+                    </>
+                )}
+            </div>
+
+            <div className={styles.activity}>
+                <h3>Recent Activity</h3>
+                <ul className={styles.activityList}>
+                    <li>Investor John Smith viewed your profile</li>
+                    <li>Dr. Sarah Expert sent a consulting request</li>
+                    <li>Your AI evaluation was updated (Score: 75/100)</li>
+                    <li>Capital Ventures Fund showed interest</li>
+                </ul>
+            </div>
+        </div>
+    );
+}
+
+function ProfileTab({ user }) {
+    return (
+        <div className={styles.profileEdit}>
+            <h3>Edit Profile</h3>
+            <form className={styles.form}>
+                <div className={styles.formGroup}>
+                    <label>Name</label>
+                    <input type="text" defaultValue={user.name} />
+                </div>
+                {user.role === 'startup' && (
+                    <div className={styles.formGroup}>
+                        <label>Company Name</label>
+                        <input type="text" defaultValue={user.companyName} />
+                    </div>
+                )}
+                <div className={styles.formGroup}>
+                    <label>Bio</label>
+                    <textarea rows={4} placeholder="Tell us about yourself..." />
+                </div>
+                <button type="submit" className={styles.saveBtn}>Save Changes</button>
+            </form>
+        </div>
+    );
+}
+
+function DocumentsTab({ user }) {
+    return (
+        <div className={styles.documents}>
+            <h3>Documents & IP</h3>
+            <div className={styles.uploadBox}>
+                <input type="file" id="docUpload" multiple style={{ display: 'none' }} />
+                <label htmlFor="docUpload" className={styles.uploadLabel}>
+                    📤 Upload documents
+                </label>
+                <p>Supported: PDF, DOC, DOCX, PPT</p>
+            </div>
+
+            <div className={styles.documentsList}>
+                <h4>Uploaded Documents</h4>
+                <div className={styles.documentItem}>
+                    <span>📋 Business Plan 2024.pdf</span>
+                    <div className={styles.documentActions}>
+                        <button>View</button>
+                        <button>Verify</button>
+                    </div>
+                </div>
+                <div className={styles.documentItem}>
+                    <span>🔐 Patent Application.docx</span>
+                    <div className={styles.documentActions}>
+                        <button>View</button>
+                        <button>Verify</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function EvaluationTab({ user }) {
+    return (
+        <div className={styles.evaluation}>
+            <h3>AI Evaluation Score</h3>
+            <div className={styles.scoreCircle}>
+                <div className={styles.scoreValue}>75</div>
+                <div className={styles.scoreLabel}>/ 100</div>
+            </div>
+
+            <div className={styles.metrics}>
+                <div className={styles.metricRow}>
+                    <span>Market Size Potential</span>
+                    <div className={styles.progressBar}>
+                        <div className={styles.progress} style={{ width: '85%' }}></div>
+                    </div>
+                    <span>85/100</span>
+                </div>
+                <div className={styles.metricRow}>
+                    <span>Team Strength</span>
+                    <div className={styles.progressBar}>
+                        <div className={styles.progress} style={{ width: '72%' }}></div>
+                    </div>
+                    <span>72/100</span>
+                </div>
+                <div className={styles.metricRow}>
+                    <span>Innovation Factor</span>
+                    <div className={styles.progressBar}>
+                        <div className={styles.progress} style={{ width: '78%' }}></div>
+                    </div>
+                    <span>78/100</span>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function AdvisorsTab({ user, onShowAdvisors }) {
+    // Show the booking management for startups
+    if (user.role === 'startup') {
+        return <StartupAdvisorsList onExploreAdvisors={onShowAdvisors} />;
+    }
+
+    // For investors and advisors, show placeholder
+    return (
+        <div className={styles.message}>
+            <h3>Coming Soon</h3>
+            <p>This feature is currently under development.</p>
+        </div>
+    );
+}

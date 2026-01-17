@@ -169,7 +169,7 @@
 
 /* Demo Dropdown Button - Hidden on mobile */
 .demoDropdownBtn {
-  display: none;
+  display: flex;
   position: absolute;
   right: 12px;
   top: 50%;
@@ -248,8 +248,8 @@
 
 /* --- BUTTONS --- */
 .loginButton {
-  background-color: var(--text-primary);
-  color: var(--bg-primary);
+  background-color: var(--primary-blue);
+  color: white;
   border: none;
   border-radius: 9999px;
   padding: 12px;
@@ -380,10 +380,6 @@
   }
 
   .desktopBackButton {
-    display: flex;
-  }
-
-  .demoDropdownBtn {
     display: flex;
   }
 

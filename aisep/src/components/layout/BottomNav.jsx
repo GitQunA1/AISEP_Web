@@ -1,27 +1,57 @@
 import React from 'react';
-import { Home, Search, Users, User } from 'lucide-react';
+import { Home, Search, TrendingUp, Users, User } from 'lucide-react';
 import styles from './BottomNav.module.css';
 
 /**
  * BottomNav Component - Bottom navigation bar (Mobile only)
  * Contains main navigation icons at the bottom of screen
  */
-function BottomNav() {
+function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInvestors, activeTab }) {
   const navItems = [
     { icon: Home, label: 'Home', href: '#' },
     { icon: Search, label: 'Explore', href: '#' },
+    { icon: TrendingUp, label: 'Investors', href: '#' },
     { icon: Users, label: 'Advisors', href: '#' },
     { icon: User, label: 'Profile', href: '#' },
   ];
 
+  const handleClick = (e, label) => {
+    e.preventDefault();
+    if (label === 'Home' && onShowHome) {
+      onShowHome();
+    }
+    if (label === 'Profile' && onShowProfile) {
+      onShowProfile();
+    }
+    if (label === 'Advisors' && onShowAdvisors) {
+      onShowAdvisors();
+    }
+    if (label === 'Investors' && onShowInvestors) {
+      onShowInvestors();
+    }
+  };
+
   return (
     <nav className={styles.bottomNav}>
-      {navItems.map((item) => (
-        <a key={item.label} href={item.href} className={styles.navButton}>
-          <item.icon size={24} />
-          <span className={styles.label}>{item.label}</span>
-        </a>
-      ))}
+      {navItems
+        .filter(item => {
+          // Hide Profile when user is not logged in
+          if (item.label === 'Profile' && !user) {
+            return false;
+          }
+          return true;
+        })
+        .map((item) => (
+          <a
+            key={item.label}
+            href={item.href}
+            className={`${styles.navButton} ${activeTab === item.label ? styles.active : ''}`}
+            onClick={(e) => handleClick(e, item.label)}
+          >
+            <item.icon size={24} />
+            <span className={styles.label}>{item.label}</span>
+          </a>
+        ))}
     </nav>
   );
 }

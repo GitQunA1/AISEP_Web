@@ -31,6 +31,11 @@
   background-color: rgba(29, 155, 240, 0.1);
 }
 
+.navButton.active {
+  color: var(--primary-blue);
+  font-weight: 700;
+}
+
 .label {
   font-size: 10px;
   font-weight: 600;
