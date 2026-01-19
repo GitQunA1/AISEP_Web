@@ -16,12 +16,34 @@ import InvestorDiscovery from '../investors/InvestorDiscovery';
  * Handles responsive 3-column flex layout (desktop) vs single column (mobile)
  * Includes sticky sidebars and scrollable feed
  */
-function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, onShowAdvisors, onShowInvestors, user, onLogout, showProfile = false, showAdvisors = false, showInvestors = false }) {
+function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, onShowAdvisors, onShowInvestors, onShowDashboard, user, onLogout, showProfile = false, showAdvisors = false, showInvestors = false }) {
   const [isPremium] = useState(false); // Hardcoded as false - shows blur overlay
   const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile sidebar state
+  const [filteredStartups, setFilteredStartups] = useState(mockStartups);
+  const [activeFilters, setActiveFilters] = useState({
+    industry: '',
+    stage: '',
+    minScore: 0,
+    fundingStage: '',
+  });
 
   const openSidebar = () => setIsSidebarOpen(true);
   const closeSidebar = () => setIsSidebarOpen(false);
+
+  const handleFilterChange = (filters) => {
+    setActiveFilters(filters);
+    
+    // Apply filters to startups
+    const filtered = mockStartups.filter(startup => {
+      if (filters.industry && startup.industry !== filters.industry) return false;
+      if (filters.stage && startup.stage !== filters.stage) return false;
+      if (filters.minScore && startup.aiScore < filters.minScore) return false;
+      if (filters.fundingStage && startup.fundingStage !== filters.fundingStage) return false;
+      return true;
+    });
+    
+    setFilteredStartups(filtered);
+  };
 
   return (
     <div className={styles.layoutContainer}>
@@ -35,6 +57,7 @@ function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, on
         onShowHome={onShowHome}
         onShowAdvisors={onShowAdvisors}
         onShowInvestors={onShowInvestors}
+        onShowDashboard={onShowDashboard}
         onMenuItemClick={closeSidebar}
         user={user}
         onLogout={onLogout}
@@ -54,15 +77,25 @@ function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, on
           <InvestorDiscovery />
         ) : (
           <>
-            <FeedHeader />
+            <FeedHeader 
+              user={user}
+              onFilterChange={handleFilterChange}
+            />
             <div className={styles.feedContainer}>
-              {mockStartups.map((startup) => (
-                <StartupCard
-                  key={startup.id}
-                  startup={startup}
-                  isPremium={isPremium}
-                />
-              ))}
+              {filteredStartups.length > 0 ? (
+                filteredStartups.map((startup) => (
+                  <StartupCard
+                    key={startup.id}
+                    startup={startup}
+                    isPremium={isPremium}
+                    user={user}
+                  />
+                ))
+              ) : (
+                <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
+                  <p>No projects found matching your filters</p>
+                </div>
+              )}
             </div>
           </>
         )}
@@ -78,6 +111,7 @@ function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, on
         onShowHome={onShowHome}
         onShowAdvisors={onShowAdvisors}
         onShowInvestors={onShowInvestors}
+        onShowDashboard={onShowDashboard}
         activeTab={showProfile ? 'Profile' : showAdvisors ? 'Advisors' : showInvestors ? 'Investors' : 'Home'}
       />
     </div>

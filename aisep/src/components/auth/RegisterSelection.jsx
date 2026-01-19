@@ -1,10 +1,10 @@
 import React from 'react';
-import { ArrowLeft, Rocket, TrendingUp, Award } from 'lucide-react';
+import { ArrowLeft, Rocket, TrendingUp, Award, Shield } from 'lucide-react';
 import styles from './RegisterSelection.module.css';
 
 /**
  * RegisterSelection Component
- * Allows users to select their role (Founder, Investor, Advisor).
+ * Allows users to select their role (Founder, Investor, Advisor, Operation Staff).
  * Responsive Design: Stacked on Mobile, Grid on Desktop.
  */
 function RegisterSelection({ onBack, onRoleSelect }) {
@@ -12,7 +12,7 @@ function RegisterSelection({ onBack, onRoleSelect }) {
   // Role Data definition
   const roles = [
     {
-      id: 'founder',
+      id: 'startup',
       icon: Rocket,
       title: 'Founder / Startup',
       description: 'Submit your project, protect your idea with blockchain, and get AI evaluation.',
@@ -28,6 +28,12 @@ function RegisterSelection({ onBack, onRoleSelect }) {
       icon: Award,
       title: 'Advisor',
       description: 'Monetize your expertise by auditing startups and offering professional consultation.',
+    },
+    {
+      id: 'operation_staff',
+      icon: Shield,
+      title: 'Operation Staff',
+      description: 'Manage platform operations, verify documents, and approve user registrations.',
     },
   ];
 

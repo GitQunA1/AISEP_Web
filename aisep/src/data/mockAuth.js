@@ -27,6 +27,36 @@ export const mockAccounts = [
     companyName: 'Business Advisory',
     avatar: '👨‍💼',
   },
+  {
+    id: 'staff-001',
+    email: 'staff1@operationteam.com',
+    password: 'Staff@123',
+    role: 'operation_staff',
+    name: 'Anna Chen',
+    companyName: 'Operation Team',
+    department: 'Project Review',
+    avatar: '👩‍💼',
+  },
+  {
+    id: 'staff-002',
+    email: 'staff2@operationteam.com',
+    password: 'Staff@123',
+    role: 'operation_staff',
+    name: 'Mark Johnson',
+    companyName: 'Operation Team',
+    department: 'User Verification',
+    avatar: '👨‍💼',
+  },
+  {
+    id: 'staff-003',
+    email: 'admin@operationteam.com',
+    password: 'Admin@123',
+    role: 'operation_staff',
+    name: 'Lisa Admin',
+    companyName: 'Operation Team',
+    department: 'Administration',
+    avatar: '👩‍💼',
+  },
 ];
 
 // Simulate login - return user data if credentials match
