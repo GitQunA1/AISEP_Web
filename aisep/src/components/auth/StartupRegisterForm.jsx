@@ -1,270 +1,248 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
-import FileUpload from '../common/FileUpload';
-import styles from './RegisterForms.module.css';
+import { Eye, EyeOff, Loader, ChevronLeft } from 'lucide-react';
+import styles from './RegistrationUnique.module.css';
 
 /**
- * StartupRegisterForm Component
- * Refactored to include Contact Info (Phone) and improved layout
+ * StartupRegisterForm - Simplified credential collection
+ * Only collects: Full Name, Email, Password
  */
 function StartupRegisterForm({ onBack, onComplete }) {
-  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    // Step 1: Account & Basic Info
-    startupName: '',
+    fullName: '',
     email: '',
-    phone: '',          // ADDED
     password: '',
-    website: '',
-    country: '',
-    city: '',
-    logo: null,
-
-    // Step 2: Business Details
-    industry: '',
-    stage: '',
-    problemStatement: '',
-    solutionDescription: '',
-
-    // Step 3: Market & Team
-    targetCustomers: '',
-    revenue: '',
-    teamSize: '',
-
-    // Step 4: Documents
-    pitchDeck: null,
-    businessPlan: null,
+    confirmPassword: '',
   });
 
   const [errors, setErrors] = useState({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const industries = ['Fintech', 'HealthTech', 'EduTech', 'E-commerce', 'SaaS', 'AI/ML', 'Blockchain', 'Other'];
-  const stages = ['Idea', 'MVP', 'Growth'];
-
-  // --- Handlers ---
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
-  };
-
-  const handleFileSelect = (field, file) => {
-    setFormData((prev) => ({ ...prev, [field]: file }));
-    if (field === 'pitchDeck' && errors.pitchDeck) setErrors((prev) => ({ ...prev, pitchDeck: '' }));
-  };
-
-  // --- Validation ---
-  const validateStep = () => {
+  // Validation
+  const validateForm = () => {
     const newErrors = {};
-    if (currentStep === 1) {
-      if (!formData.startupName) newErrors.startupName = 'Startup Name is required';
-      if (!formData.email) newErrors.email = 'Email is required';
-      if (!formData.phone) newErrors.phone = 'Phone Number is required';
-      if (!formData.password) newErrors.password = 'Password is required';
-      if (!formData.country) newErrors.country = 'Country is required';
+
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = 'Full name is required';
     }
-    if (currentStep === 2) {
-      if (!formData.industry) newErrors.industry = 'Industry is required';
-      if (!formData.stage) newErrors.stage = 'Stage is required';
-      if (!formData.problemStatement) newErrors.problemStatement = 'Problem statement is required';
+
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Invalid email format';
     }
-    if (currentStep === 4) {
-      if (!formData.pitchDeck) newErrors.pitchDeck = 'Pitch deck is required';
+
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
     }
+
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Passwords do not match';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleNext = () => { if (validateStep()) setCurrentStep((prev) => prev + 1); };
-  const handlePrevious = () => { setCurrentStep((prev) => prev - 1); };
-  const handleSubmit = () => { if (validateStep()) onComplete && onComplete(formData); };
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    setIsLoading(true);
+
+    // Simulate API call
+    setTimeout(() => {
+      setIsLoading(false);
+      // Simulate success response
+      const mockResponse = { ...formData, role: 'Startup' };
+      onComplete && onComplete(mockResponse);
+    }, 1500);
+  };
+
+  const isFormValid =
+    formData.fullName.trim() &&
+    formData.email.trim() &&
+    formData.password.length >= 8 &&
+    formData.password === formData.confirmPassword;
 
   return (
-    <div className={styles.formCard}>
-      
-      {/* HEADER */}
-      <div className={styles.cardHeader}>
-        <div className={styles.progressBar}>
-          <div className={styles.progressFill} style={{ width: `${(currentStep / 4) * 100}%` }} />
+    <div className={styles.reg_formCard}>
+      {/* Header */}
+      <div className={styles.reg_cardHeader}>
+        <div className={styles.reg_progressBar}>
+          <div className={styles.reg_progressFill} style={{ width: '100%' }} />
         </div>
-        <p className={styles.stepIndicator}>Step {currentStep} of 4</p>
+        <p className={styles.reg_stepIndicator}>Create Your Account</p>
       </div>
 
-      {/* BODY (Scrollable) */}
-      <div className={styles.cardBody}>
-        
-        {/* STEP 1: Account & Contact */}
-        {currentStep === 1 && (
-          <div className={styles.stepContainer}>
-            <div>
-              <h2 className={styles.stepTitle}>Let's get started</h2>
-              <p className={styles.stepSubtitle}>Create your startup account and contact details</p>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Startup Name <span className={styles.required}>*</span></label>
-              <input type="text" name="startupName" value={formData.startupName} onChange={handleInputChange} 
-                className={`${styles.input} ${errors.startupName ? styles.inputError : ''}`} placeholder="e.g., TechVenture Inc." />
-              {errors.startupName && <p className={styles.errorText}>{errors.startupName}</p>}
-            </div>
-
-            <div className={styles.twoColumnGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Email Address <span className={styles.required}>*</span></label>
-                <input type="email" name="email" value={formData.email} onChange={handleInputChange} 
-                  className={`${styles.input} ${errors.email ? styles.inputError : ''}`} placeholder="founder@startup.com" />
-                {errors.email && <p className={styles.errorText}>{errors.email}</p>}
-              </div>
-              
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Phone Number <span className={styles.required}>*</span></label>
-                <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange} 
-                  className={`${styles.input} ${errors.phone ? styles.inputError : ''}`} placeholder="+1 (555) 000-0000" />
-                {errors.phone && <p className={styles.errorText}>{errors.phone}</p>}
-              </div>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Password <span className={styles.required}>*</span></label>
-              <input type="password" name="password" value={formData.password} onChange={handleInputChange} 
-                className={`${styles.input} ${errors.password ? styles.inputError : ''}`} placeholder="••••••••" />
-              {errors.password && <p className={styles.errorText}>{errors.password}</p>}
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Website URL</label>
-              <input type="text" name="website" value={formData.website} onChange={handleInputChange} 
-                className={styles.input} placeholder="https://yourstartup.com" />
-            </div>
-
-            <div className={styles.twoColumnGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Country <span className={styles.required}>*</span></label>
-                <input type="text" name="country" value={formData.country} onChange={handleInputChange} 
-                  className={`${styles.input} ${errors.country ? styles.inputError : ''}`} placeholder="Vietnam" />
-                 {errors.country && <p className={styles.errorText}>{errors.country}</p>}
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>City</label>
-                <input type="text" name="city" value={formData.city} onChange={handleInputChange} 
-                  className={styles.input} placeholder="Ho Chi Minh" />
-              </div>
-            </div>
+      {/* Body */}
+      <div className={styles.reg_cardBody}>
+        <div className={styles.reg_stepContainer}>
+          <div>
+            <h2 className={styles.reg_stepTitle}>Welcome to AISEP</h2>
+            <p className={styles.reg_stepSubtitle}>Join as a Founder / Startup</p>
           </div>
-        )}
 
-        {/* STEP 2: Business Details */}
-        {currentStep === 2 && (
-          <div className={styles.stepContainer}>
-            <div>
-              <h2 className={styles.stepTitle}>Business Details</h2>
-              <p className={styles.stepSubtitle}>Tell us about your solution</p>
+          <form onSubmit={handleSubmit} className={styles.reg_Form}>
+            {/* Full Name */}
+            <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
+              <label htmlFor="fullName" className={styles.reg_label}>
+                Full Name <span className={styles.reg_required}>*</span>
+              </label>
+              <input
+                id="fullName"
+                name="fullName"
+                type="text"
+                value={formData.fullName}
+                onChange={handleInputChange}
+                className={`${styles.reg_input} ${errors.fullName ? styles.reg_inputError : ''}`}
+                placeholder="Enter your full name"
+                disabled={isLoading}
+              />
+              {errors.fullName && <p className={styles.reg_errorText}>{errors.fullName}</p>}
             </div>
 
-            <div className={styles.twoColumnGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Industry <span className={styles.required}>*</span></label>
-                <select name="industry" value={formData.industry} onChange={handleInputChange} 
-                  className={`${styles.select} ${errors.industry ? styles.inputError : ''}`}>
-                  <option value="">Select industry</option>
-                  {industries.map(i => <option key={i} value={i}>{i}</option>)}
-                </select>
-                {errors.industry && <p className={styles.errorText}>{errors.industry}</p>}
+            {/* Email */}
+            <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
+              <label htmlFor="email" className={styles.reg_label}>
+                Email Address <span className={styles.reg_required}>*</span>
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className={`${styles.reg_input} ${errors.email ? styles.reg_inputError : ''}`}
+                placeholder="you@example.com"
+                disabled={isLoading}
+              />
+              {errors.email && <p className={styles.reg_errorText}>{errors.email}</p>}
+            </div>
+
+            {/* Password */}
+            <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
+              <label htmlFor="password" className={styles.reg_label}>
+                Password <span className={styles.reg_required}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={`${styles.reg_input} ${errors.password ? styles.reg_inputError : ''}`}
+                  placeholder="Minimum 8 characters"
+                  disabled={isLoading}
+                  style={{ paddingRight: '48px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
-              
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Stage <span className={styles.required}>*</span></label>
-                 <select name="stage" value={formData.stage} onChange={handleInputChange} 
-                  className={`${styles.select} ${errors.stage ? styles.inputError : ''}`}>
-                  <option value="">Select stage</option>
-                  {stages.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                {errors.stage && <p className={styles.errorText}>{errors.stage}</p>}
+              {errors.password && <p className={styles.reg_errorText}>{errors.password}</p>}
+            </div>
+
+            {/* Confirm Password */}
+            <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
+              <label htmlFor="confirmPassword" className={styles.reg_label}>
+                Confirm Password <span className={styles.reg_required}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className={`${styles.reg_input} ${errors.confirmPassword ? styles.reg_inputError : ''}`}
+                  placeholder="Re-enter password"
+                  disabled={isLoading}
+                  style={{ paddingRight: '48px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
               </div>
+              {errors.confirmPassword && <p className={styles.reg_errorText}>{errors.confirmPassword}</p>}
             </div>
 
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Problem Statement <span className={styles.required}>*</span></label>
-              <textarea name="problemStatement" value={formData.problemStatement} onChange={handleInputChange} 
-                className={`${styles.textarea} ${errors.problemStatement ? styles.inputError : ''}`} 
-                placeholder="What core problem are you solving? (Max 200 words)" maxLength={1000} />
-              <p className={styles.charCount}>{formData.problemStatement.length} chars</p>
-              {errors.problemStatement && <p className={styles.errorText}>{errors.problemStatement}</p>}
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Solution Description</label>
-              <textarea name="solutionDescription" value={formData.solutionDescription} onChange={handleInputChange} 
-                className={styles.textarea} placeholder="How does your product solve this?" />
-            </div>
-          </div>
-        )}
-
-        {/* STEP 3: Market & Team */}
-        {currentStep === 3 && (
-          <div className={styles.stepContainer}>
-            <div>
-              <h2 className={styles.stepTitle}>Market & Team</h2>
-              <p className={styles.stepSubtitle}>Define your opportunity</p>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Target Customers</label>
-              <input type="text" name="targetCustomers" value={formData.targetCustomers} onChange={handleInputChange} 
-                className={styles.input} placeholder="e.g., Gen Z, SMEs, Enterprise" />
-            </div>
-
-            <div className={styles.twoColumnGrid}>
-               <div className={styles.formGroup}>
-                <label className={styles.label}>Expected Revenue</label>
-                <input type="text" name="revenue" value={formData.revenue} onChange={handleInputChange} 
-                  className={styles.input} placeholder="e.g. $500k ARR" />
+            {/* Submit Error */}
+            {errors.submit && (
+              <div className={styles.reg_submitError}>
+                {errors.submit}
               </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Team Size</label>
-                <input type="number" name="teamSize" value={formData.teamSize} onChange={handleInputChange} 
-                  className={styles.input} placeholder="e.g. 5" min="1" />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* STEP 4: Documents */}
-        {currentStep === 4 && (
-          <div className={styles.stepContainer}>
-            <div>
-              <h2 className={styles.stepTitle}>Verification</h2>
-              <p className={styles.stepSubtitle}>Upload documents for AI scoring</p>
-            </div>
-
-            <FileUpload 
-              label="Pitch Deck (Required)" 
-              required 
-              onFileSelect={(f) => handleFileSelect('pitchDeck', f)} 
-              error={errors.pitchDeck} 
-            />
-
-            <FileUpload 
-              label="Business Plan (Optional)" 
-              onFileSelect={(f) => handleFileSelect('businessPlan', f)} 
-            />
-          </div>
-        )}
+            )}
+          </form>
+        </div>
       </div>
 
-      {/* FOOTER */}
-      <div className={styles.cardFooter}>
-        <button onClick={currentStep === 1 ? onBack : handlePrevious} className={styles.secondaryButton}>
-          <ChevronLeft size={20} />
-          <span>{currentStep === 1 ? 'Back' : 'Previous'}</span>
+      {/* Footer */}
+      <div className={styles.reg_cardFooter}>
+        <button onClick={onBack} className={styles.reg_secondaryButton} disabled={isLoading}>
+          <ChevronLeft size={20} /> Back
         </button>
-        
-        <button onClick={currentStep === 4 ? handleSubmit : handleNext} className={styles.primaryButton}>
-          <span>{currentStep === 4 ? 'Complete Registration' : 'Next Step'}</span>
-          {currentStep !== 4 && <ChevronRight size={20} />}
+        <button
+          onClick={handleSubmit}
+          className={styles.reg_primaryButton}
+          disabled={!isFormValid || isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} />
+              Creating account...
+            </>
+          ) : (
+            'Create Account'
+          )}
         </button>
       </div>
-
     </div>
   );
 }

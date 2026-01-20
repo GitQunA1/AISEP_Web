@@ -55,7 +55,7 @@ function FeedFilter({ startups = [], onFilterChange, user }) {
       [filterName]: value,
     };
     setFilters(newFilters);
-    
+
     // Call parent callback with filtered results
     if (onFilterChange) {
       onFilterChange(newFilters);
@@ -79,10 +79,7 @@ function FeedFilter({ startups = [], onFilterChange, user }) {
     value => value !== '' && value !== 0
   );
 
-  // Only show filters for investors
-  if (user?.role !== 'investor') {
-    return null;
-  }
+  // Filter is now available for all users
 
   return (
     <div className={styles.filterContainer}>

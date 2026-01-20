@@ -1,26 +1,26 @@
 /* Container */
+/* Container */
 .container {
-    background-color: var(--bg-primary);
+    background-color: transparent;
+    /* Transparent for card gap effect */
     min-height: 100vh;
     width: 100%;
-    max-width: 600px;
+    max-width: 680px;
+    /* Constrained stream width */
     margin: 0 auto;
+    padding-bottom: 60px;
+}
+
+.searchSection {
+    padding: var(--spacing-md);
+    background-color: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 16px;
+    /* Gap before list */
 }
 
 /* Header */
-.header {
-    position: sticky;
-    top: 0;
-    background-color: var(--bg-primary);
-    /* Changed from semi-transparent black to match FeedHeader */
-    z-index: 10;
-    padding: var(--spacing-lg);
-    /* Changed from 12px 16px to match FeedHeader */
-    border-bottom: 1px solid var(--border-color);
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-md);
-}
+/* Old Header Styles Removed - using FeedHeader */
 
 .headerTitle {
     font-size: var(--font-size-xl);
@@ -36,17 +36,19 @@
 
 .searchIcon {
     position: absolute;
-    left: 12px;
+    left: 16px;
     top: 50%;
     transform: translateY(-50%);
     color: var(--text-secondary);
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
 }
 
 .searchInput {
     width: 100%;
-    padding: 10px 10px 10px 40px;
+    height: 44px;
+    padding: 10px 10px 10px 50px !important;
+    /* Force padding */
     border-radius: 9999px;
     background-color: var(--bg-secondary);
     border: 1px solid transparent;
@@ -66,12 +68,16 @@
 .list {
     display: flex;
     flex-direction: column;
+    gap: 16px;
+    /* Separated cards */
 }
 
 .advisorItem {
     display: flex;
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-color);
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background-color: var(--bg-secondary);
     cursor: auto;
     transition: background-color 0.2s;
     gap: 12px;
@@ -197,5 +203,10 @@
     .container {
         border-right: none;
         border-left: none;
+    }
+
+    /* Add spacing for cards on mobile */
+    .list {
+        padding: 0 12px;
     }
 }

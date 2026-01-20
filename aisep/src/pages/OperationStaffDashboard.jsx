@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FileCheck, CheckCircle, AlertCircle, Users, Activity, Settings, Trash2, Download, Eye } from 'lucide-react';
-import styles from './OperationStaffDashboard.module.css';
+import styles from '../styles/SharedDashboard.module.css';
+import FeedHeader from '../components/feed/FeedHeader';
 
 /**
  * OperationStaffDashboard - Dashboard for Operation Staff
@@ -8,7 +9,7 @@ import styles from './OperationStaffDashboard.module.css';
  */
 export default function OperationStaffDashboard({ user }) {
     const [activeSection, setActiveSection] = useState('overview');
-    
+
     const [projectSubmissions, setProjectSubmissions] = useState([
         {
             id: 1,
@@ -35,7 +36,7 @@ export default function OperationStaffDashboard({ user }) {
             description: 'Automated marketing campaign optimizer using machine learning'
         }
     ]);
-    
+
     const [pendingDocuments, setPendingDocuments] = useState([
         {
             id: 1,
@@ -160,19 +161,19 @@ export default function OperationStaffDashboard({ user }) {
 
     return (
         <div className={styles.container}>
-            {/* Header */}
-            <div className={styles.header}>
-                <div className={styles.headerContent}>
-                    <h1 className={styles.title}>Operation Staff Dashboard</h1>
-                    <p className={styles.subtitle}>Welcome, {user?.name || 'Staff'}! Manage platform operations and approvals.</p>
-                </div>
-            </div>
+            {/* Unified Header */}
+            <FeedHeader
+                title="Operation Staff Dashboard"
+                subtitle={`Welcome, ${user?.name || 'Staff'}! Manage platform operations and approvals.`}
+                showFilter={false}
+                user={user}
+            />
 
             {/* Quick Stats */}
             <div className={styles.statsGrid}>
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#fef3c7' }}>
-                        <FileCheck size={24} color="#d97706" />
+                    <div className={`${styles.statIcon} ${styles.iconYellow}`}>
+                        <FileCheck size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.pendingDocuments}</div>
@@ -181,8 +182,8 @@ export default function OperationStaffDashboard({ user }) {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#dbeafe' }}>
-                        <Users size={24} color="#0284c7" />
+                    <div className={`${styles.statIcon} ${styles.iconBlue}`}>
+                        <Users size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.pendingApprovals}</div>
@@ -191,8 +192,8 @@ export default function OperationStaffDashboard({ user }) {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#fce7f3' }}>
-                        <AlertCircle size={24} color="#be185d" />
+                    <div className={`${styles.statIcon} ${styles.iconRed}`}>
+                        <AlertCircle size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.pendingRequests}</div>
@@ -201,8 +202,8 @@ export default function OperationStaffDashboard({ user }) {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#d1fae5' }}>
-                        <CheckCircle size={24} color="#059669" />
+                    <div className={`${styles.statIcon} ${styles.iconGreen}`}>
+                        <CheckCircle size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.verifiedDocuments}</div>
@@ -258,36 +259,32 @@ export default function OperationStaffDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>Project Submissions for Review</h3>
-                            <div className={styles.documentsList}>
+                            <div className={styles.list}>
                                 {projectSubmissions.filter(p => p.status === 'pending').map(project => (
-                                    <div key={project.id} className={styles.documentItem}>
-                                        <div className={styles.documentInfo}>
-                                            <div className={styles.documentHeader}>
-                                                <h4 className={styles.startupName}>{project.projectName}</h4>
-                                                <span style={{ fontSize: '12px', color: '#64748b' }}>
-                                                    by {project.startupName}
-                                                </span>
+                                    <div key={project.id} className={styles.listItem}>
+                                        <div className={styles.listContent}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                <h4 className={styles.listTitle}>{project.projectName}</h4>
+                                                <span className={styles.listMeta}>by {project.startupName}</span>
                                             </div>
-                                            <div className={styles.documentDetails}>
-                                                <div className={styles.documentName}>{project.tagline}</div>
-                                                <div className={styles.documentMeta}>
-                                                    Industry: {project.industry} | Stage: {project.stage} | Submitted: {project.submittedDate}
-                                                </div>
-                                                <div style={{ marginTop: '8px', fontSize: '13px', color: '#475569', lineHeight: '1.4' }}>
-                                                    {project.description}
-                                                </div>
+                                            <div className={styles.listSubtitle} style={{ marginBottom: '8px' }}>{project.tagline}</div>
+                                            <div className={styles.listMeta}>
+                                                Industry: {project.industry} | Stage: {project.stage} | Submitted: {project.submittedDate}
                                             </div>
+                                            <p style={{ marginTop: '8px', fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.4' }}>
+                                                {project.description}
+                                            </p>
                                         </div>
-                                        <div className={styles.documentActions}>
+                                        <div className={styles.listActions}>
                                             <button
                                                 onClick={() => handleApproveProject(project.id)}
-                                                className={styles.approveBtn}
+                                                className={styles.primaryBtn}
                                             >
                                                 ✓ Approve
                                             </button>
                                             <button
                                                 onClick={() => handleRejectProject(project.id)}
-                                                className={styles.rejectBtn}
+                                                className={styles.dangerBtn}
                                             >
                                                 ✗ Reject
                                             </button>
@@ -295,7 +292,7 @@ export default function OperationStaffDashboard({ user }) {
                                     </div>
                                 ))}
                                 {projectSubmissions.filter(p => p.status === 'pending').length === 0 && (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>
+                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                                         No pending project reviews
                                     </div>
                                 )}
@@ -303,21 +300,15 @@ export default function OperationStaffDashboard({ user }) {
 
                             {projectSubmissions.filter(p => p.status === 'approved').length > 0 && (
                                 <div style={{ marginTop: '24px' }}>
-                                    <h4 style={{ color: '#1e293b', marginBottom: '16px' }}>Approved Projects</h4>
-                                    <div className={styles.documentsList}>
+                                    <h4 className={styles.cardTitle} style={{ fontSize: '16px' }}>Approved Projects</h4>
+                                    <div className={styles.list}>
                                         {projectSubmissions.filter(p => p.status === 'approved').map(project => (
-                                            <div key={project.id} style={{ 
-                                                border: '1px solid #e2e8f0', 
-                                                borderRadius: '8px', 
-                                                padding: '12px 16px',
-                                                background: '#f0fdf4',
-                                                opacity: 0.8
-                                            }}>
-                                                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1e293b' }}>
-                                                    {project.projectName}
-                                                </div>
-                                                <div style={{ fontSize: '12px', color: '#65a30d', marginTop: '4px' }}>
-                                                    ✓ Approved - Published to mainboard
+                                            <div key={project.id} className={styles.listItem} style={{ background: 'rgba(23, 191, 99, 0.05)' }}>
+                                                <div className={styles.listContent}>
+                                                    <div className={styles.listTitle}>{project.projectName}</div>
+                                                    <div className={`${styles.badge} ${styles.badgeSuccess}`} style={{ marginTop: '4px' }}>
+                                                        ✓ Approved - Published to mainboard
+                                                    </div>
                                                 </div>
                                             </div>
                                         ))}
@@ -358,18 +349,24 @@ export default function OperationStaffDashboard({ user }) {
                             {/* Pending Items Summary */}
                             <div className={styles.card}>
                                 <h3 className={styles.cardTitle}>Pending Items</h3>
-                                <div className={styles.pendingList}>
-                                    <div className={styles.pendingItem}>
-                                        <span>Documents Awaiting Verification</span>
-                                        <span className={styles.badge}>{dashboardData.pendingDocuments}</span>
+                                <div className={styles.list}>
+                                    <div className={styles.listItem}>
+                                        <span className={styles.listTitle}>Documents Awaiting Verification</span>
+                                        <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: 'auto' }}>
+                                            {dashboardData.pendingDocuments}
+                                        </span>
                                     </div>
-                                    <div className={styles.pendingItem}>
-                                        <span>User Approvals Needed</span>
-                                        <span className={styles.badge}>{dashboardData.pendingApprovals}</span>
+                                    <div className={styles.listItem}>
+                                        <span className={styles.listTitle}>User Approvals Needed</span>
+                                        <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginLeft: 'auto' }}>
+                                            {dashboardData.pendingApprovals}
+                                        </span>
                                     </div>
-                                    <div className={styles.pendingItem}>
-                                        <span>Requests to Review</span>
-                                        <span className={styles.badge}>{dashboardData.pendingRequests}</span>
+                                    <div className={styles.listItem}>
+                                        <span className={styles.listTitle}>Requests to Review</span>
+                                        <span className={`${styles.badge} ${styles.badgeError}`} style={{ marginLeft: 'auto' }}>
+                                            {dashboardData.pendingRequests}
+                                        </span>
                                     </div>
                                 </div>
                             </div>
@@ -377,32 +374,32 @@ export default function OperationStaffDashboard({ user }) {
                             {/* Recent Activity */}
                             <div className={styles.card}>
                                 <h3 className={styles.cardTitle}>Recent Activity</h3>
-                                <div className={styles.activityList}>
-                                    <div className={styles.activityItem}>
-                                        <div className={styles.activityIcon}>
+                                <div className={styles.list}>
+                                    <div className={styles.listItem}>
+                                        <div className={`${styles.listIcon} ${styles.iconGreen}`}>
                                             <CheckCircle size={18} />
                                         </div>
-                                        <div className={styles.activityContent}>
-                                            <div>Document verified: Business Plan (TechStartup AI)</div>
-                                            <div className={styles.activityTime}>1 hour ago</div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>Document verified: Business Plan (TechStartup AI)</div>
+                                            <div className={styles.listMeta}>1 hour ago</div>
                                         </div>
                                     </div>
-                                    <div className={styles.activityItem}>
-                                        <div className={styles.activityIcon}>
+                                    <div className={styles.listItem}>
+                                        <div className={`${styles.listIcon} ${styles.iconBlue}`}>
                                             <Users size={18} />
                                         </div>
-                                        <div className={styles.activityContent}>
-                                            <div>User approved: John Investment (Investor)</div>
-                                            <div className={styles.activityTime}>3 hours ago</div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>User approved: John Investment (Investor)</div>
+                                            <div className={styles.listMeta}>3 hours ago</div>
                                         </div>
                                     </div>
-                                    <div className={styles.activityItem}>
-                                        <div className={styles.activityIcon}>
+                                    <div className={styles.listItem}>
+                                        <div className={`${styles.listIcon} ${styles.iconRed}`}>
                                             <AlertCircle size={18} />
                                         </div>
-                                        <div className={styles.activityContent}>
-                                            <div>Request rejected: Consulting request (FinApp)</div>
-                                            <div className={styles.activityTime}>5 hours ago</div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>Request rejected: Consulting request (FinApp)</div>
+                                            <div className={styles.listMeta}>5 hours ago</div>
                                         </div>
                                     </div>
                                 </div>
@@ -418,37 +415,39 @@ export default function OperationStaffDashboard({ user }) {
                             <h3 className={styles.cardTitle}>
                                 Document Verification Queue
                                 {dashboardData.pendingDocuments > 0 && (
-                                    <span className={styles.badge}>{dashboardData.pendingDocuments} Pending</span>
+                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
+                                        {dashboardData.pendingDocuments} Pending
+                                    </span>
                                 )}
                             </h3>
 
-                            <div className={styles.documentsList}>
+                            <div className={styles.list}>
                                 {pendingDocuments.map(doc => (
-                                    <div key={doc.id} className={styles.documentItem}>
-                                        <div className={styles.documentInfo}>
-                                            <div className={styles.documentHeader}>
-                                                <h4 className={styles.startupName}>{doc.startupName}</h4>
-                                                <span className={styles.founderName}>by {doc.founder}</span>
-                                            </div>
-                                            <div className={styles.documentDetails}>
-                                                <span className={styles.documentName}>📄 {doc.documentName}</span>
-                                                <span className={styles.documentMeta}>{doc.size} • {doc.uploadDate}</span>
+                                    <div key={doc.id} className={styles.listItem}>
+                                        <div className={styles.listContent}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    <h4 className={styles.listTitle}>{doc.startupName}</h4>
+                                                    <span className={styles.listMeta}>by {doc.founder}</span>
+                                                </div>
+                                                <span style={{ fontSize: '14px', color: 'var(--text-primary)' }}>📄 {doc.documentName}</span>
+                                                <span className={styles.listMeta}>{doc.size} • {doc.uploadDate}</span>
                                             </div>
                                         </div>
-                                        <div className={styles.documentActions}>
-                                            <button className={styles.viewBtn}>
+                                        <div className={styles.listActions}>
+                                            <button className={styles.secondaryBtn}>
                                                 <Eye size={16} /> View
                                             </button>
                                             {doc.status === 'pending' && (
                                                 <>
                                                     <button
-                                                        className={styles.approveBtn}
+                                                        className={styles.primaryBtn}
                                                         onClick={() => handleVerifyDocument(doc.id)}
                                                     >
                                                         ✓ Verify
                                                     </button>
                                                     <button
-                                                        className={styles.rejectBtn}
+                                                        className={styles.dangerBtn}
                                                         onClick={() => handleRejectDocument(doc.id)}
                                                     >
                                                         ✗ Reject
@@ -470,37 +469,39 @@ export default function OperationStaffDashboard({ user }) {
                             <h3 className={styles.cardTitle}>
                                 User Registration Approvals
                                 {dashboardData.pendingApprovals > 0 && (
-                                    <span className={styles.badge}>{dashboardData.pendingApprovals} Pending</span>
+                                    <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginLeft: '12px' }}>
+                                        {dashboardData.pendingApprovals} Pending
+                                    </span>
                                 )}
                             </h3>
 
-                            <div className={styles.approvalsList}>
+                            <div className={styles.list}>
                                 {pendingApprovals.map(approval => (
-                                    <div key={approval.id} className={styles.approvalItem}>
-                                        <div className={styles.approvalInfo}>
-                                            <div className={styles.approvalHeader}>
-                                                <h4 className={styles.userName}>{approval.name}</h4>
-                                                <span className={styles.roleRole}>{approval.role}</span>
+                                    <div key={approval.id} className={styles.listItem}>
+                                        <div className={styles.listContent}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                <h4 className={styles.listTitle}>{approval.name}</h4>
+                                                <span className={`${styles.badge} ${styles.badgePending}`}>{approval.role}</span>
                                             </div>
-                                            <div className={styles.approvalDetails}>
+                                            <div className={styles.listMeta} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                                 <span>Email: {approval.email}</span>
                                                 <span>Registered: {approval.registeredDate}</span>
-                                                <span className={`${styles.verificationStatus} ${styles[`status-${approval.verification}`]}`}>
-                                                    {approval.verification === 'verified' ? '✓ ID Verified' : '⚠ Awaiting Verification'}
+                                                <span style={{ color: approval.verification === 'verified' ? '#17bf63' : '#d97706', fontWeight: '600', marginTop: '4px' }}>
+                                                    {approval.verification === 'verified' ? '✓ ID Verified' : '⚠ Awaiting ID Verification'}
                                                 </span>
                                             </div>
                                         </div>
-                                        <div className={styles.approvalActions}>
+                                        <div className={styles.listActions}>
                                             {approval.status === 'pending' && (
                                                 <>
                                                     <button
-                                                        className={styles.approveBtn}
+                                                        className={styles.primaryBtn}
                                                         onClick={() => handleApproveUser(approval.id)}
                                                     >
                                                         Approve
                                                     </button>
                                                     <button
-                                                        className={styles.rejectBtn}
+                                                        className={styles.dangerBtn}
                                                         onClick={() => handleRejectUser(approval.id)}
                                                     >
                                                         Reject
@@ -522,35 +523,37 @@ export default function OperationStaffDashboard({ user }) {
                             <h3 className={styles.cardTitle}>
                                 Pending Requests
                                 {dashboardData.pendingRequests > 0 && (
-                                    <span className={styles.badge}>{dashboardData.pendingRequests} Pending</span>
+                                    <span className={`${styles.badge} ${styles.badgeError}`} style={{ marginLeft: '12px' }}>
+                                        {dashboardData.pendingRequests} Pending
+                                    </span>
                                 )}
                             </h3>
 
-                            <div className={styles.requestsList}>
+                            <div className={styles.list}>
                                 {pendingRequests.map(request => (
-                                    <div key={request.id} className={styles.requestItem}>
-                                        <div className={styles.requestInfo}>
-                                            <div className={styles.requestType}>
-                                                {request.requestType === 'consulting' ? '📚' : '🤝'} {request.requestType.charAt(0).toUpperCase() + request.requestType.slice(1)} Request
+                                    <div key={request.id} className={styles.listItem}>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listSubtitle} style={{ color: 'var(--primary-blue)', fontWeight: '700', marginBottom: '4px' }}>
+                                                {request.requestType === 'consulting' ? '📚 Consulting' : '🤝 Connection'} Request
                                             </div>
-                                            <h4>
+                                            <h4 className={styles.listTitle}>
                                                 {request.startupName}
                                                 {request.advisorName && ` + ${request.advisorName}`}
                                                 {request.investorName && ` + ${request.investorName}`}
                                             </h4>
-                                            <span className={styles.submittedDate}>Submitted: {request.submittedDate}</span>
+                                            <span className={styles.listMeta}>Submitted: {request.submittedDate}</span>
                                         </div>
-                                        <div className={styles.requestActions}>
+                                        <div className={styles.listActions}>
                                             {request.status === 'pending' && (
                                                 <>
                                                     <button
-                                                        className={styles.approveBtn}
+                                                        className={styles.primaryBtn}
                                                         onClick={() => handleApproveRequest(request.id)}
                                                     >
                                                         Approve
                                                     </button>
                                                     <button
-                                                        className={styles.rejectBtn}
+                                                        className={styles.dangerBtn}
                                                         onClick={() => handleRejectRequest(request.id)}
                                                     >
                                                         Reject
@@ -570,30 +573,30 @@ export default function OperationStaffDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>Platform Activity Monitor</h3>
-                            <div className={styles.activityMonitor}>
-                                <div className={styles.monitorItem}>
-                                    <span>Total User Logins Today</span>
-                                    <strong>143</strong>
+                            <div className={styles.metricsGrid}>
+                                <div className={styles.metricItem}>
+                                    <span className={styles.metricLabel}>Total User Logins Today</span>
+                                    <strong className={styles.metricValue}>143</strong>
                                 </div>
-                                <div className={styles.monitorItem}>
-                                    <span>Documents Uploaded</span>
-                                    <strong>24</strong>
+                                <div className={styles.metricItem}>
+                                    <span className={styles.metricLabel}>Documents Uploaded</span>
+                                    <strong className={styles.metricValue}>24</strong>
                                 </div>
-                                <div className={styles.monitorItem}>
-                                    <span>New Connections Made</span>
-                                    <strong>8</strong>
+                                <div className={styles.metricItem}>
+                                    <span className={styles.metricLabel}>New Connections Made</span>
+                                    <strong className={styles.metricValue}>8</strong>
                                 </div>
-                                <div className={styles.monitorItem}>
-                                    <span>Consulting Requests</span>
-                                    <strong>15</strong>
+                                <div className={styles.metricItem}>
+                                    <span className={styles.metricLabel}>Consulting Requests</span>
+                                    <strong className={styles.metricValue}>15</strong>
                                 </div>
-                                <div className={styles.monitorItem}>
-                                    <span>System Errors</span>
-                                    <strong>0</strong>
+                                <div className={styles.metricItem}>
+                                    <span className={styles.metricLabel}>System Errors</span>
+                                    <strong className={styles.metricValue}>0</strong>
                                 </div>
-                                <div className={styles.monitorItem}>
-                                    <span>Flagged Issues</span>
-                                    <strong>2</strong>
+                                <div className={styles.metricItem}>
+                                    <span className={styles.metricLabel}>Flagged Issues</span>
+                                    <strong className={styles.metricValue}>2</strong>
                                 </div>
                             </div>
                         </div>

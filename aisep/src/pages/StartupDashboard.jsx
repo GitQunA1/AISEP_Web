@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
 import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye } from 'lucide-react';
-import styles from './StartupDashboard.module.css';
+import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
+import SuccessModal from '../components/common/SuccessModal';
+import FeedHeader from '../components/feed/FeedHeader';
 
 /**
  * StartupDashboard - Comprehensive dashboard for startup founders
@@ -10,6 +12,7 @@ import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoFo
 export default function StartupDashboard({ user }) {
     const [activeSection, setActiveSection] = useState('overview');
     const [showCompleteInfoForm, setShowCompleteInfoForm] = useState(false);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [project, setProject] = useState({
         id: 1,
         name: 'AI Analytics Platform',
@@ -96,19 +99,19 @@ export default function StartupDashboard({ user }) {
 
     return (
         <div className={styles.container}>
-            {/* Header */}
-            <div className={styles.header}>
-                <div className={styles.headerContent}>
-                    <h1 className={styles.title}>Startup Dashboard</h1>
-                    <p className={styles.subtitle}>Welcome, {user?.name || 'Founder'}! Here's your startup overview.</p>
-                </div>
-            </div>
+            {/* Unified Header */}
+            <FeedHeader
+                title="Dashboard"
+                subtitle={`Welcome, ${user?.name || 'Founder'}! Here's your startup overview.`}
+                showFilter={false} // No filter for dashboard
+                user={user}
+            />
 
             {/* Quick Stats */}
             <div className={styles.statsGrid}>
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#e8f4f8' }}>
-                        <Eye size={24} color="#0891b2" />
+                    <div className={`${styles.statIcon} ${styles.iconCyan}`}>
+                        <Eye size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.profileViews}</div>
@@ -117,8 +120,8 @@ export default function StartupDashboard({ user }) {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#fef3c7' }}>
-                        <Users size={24} color="#d97706" />
+                    <div className={`${styles.statIcon} ${styles.iconYellow}`}>
+                        <Users size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.investorInterests}</div>
@@ -127,8 +130,8 @@ export default function StartupDashboard({ user }) {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#d1fae5' }}>
-                        <FileText size={24} color="#059669" />
+                    <div className={`${styles.statIcon} ${styles.iconGreen}`}>
+                        <FileText size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.documentsUploaded}</div>
@@ -137,8 +140,8 @@ export default function StartupDashboard({ user }) {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#ede9fe' }}>
-                        <TrendingUp size={24} color="#7c3aed" />
+                    <div className={`${styles.statIcon} ${styles.iconPurple}`}>
+                        <TrendingUp size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.aiScore}</div>
@@ -189,32 +192,21 @@ export default function StartupDashboard({ user }) {
 
             {/* Content Sections */}
             <div className={styles.content}>
-                {/* Complete Information Form */}
+                {/* Complete Information Form (Section View) */}
                 {activeSection === 'complete-info' && (
                     <div className={styles.section}>
-                        {showCompleteInfoForm ? (
-                            <CompleteStartupInfoForm
-                                onSubmit={(formData) => {
-                                    console.log('Complete startup info submitted:', formData);
-                                    setShowCompleteInfoForm(false);
-                                    // Here you would typically save to backend
-                                }}
-                                onCancel={() => setShowCompleteInfoForm(false)}
-                            />
-                        ) : (
-                            <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Complete Startup Information</h3>
-                                <p className={styles.cardDescription}>
-                                    Upload comprehensive information about your startup to help investors and advisors better understand your venture.
-                                </p>
-                                <button
-                                    onClick={() => setShowCompleteInfoForm(true)}
-                                    className={styles.primaryBtn}
-                                >
-                                    + Fill Out Complete Information
-                                </button>
-                            </div>
-                        )}
+                        <div className={styles.card}>
+                            <h3 className={styles.cardTitle}>Complete Startup Information</h3>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
+                                Upload comprehensive information about your startup to help investors and advisors better understand your venture.
+                            </p>
+                            <button
+                                onClick={() => setShowCompleteInfoForm(true)}
+                                className={styles.primaryBtn}
+                            >
+                                + Fill Out Complete Information
+                            </button>
+                        </div>
                     </div>
                 )}
 
@@ -233,6 +225,7 @@ export default function StartupDashboard({ user }) {
                                         ></div>
                                     </div>
                                     <div className={styles.progressText}>
+                                        <span>Progress</span>
                                         {dashboardData.profileCompletion}% Complete
                                     </div>
                                 </div>
@@ -240,6 +233,7 @@ export default function StartupDashboard({ user }) {
                                 <button
                                     onClick={() => setActiveSection('complete-info')}
                                     className={styles.linkBtn}
+                                    style={{ marginTop: '12px' }}
                                 >
                                     Fill out complete information →
                                 </button>
@@ -262,32 +256,32 @@ export default function StartupDashboard({ user }) {
                             {/* Recent Activity */}
                             <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
                                 <h3 className={styles.cardTitle}>Recent Activity</h3>
-                                <div className={styles.activityList}>
-                                    <div className={styles.activityItem}>
-                                        <div className={styles.activityIcon}>
+                                <div className={styles.list}>
+                                    <div className={styles.listItem}>
+                                        <div className={`${styles.listIcon} ${styles.iconCyan}`}>
                                             <Eye size={18} />
                                         </div>
-                                        <div className={styles.activityContent}>
-                                            <div className={styles.activityTitle}>Profile viewed by Sequoia Capital</div>
-                                            <div className={styles.activityTime}>2 hours ago</div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>Profile viewed by Sequoia Capital</div>
+                                            <div className={styles.listMeta}>2 hours ago</div>
                                         </div>
                                     </div>
-                                    <div className={styles.activityItem}>
-                                        <div className={styles.activityIcon}>
+                                    <div className={styles.listItem}>
+                                        <div className={`${styles.listIcon} ${styles.iconYellow}`}>
                                             <MessageSquare size={18} />
                                         </div>
-                                        <div className={styles.activityContent}>
-                                            <div className={styles.activityTitle}>New advisor request from Dr. Sarah Expert</div>
-                                            <div className={styles.activityTime}>5 hours ago</div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>New advisor request from Dr. Sarah Expert</div>
+                                            <div className={styles.listMeta}>5 hours ago</div>
                                         </div>
                                     </div>
-                                    <div className={styles.activityItem}>
-                                        <div className={styles.activityIcon}>
+                                    <div className={styles.listItem}>
+                                        <div className={`${styles.listIcon} ${styles.iconGreen}`}>
                                             <CheckCircle size={18} />
                                         </div>
-                                        <div className={styles.activityContent}>
-                                            <div className={styles.activityTitle}>Document "Business Plan" verified on blockchain</div>
-                                            <div className={styles.activityTime}>1 day ago</div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>Document "Business Plan" verified on blockchain</div>
+                                            <div className={styles.listMeta}>1 day ago</div>
                                         </div>
                                     </div>
                                 </div>
@@ -300,7 +294,7 @@ export default function StartupDashboard({ user }) {
                 {activeSection === 'documents' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <div className={styles.sectionHeader}>
+                            <div className={styles.cardHeader}>
                                 <h3 className={styles.cardTitle}>Document & IP Management</h3>
                                 <button className={styles.primaryBtn}>
                                     <PlusCircle size={18} />
@@ -308,32 +302,30 @@ export default function StartupDashboard({ user }) {
                                 </button>
                             </div>
 
-                            <div className={styles.documentsList}>
+                            <div className={styles.list}>
                                 {documents.map(doc => (
-                                    <div key={doc.id} className={styles.documentItem}>
-                                        <div className={styles.documentInfo}>
-                                            <div className={styles.documentName}>
-                                                <FileText size={20} />
-                                                <span>{doc.name}</span>
+                                    <div key={doc.id} className={styles.listItem}>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <FileText size={16} color="var(--primary-blue)" />
+                                                {doc.name}
                                             </div>
-                                            <div className={styles.documentMeta}>
-                                                <span className={styles.uploadDate}>Uploaded: {doc.uploadDate}</span>
-                                                <span className={`${styles.status} ${styles[`status-${doc.status}`]}`}>
+                                            <div className={styles.listMeta} style={{ marginTop: '4px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+                                                <span>Uploaded: {doc.uploadDate}</span>
+                                                <span className={`${styles.badge} ${doc.status === 'verified' ? styles.badgeSuccess : styles.badgePending}`}>
                                                     {doc.status === 'verified' ? '✓ Verified' : '⏳ Pending'}
                                                 </span>
                                             </div>
                                             {doc.hash && (
-                                                <div className={styles.hashContainer}>
-                                                    <span className={styles.hashLabel}>Blockchain Hash:</span>
-                                                    <code className={styles.hash}>{doc.hash}</code>
+                                                <div style={{ marginTop: '6px' }}>
+                                                    <code className={styles.codeBlock}>{doc.hash}</code>
                                                 </div>
                                             )}
                                         </div>
-                                        <div className={styles.documentActions}>
-                                            <button className={styles.actionBtn}>View</button>
-                                            <button className={styles.actionBtn}>Details</button>
+                                        <div className={styles.listActions}>
+                                            <button className={styles.secondaryBtn}>View</button>
                                             <button
-                                                className={styles.deleteBtn}
+                                                className={styles.dangerBtn}
                                                 onClick={() => handleDeleteDocument(doc.id)}
                                             >
                                                 Delete
@@ -351,165 +343,131 @@ export default function StartupDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>My Project</h3>
-                            <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
                                 Each startup can submit one project for review. Once approved, it will be published to the main board.
                             </p>
 
                             {showProjectForm ? (
-                                <div style={{
-                                    background: '#f8fafc',
-                                    padding: '20px',
-                                    borderRadius: '8px',
-                                    marginBottom: '20px',
-                                    border: '1px solid #e2e8f0'
-                                }}>
-                                    <h4 style={{ marginTop: 0, color: '#1e293b' }}>Edit Project Details</h4>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                                        <input
-                                            type="text"
-                                            placeholder="Project Name"
-                                            value={projectFormData.projectName}
-                                            onChange={(e) => setProjectFormData({ ...projectFormData, projectName: e.target.value })}
-                                            style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontFamily: 'inherit' }}
-                                        />
-                                        <input
-                                            type="text"
-                                            placeholder="Tagline"
-                                            value={projectFormData.tagline}
-                                            onChange={(e) => setProjectFormData({ ...projectFormData, tagline: e.target.value })}
-                                            style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontFamily: 'inherit' }}
-                                        />
-                                    </div>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-                                        <select
-                                            value={projectFormData.industry}
-                                            onChange={(e) => setProjectFormData({ ...projectFormData, industry: e.target.value })}
-                                            style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontFamily: 'inherit' }}
-                                        >
-                                            <option value="">Select Industry</option>
-                                            <option value="AI/ML">AI/ML</option>
-                                            <option value="Fintech">Fintech</option>
-                                            <option value="Healthtech">Healthtech</option>
-                                        </select>
-                                        <select
-                                            value={projectFormData.stage}
-                                            onChange={(e) => setProjectFormData({ ...projectFormData, stage: e.target.value })}
-                                            style={{ padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontFamily: 'inherit' }}
-                                        >
-                                            <option value="">Select Stage</option>
-                                            <option value="Idea">Idea</option>
-                                            <option value="MVP">MVP</option>
-                                            <option value="Growth">Growth</option>
-                                        </select>
-                                    </div>
-
-                                    <textarea
-                                        placeholder="Project Description"
-                                        value={projectFormData.description}
-                                        onChange={(e) => setProjectFormData({ ...projectFormData, description: e.target.value })}
-                                        rows="4"
-                                        style={{ width: '100%', padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px', fontFamily: 'inherit', marginBottom: '16px' }}
-                                    />
-
-                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                        <button
-                                            onClick={() => {
-                                                if (projectFormData.projectName && projectFormData.description) {
-                                                    setProject({
-                                                        ...project,
-                                                        name: projectFormData.projectName,
-                                                        tagline: projectFormData.tagline,
-                                                        description: projectFormData.description,
-                                                        industry: projectFormData.industry,
-                                                        stage: projectFormData.stage,
-                                                        status: 'pending',
-                                                        submittedDate: new Date().toISOString().split('T')[0],
-                                                        reviewedDate: null,
-                                                        feedback: null
-                                                    });
-                                                    setShowProjectForm(false);
-                                                }
-                                            }}
-                                            style={{
-                                                background: '#10b981',
-                                                color: 'white',
-                                                border: 'none',
-                                                padding: '10px 16px',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                fontSize: '14px',
-                                                fontWeight: '600'
-                                            }}
-                                        >
-                                            Update & Submit
-                                        </button>
-                                        <button
-                                            onClick={() => setShowProjectForm(false)}
-                                            style={{
-                                                background: '#f1f5f9',
-                                                color: '#475569',
-                                                border: 'none',
-                                                padding: '10px 16px',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                fontSize: '14px',
-                                                fontWeight: '600'
-                                            }}
-                                        >
-                                            Cancel
-                                        </button>
+                                <div className={styles.card} style={{ background: 'var(--bg-secondary)', border: 'none' }}>
+                                    <h4 className={styles.cardTitle}>Edit Project Details</h4>
+                                    <div className={styles.form}>
+                                        <div className={styles.formRow}>
+                                            <div className={styles.formGroup}>
+                                                <label>Project Name</label>
+                                                <input
+                                                    type="text"
+                                                    value={projectFormData.projectName}
+                                                    onChange={(e) => setProjectFormData({ ...projectFormData, projectName: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className={styles.formGroup}>
+                                                <label>Tagline</label>
+                                                <input
+                                                    type="text"
+                                                    value={projectFormData.tagline}
+                                                    onChange={(e) => setProjectFormData({ ...projectFormData, tagline: e.target.value })}
+                                                />
+                                            </div>
+                                        </div>
+                                        <div className={styles.formRow}>
+                                            <div className={styles.formGroup}>
+                                                <label>Industry</label>
+                                                <select
+                                                    value={projectFormData.industry}
+                                                    onChange={(e) => setProjectFormData({ ...projectFormData, industry: e.target.value })}
+                                                >
+                                                    <option value="">Select Industry</option>
+                                                    <option value="AI/ML">AI/ML</option>
+                                                    <option value="Fintech">Fintech</option>
+                                                    <option value="Healthtech">Healthtech</option>
+                                                </select>
+                                            </div>
+                                            <div className={styles.formGroup}>
+                                                <label>Stage</label>
+                                                <select
+                                                    value={projectFormData.stage}
+                                                    onChange={(e) => setProjectFormData({ ...projectFormData, stage: e.target.value })}
+                                                >
+                                                    <option value="">Select Stage</option>
+                                                    <option value="Idea">Idea</option>
+                                                    <option value="MVP">MVP</option>
+                                                    <option value="Growth">Growth</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                            <label>Description</label>
+                                            <textarea
+                                                rows="4"
+                                                value={projectFormData.description}
+                                                onChange={(e) => setProjectFormData({ ...projectFormData, description: e.target.value })}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '12px' }}>
+                                            <button
+                                                onClick={() => {
+                                                    if (projectFormData.projectName && projectFormData.description) {
+                                                        setProject({
+                                                            ...project,
+                                                            name: projectFormData.projectName,
+                                                            tagline: projectFormData.tagline,
+                                                            description: projectFormData.description,
+                                                            industry: projectFormData.industry,
+                                                            stage: projectFormData.stage,
+                                                            status: 'pending',
+                                                            submittedDate: new Date().toISOString().split('T')[0],
+                                                            reviewedDate: null,
+                                                            feedback: null
+                                                        });
+                                                        setShowProjectForm(false);
+                                                    }
+                                                }}
+                                                className={styles.primaryBtn}
+                                            >
+                                                Update & Submit
+                                            </button>
+                                            <button
+                                                onClick={() => setShowProjectForm(false)}
+                                                className={styles.secondaryBtn}
+                                            >
+                                                Cancel
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ) : (
-                                <div
-                                    style={{
-                                        border: '1px solid #e2e8f0',
-                                        borderRadius: '8px',
-                                        padding: '16px',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'flex-start'
-                                    }}
-                                >
-                                    <div style={{ flex: 1 }}>
-                                        <h4 style={{ margin: '0 0 4px 0', color: '#1e293b', fontSize: '15px', fontWeight: '600' }}>
-                                            {project.name}
-                                        </h4>
-                                        <p style={{ margin: '0 0 8px 0', color: '#64748b', fontSize: '13px' }}>
-                                            {project.tagline}
-                                        </p>
-                                        <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#94a3b8', marginBottom: '8px' }}>
-                                            <span>Industry: {project.industry}</span>
-                                            <span>Stage: {project.stage}</span>
+                                <div className={styles.listItem}>
+                                    <div className={styles.listContent}>
+                                        <div>
+                                            <h4 style={{ fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)', margin: '0 0 4px 0' }}>
+                                                {project.name}
+                                            </h4>
+                                            <p style={{ color: 'var(--text-secondary)', fontSize: '15px', margin: '0 0 12px 0' }}>
+                                                {project.tagline}
+                                            </p>
                                         </div>
-                                        <div style={{ display: 'flex', gap: '16px', fontSize: '12px', color: '#94a3b8', marginBottom: '8px' }}>
-                                            <span>Submitted: {project.submittedDate}</span>
-                                            {project.reviewedDate && <span>Reviewed: {project.reviewedDate}</span>}
+
+                                        <div style={{ display: 'flex', gap: '12px', marginBottom: '12px' }}>
+                                            <span className={`${styles.badge} ${styles.badgeInfo}`}>
+                                                {project.industry}
+                                            </span>
+                                            <span className={`${styles.badge} ${styles.badgeInfo}`}>
+                                                {project.stage}
+                                            </span>
                                         </div>
-                                        <p style={{ margin: '8px 0 0 0', color: '#475569', fontSize: '13px', lineHeight: '1.5' }}>
+
+                                        <p style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-primary)', margin: '0 0 8px 0' }}>
                                             {project.description}
                                         </p>
-                                        {project.feedback && (
-                                            <div style={{ marginTop: '12px', padding: '10px', background: '#f0fdf4', borderRadius: '4px', fontSize: '12px', color: '#15803d' }}>
-                                                ✓ {project.feedback}
-                                            </div>
-                                        )}
+
+                                        <div className={styles.listMeta}>
+                                            Submitted: {project.submittedDate}
+                                            {project.reviewedDate && ` • Reviewed: ${project.reviewedDate}`}
+                                        </div>
                                     </div>
-                                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '12px' }}>
-                                        <span
-                                            style={{
-                                                display: 'inline-block',
-                                                padding: '6px 12px',
-                                                borderRadius: '20px',
-                                                fontSize: '12px',
-                                                fontWeight: '600',
-                                                background: project.status === 'pending' ? '#fef3c7' : '#d1fae5',
-                                                color: project.status === 'pending' ? '#92400e' : '#065f46',
-                                                whiteSpace: 'nowrap'
-                                            }}
-                                        >
-                                            {project.status === 'pending' ? '⏳ Pending' : '✓ Approved'}
+                                    <div className={styles.listActions}>
+                                        <span className={`${styles.badge} ${project.status === 'pending' ? styles.badgePending : styles.badgeSuccess}`}>
+                                            {project.status === 'pending' ? 'Pending Review' : 'Approved'}
                                         </span>
                                         <button
                                             onClick={() => {
@@ -533,18 +491,10 @@ export default function StartupDashboard({ user }) {
                                                 });
                                                 setShowProjectForm(true);
                                             }}
-                                            style={{
-                                                background: '#3b82f6',
-                                                color: 'white',
-                                                border: 'none',
-                                                padding: '8px 12px',
-                                                borderRadius: '6px',
-                                                cursor: 'pointer',
-                                                fontSize: '12px',
-                                                fontWeight: '600'
-                                            }}
+                                            className={styles.secondaryBtn}
+                                            style={{ fontSize: '13px', padding: '8px 16px' }}
                                         >
-                                            Edit
+                                            Edit Project
                                         </button>
                                     </div>
                                 </div>
@@ -553,49 +503,53 @@ export default function StartupDashboard({ user }) {
                     </div>
                 )}
 
-                {/* Documents Section */}
+                {/* Advisors Section */}
                 {activeSection === 'advisors' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>
                                 Advisor Consulting Requests
                                 {dashboardData.pendingAdvisorRequests > 0 && (
-                                    <span className={styles.badge}>{dashboardData.pendingAdvisorRequests} Pending</span>
+                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
+                                        {dashboardData.pendingAdvisorRequests} Pending
+                                    </span>
                                 )}
                             </h3>
 
-                            <div className={styles.requestsList}>
+                            <div className={styles.list}>
                                 {advisorRequests.map(request => (
-                                    <div key={request.id} className={styles.requestItem}>
-                                        <div className={styles.requestInfo}>
-                                            <div className={styles.requestHeader}>
-                                                <h4 className={styles.advisorName}>{request.advisorName}</h4>
-                                                <span className={styles.expertise}>{request.expertise}</span>
+                                    <div key={request.id} className={styles.listItem}>
+                                        <div className={styles.listContent}>
+                                            <div>
+                                                <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                    {request.advisorName}
+                                                </h4>
+                                                <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ display: 'inline-block', marginBottom: '8px' }}>
+                                                    {request.expertise}
+                                                </span>
                                             </div>
-                                            <p className={styles.requestMessage}>{request.message}</p>
-                                            <div className={styles.requestDetails}>
-                                                <span>Requested: {request.requestDate}</span>
-                                                {request.appointmentDate && (
-                                                    <span>📅 Appointment: {request.appointmentDate}</span>
-                                                )}
+                                            <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-primary)' }}>{request.message}</p>
+                                            <div className={styles.listMeta}>
+                                                Requested: {request.requestDate}
+                                                {request.appointmentDate && ` • Appointment: ${request.appointmentDate}`}
                                             </div>
                                         </div>
-                                        <div className={styles.requestActions}>
-                                            <span className={`${styles.statusBadge} ${styles[`badge-${request.status}`]}`}>
-                                                {request.status === 'pending' && 'Pending'}
-                                                {request.status === 'accepted' && '✓ Accepted'}
-                                                {request.status === 'rejected' && '✗ Rejected'}
+                                        <div className={styles.listActions}>
+                                            <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`}>
+                                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                                             </span>
                                             {request.status === 'pending' && (
-                                                <div className={styles.actionButtons}>
+                                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
                                                     <button
-                                                        className={styles.acceptBtn}
+                                                        className={styles.primaryBtn}
+                                                        style={{ fontSize: '12px', padding: '6px 12px' }}
                                                         onClick={() => handleAcceptRequest(request.id)}
                                                     >
                                                         Accept
                                                     </button>
                                                     <button
-                                                        className={styles.rejectBtn}
+                                                        className={styles.dangerBtn}
+                                                        style={{ fontSize: '12px', padding: '6px 12px' }}
                                                         onClick={() => handleRejectRequest(request.id)}
                                                     >
                                                         Decline
@@ -665,15 +619,68 @@ export default function StartupDashboard({ user }) {
                                     </div>
                                 </div>
 
-                                <div className={styles.formActions}>
-                                    <button type="submit" className={styles.saveBtn}>Save Changes</button>
-                                    <button type="button" className={styles.cancelBtn}>Cancel</button>
+                                <div style={{ display: 'flex', gap: '12px' }}>
+                                    <button type="submit" className={styles.primaryBtn}>Save Changes</button>
+                                    <button type="button" className={styles.secondaryBtn}>Cancel</button>
                                 </div>
                             </form>
                         </div>
                     </div>
                 )}
             </div>
+
+            {/* Modal Overlay for Complete Info Form */}
+            {showCompleteInfoForm && (
+                <div
+                    className={styles.modalOverlay}
+                    onClick={(e) => {
+                        // Close if clicked directly on overlay (not child)
+                        if (e.target === e.currentTarget) {
+                            if (window.isStartupFormDirty) {
+                                if (window.confirm("You have unsaved changes. Are you sure you want to close?")) {
+                                    setShowCompleteInfoForm(false);
+                                    window.isStartupFormDirty = false;
+                                }
+                            } else {
+                                setShowCompleteInfoForm(false);
+                            }
+                        }
+                    }}
+                >
+                    <div style={{ width: '100%', maxWidth: '100%', display: 'flex', justifyContent: 'center' }}>
+                        <CompleteStartupInfoForm
+                            onSubmit={(formData) => {
+                                console.log('Complete startup info submitted:', formData);
+                                setShowCompleteInfoForm(false);
+                                setShowSuccessModal(true);
+                                window.isStartupFormDirty = false;
+                            }}
+                            onCancel={() => {
+                                if (window.isStartupFormDirty) {
+                                    if (window.confirm("You have unsaved changes. Are you sure you want to close?")) {
+                                        setShowCompleteInfoForm(false);
+                                        window.isStartupFormDirty = false;
+                                    }
+                                } else {
+                                    setShowCompleteInfoForm(false);
+                                }
+                            }}
+                            onDirtyChange={(isDirty) => {
+                                window.isStartupFormDirty = isDirty;
+                            }}
+                        />
+                    </div>
+                </div>
+            )}
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <SuccessModal
+                    onClose={() => setShowSuccessModal(false)}
+                    title="Profile Submitted Successfully!"
+                    message="Thank you for completing your startup profile. Our team will review your information and get back to you soon."
+                />
+            )}
         </div>
     );
 }

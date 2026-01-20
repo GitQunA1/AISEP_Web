@@ -19,7 +19,7 @@
 .badge--stage {
   background-color: var(--bg-light-gray);
   color: var(--text-black);
-  border: 1px solid var(--border-light);
+  border: 1px solid var(--badge-border);
 }
 
 .badge--industry:hover,

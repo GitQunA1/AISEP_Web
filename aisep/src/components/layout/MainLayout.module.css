@@ -1,40 +1,114 @@
-.layoutContainer {
-  display: flex;
-  width: 100%;
-  min-height: 100vh;
-  background-color: var(--bg-primary);
-  position: relative;
+/* GLOBAL RESET for this layout */
+:global(body) {
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  /* CRITICAL: Kills the browser's default scrollbar */
 }
 
-/* Main Content Area */
-.mainContent {
-  flex: 1 1 600px;
-  max-width: 600px;
-  min-width: 0;
+/* Custom Scrollbar for Webkit (Chrome, Safari, Edge) */
+/* Targeted to scrollable areas to maintain sleek look */
+/* Custom Scrollbar rules REMOVED - using global index.css rules */
+
+
+/* THE GRID CONTAINER */
+.mainContainer {
+  display: grid;
+  /* Fixed Sidebar (275px) | Fluid Feed (1fr) | Fixed Right Panel (350px) */
+  grid-template-columns: 275px 1fr 350px;
+  grid-template-rows: 100vh;
+  /* Force exact viewport height */
+  width: 100%;
+  /* Fits perfectly within the body */
+  height: 100vh;
+  background-color: var(--bg-primary);
+  overflow: hidden;
+  /* Prevents ANY outer scrolling */
+}
+
+/* COLUMN 1: LEFT SIDEBAR */
+.leftSidebar {
+  height: 100%;
+  /* border-right: 1px solid var(--border-color); <-- REMOVED */
   display: flex;
   flex-direction: column;
-  width: 100%;
-  border-left: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color);
+  overflow: hidden;
 }
 
-.feedContainer {
-  flex: 1;
+/* COLUMN 2: CENTER FEED (The ONLY thing that scrolls) */
+.mainContent {
+  height: 100%;
+  overflow-y: auto;
+  /* border-right: 1px solid var(--border-color); <-- REMOVED */
+  scroll-behavior: smooth;
+  /* scrollbar-width handled globally now */
 }
 
-/* Desktop: 3-column layout */
-@media (min-width: 769px) {
-  .layoutContainer {
-    justify-content: center;
+/* COLUMN 3: RIGHT PANEL */
+.rightPanel {
+  height: 100%;
+  overflow-y: auto;
+  display: block;
+}
+
+/* Center the Feed Stream (Facebook Style Separated Cards) */
+/* Center the Feed Stream (Facebook Style Separated Cards) */
+.feedStreamWrapper {
+  max-width: 680px;
+  /* Wider for card look */
+  margin: 0 auto;
+  padding-top: 0;
+  padding-bottom: 60px;
+  /* Space at bottom for desktop */
+  min-height: 100%;
+
+  /* Flex Layout for Gaps */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  /* Space between cards */
+
+  /* No Borders on the wrapper itself */
+  border: none;
+  background-color: transparent;
+}
+
+/* RESPONSIVE: Mobile/Tablet (< 1024px) */
+@media (max-width: 1023px) {
+
+  /* ... existing styles for mainContainer/rightPanel/leftSidebar ... */
+  .mainContainer {
+    display: block;
+    height: auto;
+    overflow-y: auto;
   }
-}
 
-/* Mobile: Stack content, hide borders, add bottom nav spacing */
-@media (max-width: 768px) {
+  .rightPanel {
+    display: none;
+  }
+
+  .leftSidebar {
+    display: block;
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: visible;
+    z-index: 2000;
+  }
+
   .mainContent {
-    max-width: none;
+    height: auto;
     border: none;
-    padding-bottom: 60px;
-    /* Space for bottom nav */
+    overflow: visible;
+    margin-top: 60px;
+    padding-bottom: 80px;
+  }
+
+  /* Add horizontal padding for mobile */
+  .feedStreamWrapper {
+    padding-left: 16px;
+    padding-right: 16px;
+    padding-top: 10px;
+    /* Bit tighter on mobile */
   }
 }

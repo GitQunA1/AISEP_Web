@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Users, Calendar, FileText, Star, Clock, CheckCircle, MessageSquare, PlusCircle, TrendingUp } from 'lucide-react';
-import styles from './AdvisorDashboard.module.css';
+import styles from '../styles/SharedDashboard.module.css';
+import FeedHeader from '../components/feed/FeedHeader';
 
 /**
  * AdvisorDashboard - Comprehensive dashboard for advisors/experts
@@ -107,7 +108,6 @@ export default function AdvisorDashboard({ user }) {
     };
 
     const handleRescheduleAppointment = (id) => {
-        // Mock reschedule - in real app, open a date picker
         alert('Reschedule functionality would open a calendar picker');
     };
 
@@ -117,19 +117,19 @@ export default function AdvisorDashboard({ user }) {
 
     return (
         <div className={styles.container}>
-            {/* Header */}
-            <div className={styles.header}>
-                <div className={styles.headerContent}>
-                    <h1 className={styles.title}>Advisor Dashboard</h1>
-                    <p className={styles.subtitle}>Welcome, {user?.name || 'Advisor'}! Manage your consulting practice.</p>
-                </div>
-            </div>
+            {/* Unified Header */}
+            <FeedHeader
+                title="Advisor Dashboard"
+                subtitle={`Welcome, ${user?.name || 'Advisor'}! Manage your consulting practice.`}
+                showFilter={false}
+                user={user}
+            />
 
             {/* Quick Stats */}
             <div className={styles.statsGrid}>
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#ede9fe' }}>
-                        <Users size={24} color="#7c3aed" />
+                    <div className={`${styles.statIcon} ${styles.iconPurple}`}>
+                        <Users size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.activeClients}</div>
@@ -138,8 +138,8 @@ export default function AdvisorDashboard({ user }) {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#fef3c7' }}>
-                        <MessageSquare size={24} color="#d97706" />
+                    <div className={`${styles.statIcon} ${styles.iconYellow}`}>
+                        <MessageSquare size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.pendingRequests}</div>
@@ -148,8 +148,8 @@ export default function AdvisorDashboard({ user }) {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#dbeafe' }}>
-                        <Calendar size={24} color="#0284c7" />
+                    <div className={`${styles.statIcon} ${styles.iconBlue}`}>
+                        <Calendar size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.upcomingAppointments}</div>
@@ -158,8 +158,8 @@ export default function AdvisorDashboard({ user }) {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#fce7f3' }}>
-                        <Star size={24} color="#be185d" />
+                    <div className={`${styles.statIcon} ${styles.iconRed}`}>
+                        <Star size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.averageRating}</div>
@@ -211,25 +211,24 @@ export default function AdvisorDashboard({ user }) {
                             {/* Summary Stats */}
                             <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
                                 <h3 className={styles.cardTitle}>Practice Summary</h3>
-                                <div className={styles.summaryGrid}>
-                                    <div className={styles.summaryItem}>
-                                        <div className={styles.summaryLabel}>Total Consultations</div>
-                                        <div className={styles.summaryValue}>{dashboardData.totalConsultations}</div>
+                                <div className={styles.metricsGrid}>
+                                    <div className={styles.metricItem}>
+                                        <div className={styles.metricLabel}>Total Consultations</div>
+                                        <div className={styles.metricValue}>{dashboardData.totalConsultations}</div>
                                     </div>
-                                    <div className={styles.summaryItem}>
-                                        <div className={styles.summaryLabel}>Completed Reports</div>
-                                        <div className={styles.summaryValue}>{dashboardData.completedReports}</div>
+                                    <div className={styles.metricItem}>
+                                        <div className={styles.metricLabel}>Completed Reports</div>
+                                        <div className={styles.metricValue}>{dashboardData.completedReports}</div>
                                     </div>
-                                    <div className={styles.summaryItem}>
-                                        <div className={styles.summaryLabel}>Average Rating</div>
-                                        <div className={styles.summaryValue}>
-                                            <span>{dashboardData.averageRating}</span>
-                                            <span className={styles.stars}>⭐</span>
+                                    <div className={styles.metricItem}>
+                                        <div className={styles.metricLabel}>Average Rating</div>
+                                        <div className={styles.metricValue}>
+                                            {dashboardData.averageRating} ⭐
                                         </div>
                                     </div>
-                                    <div className={styles.summaryItem}>
-                                        <div className={styles.summaryLabel}>Hourly Rate</div>
-                                        <div className={styles.summaryValue}>{dashboardData.hourlyRate}</div>
+                                    <div className={styles.metricItem}>
+                                        <div className={styles.metricLabel}>Hourly Rate</div>
+                                        <div className={styles.metricValue}>{dashboardData.hourlyRate}</div>
                                     </div>
                                 </div>
                             </div>
@@ -237,52 +236,52 @@ export default function AdvisorDashboard({ user }) {
                             {/* Upcoming Appointments */}
                             <div className={styles.card}>
                                 <h3 className={styles.cardTitle}>Next 7 Days</h3>
-                                {appointments.slice(0, 3).map(appt => (
-                                    <div key={appt.id} className={styles.upcomingItem}>
-                                        <div className={styles.appointmentDate}>
-                                            <div className={styles.dateDay}>{appt.date.split('-')[2]}</div>
-                                            <div className={styles.dateMonth}>Jan</div>
+                                <div className={styles.list}>
+                                    {appointments.slice(0, 3).map(appt => (
+                                        <div key={appt.id} className={styles.listItem}>
+                                            <div className={styles.dateBox} style={{ marginRight: '12px' }}>
+                                                <span className={styles.dateMonth}>Jan</span>
+                                                <span className={styles.dateDay}>{appt.date.split('-')[2]}</span>
+                                            </div>
+                                            <div className={styles.listContent}>
+                                                <h4 className={styles.listTitle}>{appt.startupName}</h4>
+                                                <div className={styles.listMeta}>{appt.time} • {appt.duration}</div>
+                                            </div>
+                                            <div className={`${styles.badge} ${styles.badgeSuccess}`}>Confirmed</div>
                                         </div>
-                                        <div className={styles.appointmentInfo}>
-                                            <h4>{appt.startupName}</h4>
-                                            <p>{appt.time} - {appt.duration}</p>
-                                        </div>
-                                        <div className={styles.appointmentStatus}>
-                                            <span className={styles.badge}>Confirmed</span>
-                                        </div>
-                                    </div>
-                                ))}
+                                    ))}
+                                </div>
                             </div>
 
                             {/* Recent Activity */}
                             <div className={styles.card}>
                                 <h3 className={styles.cardTitle}>Recent Activity</h3>
-                                <div className={styles.activityList}>
-                                    <div className={styles.activityItem}>
-                                        <div className={styles.activityIcon}>
+                                <div className={styles.list}>
+                                    <div className={styles.listItem}>
+                                        <div className={`${styles.listIcon} ${styles.iconYellow}`}>
                                             <MessageSquare size={18} />
                                         </div>
-                                        <div className={styles.activityContent}>
-                                            <div className={styles.activityTitle}>New request from TechStartup AI</div>
-                                            <div className={styles.activityTime}>2 hours ago</div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>New request from TechStartup AI</div>
+                                            <div className={styles.listMeta}>2 hours ago</div>
                                         </div>
                                     </div>
-                                    <div className={styles.activityItem}>
-                                        <div className={styles.activityIcon}>
+                                    <div className={styles.listItem}>
+                                        <div className={`${styles.listIcon} ${styles.iconGreen}`}>
                                             <CheckCircle size={18} />
                                         </div>
-                                        <div className={styles.activityContent}>
-                                            <div className={styles.activityTitle}>Report completed for FinApp Solutions</div>
-                                            <div className={styles.activityTime}>1 day ago</div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>Report completed for FinApp Solutions</div>
+                                            <div className={styles.listMeta}>1 day ago</div>
                                         </div>
                                     </div>
-                                    <div className={styles.activityItem}>
-                                        <div className={styles.activityIcon}>
+                                    <div className={styles.listItem}>
+                                        <div className={`${styles.listIcon} ${styles.iconRed}`}>
                                             <Star size={18} />
                                         </div>
-                                        <div className={styles.activityContent}>
-                                            <div className={styles.activityTitle}>Received 5-star rating from HealthPro Tech</div>
-                                            <div className={styles.activityTime}>3 days ago</div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>Received 5-star rating from HealthPro Tech</div>
+                                            <div className={styles.listMeta}>3 days ago</div>
                                         </div>
                                     </div>
                                 </div>
@@ -298,40 +297,42 @@ export default function AdvisorDashboard({ user }) {
                             <h3 className={styles.cardTitle}>
                                 Consulting Requests
                                 {dashboardData.pendingRequests > 0 && (
-                                    <span className={styles.badge}>{dashboardData.pendingRequests} Pending</span>
+                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
+                                        {dashboardData.pendingRequests} Pending
+                                    </span>
                                 )}
                             </h3>
 
-                            <div className={styles.requestsList}>
+                            <div className={styles.list}>
                                 {consultingRequests.map(request => (
-                                    <div key={request.id} className={styles.requestItem}>
-                                        <div className={styles.requestInfo}>
-                                            <div className={styles.requestHeader}>
-                                                <h4 className={styles.startupName}>{request.startupName}</h4>
-                                                <span className={styles.founderName}>by {request.founderName}</span>
+                                    <div key={request.id} className={styles.listItem} style={{ alignItems: 'flex-start' }}>
+                                        <div className={styles.listContent}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                                <h4 className={styles.listTitle}>{request.startupName}</h4>
+                                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>by {request.founderName}</span>
                                             </div>
-                                            <p className={styles.inquiry}>{request.inquiry}</p>
-                                            <div className={styles.requestDetails}>
-                                                <span className={styles.budget}>💰 {request.budget}</span>
+                                            <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-primary)' }}>{request.inquiry}</p>
+                                            <div className={styles.listMeta} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                                                <span className={`${styles.badge} ${styles.badgeInfo}`}>{request.budget}</span>
                                                 <span>Requested: {request.requestDate}</span>
                                             </div>
                                         </div>
-                                        <div className={styles.requestActions}>
-                                            <span className={`${styles.statusBadge} ${styles[`badge-${request.status}`]}`}>
-                                                {request.status === 'pending' && 'Pending'}
-                                                {request.status === 'accepted' && '✓ Accepted'}
-                                                {request.status === 'rejected' && '✗ Declined'}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px', alignItems: 'flex-end', marginLeft: '16px' }}>
+                                            <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`}>
+                                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
                                             </span>
                                             {request.status === 'pending' && (
-                                                <div className={styles.actionButtons}>
+                                                <div style={{ display: 'flex', gap: '8px' }}>
                                                     <button
-                                                        className={styles.acceptBtn}
+                                                        className={styles.primaryBtn}
+                                                        style={{ padding: '6px 12px', fontSize: '12px' }}
                                                         onClick={() => handleAcceptRequest(request.id)}
                                                     >
                                                         Accept
                                                     </button>
                                                     <button
-                                                        className={styles.rejectBtn}
+                                                        className={styles.dangerBtn}
+                                                        style={{ padding: '6px 12px', fontSize: '12px' }}
                                                         onClick={() => handleRejectRequest(request.id)}
                                                     >
                                                         Decline
@@ -350,7 +351,7 @@ export default function AdvisorDashboard({ user }) {
                 {activeSection === 'appointments' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <div className={styles.sectionHeader}>
+                            <div className={styles.cardHeader}>
                                 <h3 className={styles.cardTitle}>Scheduled Appointments</h3>
                                 <button className={styles.primaryBtn}>
                                     <PlusCircle size={18} />
@@ -358,32 +359,30 @@ export default function AdvisorDashboard({ user }) {
                                 </button>
                             </div>
 
-                            <div className={styles.appointmentsList}>
+                            <div className={styles.list}>
                                 {appointments.map(appt => (
-                                    <div key={appt.id} className={styles.appointmentCard}>
-                                        <div className={styles.appointmentDateTime}>
-                                            <div className={styles.dateBox}>
-                                                <span className={styles.day}>{appt.date.split('-')[2]}</span>
-                                                <span className={styles.month}>Jan</span>
-                                            </div>
-                                            <div className={styles.timeInfo}>
-                                                <span className={styles.time}>{appt.time}</span>
-                                                <span className={styles.duration}>{appt.duration}</span>
+                                    <div key={appt.id} className={styles.listItem}>
+                                        <div className={styles.dateBox} style={{ marginRight: '16px' }}>
+                                            <span className={styles.dateMonth}>Jan</span>
+                                            <span className={styles.dateDay}>{appt.date.split('-')[2]}</span>
+                                        </div>
+                                        <div className={styles.listContent}>
+                                            <h4 className={styles.listTitle}>{appt.startupName}</h4>
+                                            <div className={styles.listMeta} style={{ marginBottom: '4px' }}>with {appt.founderName}</div>
+                                            <div className={styles.listMeta} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <Clock size={14} />
+                                                {appt.time} ({appt.duration})
                                             </div>
                                         </div>
-                                        <div className={styles.appointmentDetails}>
-                                            <h4>{appt.startupName}</h4>
-                                            <p>with {appt.founderName}</p>
-                                        </div>
-                                        <div className={styles.appointmentButtons}>
+                                        <div className={styles.listActions}>
                                             <button
-                                                className={styles.rescheduleBtn}
+                                                className={styles.secondaryBtn}
                                                 onClick={() => handleRescheduleAppointment(appt.id)}
                                             >
                                                 Reschedule
                                             </button>
                                             <button
-                                                className={styles.cancelBtn}
+                                                className={styles.dangerBtn}
                                                 onClick={() => handleCancelAppointment(appt.id)}
                                             >
                                                 Cancel
@@ -400,7 +399,7 @@ export default function AdvisorDashboard({ user }) {
                 {activeSection === 'reports' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <div className={styles.sectionHeader}>
+                            <div className={styles.cardHeader}>
                                 <h3 className={styles.cardTitle}>Consulting Reports</h3>
                                 <button className={styles.primaryBtn}>
                                     <PlusCircle size={18} />
@@ -408,27 +407,28 @@ export default function AdvisorDashboard({ user }) {
                                 </button>
                             </div>
 
-                            <div className={styles.reportsList}>
+                            <div className={styles.list}>
                                 {consultingReports.map(report => (
-                                    <div key={report.id} className={styles.reportItem}>
-                                        <div className={styles.reportInfo}>
-                                            <h4>{report.startupName}</h4>
-                                            <p className={styles.founderName}>with {report.founderName}</p>
-                                            <div className={styles.reportMeta}>
-                                                <span>Consultation: {report.consultationDate}</span>
-                                                <span>Report: {report.date}</span>
+                                    <div key={report.id} className={styles.listItem}>
+                                        <div className={styles.listContent}>
+                                            <h4 className={styles.listTitle}>{report.startupName}</h4>
+                                            <div className={styles.listMeta}>with {report.founderName}</div>
+                                            <div className={styles.listMeta} style={{ marginTop: '4px' }}>
+                                                Consultation: {report.consultationDate} • Report: {report.date}
                                             </div>
                                         </div>
-                                        <div className={styles.reportRating}>
-                                            <div className={styles.rating}>
-                                                {'⭐'.repeat(Math.floor(report.rating))}
-                                                {report.rating % 1 !== 0 && '✨'}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                            <div style={{ textAlign: 'right' }}>
+                                                <div style={{ color: '#fbbf24', fontSize: '14px' }}>
+                                                    {'⭐'.repeat(Math.floor(report.rating))}
+                                                    {report.rating % 1 !== 0 && '✨'}
+                                                </div>
+                                                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{report.rating}/5</span>
                                             </div>
-                                            <span className={styles.ratingText}>{report.rating}/5</span>
-                                        </div>
-                                        <div className={styles.reportActions}>
-                                            <button className={styles.viewBtn}>View</button>
-                                            <button className={styles.downloadBtn}>Download</button>
+                                            <div className={styles.listActions}>
+                                                <button className={styles.secondaryBtn}>View</button>
+                                                <button className={styles.secondaryBtn}>Download</button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -491,9 +491,9 @@ export default function AdvisorDashboard({ user }) {
                                     <input type="number" min="0" max="70" />
                                 </div>
 
-                                <div className={styles.formActions}>
-                                    <button type="submit" className={styles.saveBtn}>Save Changes</button>
-                                    <button type="button" className={styles.cancelBtn}>Cancel</button>
+                                <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
+                                    <button type="submit" className={styles.primaryBtn}>Save Changes</button>
+                                    <button type="button" className={styles.secondaryBtn}>Cancel</button>
                                 </div>
                             </form>
                         </div>

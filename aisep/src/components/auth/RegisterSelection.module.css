@@ -18,7 +18,8 @@
   height: 53px;
   background-color: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
-  display: none; /* Hidden on Desktop */
+  display: none;
+  /* Hidden on Desktop */
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
@@ -63,27 +64,34 @@
   padding: 24px;
   gap: 24px;
   width: 100%;
-  margin-top: 53px; /* Offset for mobile header */
+  margin-top: 53px;
+  /* Offset for mobile header */
 }
 
 /* --- DESKTOP LOGO (Centered Top - Visible > 768px) --- */
 .desktopLogo {
-  display: none; /* Hidden on Mobile */
+  display: none;
+  /* Hidden on Mobile */
   align-items: center;
   gap: 12px;
   font-weight: 800;
-  font-size: 32px; /* Large size */
+  font-size: 32px;
+  /* Large size */
   letter-spacing: -0.5px;
   margin-bottom: 16px;
 }
 
 /* Shared Logo Styles */
-.logoIcon, .headerLogoIcon {
-  color: var(--primary-color); /* Rocket is Blue */
+.logoIcon,
+.headerLogoIcon {
+  color: var(--primary-color);
+  /* Rocket is Blue */
 }
 
-.logoText, .headerLogoText {
-  color: var(--text-primary); /* Text is Black/White - NOT Blue */
+.logoText,
+.headerLogoText {
+  color: var(--text-primary);
+  /* Text is Black/White - NOT Blue */
 }
 
 /* --- TYPOGRAPHY --- */
@@ -108,7 +116,8 @@
 /* --- CARDS GRID SYSTEM --- */
 .cardsGrid {
   display: grid;
-  grid-template-columns: 1fr; /* Stacked on mobile */
+  grid-template-columns: 1fr;
+  /* Stacked on mobile */
   gap: 20px;
   width: 100%;
   max-width: 400px;
@@ -123,13 +132,15 @@
   justify-content: center;
   gap: 16px;
   padding: 32px 24px;
-  
+
   /* Visual Definition */
-  background-color: var(--bg-primary); 
-  border: 1px solid var(--border-color); /* Visible Border */
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  /* Visible Border */
   border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04); /* Subtle Shadow */
-  
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  /* Subtle Shadow */
+
   cursor: pointer;
   text-align: center;
   transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
@@ -139,10 +150,14 @@
 
 /* Hover Effect */
 .card:hover {
-  border-color: var(--primary-color); /* Blue Border */
-  background-color: rgba(29, 155, 240, 0.03); /* Faint Blue Tint */
-  transform: translateY(-4px); /* Lift Up */
-  box-shadow: 0 12px 24px rgba(29, 155, 240, 0.12); /* Blue Shadow Glow */
+  border-color: var(--primary-color);
+  /* Blue Border */
+  background-color: rgba(29, 155, 240, 0.03);
+  /* Faint Blue Tint */
+  transform: translateY(-4px);
+  /* Lift Up */
+  box-shadow: 0 12px 24px rgba(29, 155, 240, 0.12);
+  /* Blue Shadow Glow */
 }
 
 /* Icon Circle */
@@ -150,7 +165,8 @@
   width: 64px;
   height: 64px;
   border-radius: 50%;
-  background-color: rgba(29, 155, 240, 0.1); /* Light Blue Circle */
+  background-color: rgba(29, 155, 240, 0.1);
+  /* Light Blue Circle */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -184,15 +200,17 @@
   align-items: center;
   justify-content: center;
   gap: 10px;
-  
+
   margin-top: 48px;
   padding: 12px 32px;
-  
+
   /* Outline Style */
   background-color: transparent;
-  border: 1px solid var(--border-color); /* Visible Border */
-  border-radius: 9999px; /* Pill Shape */
-  
+  border: 1px solid var(--border-color);
+  /* Visible Border */
+  border-radius: 9999px;
+  /* Pill Shape */
+
   color: var(--text-primary);
   font-weight: 700;
   font-size: 1rem;
@@ -210,7 +228,11 @@
 
 /* Mobile (< 768px) */
 @media (max-width: 767px) {
-  .header { display: flex; } /* Show fixed header */
+  .header {
+    display: flex;
+  }
+
+  /* Show fixed header */
 }
 
 /* Desktop (> 768px) */
@@ -219,18 +241,30 @@
     margin-top: 0;
     padding-top: 60px;
     max-width: 1100px;
-    margin-inline: auto; /* Center page */
+    margin-inline: auto;
+    /* Center page */
   }
 
-  .heading { font-size: 2.5rem; }
+  .heading {
+    font-size: 2.5rem;
+  }
 
-  .desktopLogo { display: flex; } /* Show big logo */
-  
+  .desktopLogo {
+    display: flex;
+  }
+
+  /* Show big logo */
+
   .cardsGrid {
-    grid-template-columns: repeat(3, 1fr); /* 3 Cards in a row */
-    max-width: 1000px;
-    gap: 32px;
+    grid-template-columns: repeat(4, 1fr);
+    /* 4 Cards in a row */
+    max-width: 1200px;
+    gap: 24px;
   }
-  
-  .desktopBackButton { display: flex; } /* Show bottom button */
+
+  .desktopBackButton {
+    display: flex;
+  }
+
+  /* Show bottom button */
 }

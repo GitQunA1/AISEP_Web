@@ -8,6 +8,7 @@ import {
   Phone,
   Mail,
   Calendar,
+  MoreHorizontal
 } from 'lucide-react';
 import styles from './StartupCard.module.css';
 import Avatar from '../common/Avatar';
@@ -15,11 +16,8 @@ import Badge from '../common/Badge';
 import Button from '../common/Button';
 
 /**
- * StartupCard Component - Displays individual startup profile in feed
- * Mimics Twitter/X card design with premium content blur
- * @param {object} startup - Startup data object
- * @param {boolean} isPremium - Whether user has premium access (default: false)
- * @param {object} user - Current user object
+ * StartupCard Component - "Smart Density" Redesign
+ * Layout: Avatar (Left Side) | Content (Right Side)
  */
 function StartupCard({ startup, isPremium = false, user }) {
   const [isBookmarked, setIsBookmarked] = useState(false);
@@ -45,138 +43,88 @@ function StartupCard({ startup, isPremium = false, user }) {
 
   return (
     <article className={styles.card}>
-      {/* Card Header with Avatar, Name, Username, Timestamp */}
-      <div className={styles.header}>
-        <Avatar src={startup.logo} alt={startup.name} name={startup.name} size="sm" />
-        <div className={styles.headerInfo}>
-          <div className={styles.nameRow}>
+      {/* LEFT COLUMN: AVATAR */}
+      <div className={styles.avatarColumn}>
+        <Avatar src={startup.logo} alt={startup.name} name={startup.name} size="md" />
+      </div>
+
+      {/* RIGHT COLUMN: CONTENT */}
+      <div className={styles.contentColumn}>
+
+        {/* ROW 1: HEADLINE (Name, Badges, Time, Menu) */}
+        <div className={styles.headerRow}>
+          <div className={styles.infoGroup}>
             <h3 className={styles.name}>{startup.name}</h3>
+            {/* Verified/Score Badge */}
             <Badge
               label={`${startup.aiScore}`}
               variant={getScoreBadgeVariant()}
               showIcon={true}
+              size="sm"
             />
+            <span className={styles.separator}>·</span>
+            <span className={styles.time}>{startup.timestamp}</span>
           </div>
-          <div className={styles.metadataRow}>
-            <span>{startup.username}</span>
-            <span>·</span>
-            <span>{startup.timestamp}</span>
-          </div>
-        </div>
-      </div>
 
-      {/* Sub-header with Industry and Stage Badges */}
-      <div className={styles.badgeRow}>
-        <Badge label={startup.industry} variant="industry" />
-        <Badge label={startup.stage} variant="stage" />
-      </div>
-
-      {/* Pitch Description */}
-      <p className={styles.description}>{startup.description}</p>
-
-      {/* Premium Zone - Sensitive Data with Blur Tease */}
-      <div className={styles.premiumZone}>
-        {/* Fake blurred data - always shown but blurred if not premium */}
-        <div className={`${styles.dataGrid} ${!isPremium ? styles.dataGridBlurred : ''}`}>
-          <div className={styles.dataItem}>
-            <span className={styles.label}>Monthly Revenue</span>
-            <span className={styles.value}>{startup.sensitiveData.revenue}</span>
-          </div>
-          <div className={styles.dataItem}>
-            <span className={styles.label}>Funding Ask</span>
-            <span className={styles.value}>{startup.sensitiveData.fundingAsk}</span>
-          </div>
-          <div className={styles.dataItem}>
-            <span className={styles.label}>Contact</span>
-            <span className={styles.value}>{startup.sensitiveData.email}</span>
-          </div>
+          <button className={styles.menuBtn}>
+            <MoreHorizontal size={18} />
+          </button>
         </div>
 
-        {/* Blur Overlay with Gradient Fade - Only visible if not premium */}
-        {!isPremium && (
-          <div className={styles.blurOverlay}>
-            <div className={styles.overlayContent}>
-              <Lock size={24} color="var(--text-black)" strokeWidth={2.5} />
-              <p className={styles.overlayText}>Unlock Premium</p>
-              <Button variant="primary">
-                Subscribe
-              </Button>
-            </div>
-          </div>
-        )}
-      </div>
+        {/* Industry/Stage Badges (Optional secondary line or inline) */}
+        <div className={styles.badgeRow}>
+          <Badge label={startup.industry} variant="industry" size="xs" />
+          <Badge label={startup.stage} variant="stage" size="xs" />
+        </div>
 
-      {/* Action Footer - Save, Share, Like */}
-      <div className={styles.footer}>
-        <button
-          className={`${styles.actionBtn} ${isLiked ? styles.liked : ''}`}
-          onClick={handleLike}
-          aria-label="Like startup"
-          title="Like"
-        >
-          <Heart size={18} />
-          <span className={styles.actionLabel}>Like</span>
-        </button>
-        <button
-          className={styles.actionBtn}
-          aria-label="Comment"
-          title="Message"
-        >
-          <MessageCircle size={18} />
-          <span className={styles.actionLabel}>Message</span>
-        </button>
-        <button
-          className={styles.actionBtn}
-          aria-label="Share"
-          title="Share"
-        >
-          <Share2 size={18} />
-          <span className={styles.actionLabel}>Share</span>
-        </button>
-        <button
-          className={`${styles.actionBtn} ${isBookmarked ? styles.bookmarked : ''}`}
-          onClick={handleBookmark}
-          aria-label="Bookmark startup"
-          title="Save"
-        >
-          <Bookmark size={18} />
-          <span className={styles.actionLabel}>Save</span>
-        </button>
+        {/* ROW 2: DESCRIPTION */}
+        <p className={styles.description}>{startup.description}</p>
 
-        {/* Advisor Actions */}
-        {user?.role === 'advisor' && (
-          <div className={styles.advisorActionsContainer}>
-            <button
-              className={styles.advisorMenuBtn}
-              onClick={() => setShowAdvisorActions(!showAdvisorActions)}
-              title="Contact"
-            >
-              <Phone size={18} />
-              <span className={styles.actionLabel}>Contact</span>
-            </button>
-
-            {showAdvisorActions && (
-              <div className={styles.advisorMenu}>
-                <button className={styles.advisorAction}>
-                  <Mail size={16} />
-                  Send Email
-                </button>
-                <button className={styles.advisorAction}>
-                  <Phone size={16} />
-                  Call
-                </button>
-                <button className={styles.advisorAction}>
-                  <Calendar size={16} />
-                  Schedule Meeting
-                </button>
-                <button className={styles.advisorAction}>
-                  <MessageCircle size={16} />
-                  Message
-                </button>
+        {/* ROW 3: PREMIUM CTA (Slim Strip) */}
+        <div className={styles.premiumZone}>
+          {!isPremium ? (
+            <div className={styles.premiumTease}>
+              <div className={styles.lockIcon}>
+                <Lock size={14} />
               </div>
-            )}
-          </div>
-        )}
+              <span className={styles.teaseText}>Unlock financial data & funding ask</span>
+              <button className={styles.subscribeBtn}>Subscribe</button>
+            </div>
+          ) : (
+            <div className={styles.dataGrid}>
+              {/* Real Data for Premium Users */}
+              <span>{startup.sensitiveData.revenue}</span>
+              <span>{startup.sensitiveData.fundingAsk}</span>
+            </div>
+          )}
+        </div>
+
+        {/* ROW 4: ACTIONS */}
+        <div className={styles.actionRow}>
+          <button
+            className={`${styles.actionBtn} ${isLiked ? styles.liked : ''}`}
+            onClick={handleLike}
+          >
+            <Heart size={16} />
+            <span>24</span>
+          </button>
+
+          <button className={styles.actionBtn}>
+            <MessageCircle size={16} />
+            <span>Reply</span>
+          </button>
+
+          <button className={styles.actionBtn}>
+            <Share2 size={16} />
+          </button>
+
+          <button
+            className={`${styles.actionBtn} ${isBookmarked ? styles.bookmarked : ''}`}
+            onClick={handleBookmark}
+          >
+            <Bookmark size={16} />
+          </button>
+        </div>
       </div>
     </article>
   );

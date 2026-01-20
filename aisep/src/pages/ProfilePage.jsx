@@ -7,7 +7,7 @@ import StartupAdvisorsList from '../components/profile/StartupAdvisorsList';
  * ProfilePage - Twitter/X-style profile page with role-specific tabs
  */
 export default function ProfilePage({ user, onShowAdvisors }) {
-    const [activeTab, setActiveTab] = useState('overview');
+    const [activeTab, setActiveTab] = useState('profile');
 
     if (!user) {
         return (
@@ -20,16 +20,9 @@ export default function ProfilePage({ user, onShowAdvisors }) {
     // Role-specific tabs
     const getTabs = () => {
         const baseTabs = [
-            { id: 'overview', label: 'Overview' },
             { id: 'profile', label: 'Basic Profile' },
+            // Add Document/other tabs if needed, but for now just Basic Profile as requested
         ];
-
-        if (user.role === 'startup') {
-            return [
-                ...baseTabs,
-                { id: 'advisors', label: 'Advisors' },
-            ];
-        }
 
         return baseTabs;
     };
@@ -41,8 +34,6 @@ export default function ProfilePage({ user, onShowAdvisors }) {
 
     // Mock data
     const joinDate = 'February 2024';
-    const following = 42;
-    const followers = 128;
 
     return (
         <div className={styles.container}>
@@ -95,9 +86,7 @@ export default function ProfilePage({ user, onShowAdvisors }) {
 
             {/* Tab Content */}
             <div className={styles.tabContent}>
-                {activeTab === 'overview' && <OverviewTab user={user} />}
                 {activeTab === 'profile' && <ProfileTab user={user} />}
-                {activeTab === 'advisors' && <AdvisorsTab user={user} onShowAdvisors={onShowAdvisors} />}
             </div>
         </div>
     );

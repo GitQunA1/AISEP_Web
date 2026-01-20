@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Briefcase, Star } from 'lucide-react';
+import { Search, MapPin, Star } from 'lucide-react';
+import FeedHeader from '../components/feed/FeedHeader';
 import styles from './AdvisorsPage.module.css';
 
 // Mock data for advisors
@@ -61,8 +62,13 @@ export default function AdvisorsPage() {
 
     return (
         <div className={styles.container}>
-            <header className={styles.header}>
-                <h2 className={styles.headerTitle}>Find Advisors</h2>
+            <FeedHeader
+                title="Find Advisors"
+                subtitle="Connect with verified experts to accelerate your growth"
+                showFilter={false}
+            />
+
+            <div className={styles.searchSection}>
                 <div className={styles.searchContainer}>
                     <Search className={styles.searchIcon} />
                     <input
@@ -73,7 +79,7 @@ export default function AdvisorsPage() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
-            </header>
+            </div>
 
             <div className={styles.list}>
                 {filteredAdvisors.map(advisor => (

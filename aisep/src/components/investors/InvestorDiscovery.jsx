@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Search, CheckCircle, TrendingUp, MapPin, Building2, Target } from 'lucide-react';
+import { Search, CheckCircle, TrendingUp, MapPin, Building2, Target, Filter } from 'lucide-react';
+import FeedHeader from '../feed/FeedHeader';
+import FilterModal from './FilterModal';
 import styles from './InvestorDiscovery.module.css';
 
-// Mock investor data
+// Mock investor data - Extended with funding status and AI score
 const MOCK_INVESTORS = [
     {
         id: 1,
@@ -16,7 +18,9 @@ const MOCK_INVESTORS = [
         location: 'Menlo Park, CA',
         matchScore: 92,
         portfolioSize: '200+ companies',
-        ticketSize: '$500K - $5M'
+        ticketSize: '$500K - $5M',
+        fundingStatus: 'Seeking Funding',
+        aiScore: 92
     },
     {
         id: 2,
@@ -30,7 +34,9 @@ const MOCK_INVESTORS = [
         location: 'Mountain View, CA',
         matchScore: 88,
         portfolioSize: '3000+ companies',
-        ticketSize: '$125K - $500K'
+        ticketSize: '$125K - $500K',
+        fundingStatus: 'Funded',
+        aiScore: 88
     },
     {
         id: 3,
@@ -44,7 +50,9 @@ const MOCK_INVESTORS = [
         location: 'San Francisco, CA',
         matchScore: 75,
         portfolioSize: '12 companies',
-        ticketSize: '$50K - $250K'
+        ticketSize: '$50K - $250K',
+        fundingStatus: 'Seeking Funding',
+        aiScore: 75
     },
     {
         id: 4,
@@ -58,17 +66,26 @@ const MOCK_INVESTORS = [
         location: 'New York, NY',
         matchScore: 68,
         portfolioSize: '300+ companies',
-        ticketSize: '$10M - $50M'
+        ticketSize: '$10M - $50M',
+        fundingStatus: 'Not Seeking',
+        aiScore: 68
     }
 ];
 
-const INDUSTRIES = ['All', 'AI/ML', 'Blockchain', 'Fintech', 'HealthTech', 'SaaS', 'E-commerce', 'EdTech'];
-const STAGES = ['All', 'Pre-Seed', 'Seed', 'Series A', 'Series B', 'Series C'];
-
 export default function InvestorDiscovery() {
     const [searchQuery, setSearchQuery] = useState('');
-    const [selectedIndustry, setSelectedIndustry] = useState('All');
-    const [selectedStage, setSelectedStage] = useState('All');
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filters, setFilters] = useState({
+        industry: 'All Industries',
+        stage: 'All Stages',
+        fundingStatus: 'All Statuses',
+        minAiScore: 0
+    });
+
+    // Apply filters
+    const handleApplyFilters = (newFilters) => {
+        setFilters(newFilters);
+    };
 
     // Filter investors based on search and filters
     const filteredInvestors = MOCK_INVESTORS.filter(investor => {
@@ -78,14 +95,20 @@ export default function InvestorDiscovery() {
             investor.type.toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesIndustry =
-            selectedIndustry === 'All' ||
-            investor.industries.includes(selectedIndustry);
+            filters.industry === 'All Industries' ||
+            investor.industries.includes(filters.industry);
 
         const matchesStage =
-            selectedStage === 'All' ||
-            investor.stages.includes(selectedStage);
+            filters.stage === 'All Stages' ||
+            investor.stages.includes(filters.stage);
 
-        return matchesSearch && matchesIndustry && matchesStage;
+        const matchesFundingStatus =
+            filters.fundingStatus === 'All Statuses' ||
+            investor.fundingStatus === filters.fundingStatus;
+
+        const matchesAiScore = investor.aiScore >= filters.minAiScore;
+
+        return matchesSearch && matchesIndustry && matchesStage && matchesFundingStatus && matchesAiScore;
     });
 
     // Get match score badge class
@@ -98,8 +121,13 @@ export default function InvestorDiscovery() {
     return (
         <div className={styles.container}>
             {/* Search Header */}
-            <div className={styles.header}>
-                <h2 className={styles.headerTitle}>Find Investors</h2>
+            <FeedHeader
+                title="Find Investors"
+                subtitle="Discover funds and angels matching your criteria"
+                showFilter={false}
+            />
+
+            <div className={styles.searchSection}>
                 <div className={styles.searchContainer}>
                     <Search className={styles.searchIcon} size={20} />
                     <input
@@ -110,40 +138,21 @@ export default function InvestorDiscovery() {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
+
+                {/* Filter Button */}
+                <button className={styles.filterButton} onClick={() => setIsFilterOpen(true)}>
+                    <Filter size={18} />
+                    <span>Filter</span>
+                </button>
             </div>
 
-            {/* Filter Pills */}
-            <div className={styles.filtersSection}>
-                <div className={styles.filterGroup}>
-                    <span className={styles.filterLabel}>Industry:</span>
-                    <div className={styles.filterPills}>
-                        {INDUSTRIES.map(industry => (
-                            <button
-                                key={industry}
-                                className={`${styles.filterPill} ${selectedIndustry === industry ? styles.filterPillActive : ''}`}
-                                onClick={() => setSelectedIndustry(industry)}
-                            >
-                                {industry}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-
-                <div className={styles.filterGroup}>
-                    <span className={styles.filterLabel}>Stage:</span>
-                    <div className={styles.filterPills}>
-                        {STAGES.map(stage => (
-                            <button
-                                key={stage}
-                                className={`${styles.filterPill} ${selectedStage === stage ? styles.filterPillActive : ''}`}
-                                onClick={() => setSelectedStage(stage)}
-                            >
-                                {stage}
-                            </button>
-                        ))}
-                    </div>
-                </div>
-            </div>
+            {/* Filter Modal */}
+            <FilterModal
+                isOpen={isFilterOpen}
+                filters={filters}
+                onApply={handleApplyFilters}
+                onClose={() => setIsFilterOpen(false)}
+            />
 
             {/* Investor Feed */}
             <div className={styles.feed}>

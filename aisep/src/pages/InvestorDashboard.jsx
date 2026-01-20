@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { TrendingUp, Heart, DollarSign, CheckCircle, Calendar, Target, Eye, MessageSquare } from 'lucide-react';
-import styles from './InvestorDashboard.module.css';
+import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare } from 'lucide-react';
+import styles from '../styles/SharedDashboard.module.css';
+import FeedHeader from '../components/feed/FeedHeader';
 
 /**
  * InvestorDashboard - Comprehensive dashboard for investors
@@ -45,19 +46,19 @@ export default function InvestorDashboard({ user }) {
 
     return (
         <div className={styles.container}>
-            {/* Header */}
-            <div className={styles.header}>
-                <div className={styles.headerContent}>
-                    <h1 className={styles.title}>Investor Dashboard</h1>
-                    <p className={styles.subtitle}>Welcome, {user?.name || 'Investor'}! Manage your investments and discover startups.</p>
-                </div>
-            </div>
+            {/* Unified Header */}
+            <FeedHeader
+                title="Investor Dashboard"
+                subtitle={`Welcome, ${user?.name || 'Investor'}! Manage your investments and discover startups.`}
+                showFilter={false}
+                user={user}
+            />
 
             {/* Quick Stats */}
             <div className={styles.statsGrid}>
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#dbeafe' }}>
-                        <DollarSign size={24} color="#0284c7" />
+                    <div className={`${styles.statIcon} ${styles.iconCyan}`}>
+                        <DollarSign size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.totalInvested}</div>
@@ -66,8 +67,8 @@ export default function InvestorDashboard({ user }) {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#ede9fe' }}>
-                        <TrendingUp size={24} color="#7c3aed" />
+                    <div className={`${styles.statIcon} ${styles.iconPurple}`}>
+                        <TrendingUp size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.activeInvestments}</div>
@@ -76,8 +77,8 @@ export default function InvestorDashboard({ user }) {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#fce7f3' }}>
-                        <Heart size={24} color="#be185d" />
+                    <div className={`${styles.statIcon} ${styles.iconRed}`}>
+                        <Heart size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.watchlistCount}</div>
@@ -86,8 +87,8 @@ export default function InvestorDashboard({ user }) {
                 </div>
 
                 <div className={styles.statCard}>
-                    <div className={styles.statIcon} style={{ background: '#f0fdf4' }}>
-                        <MessageSquare size={24} color="#16a34a" />
+                    <div className={`${styles.statIcon} ${styles.iconGreen}`}>
+                        <MessageSquare size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.acceptedInterests}</div>
@@ -139,22 +140,22 @@ export default function InvestorDashboard({ user }) {
                             {/* Portfolio Summary */}
                             <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
                                 <h3 className={styles.cardTitle}>Portfolio Summary</h3>
-                                <div className={styles.summaryGrid}>
-                                    <div className={styles.summaryItem}>
-                                        <div className={styles.summaryLabel}>Portfolio Value</div>
-                                        <div className={styles.summaryValue}>{dashboardData.portfolioValue}</div>
+                                <div className={styles.metricsGrid}>
+                                    <div className={styles.metricItem}>
+                                        <div className={styles.metricLabel}>Portfolio Value</div>
+                                        <div className={styles.metricValue}>{dashboardData.portfolioValue}</div>
                                     </div>
-                                    <div className={styles.summaryItem}>
-                                        <div className={styles.summaryLabel}>Active Investments</div>
-                                        <div className={styles.summaryValue}>{dashboardData.activeInvestments}</div>
+                                    <div className={styles.metricItem}>
+                                        <div className={styles.metricLabel}>Active Investments</div>
+                                        <div className={styles.metricValue}>{dashboardData.activeInvestments}</div>
                                     </div>
-                                    <div className={styles.summaryItem}>
-                                        <div className={styles.summaryLabel}>Total Deployed</div>
-                                        <div className={styles.summaryValue}>{dashboardData.totalInvested}</div>
+                                    <div className={styles.metricItem}>
+                                        <div className={styles.metricLabel}>Total Deployed</div>
+                                        <div className={styles.metricValue}>{dashboardData.totalInvested}</div>
                                     </div>
-                                    <div className={styles.summaryItem}>
-                                        <div className={styles.summaryLabel}>Accepted Interests</div>
-                                        <div className={styles.summaryValue}>{dashboardData.acceptedInterests}</div>
+                                    <div className={styles.metricItem}>
+                                        <div className={styles.metricLabel}>Accepted Interests</div>
+                                        <div className={styles.metricValue}>{dashboardData.acceptedInterests}</div>
                                     </div>
                                 </div>
                             </div>
@@ -162,32 +163,32 @@ export default function InvestorDashboard({ user }) {
                             {/* Recent Activity */}
                             <div className={styles.card}>
                                 <h3 className={styles.cardTitle}>Recent Activity</h3>
-                                <div className={styles.activityList}>
-                                    <div className={styles.activityItem}>
-                                        <div className={styles.activityIcon}>
+                                <div className={styles.list}>
+                                    <div className={styles.listItem}>
+                                        <div className={`${styles.listIcon} ${styles.iconGreen}`}>
                                             <CheckCircle size={18} />
                                         </div>
-                                        <div className={styles.activityContent}>
-                                            <div className={styles.activityTitle}>Interest accepted by TechStartup AI</div>
-                                            <div className={styles.activityTime}>3 hours ago</div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>Interest accepted by TechStartup AI</div>
+                                            <div className={styles.listMeta}>3 hours ago</div>
                                         </div>
                                     </div>
-                                    <div className={styles.activityItem}>
-                                        <div className={styles.activityIcon}>
+                                    <div className={styles.listItem}>
+                                        <div className={`${styles.listIcon} ${styles.iconCyan}`}>
                                             <Eye size={18} />
                                         </div>
-                                        <div className={styles.activityContent}>
-                                            <div className={styles.activityTitle}>New startup added to watchlist: FinApp</div>
-                                            <div className={styles.activityTime}>1 day ago</div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>New startup added to watchlist: FinApp</div>
+                                            <div className={styles.listMeta}>1 day ago</div>
                                         </div>
                                     </div>
-                                    <div className={styles.activityItem}>
-                                        <div className={styles.activityIcon}>
+                                    <div className={styles.listItem}>
+                                        <div className={`${styles.listIcon} ${styles.iconPurple}`}>
                                             <TrendingUp size={18} />
                                         </div>
-                                        <div className={styles.activityContent}>
-                                            <div className={styles.activityTitle}>AI Score updated for CloudData Inc (82/100)</div>
-                                            <div className={styles.activityTime}>2 days ago</div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>AI Score updated for CloudData Inc (82/100)</div>
+                                            <div className={styles.listMeta}>2 days ago</div>
                                         </div>
                                     </div>
                                 </div>
@@ -196,21 +197,21 @@ export default function InvestorDashboard({ user }) {
                             {/* Quick Stats */}
                             <div className={styles.card}>
                                 <h3 className={styles.cardTitle}>Quick Stats</h3>
-                                <div className={styles.statsDetails}>
-                                    <div className={styles.statRow}>
-                                        <span>Average AI Score</span>
+                                <div className={styles.list}>
+                                    <div className={styles.listItem} style={{ justifyContent: 'space-between' }}>
+                                        <span className={styles.listSubtitle}>Average AI Score</span>
                                         <strong>79/100</strong>
                                     </div>
-                                    <div className={styles.statRow}>
-                                        <span>Preferred Stage</span>
+                                    <div className={styles.listItem} style={{ justifyContent: 'space-between' }}>
+                                        <span className={styles.listSubtitle}>Preferred Stage</span>
                                         <strong>Series A</strong>
                                     </div>
-                                    <div className={styles.statRow}>
-                                        <span>Top Industry</span>
+                                    <div className={styles.listItem} style={{ justifyContent: 'space-between' }}>
+                                        <span className={styles.listSubtitle}>Top Industry</span>
                                         <strong>AI/ML</strong>
                                     </div>
-                                    <div className={styles.statRow}>
-                                        <span>Success Rate</span>
+                                    <div className={styles.listItem} style={{ justifyContent: 'space-between' }}>
+                                        <span className={styles.listSubtitle}>Success Rate</span>
                                         <strong>67%</strong>
                                     </div>
                                 </div>
@@ -224,23 +225,22 @@ export default function InvestorDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>Active Investments</h3>
-                            <div className={styles.investmentsList}>
+                            <div className={styles.list}>
                                 {activeInvestments.map(investment => (
-                                    <div key={investment.id} className={styles.investmentItem}>
-                                        <div className={styles.investmentInfo}>
-                                            <h4 className={styles.startupName}>{investment.startupName}</h4>
-                                            <div className={styles.investmentDetails}>
-                                                <span className={styles.stage}>{investment.stage}</span>
-                                                <span className={styles.date}>Invested: {investment.date}</span>
+                                    <div key={investment.id} className={styles.listItem}>
+                                        <div className={styles.listContent}>
+                                            <h4 className={styles.listTitle}>{investment.startupName}</h4>
+                                            <div className={styles.listMeta} style={{ display: 'flex', gap: '12px' }}>
+                                                <span className={`${styles.badge} ${styles.badgeInfo}`}>{investment.stage}</span>
+                                                <span>Invested: {investment.date}</span>
                                             </div>
-                                            <div className={styles.investmentBreakdown}>
-                                                <span>Amount: {investment.amount}</span>
-                                                <span>Equity: {investment.equity}</span>
+                                            <div style={{ marginTop: '8px', fontSize: '14px', color: 'var(--text-primary)' }}>
+                                                <strong>{investment.amount}</strong> for {investment.equity} Equity
                                             </div>
                                         </div>
-                                        <div className={styles.investmentActions}>
-                                            <button className={styles.viewBtn}>View Details</button>
-                                            <button className={styles.documentsBtn}>Documents</button>
+                                        <div className={styles.listActions}>
+                                            <button className={styles.secondaryBtn}>View Details</button>
+                                            <button className={styles.secondaryBtn}>Documents</button>
                                         </div>
                                     </div>
                                 ))}
@@ -254,23 +254,23 @@ export default function InvestorDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>My Watchlist ({watchlist.length})</h3>
-                            <div className={styles.watchlistItems}>
+                            <div className={styles.list}>
                                 {watchlist.map(item => (
-                                    <div key={item.id} className={styles.watchlistItem}>
-                                        <div className={styles.watchlistInfo}>
-                                            <h4 className={styles.startupName}>{item.name}</h4>
-                                            <div className={styles.watchlistMeta}>
-                                                <span className={styles.stage}>{item.stage}</span>
-                                                <span className={styles.industry}>{item.industry}</span>
-                                                <span className={styles.score}>Score: {item.score}/100</span>
-                                                <span className={styles.followers}>👥 {item.followers}</span>
+                                    <div key={item.id} className={styles.listItem}>
+                                        <div className={styles.listContent}>
+                                            <h4 className={styles.listTitle}>{item.name}</h4>
+                                            <div className={styles.listMeta} style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
+                                                <span className={`${styles.badge} ${styles.badgeInfo}`}>{item.stage}</span>
+                                                <span className={`${styles.badge} ${styles.badgePending}`}>{item.industry}</span>
+                                                <span>Score: {item.score}/100</span>
+                                                <span>👥 {item.followers}</span>
                                             </div>
                                         </div>
-                                        <div className={styles.watchlistActions}>
-                                            <button className={styles.viewBtn}>View Profile</button>
-                                            <button className={styles.interestBtn}>Send Interest</button>
+                                        <div className={styles.listActions}>
+                                            <button className={styles.secondaryBtn}>Profile</button>
+                                            <button className={styles.primaryBtn}>Send Interest</button>
                                             <button
-                                                className={styles.removeBtn}
+                                                className={styles.dangerBtn}
                                                 onClick={() => handleRemoveFromWatchlist(item.id)}
                                             >
                                                 Remove
@@ -290,30 +290,29 @@ export default function InvestorDashboard({ user }) {
                             <h3 className={styles.cardTitle}>
                                 Sent Interests ({sentInterests.length})
                             </h3>
-                            <div className={styles.interestsList}>
+                            <div className={styles.list}>
                                 {sentInterests.map(interest => (
-                                    <div key={interest.id} className={styles.interestItem}>
-                                        <div className={styles.interestInfo}>
-                                            <h4 className={styles.startupName}>{interest.startupName}</h4>
-                                            <div className={styles.interestMeta}>
-                                                <span className={styles.stage}>{interest.stage}</span>
-                                                <span>Sent: {interest.sentDate}</span>
+                                    <div key={interest.id} className={styles.listItem}>
+                                        <div className={styles.listContent}>
+                                            <h4 className={styles.listTitle}>{interest.startupName}</h4>
+                                            <div className={styles.listMeta}>
+                                                <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginRight: '8px' }}>{interest.stage}</span>
+                                                Sent: {interest.sentDate}
                                             </div>
                                         </div>
-                                        <div className={styles.interestStatus}>
-                                            <span className={`${styles.statusBadge} ${styles[`badge-${interest.status}`]}`}>
-                                                {interest.status === 'pending' && '⏳ Pending'}
-                                                {interest.status === 'accepted' && '✓ Accepted'}
+                                        <div className={styles.listActions} style={{ alignItems: 'center' }}>
+                                            <span className={`${styles.badge} ${interest.status === 'pending' ? styles.badgePending : styles.badgeSuccess}`}>
+                                                {interest.status === 'pending' ? '⏳ Pending' : '✓ Accepted'}
                                             </span>
+                                            {interest.status === 'pending' && (
+                                                <button
+                                                    className={styles.dangerBtn}
+                                                    onClick={() => handleWithdrawInterest(interest.id)}
+                                                >
+                                                    Withdraw
+                                                </button>
+                                            )}
                                         </div>
-                                        {interest.status === 'pending' && (
-                                            <button
-                                                className={styles.withdrawBtn}
-                                                onClick={() => handleWithdrawInterest(interest.id)}
-                                            >
-                                                Withdraw
-                                            </button>
-                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -359,8 +358,8 @@ export default function InvestorDashboard({ user }) {
                                     </div>
                                 </div>
 
-                                <div className={styles.formActions}>
-                                    <button type="submit" className={styles.saveBtn}>Save Preferences</button>
+                                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
+                                    <button type="submit" className={styles.primaryBtn}>Save Preferences</button>
                                 </div>
                             </form>
                         </div>

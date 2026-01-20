@@ -21,9 +21,9 @@ function Sidebar({
   onShowDashboard,
   onMenuItemClick,
   user,
-  onLogout
+  onLogout,
+  activeView = 'main' // New prop to determine active state
 }) {
-  const [activeItem, setActiveItem] = useState('Home');
   const { theme, toggleTheme } = useTheme();
 
   const navItems = [
@@ -36,8 +36,6 @@ function Sidebar({
   ];
 
   const handleNavClick = (label) => {
-    setActiveItem(label);
-
     // Navigate to dashboard when clicking Dashboard
     if (label === 'Dashboard' && onShowDashboard) {
       onShowDashboard();
@@ -133,12 +131,22 @@ function Sidebar({
               })
               .map((item) => {
                 const Icon = item.icon;
+                // Map activeView to nav item labels
+                const getActiveLabel = () => {
+                  if (activeView === 'main') return 'Home';
+                  if (activeView === 'dashboard') return 'Dashboard';
+                  if (activeView === 'profile') return 'Profile';
+                  if (activeView === 'advisors') return 'Advisors';
+                  if (activeView === 'investors') return 'Investors';
+                  return 'Home';
+                };
+                const isActive = item.label === getActiveLabel();
+
                 return (
                   <a
                     key={item.label}
                     href={item.href}
-                    className={`${styles.navItem} ${activeItem === item.label ? styles.active : ''
-                      }`}
+                    className={`${styles.navItem} ${isActive ? styles.active : ''}`}
                     onClick={(e) => {
                       e.preventDefault();
                       handleNavClick(item.label);

@@ -111,6 +111,7 @@ function App() {
           onShowDashboard={handleShowDashboard}
           user={user}
           onLogout={handleLogout}
+          activeView={currentView}
         >
           {user?.role === 'startup' ? (
             <StartupDashboard user={user} />
@@ -137,6 +138,7 @@ function App() {
           onShowDashboard={handleShowDashboard}
           user={user}
           onLogout={handleLogout}
+          activeView={currentView}
         />
       ) : currentView === 'roleSelection' ? (
         <RegisterSelection
@@ -155,6 +157,7 @@ function App() {
           user={user}
           onLogout={handleLogout}
           showProfile={true}
+          activeView={currentView}
         />
       ) : currentView === 'advisors' ? (
         <MainLayout
@@ -168,6 +171,7 @@ function App() {
           user={user}
           onLogout={handleLogout}
           showAdvisors={true}
+          activeView={currentView}
         />
       ) : currentView === 'investors' ? (
         <MainLayout
@@ -181,6 +185,7 @@ function App() {
           user={user}
           onLogout={handleLogout}
           showInvestors={true}
+          activeView={currentView}
         />
       ) : (
         <RegisterPage

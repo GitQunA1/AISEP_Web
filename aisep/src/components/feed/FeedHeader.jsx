@@ -8,22 +8,22 @@ import FeedFilter from './FeedFilter';
  * @param {object} user - Current user object
  * @param {function} onFilterChange - Callback when filters change
  */
-function FeedHeader({ user, onFilterChange }) {
+function FeedHeader({ user, onFilterChange, title = "Discover Projects", subtitle = "Explore innovative AI-powered projects", showFilter = true }) {
   return (
     <>
       <div className={styles.feedHeader}>
         <div className={styles.headerContent}>
           <div className={styles.titleSection}>
             <div>
-              <h2 className={styles.title}>Discover Projects</h2>
-              <p className={styles.subtitle}>Explore innovative AI-powered projects</p>
+              <h2 className={styles.title}>{title}</h2>
+              <p className={styles.subtitle}>{subtitle}</p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Feed Filter for Investors */}
-      <FeedFilter user={user} onFilterChange={onFilterChange} />
+      {/* Feed Filter for Investors (Optional) */}
+      {showFilter && <FeedFilter user={user} onFilterChange={onFilterChange} />}
     </>
   );
 }

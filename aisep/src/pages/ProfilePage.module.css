@@ -1,9 +1,521 @@
 .container {
     width: 100%;
-    max-width: 600px;
+    max-width: 680px;
+    /* Updated to 680px */
     margin: 0 auto;
     background-color: var(--bg-primary);
     min-height: 100vh;
+    padding-bottom: 60px;
+}
+
+.message {
+    padding: var(--spacing-xl);
+    text-align: center;
+    color: var(--text-secondary);
+}
+
+/* Cover Banner */
+.coverBanner {
+    width: 100%;
+    height: 200px;
+    background: linear-gradient(135deg, var(--primary-blue) 0%, #764ba2 100%);
+    /* Adjusted to use variable */
+}
+
+@media (max-width: 768px) {
+    .coverBanner {
+        height: 150px;
+    }
+}
+
+/* Profile Header */
+.profileHeader {
+    padding: 0 var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.avatarSection {
+    margin-top: -75px;
+    margin-bottom: var(--spacing-md);
+    position: relative;
+    /* Context */
+}
+
+.avatar {
+    width: 134px;
+    height: 134px;
+    border-radius: 50%;
+    background-color: var(--primary-blue);
+    border: 4px solid var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 48px;
+    font-weight: 700;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .avatarSection {
+        margin-top: -60px;
+    }
+
+    .avatar {
+        width: 100px;
+        height: 100px;
+        font-size: 36px;
+    }
+}
+
+.profileInfo {
+    padding-bottom: var(--spacing-lg);
+}
+
+/* Mobile Adjustments for Header Padding */
+@media (max-width: 600px) {
+    .profileHeader {
+        padding: 0 16px;
+        /* Ensure 16px sides */
+    }
+}
+
+.nameSection {
+    margin-bottom: var(--spacing-sm);
+}
+
+.name {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.handle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+}
+
+.bio {
+    font-size: 15px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin: var(--spacing-md) 0;
+}
+
+.metadata {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin: var(--spacing-sm) 0;
+}
+
+.metaItem {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-secondary);
+    font-size: 15px;
+}
+
+.metaItem svg {
+    color: var(--text-secondary);
+}
+
+.stats {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-md);
+}
+
+.stat {
+    display: flex;
+    gap: 4px;
+    cursor: pointer;
+    transition: text-decoration 0.2s;
+}
+
+.stat:hover .statValue {
+    text-decoration: underline;
+}
+
+.statValue {
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.statLabel {
+    color: var(--text-secondary);
+}
+
+/* Tabs */
+.tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    position: sticky;
+    top: 0;
+    /* Sticky at very top context if possible, or adjusted by layout */
+    background-color: rgba(0, 0, 0, 0.65);
+    /* Blurred background trick */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    z-index: 10;
+    overflow-x: auto;
+    scrollbar-width: none;
+}
+
+/* Light mode adjustment for blur might be needed, but assuming dark mode focused based on screenshots */
+:global([data-theme='light']) .tabs {
+    background-color: rgba(255, 255, 255, 0.85);
+}
+
+.tabs::-webkit-scrollbar {
+    display: none;
+}
+
+.tab {
+    flex: 1;
+    min-width: max-content;
+    padding: 16px 0;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+}
+
+.tab:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.tab.active {
+    color: var(--text-primary);
+}
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background-color: var(--primary-blue);
+    border-radius: 4px 4px 0 0;
+}
+
+/* Tab Content */
+.tabContent {
+    padding: var(--spacing-lg);
+}
+
+@media (max-width: 600px) {
+    .tabContent {
+        padding: 16px 12px;
+        /* Mobile padding side adjustments */
+    }
+}
+
+/* Overview Tab */
+.overview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+}
+
+@media (min-width: 769px) {
+    .statsGrid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+}
+
+.statCard {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    text-align: center;
+}
+
+.cardValue {
+    font-size: 32px;
+    font-weight: 700;
+    color: var(--primary-blue);
+    margin-bottom: var(--spacing-sm);
+}
+
+.cardLabel {
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.activity h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+.activityList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.activityList li {
+    padding: var(--spacing-md);
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-size: 15px;
+}
+
+.activityList li:last-child {
+    border-bottom: none;
+}
+
+/* Profile Edit Tab */
+.profileEdit h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: var(--spacing-lg);
+    color: var(--text-primary);
+}
+
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.formGroup label {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* NEW INPUT STYLE */
+.formGroup input,
+.formGroup textarea {
+    padding: 12px;
+    border: 1px solid transparent;
+    /* No default border */
+    border-radius: var(--radius-md);
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 15px;
+    font-family: inherit;
+    transition: all 0.2s;
+}
+
+.formGroup input:focus,
+.formGroup textarea:focus {
+    outline: none;
+    background-color: var(--bg-primary);
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 1px var(--primary-blue);
+}
+
+.saveBtn {
+    padding: 10px 24px;
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 9999px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    align-self: flex-start;
+    transition: background-color 0.2s;
+}
+
+.saveBtn:hover {
+    background-color: #1d9bf0;
+}
+
+/* Documents Tab */
+.documents h3 {
+    font-size: 20px;
+    font-weight: 700;
+    margin-bottom: var(--spacing-lg);
+    color: var(--text-primary);
+}
+
+.uploadBox {
+    border: 2px dashed var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-xl);
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.uploadLabel {
+    display: inline-block;
+    padding: 12px 24px;
+    background-color: var(--primary-blue);
+    color: white;
+    border-radius: 9999px;
+    font-weight: 700;
+    cursor: pointer;
+    margin-bottom: var(--spacing-md);
+}
+
+.uploadLabel:hover {
+    background-color: #1d9bf0;
+}
+
+.uploadBox p {
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.documentsList h4 {
+    font-size: 17px;
+    font-weight: 700;
+    margin-bottom: var(--spacing-md);
+    color: var(--text-primary);
+}
+
+.documentItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--spacing-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-sm);
+    background-color: var(--bg-secondary);
+    /* Added card bg */
+}
+
+.documentItem span {
+    color: var(--text-primary);
+    font-size: 15px;
+}
+
+.documentActions {
+    display: flex;
+    gap: var(--spacing-sm);
+}
+
+.documentActions button {
+    padding: 6px 12px;
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    /* Pill */
+    color: var(--text-primary);
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.documentActions button:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--text-secondary);
+}
+
+/* SEARCH INPUT for Advisors Tab */
+.searchInput {
+    width: 100%;
+    height: 44px;
+    padding: 10px 10px 10px 20px;
+    border: 1px solid transparent;
+    border-radius: 9999px;
+    background-color: var(--bg-secondary);
+    color: var(--text-primary);
+    font-size: 15px;
+    margin-bottom: var(--spacing-lg);
+    transition: all 0.2s;
+}
+
+.searchInput:focus {
+    outline: none;
+    background-color: var(--bg-primary);
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 1px var(--primary-blue);
+}
+
+.advisorsList {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.advisorCard {
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    background-color: var(--bg-secondary);
+}
+
+.advisorHeader {
+    display: flex;
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+}
+
+.advisorAvatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background-color: var(--primary-blue);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 20px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.advisorInfo h4 {
+    font-size: 17px;
+    font-weight: 700;
+    margin: 0 0 4px 0;
+    color: var(--text-primary);
+}
+
+.advisorInfo p {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.advisorCard>p {
+    font-size: 15px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin-bottom: var(--spacing-md);
+}
+
+.requestBtn {
+    padding: 8px 20px;
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.requestBtn:hover {
+    background-color: #1d9bf0;
 }
 
 .message {

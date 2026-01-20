@@ -1,25 +1,45 @@
 import React, { useState } from 'react';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
-import FileUpload from '../common/FileUpload';
-import styles from './RegisterForms.module.css';
+import { Eye, EyeOff, Loader, ChevronLeft } from 'lucide-react';
+import styles from './RegistrationUnique.module.css';
 
+/**
+ * InvestorRegisterForm - Simplified credentials
+ * Only collects: Full Name, Email, Password
+ */
 function InvestorRegisterForm({ onBack, onComplete }) {
-  const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
-    fullName: '', 
-    email: '',          // ADDED
-    phone: '',          // ADDED
-    organizationName: '', 
-    linkedinUrl: '', 
-    website: '',        // ADDED
-    industries: [], 
-    stages: [], 
-    verificationDocument: null,
+    fullName: '',
+    email: '',
+    password: '',
+    confirmPassword: '',
   });
-  
+
   const [errors, setErrors] = useState({});
-  const industries = ['Fintech', 'HealthTech', 'EduTech', 'E-commerce', 'SaaS', 'AI/ML', 'Blockchain'];
-  const stages = ['Idea', 'MVP', 'Growth', 'Scaling'];
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const validateForm = () => {
+    const newErrors = {};
+    if (!formData.fullName.trim()) newErrors.fullName = 'Full name is required';
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Invalid email';
+    }
+    if (!formData.password) {
+      newErrors.password = 'Password is required';
+    } else if (formData.password.length < 8) {
+      newErrors.password = 'Min 8 characters';
+    }
+    if (!formData.confirmPassword) {
+      newErrors.confirmPassword = 'Confirm password';
+    } else if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = 'Mismatch';
+    }
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -27,143 +47,182 @@ function InvestorRegisterForm({ onBack, onComplete }) {
     if (errors[name]) setErrors((prev) => ({ ...prev, [name]: '' }));
   };
 
-  const handleToggleSelection = (field, item) => {
-    setFormData((prev) => {
-      const list = prev[field];
-      const newList = list.includes(item) ? list.filter((i) => i !== item) : [...list, item];
-      return { ...prev, [field]: newList };
-    });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+    setIsLoading(true);
+
+    // Simulate API call
+    setTimeout(() => {
+      setIsLoading(false);
+      // Simulate success response
+      const mockResponse = { ...formData, role: 'Investor' };
+      onComplete && onComplete(mockResponse);
+    }, 1500);
   };
 
-  const handleFileSelect = (file) => {
-    setFormData((prev) => ({ ...prev, verificationDocument: file }));
-    if (errors.verificationDocument) setErrors((prev) => ({ ...prev, verificationDocument: '' }));
-  };
-
-  const validateStep = () => {
-    const newErrors = {};
-    if (currentStep === 1) {
-      if (!formData.fullName) newErrors.fullName = 'Full Name is required';
-      if (!formData.email) newErrors.email = 'Email address is required';
-      if (!formData.phone) newErrors.phone = 'Phone number is required';
-      if (formData.industries.length === 0) newErrors.industries = 'Select at least one industry';
-    }
-    if (currentStep === 2) {
-      if (!formData.verificationDocument) newErrors.verificationDocument = 'Verification document is required';
-    }
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleNext = () => { if (validateStep()) setCurrentStep((prev) => prev + 1); };
-  const handlePrevious = () => { setCurrentStep((prev) => prev - 1); };
-  const handleSubmit = () => { if (validateStep()) onComplete && onComplete(formData); };
+  const isFormValid =
+    formData.fullName.trim() &&
+    formData.email.trim() &&
+    formData.password.length >= 8 &&
+    formData.password === formData.confirmPassword;
 
   return (
-    <div className={styles.formCard}>
-      <div className={styles.cardHeader}>
-        <div className={styles.progressBar}>
-          <div className={styles.progressFill} style={{ width: `${(currentStep / 2) * 100}%` }} />
+    <div className={styles.reg_formCard}>
+      <div className={styles.reg_cardHeader}>
+        <div className={styles.reg_progressBar}>
+          <div className={styles.reg_progressFill} style={{ width: '100%' }} />
         </div>
-        <p className={styles.stepIndicator}>Step {currentStep} of 2</p>
+        <p className={styles.reg_stepIndicator}>Create Your Account</p>
       </div>
 
-      <div className={styles.cardBody}>
-        {currentStep === 1 && (
-          <div className={styles.stepContainer}>
-            <div>
-              <h2 className={styles.stepTitle}>Your Profile</h2>
-              <p className={styles.stepSubtitle}>Tell us about your investment background and contact details</p>
-            </div>
-            
-            {/* Contact Information Section */}
-            <div className={styles.twoColumnGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Full Name <span className={styles.required}>*</span></label>
-                <input type="text" name="fullName" value={formData.fullName} onChange={handleInputChange}
-                  className={`${styles.input} ${errors.fullName ? styles.inputError : ''}`} placeholder="John Doe" />
-                {errors.fullName && <p className={styles.errorText}>{errors.fullName}</p>}
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Email Address <span className={styles.required}>*</span></label>
-                <input type="email" name="email" value={formData.email} onChange={handleInputChange}
-                  className={`${styles.input} ${errors.email ? styles.inputError : ''}`} placeholder="john@vc.com" />
-                {errors.email && <p className={styles.errorText}>{errors.email}</p>}
-              </div>
-            </div>
-
-            <div className={styles.twoColumnGrid}>
-               <div className={styles.formGroup}>
-                <label className={styles.label}>Phone Number <span className={styles.required}>*</span></label>
-                <input type="tel" name="phone" value={formData.phone} onChange={handleInputChange}
-                  className={`${styles.input} ${errors.phone ? styles.inputError : ''}`} placeholder="+1 (555) 000-0000" />
-                {errors.phone && <p className={styles.errorText}>{errors.phone}</p>}
-              </div>
-               <div className={styles.formGroup}>
-                <label className={styles.label}>Organization / Fund Name</label>
-                <input type="text" name="organizationName" value={formData.organizationName} onChange={handleInputChange}
-                  className={styles.input} placeholder="e.g., Venture Fund XYZ" />
-              </div>
-            </div>
-
-            <div className={styles.twoColumnGrid}>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>LinkedIn URL</label>
-                <input type="text" name="linkedinUrl" value={formData.linkedinUrl} onChange={handleInputChange}
-                  className={styles.input} placeholder="https://linkedin.com/in/..." />
-              </div>
-              <div className={styles.formGroup}>
-                <label className={styles.label}>Website</label>
-                <input type="text" name="website" value={formData.website} onChange={handleInputChange}
-                  className={styles.input} placeholder="https://yourfund.com" />
-              </div>
-            </div>
-
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Interested Industries <span className={styles.required}>*</span></label>
-              <div className={styles.pillGroup}>
-                {industries.map((item) => (
-                  <button key={item} type="button" className={`${styles.pill} ${formData.industries.includes(item) ? styles.pillActive : ''}`}
-                    onClick={() => handleToggleSelection('industries', item)}>{item}</button>
-                ))}
-              </div>
-              {errors.industries && <p className={styles.errorText}>{errors.industries}</p>}
-            </div>
-            
-            <div className={styles.formGroup}>
-              <label className={styles.label}>Preferred Investment Stages</label>
-              <div className={styles.pillGroup}>
-                {stages.map((item) => (
-                  <button key={item} type="button" className={`${styles.pill} ${formData.stages.includes(item) ? styles.pillActive : ''}`}
-                    onClick={() => handleToggleSelection('stages', item)}>{item}</button>
-                ))}
-              </div>
-            </div>
+      <div className={styles.reg_cardBody}>
+        <div className={styles.reg_stepContainer}>
+          <div>
+            <h2 className={styles.reg_stepTitle}>Welcome to AISEP</h2>
+            <p className={styles.reg_stepSubtitle}>Join as an Investor</p>
           </div>
-        )}
 
-        {currentStep === 2 && (
-          <div className={styles.stepContainer}>
-            <div>
-              <h2 className={styles.stepTitle}>Identity Verification</h2>
-              <p className={styles.stepSubtitle}>To ensure platform integrity, we require verification</p>
+          <form onSubmit={handleSubmit} className={styles.reg_Form}>
+            <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
+              <label htmlFor="fullName" className={styles.reg_label}>
+                Full Name <span className={styles.reg_required}>*</span>
+              </label>
+              <input
+                id="fullName"
+                name="fullName"
+                type="text"
+                value={formData.fullName}
+                onChange={handleInputChange}
+                className={`${styles.reg_input} ${errors.fullName ? styles.reg_inputError : ''}`}
+                placeholder="Enter your full name"
+                disabled={isLoading}
+              />
+              {errors.fullName && <p className={styles.reg_errorText}>{errors.fullName}</p>}
             </div>
-            <div className={styles.kycInfo}>
-              <p>Please upload a valid government-issued ID or business registration document to verify your accredited investor status.</p>
+
+            <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
+              <label htmlFor="email" className={styles.reg_label}>
+                Email Address <span className={styles.reg_required}>*</span>
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className={`${styles.reg_input} ${errors.email ? styles.reg_inputError : ''}`}
+                placeholder="you@example.com"
+                disabled={isLoading}
+              />
+              {errors.email && <p className={styles.reg_errorText}>{errors.email}</p>}
             </div>
-            <FileUpload label="ID / Business License (Required)" required onFileSelect={handleFileSelect} error={errors.verificationDocument} />
-          </div>
-        )}
+
+            <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
+              <label htmlFor="password" className={styles.reg_label}>
+                Password <span className={styles.reg_required}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  className={`${styles.reg_input} ${errors.password ? styles.reg_inputError : ''}`}
+                  placeholder="Minimum 8 characters"
+                  disabled={isLoading}
+                  style={{ paddingRight: '48px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              {errors.password && <p className={styles.reg_errorText}>{errors.password}</p>}
+            </div>
+
+            <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
+              <label htmlFor="confirmPassword" className={styles.reg_label}>
+                Confirm Password <span className={styles.reg_required}>*</span>
+              </label>
+              <div style={{ position: 'relative' }}>
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  className={`${styles.reg_input} ${errors.confirmPassword ? styles.reg_inputError : ''}`}
+                  placeholder="Re-enter password"
+                  disabled={isLoading}
+                  style={{ paddingRight: '48px' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '12px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--text-secondary)',
+                    cursor: 'pointer',
+                    padding: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                  }}
+                >
+                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+              {errors.confirmPassword && <p className={styles.reg_errorText}>{errors.confirmPassword}</p>}
+            </div>
+
+            {/* Submit Error */}
+            {errors.submit && (
+              <div className={styles.reg_submitError}>
+                {errors.submit}
+              </div>
+            )}
+          </form>
+        </div>
       </div>
 
-      <div className={styles.cardFooter}>
-        <button onClick={currentStep === 1 ? onBack : handlePrevious} className={styles.secondaryButton}>
-          <ChevronLeft size={20} />
-          <span>{currentStep === 1 ? 'Back' : 'Previous'}</span>
+      <div className={styles.reg_cardFooter}>
+        <button onClick={onBack} className={styles.reg_secondaryButton} disabled={isLoading}>
+          <ChevronLeft size={20} /> Back
         </button>
-        <button onClick={currentStep === 2 ? handleSubmit : handleNext} className={styles.primaryButton}>
-          <span>{currentStep === 2 ? 'Complete Registration' : 'Next Step'}</span>
-          {currentStep !== 2 && <ChevronRight size={20} />}
+        <button
+          onClick={handleSubmit}
+          className={styles.reg_primaryButton}
+          disabled={!isFormValid || isLoading}
+        >
+          {isLoading ? (
+            <>
+              <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} />
+              Creating account...
+            </>
+          ) : (
+            'Create Account'
+          )}
         </button>
       </div>
     </div>

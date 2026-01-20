@@ -16,19 +16,26 @@
 @media (min-width: 768px) {
   .formCard {
     width: 100%;
-    max-width: 640px; /* Optimal reading width */
-    height: 85vh;      /* Taller to accommodate more spacing */
-    max-height: 800px;
-    min-height: 600px;
-    margin: 0 auto;    /* Center horizontally */
-    
+    max-width: 800px;
+    /* Increased width for better review step visibility */
+    height: auto;
+    /* Allow it to shrink if content is small */
+    max-height: 90vh;
+    /* KEY FIX: Constrain height to viewport */
+    margin: 0 auto;
+    /* Center horizontally */
+
     /* Card Styling */
     border: 1px solid var(--border-color);
     border-radius: 16px;
-    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08); /* Pop effect */
-    
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08);
+
     /* Layout Logic */
-    overflow: hidden; /* Clips content to rounded corners */
+    overflow: hidden;
+    /* Clip content so scrollbar stays inside */
+    display: flex;
+    /* Ensure flex context */
+    flex-direction: column;
     position: relative;
   }
 }
@@ -41,7 +48,8 @@
     width: 100%;
     border: none;
     box-shadow: none;
-    padding-bottom: 100px; /* Space for fixed footer */
+    padding-bottom: 100px;
+    /* Space for fixed footer */
   }
 }
 
@@ -51,15 +59,18 @@
 
 /* --- HEADER: Progress Bar & Titles --- */
 .cardHeader {
-  flex-shrink: 0; /* Never shrink */
+  flex-shrink: 0;
+  /* Never shrink */
   background-color: var(--bg-primary);
   z-index: 10;
 }
 
 @media (min-width: 768px) {
   .cardHeader {
-    padding: 32px 40px 0 40px; /* Increased padding */
+    padding: 32px 40px 0 40px;
+    /* Restored spacious padding */
     margin-bottom: 32px;
+    /* Restored spacious margin */
   }
 }
 
@@ -72,25 +83,35 @@
 
 /* --- BODY: The Scrollable Input Area --- */
 .cardBody {
-  flex: 1; /* Take up all remaining space */
+  flex: 1;
+  /* Take up all remaining space */
   display: flex;
   flex-direction: column;
-  gap: 32px; /* INCREASED: Space between major sections */
+  gap: 32px;
+  /* Restored spacious gap */
 }
 
 /* Desktop: Scroll INSIDE this area */
 @media (min-width: 768px) {
   .cardBody {
-    overflow-y: auto; /* Enable vertical scroll */
-    padding: 0 40px 32px 40px; /* Increased internal padding */
-    
+    padding: 0 40px 40px 40px;
+    /* Restored spacious padding */
+    overflow-y: auto;
+    /* KEY FIX: Scroll internally */
+
     /* Thin Scrollbar Styling */
     scrollbar-width: thin;
     scrollbar-color: var(--border-color) transparent;
   }
 
-  .cardBody::-webkit-scrollbar { width: 6px; }
-  .cardBody::-webkit-scrollbar-track { background: transparent; }
+  .cardBody::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .cardBody::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
   .cardBody::-webkit-scrollbar-thumb {
     background-color: #cfd9de;
     border-radius: 4px;
@@ -115,8 +136,10 @@
 /* Desktop: Pinned to bottom of card */
 @media (min-width: 768px) {
   .cardFooter {
-    flex-shrink: 0; /* Never shrink */
+    flex-shrink: 0;
+    /* Never shrink */
     padding: 24px 40px 32px 40px;
+    /* Restored spacious padding */
     border-top: 1px solid var(--border-color);
   }
 }
@@ -130,9 +153,10 @@
     right: 0;
     padding: 16px;
     gap: 12px;
-    flex-direction: row; /* Keep buttons side by side */
+    flex-direction: row;
+    /* Keep buttons side by side */
     border-top: 1px solid var(--border-color);
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
     z-index: 100;
   }
 }
@@ -148,6 +172,7 @@
   border-radius: 2px;
   overflow: hidden;
   margin-bottom: 12px;
+  /* Restored margin */
 }
 
 .progressFill {
@@ -158,6 +183,7 @@
 
 .stepIndicator {
   font-size: 0.8125rem;
+  /* Restored size */
   color: var(--text-secondary);
   font-weight: 600;
   text-transform: uppercase;
@@ -167,14 +193,17 @@
 /* Typography */
 .stepTitle {
   font-size: 1.75rem;
+  /* Restored size */
   font-weight: 800;
   letter-spacing: -0.5px;
   color: var(--text-primary);
   margin: 0 0 8px 0;
+  /* Restored margin */
 }
 
 .stepSubtitle {
   font-size: 1rem;
+  /* Restored size */
   color: var(--text-secondary);
   margin: 0;
   font-weight: 500;
@@ -185,42 +214,54 @@
 .stepContainer {
   display: flex;
   flex-direction: column;
-  gap: 32px; /* INCREASED: Space between sections */
+  gap: 32px;
+  /* Restored gap */
 }
 
 .formGroup {
   display: flex;
   flex-direction: column;
-  gap: 10px; /* INCREASED: Space between label and input */
+  gap: 10px;
+  /* Restored gap */
 }
 
 .label {
   font-size: 0.9375rem;
+  /* Restored size */
   font-weight: 700;
   color: var(--text-primary);
 }
 
-.required { color: var(--primary-blue); }
+.required {
+  color: var(--primary-blue);
+}
 
 /* High Contrast Inputs */
-.input, .select, .textarea {
+.input,
+.select,
+.textarea {
   width: 100%;
-  padding: 16px; /* INCREASED: More internal space */
+  padding: 16px;
+  /* Restored padding */
   font-size: 1rem;
   font-family: inherit;
   background-color: var(--bg-secondary);
   border: 1px solid #cfd9de;
-  border-radius: 10px; /* Slightly rounder */
+  border-radius: 10px;
+  /* Slightly rounder */
   color: var(--text-primary);
   transition: all 0.2s ease;
   box-sizing: border-box;
 }
 
-.input:focus, .select:focus, .textarea:focus {
+.input:focus,
+.select:focus,
+.textarea:focus {
   outline: none;
   background-color: var(--bg-primary);
   border-color: var(--primary-blue);
-  box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.15); /* Thicker focus ring */
+  box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.15);
+  /* Thicker focus ring */
 }
 
 .inputError {
@@ -239,9 +280,14 @@
 .twoColumnGrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 20px; /* INCREASED: Space between columns */
+  gap: 20px;
 }
-@media (max-width: 640px) { .twoColumnGrid { grid-template-columns: 1fr; } }
+
+@media (max-width: 640px) {
+  .twoColumnGrid {
+    grid-template-columns: 1fr;
+  }
+}
 
 /* Buttons */
 .primaryButton {
@@ -260,7 +306,10 @@
   cursor: pointer;
   transition: all 0.2s ease;
 }
-.primaryButton:hover { background-color: #1a91da; }
+
+.primaryButton:hover {
+  background-color: #1a91da;
+}
 
 @media (max-width: 767px) {
   .primaryButton {
@@ -284,7 +333,10 @@
   font-size: 1rem;
   cursor: pointer;
 }
-.secondaryButton:hover { background-color: var(--bg-hover); }
+
+.secondaryButton:hover {
+  background-color: var(--bg-hover);
+}
 
 @media (max-width: 767px) {
   .secondaryButton {
@@ -305,9 +357,20 @@
 }
 
 /* Pills & Tags */
-.pillGroup, .radioGroup, .tagGroup { display: flex; flex-wrap: wrap; gap: 12px; } /* Increased Gap */
-.pill, .radioLabel, .tag {
-  padding: 12px 20px; /* Larger hit area */
+.pillGroup,
+.radioGroup,
+.tagGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Increased Gap */
+.pill,
+.radioLabel,
+.tag {
+  padding: 12px 20px;
+  /* Larger hit area */
   background-color: var(--bg-secondary);
   border: 1px solid #cfd9de;
   border-radius: 9999px;
@@ -316,22 +379,43 @@
   cursor: pointer;
   transition: all 0.2s ease;
 }
-.tag { border-radius: 12px; }
 
-.pill:hover, .radioLabel:hover, .tag:hover { background-color: #e7e7e8; border-color: #b9cad3; }
+.tag {
+  border-radius: 12px;
+}
 
-.pillActive, .tagActive, .radioLabel input:checked + span {
+.pill:hover,
+.radioLabel:hover,
+.tag:hover {
+  background-color: #e7e7e8;
+  border-color: #b9cad3;
+}
+
+.pillActive,
+.tagActive,
+.radioLabel input:checked+span {
   background-color: var(--primary-blue) !important;
   color: white !important;
   border-color: var(--primary-blue) !important;
 }
 
-.radioLabel input { display: none; } /* Hide default radio */
+.radioLabel input {
+  display: none;
+}
 
-.textarea { min-height: 140px; resize: vertical; }
-.charCount { text-align: right; font-size: 0.8rem; color: var(--text-secondary); }
+/* Hide default radio */
 
-/* KYC Info Box */
+.textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.charCount {
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
 .kycInfo {
   padding: 20px;
   background-color: rgba(29, 155, 240, 0.05);

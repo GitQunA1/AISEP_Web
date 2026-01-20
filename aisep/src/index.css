@@ -1,1 +1,31 @@
 /* All global styles are imported in global.css */
+
+/* FORCE Global Scrollbar Style */
+html,
+body,
+:global(#root),
+:global(.mainContent),
+:global(.rightPanel) {
+    scrollbar-width: thin;
+    scrollbar-color: #555 var(--bg-primary);
+}
+
+::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-primary) !important;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb) !important;
+    border-radius: 99px !important;
+    border: 2px solid var(--bg-primary) !important;
+    /* Creates padding effect */
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover) !important;
+}

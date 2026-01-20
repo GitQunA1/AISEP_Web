@@ -1,24 +1,27 @@
 import React, { useState } from 'react';
 import styles from './DashboardLayout.module.css';
 import Sidebar from './Sidebar';
+import RightPanel from './RightPanel';
 import TopBar from './TopBar';
 import BottomNav from './BottomNav';
 
 /**
  * DashboardLayout - Wrapper layout for dashboard pages
  * Provides navigation (Sidebar, TopBar, BottomNav) while displaying dashboard content
+ * Uses strict 3-column grid layout
  */
-function DashboardLayout({ 
-  children, 
-  onShowRegister, 
-  onShowLogin, 
-  onShowProfile, 
-  onShowHome, 
-  onShowAdvisors, 
-  onShowInvestors, 
+function DashboardLayout({
+  children,
+  onShowRegister,
+  onShowLogin,
+  onShowProfile,
+  onShowHome,
+  onShowAdvisors,
+  onShowInvestors,
   onShowDashboard,
-  user, 
-  onLogout 
+  user,
+  onLogout,
+  activeView = 'dashboard'
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
@@ -26,35 +29,46 @@ function DashboardLayout({
   const closeSidebar = () => setIsSidebarOpen(false);
 
   return (
-    <div className={styles.layoutContainer}>
-      {/* Sidebar - Desktop always visible, Mobile slide-out */}
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={closeSidebar}
-        onShowRegister={onShowRegister}
-        onShowLogin={onShowLogin}
-        onShowProfile={onShowProfile}
-        onShowHome={onShowHome}
-        onShowAdvisors={onShowAdvisors}
-        onShowInvestors={onShowInvestors}
-        onShowDashboard={onShowDashboard}
-        onMenuItemClick={closeSidebar}
-        user={user}
-        onLogout={onLogout}
-      />
+    <div className={styles.mainContainer}>
+      {/* 1. Left Sidebar (Fixed) */}
+      <div className={styles.leftSidebar}>
+        {/* Pass activeView to sidebar for highlighting */}
+        <Sidebar
+          isOpen={isSidebarOpen}
+          onClose={closeSidebar}
+          onShowRegister={onShowRegister}
+          onShowLogin={onShowLogin}
+          onShowProfile={onShowProfile}
+          onShowHome={onShowHome}
+          onShowAdvisors={onShowAdvisors}
+          onShowInvestors={onShowInvestors}
+          onShowDashboard={onShowDashboard}
+          onMenuItemClick={closeSidebar}
+          user={user}
+          onLogout={onLogout}
+          activeView={activeView}
+        />
+      </div>
 
-      {/* Main Content Area */}
-      <div className={styles.mainContent}>
+      {/* 2. Main Content (Scrollable) */}
+      <main className={`${styles.mainContent} mainContent`}>
         {/* Mobile Top Bar */}
-        <TopBar onMenuClick={openSidebar} />
+        <div className="md:hidden">
+          <TopBar onMenuClick={openSidebar} />
+        </div>
 
         {/* Dashboard Content */}
         <div className={styles.dashboardContainer}>
           {children}
         </div>
+      </main>
+
+      {/* 3. Right Panel (Fixed) */}
+      <div className={`${styles.rightPanel} rightPanel`}>
+        <RightPanel />
       </div>
 
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation - Kept outside strict grid flow if fixed, or handled by media queries */}
       <BottomNav
         user={user}
         onShowProfile={onShowProfile}

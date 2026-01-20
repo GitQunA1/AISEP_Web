@@ -13,12 +13,15 @@ import InvestorDiscovery from '../investors/InvestorDiscovery';
 
 /**
  * MainLayout Component - Main application layout
- * Handles responsive 3-column flex layout (desktop) vs single column (mobile)
- * Includes sticky sidebars and scrollable feed
+ * Handles strictly defined 3-column grid layout (desktop) vs single column (mobile)
+ * Locks viewport width/height to prevent scrolling
  */
-function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, onShowAdvisors, onShowInvestors, onShowDashboard, user, onLogout, showProfile = false, showAdvisors = false, showInvestors = false }) {
+function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, onShowAdvisors, onShowInvestors, onShowDashboard, user, onLogout, showProfile = false, showAdvisors = false, showInvestors = false, activeView = 'main' }) {
   const [isPremium] = useState(false); // Hardcoded as false - shows blur overlay
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // Mobile sidebar state
+
+  // 1. Initialize State for Mobile Sidebar
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const [filteredStartups, setFilteredStartups] = useState(mockStartups);
   const [activeFilters, setActiveFilters] = useState({
     industry: '',
@@ -27,12 +30,13 @@ function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, on
     fundingStage: '',
   });
 
-  const openSidebar = () => setIsSidebarOpen(true);
-  const closeSidebar = () => setIsSidebarOpen(false);
+  // 2. Define Handlers
+  const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   const handleFilterChange = (filters) => {
     setActiveFilters(filters);
-    
+
     // Apply filters to startups
     const filtered = mockStartups.filter(startup => {
       if (filters.industry && startup.industry !== filters.industry) return false;
@@ -41,32 +45,40 @@ function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, on
       if (filters.fundingStage && startup.fundingStage !== filters.fundingStage) return false;
       return true;
     });
-    
+
     setFilteredStartups(filtered);
   };
 
   return (
-    <div className={styles.layoutContainer}>
-      {/* Sidebar - Desktop always visible, Mobile slide-out */}
-      <Sidebar
-        isOpen={isSidebarOpen}
-        onClose={closeSidebar}
-        onShowRegister={onShowRegister}
-        onShowLogin={onShowLogin}
-        onShowProfile={onShowProfile}
-        onShowHome={onShowHome}
-        onShowAdvisors={onShowAdvisors}
-        onShowInvestors={onShowInvestors}
-        onShowDashboard={onShowDashboard}
-        onMenuItemClick={closeSidebar}
-        user={user}
-        onLogout={onLogout}
-      />
+    <div className={styles.mainContainer}>
 
-      {/* Main Content Area */}
-      <div className={styles.mainContent}>
-        {/* Mobile Top Bar */}
-        <TopBar onMenuClick={openSidebar} />
+      {/* 1. Left Sidebar (Fixed) */}
+      <div className={styles.leftSidebar}>
+        {/* Pass state AND close handler to Sidebar */}
+        <Sidebar
+          isOpen={isMobileMenuOpen}
+          onClose={closeMobileMenu}
+          onShowRegister={onShowRegister}
+          onShowLogin={onShowLogin}
+          onShowProfile={onShowProfile}
+          onShowHome={onShowHome}
+          onShowAdvisors={onShowAdvisors}
+          onShowInvestors={onShowInvestors}
+          onShowDashboard={onShowDashboard}
+          onMenuItemClick={closeMobileMenu}
+          user={user}
+          onLogout={onLogout}
+          activeView={activeView}
+        />
+      </div>
+
+      {/* 2. Main Feed (Scrollable) */}
+      <main className={styles.mainContent}>
+        {/* MOBILE HEADER (Fixed Top) */}
+        {/* Pass the toggle function to the Hamburger Button */}
+        <div className="md:hidden">
+          <TopBar onMenuClick={toggleMobileMenu} />
+        </div>
 
         {/* Feed Content or Profile Page */}
         {showProfile ? (
@@ -77,11 +89,12 @@ function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, on
           <InvestorDiscovery />
         ) : (
           <>
-            <FeedHeader 
-              user={user}
-              onFilterChange={handleFilterChange}
-            />
-            <div className={styles.feedContainer}>
+            {/* WRAPPER FOR CONSTRAINED STREAM */}
+            <div className={styles.feedStreamWrapper}>
+              <FeedHeader
+                user={user}
+                onFilterChange={handleFilterChange}
+              />
               {filteredStartups.length > 0 ? (
                 filteredStartups.map((startup) => (
                   <StartupCard
@@ -99,12 +112,14 @@ function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, on
             </div>
           </>
         )}
+      </main>
+
+      {/* 3. Right Panel (Fixed) */}
+      <div className={styles.rightPanel}>
+        <RightPanel />
       </div>
 
-      {/* Right Panel - Desktop Only */}
-      <RightPanel />
-
-      {/* Mobile Bottom Navigation */}
+      {/* Mobile Bottom Navigation - Kept outside strict grid flow if fixed, or handled by media queries */}
       <BottomNav
         user={user}
         onShowProfile={onShowProfile}
@@ -114,6 +129,7 @@ function MainLayout({ onShowRegister, onShowLogin, onShowProfile, onShowHome, on
         onShowDashboard={onShowDashboard}
         activeTab={showProfile ? 'Profile' : showAdvisors ? 'Advisors' : showInvestors ? 'Investors' : 'Home'}
       />
+
     </div>
   );
 }
