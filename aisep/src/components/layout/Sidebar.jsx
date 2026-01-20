@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon } from 'lucide-react';
+import { Home, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
@@ -18,6 +18,7 @@ function Sidebar({
   onShowHome,
   onShowInvestors,
   onShowAdvisors,
+  onShowDashboard,
   onMenuItemClick,
   user,
   onLogout
@@ -27,14 +28,20 @@ function Sidebar({
 
   const navItems = [
     { icon: Home, label: 'Home', href: '#' },
+    { icon: LayoutDashboard, label: 'Dashboard', href: '#', showWhenLoggedIn: true },
     { icon: Search, label: 'Explore', href: '#' },
     { icon: TrendingUp, label: 'Investors', href: '#' },
-    { icon: Users, label: 'Advisors', href: '#' },
+    { icon: Users, label: 'Advisors', href: '#', hideFor: ['advisor'] },
     { icon: User, label: 'Profile', href: '#' },
   ];
 
   const handleNavClick = (label) => {
     setActiveItem(label);
+
+    // Navigate to dashboard when clicking Dashboard
+    if (label === 'Dashboard' && onShowDashboard) {
+      onShowDashboard();
+    }
 
     // Navigate to home when clicking Home
     if (label === 'Home' && onShowHome) {
@@ -110,8 +117,16 @@ function Sidebar({
           <nav className={`${styles.nav} ${styles.navDesktopOnly}`}>
             {navItems
               .filter(item => {
+                // Hide Dashboard when user is not logged in
+                if (item.showWhenLoggedIn && !user) {
+                  return false;
+                }
                 // Hide Profile when user is not logged in
                 if (item.label === 'Profile' && !user) {
+                  return false;
+                }
+                // Hide items for specific roles
+                if (item.hideFor && user?.role && item.hideFor.includes(user.role)) {
                   return false;
                 }
                 return true;

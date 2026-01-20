@@ -21,14 +21,12 @@ export default function ProfilePage({ user, onShowAdvisors }) {
     const getTabs = () => {
         const baseTabs = [
             { id: 'overview', label: 'Overview' },
-            { id: 'profile', label: 'Profile' },
+            { id: 'profile', label: 'Basic Profile' },
         ];
 
         if (user.role === 'startup') {
             return [
                 ...baseTabs,
-                { id: 'documents', label: 'Documents' },
-                { id: 'evaluation', label: 'AI Score' },
                 { id: 'advisors', label: 'Advisors' },
             ];
         }
@@ -99,8 +97,6 @@ export default function ProfilePage({ user, onShowAdvisors }) {
             <div className={styles.tabContent}>
                 {activeTab === 'overview' && <OverviewTab user={user} />}
                 {activeTab === 'profile' && <ProfileTab user={user} />}
-                {activeTab === 'documents' && <DocumentsTab user={user} />}
-                {activeTab === 'evaluation' && <EvaluationTab user={user} />}
                 {activeTab === 'advisors' && <AdvisorsTab user={user} onShowAdvisors={onShowAdvisors} />}
             </div>
         </div>
@@ -200,68 +196,8 @@ function ProfileTab({ user }) {
 function DocumentsTab({ user }) {
     return (
         <div className={styles.documents}>
-            <h3>Documents & IP</h3>
-            <div className={styles.uploadBox}>
-                <input type="file" id="docUpload" multiple style={{ display: 'none' }} />
-                <label htmlFor="docUpload" className={styles.uploadLabel}>
-                    📤 Upload documents
-                </label>
-                <p>Supported: PDF, DOC, DOCX, PPT</p>
-            </div>
-
-            <div className={styles.documentsList}>
-                <h4>Uploaded Documents</h4>
-                <div className={styles.documentItem}>
-                    <span>📋 Business Plan 2024.pdf</span>
-                    <div className={styles.documentActions}>
-                        <button>View</button>
-                        <button>Verify</button>
-                    </div>
-                </div>
-                <div className={styles.documentItem}>
-                    <span>🔐 Patent Application.docx</span>
-                    <div className={styles.documentActions}>
-                        <button>View</button>
-                        <button>Verify</button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-}
-
-function EvaluationTab({ user }) {
-    return (
-        <div className={styles.evaluation}>
-            <h3>AI Evaluation Score</h3>
-            <div className={styles.scoreCircle}>
-                <div className={styles.scoreValue}>75</div>
-                <div className={styles.scoreLabel}>/ 100</div>
-            </div>
-
-            <div className={styles.metrics}>
-                <div className={styles.metricRow}>
-                    <span>Market Size Potential</span>
-                    <div className={styles.progressBar}>
-                        <div className={styles.progress} style={{ width: '85%' }}></div>
-                    </div>
-                    <span>85/100</span>
-                </div>
-                <div className={styles.metricRow}>
-                    <span>Team Strength</span>
-                    <div className={styles.progressBar}>
-                        <div className={styles.progress} style={{ width: '72%' }}></div>
-                    </div>
-                    <span>72/100</span>
-                </div>
-                <div className={styles.metricRow}>
-                    <span>Innovation Factor</span>
-                    <div className={styles.progressBar}>
-                        <div className={styles.progress} style={{ width: '78%' }}></div>
-                    </div>
-                    <span>78/100</span>
-                </div>
-            </div>
+            <h3>Note: Complete Information</h3>
+            <p>For comprehensive startup information, head to your <strong>Startup Dashboard → Complete Info</strong> tab to fill out detailed information about your startup.</p>
         </div>
     );
 }

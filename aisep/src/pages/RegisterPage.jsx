@@ -3,6 +3,7 @@ import RegisterLayout from '../components/auth/RegisterLayout';
 import StartupRegisterForm from '../components/auth/StartupRegisterForm';
 import InvestorRegisterForm from '../components/auth/InvestorRegisterForm';
 import AdvisorRegisterForm from '../components/auth/AdvisorRegisterForm';
+import OperationStaffRegisterForm from '../components/auth/OperationStaffRegisterForm';
 import RegistrationSuccess from '../components/auth/RegistrationSuccess';
 
 /**
@@ -15,7 +16,7 @@ function RegisterPage({ selectedRole, onBack, onComplete }) {
   const [registrationData, setRegistrationData] = useState(null);
 
   const roleMap = {
-    founder: {
+    startup: {
       component: StartupRegisterForm,
       title: 'Startup Registration',
     },
@@ -26,6 +27,10 @@ function RegisterPage({ selectedRole, onBack, onComplete }) {
     advisor: {
       component: AdvisorRegisterForm,
       title: 'Advisor Registration',
+    },
+    operation_staff: {
+      component: OperationStaffRegisterForm,
+      title: 'Operation Staff Registration',
     },
   };
 

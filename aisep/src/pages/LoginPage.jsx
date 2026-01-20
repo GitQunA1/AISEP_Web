@@ -100,6 +100,7 @@ export default function LoginPage({ onLoginSuccess, onShowRegister, onBack }) {
                           {acc.role === 'startup' && '🚀'}
                           {acc.role === 'investor' && '💰'}
                           {acc.role === 'advisor' && '👨‍💼'}
+                          {acc.role === 'operation_staff' && '⚙️'}
                         </span>
                         <div className={styles.demoInfo}>
                           <div className={styles.demoName}>{acc.name}</div>

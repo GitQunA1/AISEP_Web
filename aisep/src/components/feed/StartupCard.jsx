@@ -5,6 +5,9 @@ import {
   Lock,
   Heart,
   MessageCircle,
+  Phone,
+  Mail,
+  Calendar,
 } from 'lucide-react';
 import styles from './StartupCard.module.css';
 import Avatar from '../common/Avatar';
@@ -16,10 +19,12 @@ import Button from '../common/Button';
  * Mimics Twitter/X card design with premium content blur
  * @param {object} startup - Startup data object
  * @param {boolean} isPremium - Whether user has premium access (default: false)
+ * @param {object} user - Current user object
  */
-function StartupCard({ startup, isPremium = false }) {
+function StartupCard({ startup, isPremium = false, user }) {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
+  const [showAdvisorActions, setShowAdvisorActions] = useState(false);
 
   // Determine AI score badge variant
   const getScoreBadgeVariant = () => {
@@ -137,6 +142,41 @@ function StartupCard({ startup, isPremium = false }) {
           <Bookmark size={18} />
           <span className={styles.actionLabel}>Save</span>
         </button>
+
+        {/* Advisor Actions */}
+        {user?.role === 'advisor' && (
+          <div className={styles.advisorActionsContainer}>
+            <button
+              className={styles.advisorMenuBtn}
+              onClick={() => setShowAdvisorActions(!showAdvisorActions)}
+              title="Contact"
+            >
+              <Phone size={18} />
+              <span className={styles.actionLabel}>Contact</span>
+            </button>
+
+            {showAdvisorActions && (
+              <div className={styles.advisorMenu}>
+                <button className={styles.advisorAction}>
+                  <Mail size={16} />
+                  Send Email
+                </button>
+                <button className={styles.advisorAction}>
+                  <Phone size={16} />
+                  Call
+                </button>
+                <button className={styles.advisorAction}>
+                  <Calendar size={16} />
+                  Schedule Meeting
+                </button>
+                <button className={styles.advisorAction}>
+                  <MessageCircle size={16} />
+                  Message
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </article>
   );

@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
 import './styles/global.css';
 import MainLayout from './components/layout/MainLayout';
+import DashboardLayout from './components/layout/DashboardLayout';
 import RegisterSelection from './components/auth/RegisterSelection';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
 import ProfilePage from './pages/ProfilePage';
+import StartupDashboard from './pages/StartupDashboard';
+import InvestorDashboard from './pages/InvestorDashboard';
+import AdvisorDashboard from './pages/AdvisorDashboard';
+import OperationStaffDashboard from './pages/OperationStaffDashboard';
 
 function App() {
   const [currentView, setCurrentView] = useState('main'); // 'login', 'main', 'roleSelection', 'register', 'profile'
@@ -82,6 +87,10 @@ function App() {
     setCurrentView('investors');
   };
 
+  const handleShowDashboard = () => {
+    setCurrentView('dashboard');
+  };
+
   return (
     <>
       {currentView === 'login' ? (
@@ -90,6 +99,33 @@ function App() {
           onShowRegister={handleShowRegister}
           onBack={handleBackToMain}
         />
+      ) : currentView === 'dashboard' ? (
+        // Show role-specific dashboard wrapped in DashboardLayout
+        <DashboardLayout
+          onShowRegister={handleShowRegister}
+          onShowLogin={handleShowLogin}
+          onShowProfile={handleShowProfile}
+          onShowHome={handleShowHome}
+          onShowAdvisors={handleShowAdvisors}
+          onShowInvestors={handleShowInvestors}
+          onShowDashboard={handleShowDashboard}
+          user={user}
+          onLogout={handleLogout}
+        >
+          {user?.role === 'startup' ? (
+            <StartupDashboard user={user} />
+          ) : user?.role === 'investor' ? (
+            <InvestorDashboard user={user} />
+          ) : user?.role === 'advisor' ? (
+            <AdvisorDashboard user={user} />
+          ) : user?.role === 'operation_staff' ? (
+            <OperationStaffDashboard user={user} />
+          ) : (
+            <div style={{ padding: '20px', textAlign: 'center' }}>
+              <p>Dashboard not available for your role</p>
+            </div>
+          )}
+        </DashboardLayout>
       ) : currentView === 'main' ? (
         <MainLayout
           onShowRegister={handleShowRegister}
@@ -98,6 +134,7 @@ function App() {
           onShowHome={handleShowHome}
           onShowAdvisors={handleShowAdvisors}
           onShowInvestors={handleShowInvestors}
+          onShowDashboard={handleShowDashboard}
           user={user}
           onLogout={handleLogout}
         />
@@ -114,6 +151,7 @@ function App() {
           onShowHome={handleShowHome}
           onShowAdvisors={handleShowAdvisors}
           onShowInvestors={handleShowInvestors}
+          onShowDashboard={handleShowDashboard}
           user={user}
           onLogout={handleLogout}
           showProfile={true}
@@ -126,6 +164,7 @@ function App() {
           onShowHome={handleShowHome}
           onShowAdvisors={handleShowAdvisors}
           onShowInvestors={handleShowInvestors}
+          onShowDashboard={handleShowDashboard}
           user={user}
           onLogout={handleLogout}
           showAdvisors={true}
@@ -138,6 +177,7 @@ function App() {
           onShowHome={handleShowHome}
           onShowAdvisors={handleShowAdvisors}
           onShowInvestors={handleShowInvestors}
+          onShowDashboard={handleShowDashboard}
           user={user}
           onLogout={handleLogout}
           showInvestors={true}
