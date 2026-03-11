@@ -17,6 +17,9 @@ function Badge({ label, variant = 'industry', className = '', showIcon = false }
       {isScoreBadge && showIcon && (
         <Zap size={14} className={styles.badgeIcon} />
       )}
+      {variant === 'updating' && showIcon && (
+        <Zap size={14} className={styles.badgeIcon} />
+      )}
       {isScoreBadge ? `AI ${label}` : label}
     </span>
   );

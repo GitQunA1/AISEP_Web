@@ -14,26 +14,26 @@ function RegisterSelection({ onBack, onRoleSelect }) {
     {
       id: 'startup',
       icon: Rocket,
-      title: 'Founder / Startup',
-      description: 'Submit your project, protect your idea with blockchain, and get AI evaluation.',
+      title: 'Người sáng lập / Startup',
+      description: 'Nộp dự án của bạn, bảo vệ ý tưởng bằng blockchain và nhận đánh giá từ AI.',
     },
     {
       id: 'investor',
       icon: TrendingUp,
-      title: 'Investor',
-      description: 'Discover high-potential startups using AI scoring and detailed analytics.',
+      title: 'Nhà đầu tư',
+      description: 'Khám phá các startup tiềm năng cao bằng điểm AI và phân tích chi tiết.',
     },
     {
       id: 'advisor',
       icon: Award,
-      title: 'Advisor',
-      description: 'Monetize your expertise by auditing startups and offering professional consultation.',
+      title: 'Cố vấn',
+      description: 'Kiếm thu nhập từ chuyên môn bằng cách tư vấn startup và cung cấp dịch vụ tư vấn chuyên nghiệp.',
     },
     {
       id: 'operation_staff',
       icon: Shield,
-      title: 'Operation Staff',
-      description: 'Manage platform operations, verify documents, and approve user registrations.',
+      title: 'Nhân viên vận hành',
+      description: 'Quản lý hoạt động nền tảng, xác minh tài liệu và phê duyệt đăng ký người dùng.',
     },
   ];
 
@@ -69,8 +69,8 @@ function RegisterSelection({ onBack, onRoleSelect }) {
         </div>
 
         {/* Headings */}
-        <h1 className={styles.heading}>Join AISEP as...</h1>
-        <p className={styles.subheading}>Choose your role to customize your experience</p>
+        <h1 className={styles.heading}>Tham gia AISEP với tư cách...</h1>
+        <p className={styles.subheading}>Chọn vai trò để cá nhân hóa trải nghiệm của bạn</p>
 
         {/* 3. Role Selection Grid */}
         <div className={styles.cardsGrid}>
@@ -96,7 +96,7 @@ function RegisterSelection({ onBack, onRoleSelect }) {
         {/* 4. Desktop Back Button (Only visible on Desktop) */}
         <button className={styles.desktopBackButton} onClick={onBack}>
           <ArrowLeft size={20} />
-          <span>Back to Home</span>
+          <span>Quay lại trang chủ</span>
         </button>
 
       </div>

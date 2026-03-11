@@ -10,105 +10,20 @@ import FeedHeader from '../components/feed/FeedHeader';
 export default function OperationStaffDashboard({ user }) {
     const [activeSection, setActiveSection] = useState('overview');
 
-    const [projectSubmissions, setProjectSubmissions] = useState([
-        {
-            id: 1,
-            projectName: 'AI Analytics Platform',
-            startupName: 'TechStartup AI',
-            founder: 'John Doe',
-            tagline: 'Real-time data analytics with AI',
-            industry: 'AI/ML',
-            stage: 'MVP',
-            submittedDate: '2024-01-18',
-            status: 'pending',
-            description: 'A comprehensive AI-powered analytics platform for real-time data insights'
-        },
-        {
-            id: 2,
-            projectName: 'Smart Marketing Tool',
-            startupName: 'MarketVision Inc',
-            founder: 'Alice Johnson',
-            tagline: 'AI-powered marketing automation',
-            industry: 'SaaS',
-            stage: 'Growth',
-            submittedDate: '2024-01-15',
-            status: 'pending',
-            description: 'Automated marketing campaign optimizer using machine learning'
-        }
-    ]);
-
-    const [pendingDocuments, setPendingDocuments] = useState([
-        {
-            id: 1,
-            startupName: 'TechStartup AI',
-            founder: 'John Doe',
-            documentName: 'Business Plan 2024.pdf',
-            uploadDate: '2024-01-18',
-            status: 'pending',
-            size: '2.4 MB',
-            type: 'business_plan'
-        },
-        {
-            id: 2,
-            startupName: 'FinApp Solutions',
-            founder: 'Jane Smith',
-            documentName: 'Technical Architecture.docx',
-            uploadDate: '2024-01-17',
-            status: 'pending',
-            size: '1.8 MB',
-            type: 'technical_docs'
-        }
-    ]);
-
-    const [pendingApprovals, setPendingApprovals] = useState([
-        {
-            id: 1,
-            name: 'Michael Chen',
-            role: 'investor',
-            email: 'michael@example.com',
-            registeredDate: '2024-01-18',
-            status: 'pending',
-            verification: 'not_verified'
-        },
-        {
-            id: 2,
-            name: 'Dr. Sarah Expert',
-            role: 'advisor',
-            email: 'sarah@expert.com',
-            registeredDate: '2024-01-17',
-            status: 'pending',
-            verification: 'verified'
-        }
-    ]);
-
-    const [pendingRequests, setPendingRequests] = useState([
-        {
-            id: 1,
-            startupName: 'CloudData Inc',
-            advisorName: 'John Finance',
-            requestType: 'consulting',
-            submittedDate: '2024-01-18',
-            status: 'pending'
-        },
-        {
-            id: 2,
-            startupName: 'BlockChain Lab',
-            investorName: 'Sequoia Capital',
-            requestType: 'connection',
-            submittedDate: '2024-01-17',
-            status: 'pending'
-        }
-    ]);
+    const [projectSubmissions, setProjectSubmissions] = useState([]);
+    const [pendingDocuments, setPendingDocuments] = useState([]);
+    const [pendingApprovals, setPendingApprovals] = useState([]);
+    const [pendingRequests, setPendingRequests] = useState([]);
 
     const dashboardData = {
         pendingDocuments: pendingDocuments.length,
         pendingApprovals: pendingApprovals.length,
         pendingRequests: pendingRequests.length,
-        verifiedDocuments: 24,
-        approvedUsers: 18,
-        totalActivity: 342,
-        documentVerificationRate: '92%',
-        averageApprovalTime: '2.5 hours'
+        verifiedDocuments: 0,
+        approvedUsers: 0,
+        totalActivity: 0,
+        documentVerificationRate: '0%',
+        averageApprovalTime: '-'
     };
 
     const handleVerifyDocument = (id) => {
@@ -163,8 +78,8 @@ export default function OperationStaffDashboard({ user }) {
         <div className={styles.container}>
             {/* Unified Header */}
             <FeedHeader
-                title="Operation Staff Dashboard"
-                subtitle={`Welcome, ${user?.name || 'Staff'}! Manage platform operations and approvals.`}
+                title="Bảng điều khiển Nhân viên vận hành"
+                subtitle={`Xin chào, ${user?.name || 'Nhân viên'}! Quản lý hoạt động nền tảng và các yêu cầu phê duyệt.`}
                 showFilter={false}
                 user={user}
             />
@@ -177,7 +92,7 @@ export default function OperationStaffDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.pendingDocuments}</div>
-                        <div className={styles.statLabel}>Pending Documents</div>
+                        <div className={styles.statLabel}>Tài liệu chờ kiểm tra</div>
                     </div>
                 </div>
 
@@ -187,7 +102,7 @@ export default function OperationStaffDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.pendingApprovals}</div>
-                        <div className={styles.statLabel}>Pending Approvals</div>
+                        <div className={styles.statLabel}>Phê duyệt chờ xử lý</div>
                     </div>
                 </div>
 
@@ -197,7 +112,7 @@ export default function OperationStaffDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.pendingRequests}</div>
-                        <div className={styles.statLabel}>Pending Requests</div>
+                        <div className={styles.statLabel}>Yêu cầu chờ xử lý</div>
                     </div>
                 </div>
 
@@ -207,7 +122,7 @@ export default function OperationStaffDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.verifiedDocuments}</div>
-                        <div className={styles.statLabel}>Verified Documents</div>
+                        <div className={styles.statLabel}>Tài liệu đã xác minh</div>
                     </div>
                 </div>
             </div>
@@ -218,37 +133,37 @@ export default function OperationStaffDashboard({ user }) {
                     className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
                     onClick={() => setActiveSection('overview')}
                 >
-                    Overview
+                    Tổng quan
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'projects' ? styles.active : ''}`}
                     onClick={() => setActiveSection('projects')}
                 >
-                    Project Reviews
+                    Duyệt dự án
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'documents' ? styles.active : ''}`}
                     onClick={() => setActiveSection('documents')}
                 >
-                    Document Verification
+                    Xác minh tài liệu
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'approvals' ? styles.active : ''}`}
                     onClick={() => setActiveSection('approvals')}
                 >
-                    User Approvals
+                    Phê duyệt người dùng
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'requests' ? styles.active : ''}`}
                     onClick={() => setActiveSection('requests')}
                 >
-                    Request Management
+                    Quản lý yêu cầu
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'activity' ? styles.active : ''}`}
                     onClick={() => setActiveSection('activity')}
                 >
-                    Activity Monitor
+                    Giám sát hoạt động
                 </button>
             </div>
 
@@ -258,18 +173,18 @@ export default function OperationStaffDashboard({ user }) {
                 {activeSection === 'projects' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Project Submissions for Review</h3>
+                            <h3 className={styles.cardTitle}>Dự án chờ phê duyệt</h3>
                             <div className={styles.list}>
                                 {projectSubmissions.filter(p => p.status === 'pending').map(project => (
                                     <div key={project.id} className={styles.listItem}>
                                         <div className={styles.listContent}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                                                 <h4 className={styles.listTitle}>{project.projectName}</h4>
-                                                <span className={styles.listMeta}>by {project.startupName}</span>
+                                                <span className={styles.listMeta}>bởi {project.startupName}</span>
                                             </div>
                                             <div className={styles.listSubtitle} style={{ marginBottom: '8px' }}>{project.tagline}</div>
                                             <div className={styles.listMeta}>
-                                                Industry: {project.industry} | Stage: {project.stage} | Submitted: {project.submittedDate}
+                                                Ngành: {project.industry} | Giai đoạn: {project.stage} | Nộp ngày: {project.submittedDate}
                                             </div>
                                             <p style={{ marginTop: '8px', fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.4' }}>
                                                 {project.description}
@@ -280,34 +195,34 @@ export default function OperationStaffDashboard({ user }) {
                                                 onClick={() => handleApproveProject(project.id)}
                                                 className={styles.primaryBtn}
                                             >
-                                                ✓ Approve
+                                                ✓ Phê duyệt
                                             </button>
                                             <button
                                                 onClick={() => handleRejectProject(project.id)}
                                                 className={styles.dangerBtn}
                                             >
-                                                ✗ Reject
+                                                ✗ Từ chối
                                             </button>
                                         </div>
                                     </div>
                                 ))}
                                 {projectSubmissions.filter(p => p.status === 'pending').length === 0 && (
                                     <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                        No pending project reviews
+                                        Chưa có dự án nào chờ phê duyệt
                                     </div>
                                 )}
                             </div>
 
                             {projectSubmissions.filter(p => p.status === 'approved').length > 0 && (
                                 <div style={{ marginTop: '24px' }}>
-                                    <h4 className={styles.cardTitle} style={{ fontSize: '16px' }}>Approved Projects</h4>
+                                    <h4 className={styles.cardTitle} style={{ fontSize: '16px' }}>Dự án đã được phê duyệt</h4>
                                     <div className={styles.list}>
                                         {projectSubmissions.filter(p => p.status === 'approved').map(project => (
                                             <div key={project.id} className={styles.listItem} style={{ background: 'rgba(23, 191, 99, 0.05)' }}>
                                                 <div className={styles.listContent}>
                                                     <div className={styles.listTitle}>{project.projectName}</div>
                                                     <div className={`${styles.badge} ${styles.badgeSuccess}`} style={{ marginTop: '4px' }}>
-                                                        ✓ Approved - Published to mainboard
+                                                        ✓ Đã phê duyệt - Đã đăng lên bảng chính
                                                     </div>
                                                 </div>
                                             </div>
@@ -325,22 +240,22 @@ export default function OperationStaffDashboard({ user }) {
                         <div className={styles.sectionGrid}>
                             {/* Statistics */}
                             <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
-                                <h3 className={styles.cardTitle}>Performance Metrics</h3>
+                                <h3 className={styles.cardTitle}>Chỉ số hiệu suất</h3>
                                 <div className={styles.metricsGrid}>
                                     <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Verification Rate</div>
+                                        <div className={styles.metricLabel}>Tỷ lệ xác minh</div>
                                         <div className={styles.metricValue}>{dashboardData.documentVerificationRate}</div>
                                     </div>
                                     <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Avg Approval Time</div>
+                                        <div className={styles.metricLabel}>Thời gian phê duyệt TB</div>
                                         <div className={styles.metricValue}>{dashboardData.averageApprovalTime}</div>
                                     </div>
                                     <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Total Activity</div>
+                                        <div className={styles.metricLabel}>Tổng hoạt động</div>
                                         <div className={styles.metricValue}>{dashboardData.totalActivity}</div>
                                     </div>
                                     <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Approved Users</div>
+                                        <div className={styles.metricLabel}>Người dùng được phê duyệt</div>
                                         <div className={styles.metricValue}>{dashboardData.approvedUsers}</div>
                                     </div>
                                 </div>
@@ -348,22 +263,22 @@ export default function OperationStaffDashboard({ user }) {
 
                             {/* Pending Items Summary */}
                             <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Pending Items</h3>
+                                <h3 className={styles.cardTitle}>Các mục chờ xử lý</h3>
                                 <div className={styles.list}>
                                     <div className={styles.listItem}>
-                                        <span className={styles.listTitle}>Documents Awaiting Verification</span>
+                                        <span className={styles.listTitle}>Tài liệu chờ xác minh</span>
                                         <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: 'auto' }}>
                                             {dashboardData.pendingDocuments}
                                         </span>
                                     </div>
                                     <div className={styles.listItem}>
-                                        <span className={styles.listTitle}>User Approvals Needed</span>
+                                        <span className={styles.listTitle}>Phê duyệt người dùng cần xử lý</span>
                                         <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginLeft: 'auto' }}>
                                             {dashboardData.pendingApprovals}
                                         </span>
                                     </div>
                                     <div className={styles.listItem}>
-                                        <span className={styles.listTitle}>Requests to Review</span>
+                                        <span className={styles.listTitle}>Yêu cầu cần xem xét</span>
                                         <span className={`${styles.badge} ${styles.badgeError}`} style={{ marginLeft: 'auto' }}>
                                             {dashboardData.pendingRequests}
                                         </span>
@@ -373,34 +288,10 @@ export default function OperationStaffDashboard({ user }) {
 
                             {/* Recent Activity */}
                             <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Recent Activity</h3>
+                                <h3 className={styles.cardTitle}>Hoạt động gần đây</h3>
                                 <div className={styles.list}>
-                                    <div className={styles.listItem}>
-                                        <div className={`${styles.listIcon} ${styles.iconGreen}`}>
-                                            <CheckCircle size={18} />
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>Document verified: Business Plan (TechStartup AI)</div>
-                                            <div className={styles.listMeta}>1 hour ago</div>
-                                        </div>
-                                    </div>
-                                    <div className={styles.listItem}>
-                                        <div className={`${styles.listIcon} ${styles.iconBlue}`}>
-                                            <Users size={18} />
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>User approved: John Investment (Investor)</div>
-                                            <div className={styles.listMeta}>3 hours ago</div>
-                                        </div>
-                                    </div>
-                                    <div className={styles.listItem}>
-                                        <div className={`${styles.listIcon} ${styles.iconRed}`}>
-                                            <AlertCircle size={18} />
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>Request rejected: Consulting request (FinApp)</div>
-                                            <div className={styles.listMeta}>5 hours ago</div>
-                                        </div>
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có hoạt động nào.</p>
                                     </div>
                                 </div>
                             </div>
@@ -413,16 +304,20 @@ export default function OperationStaffDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>
-                                Document Verification Queue
+                                Hàng chờ xác minh tài liệu
                                 {dashboardData.pendingDocuments > 0 && (
                                     <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
-                                        {dashboardData.pendingDocuments} Pending
+                                        {dashboardData.pendingDocuments} Chờ xử lý
                                     </span>
                                 )}
                             </h3>
 
                             <div className={styles.list}>
-                                {pendingDocuments.map(doc => (
+                                {pendingDocuments.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có tài liệu nào cần xác minh.</p>
+                                    </div>
+                                ) : pendingDocuments.map(doc => (
                                     <div key={doc.id} className={styles.listItem}>
                                         <div className={styles.listContent}>
                                             <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
@@ -436,7 +331,7 @@ export default function OperationStaffDashboard({ user }) {
                                         </div>
                                         <div className={styles.listActions}>
                                             <button className={styles.secondaryBtn}>
-                                                <Eye size={16} /> View
+                                                <Eye size={16} /> Xem
                                             </button>
                                             {doc.status === 'pending' && (
                                                 <>
@@ -444,13 +339,13 @@ export default function OperationStaffDashboard({ user }) {
                                                         className={styles.primaryBtn}
                                                         onClick={() => handleVerifyDocument(doc.id)}
                                                     >
-                                                        ✓ Verify
+                                                        ✓ Xác minh
                                                     </button>
                                                     <button
                                                         className={styles.dangerBtn}
                                                         onClick={() => handleRejectDocument(doc.id)}
                                                     >
-                                                        ✗ Reject
+                                                        ✗ Từ chối
                                                     </button>
                                                 </>
                                             )}
@@ -467,16 +362,20 @@ export default function OperationStaffDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>
-                                User Registration Approvals
+                                Phê duyệt đăng ký người dùng
                                 {dashboardData.pendingApprovals > 0 && (
                                     <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginLeft: '12px' }}>
-                                        {dashboardData.pendingApprovals} Pending
+                                        {dashboardData.pendingApprovals} Chờ xử lý
                                     </span>
                                 )}
                             </h3>
 
                             <div className={styles.list}>
-                                {pendingApprovals.map(approval => (
+                                {pendingApprovals.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có yêu cầu phê duyệt đăng ký người dùng nào.</p>
+                                    </div>
+                                ) : pendingApprovals.map(approval => (
                                     <div key={approval.id} className={styles.listItem}>
                                         <div className={styles.listContent}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
@@ -487,7 +386,7 @@ export default function OperationStaffDashboard({ user }) {
                                                 <span>Email: {approval.email}</span>
                                                 <span>Registered: {approval.registeredDate}</span>
                                                 <span style={{ color: approval.verification === 'verified' ? '#17bf63' : '#d97706', fontWeight: '600', marginTop: '4px' }}>
-                                                    {approval.verification === 'verified' ? '✓ ID Verified' : '⚠ Awaiting ID Verification'}
+                                                    {approval.verification === 'verified' ? '✓ Đã xác minh CCCD' : '⚠ Chưa xác minh danh tính'}
                                                 </span>
                                             </div>
                                         </div>
@@ -498,13 +397,13 @@ export default function OperationStaffDashboard({ user }) {
                                                         className={styles.primaryBtn}
                                                         onClick={() => handleApproveUser(approval.id)}
                                                     >
-                                                        Approve
+                                                        Phê duyệt
                                                     </button>
                                                     <button
                                                         className={styles.dangerBtn}
                                                         onClick={() => handleRejectUser(approval.id)}
                                                     >
-                                                        Reject
+                                                        Từ chối
                                                     </button>
                                                 </>
                                             )}
@@ -521,20 +420,24 @@ export default function OperationStaffDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>
-                                Pending Requests
+                                Yêu cầu đang chờ xử lý
                                 {dashboardData.pendingRequests > 0 && (
                                     <span className={`${styles.badge} ${styles.badgeError}`} style={{ marginLeft: '12px' }}>
-                                        {dashboardData.pendingRequests} Pending
+                                        {dashboardData.pendingRequests} Chờ xử lý
                                     </span>
                                 )}
                             </h3>
 
                             <div className={styles.list}>
-                                {pendingRequests.map(request => (
+                                {pendingRequests.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có yêu cầu nào đang chờ xử lý.</p>
+                                    </div>
+                                ) : pendingRequests.map(request => (
                                     <div key={request.id} className={styles.listItem}>
                                         <div className={styles.listContent}>
                                             <div className={styles.listSubtitle} style={{ color: 'var(--primary-blue)', fontWeight: '700', marginBottom: '4px' }}>
-                                                {request.requestType === 'consulting' ? '📚 Consulting' : '🤝 Connection'} Request
+                                                {request.requestType === 'consulting' ? '📚 Tư vấn' : '🤝 Kết nối'} Yêu cầu
                                             </div>
                                             <h4 className={styles.listTitle}>
                                                 {request.startupName}
@@ -550,13 +453,13 @@ export default function OperationStaffDashboard({ user }) {
                                                         className={styles.primaryBtn}
                                                         onClick={() => handleApproveRequest(request.id)}
                                                     >
-                                                        Approve
+                                                        Phê duyệt
                                                     </button>
                                                     <button
                                                         className={styles.dangerBtn}
                                                         onClick={() => handleRejectRequest(request.id)}
                                                     >
-                                                        Reject
+                                                        Từ chối
                                                     </button>
                                                 </>
                                             )}
@@ -572,31 +475,31 @@ export default function OperationStaffDashboard({ user }) {
                 {activeSection === 'activity' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Platform Activity Monitor</h3>
+                            <h3 className={styles.cardTitle}>Giám sát hoạt động nền tảng</h3>
                             <div className={styles.metricsGrid}>
                                 <div className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>Total User Logins Today</span>
-                                    <strong className={styles.metricValue}>143</strong>
-                                </div>
-                                <div className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>Documents Uploaded</span>
-                                    <strong className={styles.metricValue}>24</strong>
-                                </div>
-                                <div className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>New Connections Made</span>
-                                    <strong className={styles.metricValue}>8</strong>
-                                </div>
-                                <div className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>Consulting Requests</span>
-                                    <strong className={styles.metricValue}>15</strong>
-                                </div>
-                                <div className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>System Errors</span>
+                                    <span className={styles.metricLabel}>Tổng đăng nhập hôm nay</span>
                                     <strong className={styles.metricValue}>0</strong>
                                 </div>
                                 <div className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>Flagged Issues</span>
-                                    <strong className={styles.metricValue}>2</strong>
+                                    <span className={styles.metricLabel}>Tài liệu đã tải lên</span>
+                                    <strong className={styles.metricValue}>0</strong>
+                                </div>
+                                <div className={styles.metricItem}>
+                                    <span className={styles.metricLabel}>Kết nối mới</span>
+                                    <strong className={styles.metricValue}>0</strong>
+                                </div>
+                                <div className={styles.metricItem}>
+                                    <span className={styles.metricLabel}>Yêu cầu tư vấn</span>
+                                    <strong className={styles.metricValue}>0</strong>
+                                </div>
+                                <div className={styles.metricItem}>
+                                    <span className={styles.metricLabel}>Lỗi hệ thống</span>
+                                    <strong className={styles.metricValue}>0</strong>
+                                </div>
+                                <div className={styles.metricItem}>
+                                    <span className={styles.metricLabel}>Vấn đề bị đánh dấu</span>
+                                    <strong className={styles.metricValue}>0</strong>
                                 </div>
                             </div>
                         </div>

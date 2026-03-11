@@ -1,58 +1,15 @@
 import React, { useState } from 'react';
-import { Search, MapPin, Star } from 'lucide-react';
+import { Search, MapPin, Star, Users } from 'lucide-react';
 import FeedHeader from '../components/feed/FeedHeader';
 import styles from './AdvisorsPage.module.css';
 
-// Mock data for advisors
-const MOCK_ADVISORS = [
-    {
-        id: 1,
-        name: "Dr. Sarah Expert",
-        handle: "@sarah_strategy",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?auto=format&fit=crop&q=80&w=150",
-        expertise: "Business Strategy",
-        bio: "20+ years of experience in tech startups. Specialized in scaling operations and market entry strategies.",
-        location: "San Francisco, CA",
-        rating: 4.9,
-        isFollowing: false
-    },
-    {
-        id: 2,
-        name: "John Finance",
-        handle: "@john_vc_guide",
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150",
-        expertise: "Fundraising & Finance",
-        bio: "Ex-VC Partner. Helping startups navigate Series A/B funding rounds. 50+ successful exits.",
-        location: "New York, NY",
-        rating: 4.8,
-        isFollowing: false
-    },
-    {
-        id: 3,
-        name: "Elena Tech",
-        handle: "@elena_ai_arch",
-        avatar: "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=150",
-        expertise: "AI Architecture",
-        bio: "PhD in Machine Learning. Advising on scalable AI infrastructure and LLM integration.",
-        location: "Austin, TX",
-        rating: 5.0,
-        isFollowing: false
-    },
-    {
-        id: 4,
-        name: "David Law",
-        handle: "@legal_eagle",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&q=80&w=150",
-        expertise: "IP & Legal",
-        bio: "Specialized in intellectual property rights and tech regulations for AI companies.",
-        location: "Boston, MA",
-        rating: 4.7,
-        isFollowing: false
-    }
-];
+// Mock data for advisors removed.
+// This component should fetch from a live API `api/Users?role=advisor` in the future.
+const MOCK_ADVISORS = [];
 
 export default function AdvisorsPage() {
-    const [advisors] = useState(MOCK_ADVISORS);
+    const [advisors, setAdvisors] = useState([]); // Initialize empty
+    const [isLoading, setIsLoading] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
 
     const filteredAdvisors = advisors.filter(advisor =>
@@ -63,8 +20,8 @@ export default function AdvisorsPage() {
     return (
         <div className={styles.container}>
             <FeedHeader
-                title="Find Advisors"
-                subtitle="Connect with verified experts to accelerate your growth"
+                title="Tìm cố vấn"
+                subtitle="Kết nối với các chuyên gia đã được xác minh để đẩy nhanh tăng trưởng"
                 showFilter={false}
             />
 
@@ -73,7 +30,7 @@ export default function AdvisorsPage() {
                     <Search className={styles.searchIcon} />
                     <input
                         type="text"
-                        placeholder="Search by name or expertise"
+                        placeholder="Tìm kiếm theo tên hoặc chuyên môn"
                         className={styles.searchInput}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -82,7 +39,18 @@ export default function AdvisorsPage() {
             </div>
 
             <div className={styles.list}>
-                {filteredAdvisors.map(advisor => (
+                {isLoading ? (
+                    <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
+                        <p>Đang tải cố vấn...</p>
+                    </div>
+                ) : filteredAdvisors.length === 0 ? (
+                    <div className={styles.emptyState}>
+                        <Users size={48} className={styles.emptyIcon} />
+                        <h3>Không tìm thấy cố vấn</h3>
+                        <p>Hiện không có cố vấn nào phù hợp với tìm kiếm của bạn.</p>
+                    </div>
+                ) : (
+                filteredAdvisors.map(advisor => (
                     <div key={advisor.id} className={styles.advisorItem}>
                         <img src={advisor.avatar} alt={advisor.name} className={styles.avatar} />
 
@@ -95,7 +63,7 @@ export default function AdvisorsPage() {
                                 <button
                                     className={`${styles.followBtn} ${advisor.isFollowing ? styles.following : ''}`}
                                 >
-                                    {advisor.isFollowing ? 'Following' : 'Connect'}
+                                    {advisor.isFollowing ? 'Đang kết nối' : 'Kết nối'}
                                 </button>
                             </div>
 
@@ -109,12 +77,12 @@ export default function AdvisorsPage() {
                                 </div>
                                 <div className={styles.statItem}>
                                     <Star fill="currentColor" />
-                                    <span>{advisor.rating} Rating</span>
+                                    <span>{advisor.rating} Đánh giá</span>
                                 </div>
                             </div>
                         </div>
                     </div>
-                ))}
+                )))}
             </div>
         </div>
     );

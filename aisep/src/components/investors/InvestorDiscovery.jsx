@@ -1,86 +1,63 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, CheckCircle, TrendingUp, MapPin, Building2, Target, Filter } from 'lucide-react';
 import FeedHeader from '../feed/FeedHeader';
 import FilterModal from './FilterModal';
+import InvestorDetail from './InvestorDetail';
+import investorService from '../../services/investorService';
 import styles from './InvestorDiscovery.module.css';
 
-// Mock investor data - Extended with funding status and AI score
-const MOCK_INVESTORS = [
-    {
-        id: 1,
-        name: 'Sequoia Capital',
-        type: 'VC Fund',
-        avatar: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&q=80&w=150',
-        verified: true,
-        thesis: 'Investing in early-stage AI & Blockchain infrastructure companies',
-        industries: ['AI/ML', 'Blockchain', 'Fintech'],
-        stages: ['Seed', 'Series A'],
-        location: 'Menlo Park, CA',
-        matchScore: 92,
-        portfolioSize: '200+ companies',
-        ticketSize: '$500K - $5M',
-        fundingStatus: 'Seeking Funding',
-        aiScore: 92
-    },
-    {
-        id: 2,
-        name: 'Y Combinator',
-        type: 'Accelerator',
-        avatar: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&q=80&w=150',
-        verified: true,
-        thesis: 'Backing ambitious founders building category-defining companies',
-        industries: ['SaaS', 'Fintech', 'EdTech'],
-        stages: ['Pre-Seed', 'Seed'],
-        location: 'Mountain View, CA',
-        matchScore: 88,
-        portfolioSize: '3000+ companies',
-        ticketSize: '$125K - $500K',
-        fundingStatus: 'Funded',
-        aiScore: 88
-    },
-    {
-        id: 3,
-        name: 'Michael Chen',
-        type: 'Angel Investor',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=150',
-        verified: true,
-        thesis: 'Healthcare technology disrupting traditional medical systems',
-        industries: ['HealthTech', 'BioTech'],
-        stages: ['Pre-Seed', 'Seed'],
-        location: 'San Francisco, CA',
-        matchScore: 75,
-        portfolioSize: '12 companies',
-        ticketSize: '$50K - $250K',
-        fundingStatus: 'Seeking Funding',
-        aiScore: 75
-    },
-    {
-        id: 4,
-        name: 'Tiger Global',
-        type: 'VC Fund',
-        avatar: 'https://images.unsplash.com/photo-1560179707-f14e90ef3623?auto=format&fit=crop&q=80&w=150',
-        verified: true,
-        thesis: 'Growth-stage internet and software companies globally',
-        industries: ['E-commerce', 'SaaS', 'Fintech'],
-        stages: ['Series A', 'Series B', 'Series C'],
-        location: 'New York, NY',
-        matchScore: 68,
-        portfolioSize: '300+ companies',
-        ticketSize: '$10M - $50M',
-        fundingStatus: 'Not Seeking',
-        aiScore: 68
-    }
-];
-
-export default function InvestorDiscovery() {
+export default function InvestorDiscovery({ user }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [selectedInvestorId, setSelectedInvestorId] = useState(null);
     const [filters, setFilters] = useState({
-        industry: 'All Industries',
-        stage: 'All Stages',
-        fundingStatus: 'All Statuses',
+        industry: 'Tất cả ngành nghề',
+        stage: 'Tất cả giai đoạn',
+        fundingStatus: 'Tất cả trạng thái',
         minAiScore: 0
     });
+
+    const [investors, setInvestors] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        const fetchInvestors = async () => {
+            setIsLoading(true);
+            try {
+                const response = await investorService.getAllInvestors();
+                if (response && response.items) {
+                    // Map API fields to the existing UI format expectations if needed,
+                    // or adapt the UI to the API fields.
+                    const formatted = response.items.map(inv => ({
+                        id: inv.investorId,
+                        name: inv.organizationName || inv.userName,
+                        userName: inv.userName,
+                        thesis: inv.investmentTaste || 'Chưa cập nhật khẩu vị đầu tư.',
+                        type: 'Quỹ đầu tư', // Default or derived
+                        industries: inv.focusIndustry ? inv.focusIndustry.split(',').map(s => s.trim()) : [],
+                        stages: [`Giai đoạn ${inv.preferredStage || 'sớm'}`],
+                        fundingStatus: 'Đang hoạt động',
+                        aiScore: 0, // Not provided directly in snippet
+                        matchScore: Math.floor(Math.random() * 20) + 75, // Placeholder for algorithmic match
+                        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(inv.organizationName || inv.userName)}&background=random`,
+                        location: inv.investmentRegion || 'Chưa cập nhật',
+                        portfolioSize: 'N/A', // Not in this specific API
+                        ticketSize: inv.investmentAmount ? `$${inv.investmentAmount.toLocaleString()}` : 'N/A',
+                        verified: true // Assume verified for demo unless field exists
+                    }));
+                    setInvestors(formatted);
+                }
+            } catch (error) {
+                console.error("Failed to load investors:", error);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        if (!selectedInvestorId) {
+            fetchInvestors();
+        }
+    }, [selectedInvestorId]);
 
     // Apply filters
     const handleApplyFilters = (newFilters) => {
@@ -88,22 +65,22 @@ export default function InvestorDiscovery() {
     };
 
     // Filter investors based on search and filters
-    const filteredInvestors = MOCK_INVESTORS.filter(investor => {
+    const filteredInvestors = investors.filter(investor => {
         const matchesSearch =
             investor.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
             investor.thesis.toLowerCase().includes(searchQuery.toLowerCase()) ||
             investor.type.toLowerCase().includes(searchQuery.toLowerCase());
 
         const matchesIndustry =
-            filters.industry === 'All Industries' ||
+            filters.industry === 'Tất cả ngành nghề' ||
             investor.industries.includes(filters.industry);
 
         const matchesStage =
-            filters.stage === 'All Stages' ||
+            filters.stage === 'Tất cả giai đoạn' ||
             investor.stages.includes(filters.stage);
 
         const matchesFundingStatus =
-            filters.fundingStatus === 'All Statuses' ||
+            filters.fundingStatus === 'Tất cả trạng thái' ||
             investor.fundingStatus === filters.fundingStatus;
 
         const matchesAiScore = investor.aiScore >= filters.minAiScore;
@@ -118,12 +95,27 @@ export default function InvestorDiscovery() {
         return styles.matchLow;
     };
 
+    const getActiveFiltersCount = () => {
+        let count = 0;
+        if (filters.industry !== 'Tất cả ngành nghề') count++;
+        if (filters.stage !== 'Tất cả giai đoạn') count++;
+        if (filters.fundingStatus !== 'Tất cả trạng thái') count++;
+        if (filters.minAiScore > 0) count++;
+        return count;
+    };
+
+    const activeFilterCount = getActiveFiltersCount();
+
+    if (selectedInvestorId) {
+        return <InvestorDetail investorId={selectedInvestorId} onBack={() => setSelectedInvestorId(null)} user={user} />;
+    }
+
     return (
         <div className={styles.container}>
             {/* Search Header */}
             <FeedHeader
-                title="Find Investors"
-                subtitle="Discover funds and angels matching your criteria"
+                title="Tìm nhà đầu tư"
+                subtitle="Khám phá quỹ đầu tư và các nhà đầu tư cá nhân phù hợp với tiêu chí của bạn"
                 showFilter={false}
             />
 
@@ -132,7 +124,7 @@ export default function InvestorDiscovery() {
                     <Search className={styles.searchIcon} size={20} />
                     <input
                         type="text"
-                        placeholder="Search funds, angels..."
+                        placeholder="Tìm kiếm quỹ, cá nhân..."
                         className={styles.searchInput}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
@@ -140,27 +132,32 @@ export default function InvestorDiscovery() {
                 </div>
 
                 {/* Filter Button */}
-                <button className={styles.filterButton} onClick={() => setIsFilterOpen(true)}>
-                    <Filter size={18} />
-                    <span>Filter</span>
+                <button className={styles.filterButton} onClick={() => setIsFilterOpen(!isFilterOpen)}>
+                    <Filter size={20} />
+                    <span>Bộ lọc</span>
+                    {activeFilterCount > 0 && <span className={styles.badge}>{activeFilterCount}</span>}
                 </button>
-            </div>
 
-            {/* Filter Modal */}
-            <FilterModal
-                isOpen={isFilterOpen}
-                filters={filters}
-                onApply={handleApplyFilters}
-                onClose={() => setIsFilterOpen(false)}
-            />
+                {/* Filter Modal Panel */}
+                <FilterModal
+                    isOpen={isFilterOpen}
+                    filters={filters}
+                    onApply={handleApplyFilters}
+                    onClose={() => setIsFilterOpen(false)}
+                />
+            </div>
 
             {/* Investor Feed */}
             <div className={styles.feed}>
-                {filteredInvestors.length === 0 ? (
+                {isLoading ? (
+                    <div className={styles.emptyState}>
+                        <p>Đang tải nhà đầu tư...</p>
+                    </div>
+                ) : filteredInvestors.length === 0 ? (
                     <div className={styles.emptyState}>
                         <TrendingUp size={48} className={styles.emptyIcon} />
-                        <h3>No investors found</h3>
-                        <p>Try adjusting your filters or search query.</p>
+                        <h3>Không tìm thấy nhà đầu tư</h3>
+                        <p>Hiện không có nhà đầu tư nào phù hợp với hồ sơ của bạn.</p>
                     </div>
                 ) : (
                     filteredInvestors.map(investor => (
@@ -178,8 +175,8 @@ export default function InvestorDiscovery() {
                                         {investor.verified && (
                                             <CheckCircle size={18} className={styles.verifiedBadge} />
                                         )}
-                                        <span className={`${styles.matchScore} ${getMatchScoreClass(investor.matchScore)}`}>
-                                            {investor.matchScore}% Match
+                                        <span className={`${styles.matchScore} ${styles.matchMedium}`}>
+                                            % Phù hợp: cập nhật sau
                                         </span>
                                     </div>
                                     <p className={styles.investorType}>{investor.type}</p>
@@ -222,11 +219,17 @@ export default function InvestorDiscovery() {
 
                             {/* Actions */}
                             <div className={styles.actions}>
-                                <button className={styles.primaryBtn}>
+                                <button className={styles.primaryBtn} onClick={() => {
+                                    if (!user || user.role !== 'startup') {
+                                        alert('Chỉ tài khoản Startup mới có thể gửi Pitch cho nhà đầu tư.');
+                                    } else {
+                                        alert(`Yêu cầu kết nối đã được gửi tới ${investor.name}! (Tính năng đang phát triển)`);
+                                    }
+                                }}>
                                     <TrendingUp size={16} />
-                                    <span>Pitch</span>
+                                    <span>Yêu cầu kết nối</span>
                                 </button>
-                                <button className={styles.viewProfileBtn}>View Profile</button>
+                                <button className={styles.viewProfileBtn} onClick={() => setSelectedInvestorId(investor.id)}>Xem hồ sơ</button>
                             </div>
                         </div>
                     ))

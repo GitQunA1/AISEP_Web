@@ -9,87 +9,16 @@ import FeedHeader from '../components/feed/FeedHeader';
  */
 export default function AdvisorDashboard({ user }) {
     const [activeSection, setActiveSection] = useState('overview');
-    const [consultingRequests, setConsultingRequests] = useState([
-        {
-            id: 1,
-            startupName: 'TechStartup AI',
-            founderName: 'John Doe',
-            expertise: 'AI Architecture',
-            inquiry: 'Help with scaling ML infrastructure',
-            budget: '$2000 - $3000',
-            requestDate: '2024-01-18',
-            status: 'pending'
-        },
-        {
-            id: 2,
-            startupName: 'FinApp Solutions',
-            founderName: 'Jane Smith',
-            expertise: 'Financial Strategy',
-            inquiry: 'Guidance on Series A fundraising',
-            budget: '$3000 - $5000',
-            requestDate: '2024-01-15',
-            status: 'accepted'
-        },
-        {
-            id: 3,
-            startupName: 'BlockChain Lab',
-            founderName: 'Mike Johnson',
-            expertise: 'Blockchain',
-            inquiry: 'Smart contract security review',
-            budget: '$1500 - $2500',
-            requestDate: '2024-01-10',
-            status: 'rejected'
-        }
-    ]);
-
-    const [appointments, setAppointments] = useState([
-        {
-            id: 1,
-            startupName: 'FinApp Solutions',
-            founderName: 'Jane Smith',
-            date: '2024-01-25',
-            time: '14:00',
-            duration: '60 min',
-            status: 'scheduled'
-        },
-        {
-            id: 2,
-            startupName: 'CloudData Inc',
-            founderName: 'Alex Chen',
-            date: '2024-01-30',
-            time: '10:00',
-            duration: '45 min',
-            status: 'scheduled'
-        }
-    ]);
-
-    const [consultingReports, setConsultingReports] = useState([
-        {
-            id: 1,
-            startupName: 'TechStartup AI',
-            founderName: 'John Doe',
-            date: '2024-01-10',
-            consultationDate: '2024-01-05',
-            rating: 5,
-            status: 'completed'
-        },
-        {
-            id: 2,
-            startupName: 'HealthPro Tech',
-            founderName: 'Sarah Lee',
-            date: '2023-12-20',
-            consultationDate: '2023-12-15',
-            rating: 4.5,
-            status: 'completed'
-        }
-    ]);
+    const [consultingRequests, setConsultingRequests] = useState([]);
+    const [appointments, setAppointments] = useState([]);
+    const [consultingReports, setConsultingReports] = useState([]);
 
     const dashboardData = {
-        activeClients: 5,
-        totalConsultations: 12,
+        activeClients: 0,
+        totalConsultations: 0,
         completedReports: consultingReports.length,
-        averageRating: 4.8,
-        hourlyRate: '$150 - $250',
+        averageRating: 0.0,
+        hourlyRate: '-',
         upcomingAppointments: appointments.length,
         pendingRequests: consultingRequests.filter(r => r.status === 'pending').length,
         acceptedRequests: consultingRequests.filter(r => r.status === 'accepted').length
@@ -119,8 +48,8 @@ export default function AdvisorDashboard({ user }) {
         <div className={styles.container}>
             {/* Unified Header */}
             <FeedHeader
-                title="Advisor Dashboard"
-                subtitle={`Welcome, ${user?.name || 'Advisor'}! Manage your consulting practice.`}
+                title="Bảng điều khiển Cố vấn"
+                subtitle={`Xin chào, ${user?.name || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`}
                 showFilter={false}
                 user={user}
             />
@@ -133,7 +62,7 @@ export default function AdvisorDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.activeClients}</div>
-                        <div className={styles.statLabel}>Active Clients</div>
+                        <div className={styles.statLabel}>Khách hàng đang tư vấn</div>
                     </div>
                 </div>
 
@@ -143,7 +72,7 @@ export default function AdvisorDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.pendingRequests}</div>
-                        <div className={styles.statLabel}>Pending Requests</div>
+                        <div className={styles.statLabel}>Yêu cầu chờ xử lý</div>
                     </div>
                 </div>
 
@@ -153,7 +82,7 @@ export default function AdvisorDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.upcomingAppointments}</div>
-                        <div className={styles.statLabel}>Upcoming</div>
+                        <div className={styles.statLabel}>Lịch sắp tới</div>
                     </div>
                 </div>
 
@@ -163,7 +92,7 @@ export default function AdvisorDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.averageRating}</div>
-                        <div className={styles.statLabel}>Avg Rating</div>
+                        <div className={styles.statLabel}>Đánh giá trung bình</div>
                     </div>
                 </div>
             </div>
@@ -174,31 +103,31 @@ export default function AdvisorDashboard({ user }) {
                     className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
                     onClick={() => setActiveSection('overview')}
                 >
-                    Overview
+                    Tổng quan
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'requests' ? styles.active : ''}`}
                     onClick={() => setActiveSection('requests')}
                 >
-                    Requests
+                    Yêu cầu tư vấn
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'appointments' ? styles.active : ''}`}
                     onClick={() => setActiveSection('appointments')}
                 >
-                    Appointments
+                    Lịch hẹn
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'reports' ? styles.active : ''}`}
                     onClick={() => setActiveSection('reports')}
                 >
-                    Reports
+                    Báo cáo
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'profile' ? styles.active : ''}`}
                     onClick={() => setActiveSection('profile')}
                 >
-                    Profile
+                    Hồ sơ
                 </button>
             </div>
 
@@ -210,24 +139,24 @@ export default function AdvisorDashboard({ user }) {
                         <div className={styles.sectionGrid}>
                             {/* Summary Stats */}
                             <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
-                                <h3 className={styles.cardTitle}>Practice Summary</h3>
+                                <h3 className={styles.cardTitle}>Tóm tắt hoạt động</h3>
                                 <div className={styles.metricsGrid}>
                                     <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Total Consultations</div>
+                                        <div className={styles.metricLabel}>Tổng số buổi tư vấn</div>
                                         <div className={styles.metricValue}>{dashboardData.totalConsultations}</div>
                                     </div>
                                     <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Completed Reports</div>
+                                        <div className={styles.metricLabel}>Báo cáo đã hoàn thành</div>
                                         <div className={styles.metricValue}>{dashboardData.completedReports}</div>
                                     </div>
                                     <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Average Rating</div>
+                                        <div className={styles.metricLabel}>Đánh giá trung bình</div>
                                         <div className={styles.metricValue}>
                                             {dashboardData.averageRating} ⭐
                                         </div>
                                     </div>
                                     <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Hourly Rate</div>
+                                        <div className={styles.metricLabel}>Phí theo giờ</div>
                                         <div className={styles.metricValue}>{dashboardData.hourlyRate}</div>
                                     </div>
                                 </div>
@@ -235,9 +164,13 @@ export default function AdvisorDashboard({ user }) {
 
                             {/* Upcoming Appointments */}
                             <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Next 7 Days</h3>
+                                <h3 className={styles.cardTitle}>7 Ngày Tới</h3>
                                 <div className={styles.list}>
-                                    {appointments.slice(0, 3).map(appt => (
+                                    {appointments.length === 0 ? (
+                                        <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                            <p>Chưa có lịch hẹn nào sắp tới.</p>
+                                        </div>
+                                    ) : appointments.slice(0, 3).map(appt => (
                                         <div key={appt.id} className={styles.listItem}>
                                             <div className={styles.dateBox} style={{ marginRight: '12px' }}>
                                                 <span className={styles.dateMonth}>Jan</span>
@@ -255,34 +188,10 @@ export default function AdvisorDashboard({ user }) {
 
                             {/* Recent Activity */}
                             <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Recent Activity</h3>
+                                <h3 className={styles.cardTitle}>Hoạt động gần đây</h3>
                                 <div className={styles.list}>
-                                    <div className={styles.listItem}>
-                                        <div className={`${styles.listIcon} ${styles.iconYellow}`}>
-                                            <MessageSquare size={18} />
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>New request from TechStartup AI</div>
-                                            <div className={styles.listMeta}>2 hours ago</div>
-                                        </div>
-                                    </div>
-                                    <div className={styles.listItem}>
-                                        <div className={`${styles.listIcon} ${styles.iconGreen}`}>
-                                            <CheckCircle size={18} />
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>Report completed for FinApp Solutions</div>
-                                            <div className={styles.listMeta}>1 day ago</div>
-                                        </div>
-                                    </div>
-                                    <div className={styles.listItem}>
-                                        <div className={`${styles.listIcon} ${styles.iconRed}`}>
-                                            <Star size={18} />
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>Received 5-star rating from HealthPro Tech</div>
-                                            <div className={styles.listMeta}>3 days ago</div>
-                                        </div>
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có hoạt động nào.</p>
                                     </div>
                                 </div>
                             </div>
@@ -295,16 +204,20 @@ export default function AdvisorDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>
-                                Consulting Requests
+                                Yêu cầu tư vấn
                                 {dashboardData.pendingRequests > 0 && (
                                     <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
-                                        {dashboardData.pendingRequests} Pending
+                                        {dashboardData.pendingRequests} Chờ xử lý
                                     </span>
                                 )}
                             </h3>
 
                             <div className={styles.list}>
-                                {consultingRequests.map(request => (
+                                {consultingRequests.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có yêu cầu tư vấn nào.</p>
+                                    </div>
+                                ) : consultingRequests.map(request => (
                                     <div key={request.id} className={styles.listItem} style={{ alignItems: 'flex-start' }}>
                                         <div className={styles.listContent}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
@@ -328,14 +241,14 @@ export default function AdvisorDashboard({ user }) {
                                                         style={{ padding: '6px 12px', fontSize: '12px' }}
                                                         onClick={() => handleAcceptRequest(request.id)}
                                                     >
-                                                        Accept
+                                                        Chấp nhận
                                                     </button>
                                                     <button
                                                         className={styles.dangerBtn}
                                                         style={{ padding: '6px 12px', fontSize: '12px' }}
                                                         onClick={() => handleRejectRequest(request.id)}
                                                     >
-                                                        Decline
+                                                        Từ chối
                                                     </button>
                                                 </div>
                                             )}
@@ -352,15 +265,19 @@ export default function AdvisorDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>Scheduled Appointments</h3>
+                                <h3 className={styles.cardTitle}>Lịch hẹn đã đặt</h3>
                                 <button className={styles.primaryBtn}>
                                     <PlusCircle size={18} />
-                                    Add Availability
+                                    Thêm khung giờ rảnh
                                 </button>
                             </div>
 
                             <div className={styles.list}>
-                                {appointments.map(appt => (
+                                {appointments.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có lịch hẹn nào được đặt.</p>
+                                    </div>
+                                ) : appointments.map(appt => (
                                     <div key={appt.id} className={styles.listItem}>
                                         <div className={styles.dateBox} style={{ marginRight: '16px' }}>
                                             <span className={styles.dateMonth}>Jan</span>
@@ -400,15 +317,19 @@ export default function AdvisorDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>Consulting Reports</h3>
+                                <h3 className={styles.cardTitle}>Báo cáo tư vấn</h3>
                                 <button className={styles.primaryBtn}>
                                     <PlusCircle size={18} />
-                                    Create Report
+                                    Tạo báo cáo
                                 </button>
                             </div>
 
                             <div className={styles.list}>
-                                {consultingReports.map(report => (
+                                {consultingReports.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có báo cáo nào.</p>
+                                    </div>
+                                ) : consultingReports.map(report => (
                                     <div key={report.id} className={styles.listItem}>
                                         <div className={styles.listContent}>
                                             <h4 className={styles.listTitle}>{report.startupName}</h4>
@@ -441,14 +362,14 @@ export default function AdvisorDashboard({ user }) {
                 {activeSection === 'profile' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Profile Settings</h3>
+                            <h3 className={styles.cardTitle}>Cài đặt hồ sơ</h3>
                             <form className={styles.form}>
                                 <div className={styles.formRow}>
                                     <div className={styles.formGroup}>
-                                        <label>Full Name</label>
+                                        <label>Họ và tên</label>
                                         <input
                                             type="text"
-                                            placeholder="Your full name"
+                                            placeholder="Họ và tên của bạn"
                                             defaultValue={user?.name || ''}
                                         />
                                     </div>
@@ -456,44 +377,44 @@ export default function AdvisorDashboard({ user }) {
                                         <label>Email</label>
                                         <input
                                             type="email"
-                                            placeholder="your.email@example.com"
+                                            placeholder="email@example.com"
                                             defaultValue={user?.email || ''}
                                         />
                                     </div>
                                 </div>
 
                                 <div className={styles.formGroup}>
-                                    <label>Professional Bio</label>
+                                    <label>Giới thiệu chuyên môn</label>
                                     <textarea
                                         rows={4}
-                                        placeholder="Tell startups about your expertise and experience"
+                                        placeholder="Chia sẻ về chuyên môn và kinh nghiệm của bạn với startup"
                                     />
                                 </div>
 
                                 <div className={styles.formRow}>
                                     <div className={styles.formGroup}>
-                                        <label>Primary Expertise</label>
+                                        <label>Lĩnh vực chuyên môn chính</label>
                                         <select>
-                                            <option>Business Strategy</option>
-                                            <option>Fundraising & Finance</option>
-                                            <option>AI Architecture</option>
-                                            <option>IP & Legal</option>
+                                            <option>Chiến lược kinh doanh</option>
+                                            <option>Gọi vốn & Tài chính</option>
+                                            <option>Kiến trúc AI</option>
+                                            <option>Sở hữu trí tuệ & Pháp lý</option>
                                         </select>
                                     </div>
                                     <div className={styles.formGroup}>
-                                        <label>Hourly Rate</label>
-                                        <input type="text" placeholder="e.g., $150 - $250" />
+                                        <label>Phí theo giờ</label>
+                                        <input type="text" placeholder="VD: 150$ - 250$" />
                                     </div>
                                 </div>
 
                                 <div className={styles.formGroup}>
-                                    <label>Years of Experience</label>
+                                    <label>Số năm kinh nghiệm</label>
                                     <input type="number" min="0" max="70" />
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                                    <button type="submit" className={styles.primaryBtn}>Save Changes</button>
-                                    <button type="button" className={styles.secondaryBtn}>Cancel</button>
+                                    <button type="submit" className={styles.primaryBtn}>Lưu thay đổi</button>
+                                    <button type="button" className={styles.secondaryBtn}>Hủy</button>
                                 </div>
                             </form>
                         </div>

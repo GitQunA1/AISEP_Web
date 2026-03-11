@@ -30,7 +30,7 @@ export default function ProfilePage({ user, onShowAdvisors }) {
     const tabs = getTabs();
 
     // Generate @handle from name or email
-    const handle = user.email ? `@${user.email.split('@')[0]}` : `@${user.name.toLowerCase().replace(/\s+/g, '')}`;
+    const handle = user.email ? `@${user.email.split('@')[0]}` : `@${(user.name || 'user').toLowerCase().replace(/\s+/g, '')}`;
 
     // Mock data
     const joinDate = 'February 2024';
@@ -44,13 +44,13 @@ export default function ProfilePage({ user, onShowAdvisors }) {
             <div className={styles.profileHeader}>
                 <div className={styles.avatarSection}>
                     <div className={styles.avatar}>
-                        <span>{user.name.charAt(0).toUpperCase()}</span>
+                        <span>{(user.name || user.email || 'U').charAt(0).toUpperCase()}</span>
                     </div>
                 </div>
 
                 <div className={styles.profileInfo}>
                     <div className={styles.nameSection}>
-                        <h1 className={styles.name}>{user.name}</h1>
+                        <h1 className={styles.name}>{user.name || user.email}</h1>
                         <div className={styles.handle}>{handle}</div>
                     </div>
 
@@ -164,7 +164,7 @@ function ProfileTab({ user }) {
             <form className={styles.form}>
                 <div className={styles.formGroup}>
                     <label>Name</label>
-                    <input type="text" defaultValue={user.name} />
+                    <input type="text" defaultValue={user.name || ''} />
                 </div>
                 {user.role === 'startup' && (
                     <div className={styles.formGroup}>

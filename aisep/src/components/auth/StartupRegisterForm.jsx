@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Loader, ChevronLeft } from 'lucide-react';
 import styles from './RegistrationUnique.module.css';
+import authService from '../../services/authService';
 
 /**
  * StartupRegisterForm - Simplified credential collection
@@ -24,25 +25,25 @@ function StartupRegisterForm({ onBack, onComplete }) {
     const newErrors = {};
 
     if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
+      newErrors.fullName = 'Vui lòng nhập họ và tên.';
     }
 
     if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
+      newErrors.email = 'Vui lòng nhập địa chỉ email.';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-      newErrors.email = 'Invalid email format';
+      newErrors.email = 'Định dạng email không hợp lệ.';
     }
 
     if (!formData.password) {
-      newErrors.password = 'Password is required';
+      newErrors.password = 'Vui lòng nhập mật khẩu.';
     } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
+      newErrors.password = 'Mật khẩu phải có ít nhất 8 ký tự.';
     }
 
     if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
+      newErrors.confirmPassword = 'Vui lòng xác nhận mật khẩu.';
     } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
+      newErrors.confirmPassword = 'Mật khẩu xác nhận không khớp.';
     }
 
     setErrors(newErrors);
@@ -63,13 +64,27 @@ function StartupRegisterForm({ onBack, onComplete }) {
 
     setIsLoading(true);
 
-    // Simulate API call
-    setTimeout(() => {
+    try {
+      const response = await authService.register({
+        email: formData.email,
+        password: formData.password,
+        confirmPassword: formData.confirmPassword,
+        fullName: formData.fullName,
+        role: 0, // UserRole.Startup = 0
+      });
+
+      // apiClient interceptor returns the ApiResponse wrapper: { success, message, data }
+      if (response.success) {
+        onComplete && onComplete({ ...formData, role: 'Startup' });
+      } else {
+        setErrors((prev) => ({ ...prev, submit: response.message || 'Đăng ký thất bại. Vui lòng thử lại.' }));
+      }
+    } catch (error) {
+       const backendMsg = error.message || 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.';
+       setErrors((prev) => ({ ...prev, submit: backendMsg }));
+    } finally {
       setIsLoading(false);
-      // Simulate success response
-      const mockResponse = { ...formData, role: 'Startup' };
-      onComplete && onComplete(mockResponse);
-    }, 1500);
+    }
   };
 
   const isFormValid =
@@ -85,22 +100,22 @@ function StartupRegisterForm({ onBack, onComplete }) {
         <div className={styles.reg_progressBar}>
           <div className={styles.reg_progressFill} style={{ width: '100%' }} />
         </div>
-        <p className={styles.reg_stepIndicator}>Create Your Account</p>
+        <p className={styles.reg_stepIndicator}>Tạo tài khoản</p>
       </div>
 
       {/* Body */}
       <div className={styles.reg_cardBody}>
         <div className={styles.reg_stepContainer}>
           <div>
-            <h2 className={styles.reg_stepTitle}>Welcome to AISEP</h2>
-            <p className={styles.reg_stepSubtitle}>Join as a Founder / Startup</p>
+            <h2 className={styles.reg_stepTitle}>Chào mừng đến với AISEP</h2>
+            <p className={styles.reg_stepSubtitle}>Đăng ký với tư cách Nhà sáng lập / Startup</p>
           </div>
 
           <form onSubmit={handleSubmit} className={styles.reg_Form}>
             {/* Full Name */}
             <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
               <label htmlFor="fullName" className={styles.reg_label}>
-                Full Name <span className={styles.reg_required}>*</span>
+                Họ và tên <span className={styles.reg_required}>*</span>
               </label>
               <input
                 id="fullName"
@@ -109,7 +124,7 @@ function StartupRegisterForm({ onBack, onComplete }) {
                 value={formData.fullName}
                 onChange={handleInputChange}
                 className={`${styles.reg_input} ${errors.fullName ? styles.reg_inputError : ''}`}
-                placeholder="Enter your full name"
+                placeholder="Nhập họ và tên của bạn"
                 disabled={isLoading}
               />
               {errors.fullName && <p className={styles.reg_errorText}>{errors.fullName}</p>}
@@ -118,7 +133,7 @@ function StartupRegisterForm({ onBack, onComplete }) {
             {/* Email */}
             <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
               <label htmlFor="email" className={styles.reg_label}>
-                Email Address <span className={styles.reg_required}>*</span>
+                Địa chỉ Email <span className={styles.reg_required}>*</span>
               </label>
               <input
                 id="email"
@@ -136,7 +151,7 @@ function StartupRegisterForm({ onBack, onComplete }) {
             {/* Password */}
             <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
               <label htmlFor="password" className={styles.reg_label}>
-                Password <span className={styles.reg_required}>*</span>
+                Mật khẩu <span className={styles.reg_required}>*</span>
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -146,7 +161,7 @@ function StartupRegisterForm({ onBack, onComplete }) {
                   value={formData.password}
                   onChange={handleInputChange}
                   className={`${styles.reg_input} ${errors.password ? styles.reg_inputError : ''}`}
-                  placeholder="Minimum 8 characters"
+                  placeholder="Tối thiểu 8 ký tự"
                   disabled={isLoading}
                   style={{ paddingRight: '48px' }}
                 />
@@ -176,7 +191,7 @@ function StartupRegisterForm({ onBack, onComplete }) {
             {/* Confirm Password */}
             <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
               <label htmlFor="confirmPassword" className={styles.reg_label}>
-                Confirm Password <span className={styles.reg_required}>*</span>
+                Xác nhận mật khẩu <span className={styles.reg_required}>*</span>
               </label>
               <div style={{ position: 'relative' }}>
                 <input
@@ -186,7 +201,7 @@ function StartupRegisterForm({ onBack, onComplete }) {
                   value={formData.confirmPassword}
                   onChange={handleInputChange}
                   className={`${styles.reg_input} ${errors.confirmPassword ? styles.reg_inputError : ''}`}
-                  placeholder="Re-enter password"
+                  placeholder="Nhập lại mật khẩu"
                   disabled={isLoading}
                   style={{ paddingRight: '48px' }}
                 />
@@ -226,7 +241,7 @@ function StartupRegisterForm({ onBack, onComplete }) {
       {/* Footer */}
       <div className={styles.reg_cardFooter}>
         <button onClick={onBack} className={styles.reg_secondaryButton} disabled={isLoading}>
-          <ChevronLeft size={20} /> Back
+          <ChevronLeft size={20} /> Quay lại
         </button>
         <button
           onClick={handleSubmit}
@@ -236,10 +251,10 @@ function StartupRegisterForm({ onBack, onComplete }) {
           {isLoading ? (
             <>
               <Loader size={20} style={{ animation: 'spin 1s linear infinite' }} />
-              Creating account...
+              Đang tạo tài khoản...
             </>
           ) : (
-            'Create Account'
+            'Tạo tài khoản'
           )}
         </button>
       </div>

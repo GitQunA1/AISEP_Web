@@ -19,7 +19,7 @@ import Button from '../common/Button';
  * StartupCard Component - "Smart Density" Redesign
  * Layout: Avatar (Left Side) | Content (Right Side)
  */
-function StartupCard({ startup, isPremium = false, user }) {
+function StartupCard({ startup, isPremium = false, user, onViewProfile }) {
   const [isBookmarked, setIsBookmarked] = useState(false);
   const [isLiked, setIsLiked] = useState(false);
   const [showAdvisorActions, setShowAdvisorActions] = useState(false);
@@ -43,9 +43,15 @@ function StartupCard({ startup, isPremium = false, user }) {
 
   return (
     <article className={styles.card}>
-      {/* LEFT COLUMN: AVATAR */}
+      {/* LEFT COLUMN: AVATAR — clickable */}
       <div className={styles.avatarColumn}>
-        <Avatar src={startup.logo} alt={startup.name} name={startup.name} size="md" />
+        <button
+          className={styles.avatarBtn}
+          onClick={() => onViewProfile && onViewProfile(startup.startupId ?? startup.id)}
+          title={`Xem hồ sơ ${startup.name}`}
+        >
+          <Avatar src={startup.logo} alt={startup.name} name={startup.name} size="md" />
+        </button>
       </div>
 
       {/* RIGHT COLUMN: CONTENT */}
@@ -54,11 +60,16 @@ function StartupCard({ startup, isPremium = false, user }) {
         {/* ROW 1: HEADLINE (Name, Badges, Time, Menu) */}
         <div className={styles.headerRow}>
           <div className={styles.infoGroup}>
-            <h3 className={styles.name}>{startup.name}</h3>
+            <h3
+              className={`${styles.name} ${onViewProfile ? styles.nameClickable : ''}`}
+              onClick={() => onViewProfile && onViewProfile(startup.startupId ?? startup.id)}
+            >
+              {startup.name}
+            </h3>
             {/* Verified/Score Badge */}
             <Badge
-              label={`${startup.aiScore}`}
-              variant={getScoreBadgeVariant()}
+              label="Điểm AI: cập nhật"
+              variant="updating"
               showIcon={true}
               size="sm"
             />
@@ -71,10 +82,17 @@ function StartupCard({ startup, isPremium = false, user }) {
           </button>
         </div>
 
-        {/* Industry/Stage Badges (Optional secondary line or inline) */}
+        {/* Industry/Stage Badges - from keySkills (real API data) */}
         <div className={styles.badgeRow}>
-          <Badge label={startup.industry} variant="industry" size="xs" />
-          <Badge label={startup.stage} variant="stage" size="xs" />
+          {(startup.tags && startup.tags.length > 0
+            ? startup.tags.slice(0, 3)
+            : startup.industry
+              ? [startup.industry]
+              : []
+          ).map(tag => (
+            <Badge key={tag} label={tag} variant="industry" size="xs" />
+          ))}
+          {startup.stage && <Badge label={startup.stage} variant="stage" size="xs" />}
         </div>
 
         {/* ROW 2: DESCRIPTION */}
@@ -87,8 +105,8 @@ function StartupCard({ startup, isPremium = false, user }) {
               <div className={styles.lockIcon}>
                 <Lock size={14} />
               </div>
-              <span className={styles.teaseText}>Unlock financial data & funding ask</span>
-              <button className={styles.subscribeBtn}>Subscribe</button>
+              <span className={styles.teaseText}>Mở khóa dữ liệu tài chính & nhu cầu gọi vốn</span>
+              <button className={styles.subscribeBtn}>Đăng ký</button>
             </div>
           ) : (
             <div className={styles.dataGrid}>

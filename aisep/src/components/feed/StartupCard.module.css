@@ -26,8 +26,19 @@
 .avatarColumn {
   flex-shrink: 0;
   padding-top: 4px;
-  /* Align avatar visually with text cap height */
 }
+
+/* Clickable avatar wrapper */
+.avatarBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  display: block;
+  border-radius: 50%;
+  transition: opacity 0.15s;
+}
+.avatarBtn:hover { opacity: 0.85; }
 
 /* RIGHT COLUMN */
 .contentColumn {
@@ -58,6 +69,14 @@
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
+}
+
+.nameClickable {
+  cursor: pointer;
+}
+.nameClickable:hover {
+  text-decoration: underline;
+  color: var(--primary-blue);
 }
 
 .separator {

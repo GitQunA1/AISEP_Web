@@ -27,12 +27,11 @@ function Sidebar({
   const { theme, toggleTheme } = useTheme();
 
   const navItems = [
-    { icon: Home, label: 'Home', href: '#' },
-    { icon: LayoutDashboard, label: 'Dashboard', href: '#', showWhenLoggedIn: true },
-    { icon: Search, label: 'Explore', href: '#' },
-    { icon: TrendingUp, label: 'Investors', href: '#', hideFor: ['investor'] },
-    { icon: Users, label: 'Advisors', href: '#', hideFor: ['advisor'] },
-    { icon: User, label: 'Profile', href: '#' },
+    { icon: Home, label: 'Home', displayLabel: 'Trang chủ', href: '#' },
+    { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
+    { icon: Search, label: 'Explore', displayLabel: 'Khám phá', href: '#' },
+    { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#', hideFor: ['investor'] },
+    { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor'] },
   ];
 
   const handleNavClick = (label) => {
@@ -153,7 +152,7 @@ function Sidebar({
                     }}
                   >
                     <Icon size={24} />
-                    <span>{item.label}</span>
+                    <span>{item.displayLabel}</span>
                   </a>
                 );
               })}
@@ -167,7 +166,7 @@ function Sidebar({
             title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
           >
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-            <span>Theme</span>
+            <span>Giao diện</span>
           </button>
 
           {/* Auth Section / Profile Display */}
@@ -176,10 +175,10 @@ function Sidebar({
             <div className={styles.profileSection}>
               <div className={styles.profileDisplay}>
                 <div className={styles.profileAvatar}>
-                  <span>{user.name.charAt(0).toUpperCase()}</span>
+                  <span>{(user.name || user.email || 'U').charAt(0).toUpperCase()}</span>
                 </div>
                 <div className={styles.profileInfo}>
-                  <div className={styles.profileName}>{user.name}</div>
+                  <div className={styles.profileName}>{user.name || user.email}</div>
                   <div className={styles.profileRole}>{user.role}</div>
                 </div>
               </div>
@@ -195,7 +194,7 @@ function Sidebar({
             /* Not Logged In: Show Auth Buttons */
             <div className={styles.authSection}>
               <button className={styles.signInBtn} onClick={handleLoginClick}>
-                Sign In
+                Đăng nhập
               </button>
 
               <Button
@@ -203,7 +202,7 @@ function Sidebar({
                 className={styles.registerBtn}
                 onClick={handleRegisterClick}
               >
-                Create Account
+                Tạo tài khoản
               </Button>
             </div>
           )}

@@ -5,19 +5,27 @@ import DashboardLayout from './components/layout/DashboardLayout';
 import RegisterSelection from './components/auth/RegisterSelection';
 import RegisterPage from './pages/RegisterPage';
 import LoginPage from './pages/LoginPage';
-import ProfilePage from './pages/ProfilePage';
 import StartupDashboard from './pages/StartupDashboard';
 import InvestorDashboard from './pages/InvestorDashboard';
 import AdvisorDashboard from './pages/AdvisorDashboard';
 import OperationStaffDashboard from './pages/OperationStaffDashboard';
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import authService from './services/authService';
 
 function App() {
-  const [currentView, setCurrentView] = useState('main'); // 'login', 'main', 'roleSelection', 'register', 'profile'
+  const [currentView, setCurrentView] = useState('main'); // 'login', 'main', 'roleSelection', 'register'
   const [selectedRole, setSelectedRole] = useState(null);
   const [user, setUser] = useState(null);
 
   // Load user from localStorage on mount
   useEffect(() => {
+    // Check if URL has userId and token (email verification payload)
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('userId') && params.get('token')) {
+       setCurrentView('verifyEmail');
+       return;
+    }
+
     const storedUser = localStorage.getItem('aisep_user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
@@ -25,19 +33,25 @@ function App() {
     }
   }, []);
 
-  const handleLoginSuccess = (userData, token) => {
-    // Store user and token in localStorage (mock - in real app use secure storage)
+  const handleLoginSuccess = (userData, accessToken, refreshToken) => {
+    // Store user and tokens in localStorage
     localStorage.setItem('aisep_user', JSON.stringify(userData));
-    localStorage.setItem('aisep_token', token);
+    localStorage.setItem('aisep_token', accessToken);
+    localStorage.setItem('aisep_refresh_token', refreshToken);
     setUser(userData);
     setCurrentView('main');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+    } catch(err) {
+      console.error('Logout error:', err);
+    }
     localStorage.removeItem('aisep_user');
     localStorage.removeItem('aisep_token');
+    localStorage.removeItem('aisep_refresh_token');
     setUser(null);
-    setIsDashboardOpen(false);
     // Stay on main page, don't redirect to login
   };
 
@@ -71,10 +85,6 @@ function App() {
   };
 
 
-  const handleShowProfile = () => {
-    setCurrentView('profile');
-  };
-
   const handleShowHome = () => {
     setCurrentView('main');
   };
@@ -104,7 +114,6 @@ function App() {
         <DashboardLayout
           onShowRegister={handleShowRegister}
           onShowLogin={handleShowLogin}
-          onShowProfile={handleShowProfile}
           onShowHome={handleShowHome}
           onShowAdvisors={handleShowAdvisors}
           onShowInvestors={handleShowInvestors}
@@ -131,7 +140,6 @@ function App() {
         <MainLayout
           onShowRegister={handleShowRegister}
           onShowLogin={handleShowLogin}
-          onShowProfile={handleShowProfile}
           onShowHome={handleShowHome}
           onShowAdvisors={handleShowAdvisors}
           onShowInvestors={handleShowInvestors}
@@ -145,25 +153,10 @@ function App() {
           onBack={handleBackToMain}
           onRoleSelect={handleRoleSelect}
         />
-      ) : currentView === 'profile' ? (
-        <MainLayout
-          onShowRegister={handleShowRegister}
-          onShowLogin={handleShowLogin}
-          onShowProfile={handleShowProfile}
-          onShowHome={handleShowHome}
-          onShowAdvisors={handleShowAdvisors}
-          onShowInvestors={handleShowInvestors}
-          onShowDashboard={handleShowDashboard}
-          user={user}
-          onLogout={handleLogout}
-          showProfile={true}
-          activeView={currentView}
-        />
       ) : currentView === 'advisors' ? (
         <MainLayout
           onShowRegister={handleShowRegister}
           onShowLogin={handleShowLogin}
-          onShowProfile={handleShowProfile}
           onShowHome={handleShowHome}
           onShowAdvisors={handleShowAdvisors}
           onShowInvestors={handleShowInvestors}
@@ -177,7 +170,6 @@ function App() {
         <MainLayout
           onShowRegister={handleShowRegister}
           onShowLogin={handleShowLogin}
-          onShowProfile={handleShowProfile}
           onShowHome={handleShowHome}
           onShowAdvisors={handleShowAdvisors}
           onShowInvestors={handleShowInvestors}
@@ -187,6 +179,11 @@ function App() {
           showInvestors={true}
           activeView={currentView}
         />
+      ) : currentView === 'verifyEmail' ? (
+         <VerifyEmailPage onVerified={() => {
+              window.history.replaceState({}, document.title, window.location.pathname);
+              setCurrentView('login');
+         }} />
       ) : (
         <RegisterPage
           selectedRole={selectedRole}

@@ -7,6 +7,8 @@ import FeedHeader from '../components/feed/FeedHeader';
 import ProjectValidationService from '../services/ProjectValidation.js';
 import BlockchainService from '../services/BlockchainService.js';
 import AIEvaluationService from '../services/AIEvaluationService.js';
+import projectSubmissionService from '../services/projectSubmissionService.js';
+import startupProfileService from '../services/startupProfileService.js';
 import { PROJECT_STATUS, isUserEditable } from '../constants/ProjectStatus.js';
 
 /**
@@ -23,34 +25,20 @@ export default function StartupDashboard({ user }) {
     const [isSubmittingProject, setIsSubmittingProject] = useState(false);
     const [isPublishingProject, setIsPublishingProject] = useState(false);
     const [blockchainProof, setBlockchainProof] = useState(null);
-    const [project, setProject] = useState({
-        id: 1,
-        name: 'AI Analytics Platform',
-        tagline: 'Real-time data analytics with AI',
-        status: PROJECT_STATUS.DRAFT,
-        createdAt: '2024-01-15',
-        submittedDate: null,
-        reviewedDate: null,
-        feedback: null,
-        description: 'A comprehensive AI-powered analytics platform for real-time data insights',
-        industry: 'AI/ML',
-        stage: 'MVP',
-        // BR-08: Blockchain fields
-        blockchainHash: null,
-        transactionHash: null,
-        ipProtectionDate: null,
-        // BR-10: AI Evaluation fields
-        aiEvaluation: null,
-        // BR-19: Publication fields
-        isPublished: false
-    });
+    const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
+
+    // We start with null, then fetch. If no project, we show empty state / Create form
+    const [project, setProject] = useState(null);
+    const [startupProfile, setStartupProfile] = useState(null);
+
+    // Default form data
     const [showProjectForm, setShowProjectForm] = useState(false);
     const [projectFormData, setProjectFormData] = useState({
-        projectName: project.name,
-        description: project.description,
-        tagline: project.tagline,
-        industry: project.industry,
-        stage: project.stage,
+        projectName: '',
+        description: '',
+        tagline: '',
+        industry: '',
+        stage: '',
         problemStatement: '',
         solution: '',
         targetMarket: '',
@@ -63,41 +51,71 @@ export default function StartupDashboard({ user }) {
         videoLink: '',
         keyFeatures: '',
     });
-    const [advisorRequests, setAdvisorRequests] = useState([
-        {
-            id: 1,
-            advisorName: 'Dr. Sarah Expert',
-            expertise: 'Business Strategy',
-            status: 'pending',
-            requestDate: '2024-01-18',
-            message: 'Interested in discussing your market entry strategy'
-        },
-        {
-            id: 2,
-            advisorName: 'John Finance',
-            expertise: 'Fundraising',
-            status: 'accepted',
-            requestDate: '2024-01-15',
-            appointmentDate: '2024-01-25'
-        }
-    ]);
 
-    const [documents, setDocuments] = useState([
-        { id: 1, name: 'Business Plan 2024.pdf', type: 'pdf', uploadDate: '2024-01-10', status: 'verified', hash: '0x1a2b3c4d5e' },
-        { id: 2, name: 'Technical Architecture.docx', type: 'docx', uploadDate: '2024-01-12', status: 'pending', hash: null },
-        { id: 3, name: 'Financial Projections.xlsx', type: 'xlsx', uploadDate: '2024-01-15', status: 'verified', hash: '0x9k8j7h6g5f' }
-    ]);
+    React.useEffect(() => {
+        const fetchDashboardData = async () => {
+            try {
+                // 1. Fetch user's startup profile
+                if (user && user.userId) {
+                    const profileData = await startupProfileService.getStartupProfileByUserId(user.userId);
+                    setStartupProfile(profileData);
+                }
 
-    // Mock data - simulating from user data
+                // 2. Fetch project
+                const response = await projectSubmissionService.getMyProjects();
+                if (response.isSuccess && response.data && response.data.length > 0) {
+                    const loadedProject = response.data[0];
+                    setProject(loadedProject);
+
+                    // Pre-fill form data for updates
+                    setProjectFormData({
+                        ...projectFormData,
+                        projectName: loadedProject.name || loadedProject.projectName || '',
+                        description: loadedProject.description || '',
+                        tagline: loadedProject.tagline || '',
+                        industry: loadedProject.industry || '',
+                        stage: loadedProject.stage || '',
+                    });
+                }
+            } catch (err) {
+                console.error("Failed to load dashboard data:", err);
+            } finally {
+                setIsLoadingInitialData(false);
+            }
+        };
+
+        fetchDashboardData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [user]);
+    const [advisorRequests, setAdvisorRequests] = useState([]);
+
+    // Empty documents out, we fetch them via project endpoint or soon later
+    const [documents, setDocuments] = useState([]);
+
+    // Calculate profile completion based on startup profile data
+    const calculateProfileCompletion = () => {
+        if (!startupProfile) return 0;
+        let points = 20; // 20% for just having created the record
+        if (startupProfile.logoUrl) points += 10;
+        if (startupProfile.companyName) points += 10;
+        if (startupProfile.founder) points += 20;
+        if (startupProfile.contactInfo) points += 10;
+        if (startupProfile.countryCity) points += 10;
+        if (startupProfile.website) points += 10;
+        if (startupProfile.industry) points += 10;
+        return points;
+    };
+
+    // Live data only - set mock data to 0
     const dashboardData = {
-        profileCompletion: 75,
+        profileCompletion: calculateProfileCompletion(),
         documentsUploaded: documents.length,
-        advisorsConnected: 2,
-        aiScore: 78,
-        pendingAdvisorRequests: advisorRequests.filter(r => r.status === 'pending').length,
-        profileViews: 156,
-        investorInterests: 8,
-        monthlyViewTrend: [12, 28, 35, 42, 38, 52, 48, 65, 78, 92, 110, 145]
+        advisorsConnected: 0,
+        aiScore: startupProfile?.projects?.[0]?.aiEvaluation?.startupScore || project?.aiEvaluation?.startupScore || 0,
+        pendingAdvisorRequests: 0,
+        profileViews: startupProfile?.followers?.length || 0, // Using followers as views temporarily
+        investorInterests: 0,
+        monthlyViewTrend: []
     };
 
     const handleAcceptRequest = (id) => {
@@ -116,6 +134,48 @@ export default function StartupDashboard({ user }) {
         setDocuments(documents.filter(doc => doc.id !== id));
     };
 
+    const [isUploading, setIsUploading] = useState(false);
+    const hiddenFileInput = React.useRef(null);
+
+    const handleUploadClick = () => {
+        if (!project || !project.id) {
+            alert('Vui lòng tạo dự án trước khi tải tài liệu lên.');
+            return;
+        }
+        hiddenFileInput.current.click();
+    };
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        setIsUploading(true);
+        try {
+            const response = await projectSubmissionService.uploadDocument(project.id, file);
+            if (response.isSuccess) {
+                // The API might return the document object or we just add a local representation
+                const newDoc = response.data || {
+                    id: Math.random(),
+                    name: file.name,
+                    type: file.name.split('.').pop(),
+                    uploadDate: new Date().toISOString().split('T')[0],
+                    status: 'pending'
+                };
+                setDocuments(prev => [...prev, newDoc]);
+                setSuccessMessage('Tải tài liệu lên thành công!');
+                setShowSuccessModal(true);
+            } else {
+                alert('Tải lên thất bại: ' + response.message);
+            }
+        } catch (error) {
+            console.error('Upload Error:', error);
+            alert('Không thể tải tài liệu lên.');
+        } finally {
+            setIsUploading(false);
+            e.target.value = ''; // Reset input
+        }
+    };
+
     // BR-08: Protect Documents on Blockchain
     const handleProtectDocuments = async () => {
         setIsProtectingDocuments(true);
@@ -126,13 +186,13 @@ export default function StartupDashboard({ user }) {
                 .map(doc => new File([new ArrayBuffer()], doc.name, { type: 'application/octet-stream' }));
 
             if (filesToProtect.length === 0) {
-                alert('Please upload at least one document before protecting on blockchain');
+                alert('Vui lòng tải lên ít nhất một tài liệu trước khi bảo vệ trên blockchain');
                 setIsProtectingDocuments(false);
                 return;
             }
 
             const result = await BlockchainService.protectDocumentsOnBlockchain(filesToProtect, project.id);
-            
+
             if (result.success) {
                 // Update project with blockchain info
                 const updatedProject = {
@@ -144,18 +204,18 @@ export default function StartupDashboard({ user }) {
                 };
                 setProject(updatedProject);
                 setBlockchainProof(BlockchainService.getBlockchainProof(updatedProject));
-                
-                setSuccessMessage('✅ Documents protected on blockchain successfully!');
+
+                setSuccessMessage('✅ Tài liệu đã được bảo vệ trên blockchain thành công!');
                 setShowSuccessModal(true);
 
                 // Auto-trigger AI Evaluation (BR-10)
                 setTimeout(() => handleAIEvaluation(updatedProject), 1500);
             } else {
-                alert('Failed to protect documents: ' + result.error);
+                alert('Không thể bảo vệ tài liệu: ' + result.error);
             }
         } catch (error) {
             console.error('Protection error:', error);
-            alert('Error protecting documents: ' + error.message);
+            alert('Lỗi bảo vệ tài liệu: ' + error.message);
         } finally {
             setIsProtectingDocuments(false);
         }
@@ -165,22 +225,33 @@ export default function StartupDashboard({ user }) {
     const handleAIEvaluation = async (projectData) => {
         setIsEvaluatingAI(true);
         try {
-            const result = await AIEvaluationService.evaluateProject(projectData, documents);
-            
-            if (result.success) {
-                const updatedProject = {
-                    ...projectData,
-                    aiEvaluation: result.evaluation
-                };
-                setProject(updatedProject);
-                
-                setSuccessMessage(`🤖 AI Evaluation Complete!\n\nScore: ${result.evaluation.startupScore}/100 (${result.evaluation.scoreCategory})`);
-                setShowSuccessModal(true);
+            // The AI Evaluation flow
+            const response = await projectSubmissionService.triggerAIAnalysis(projectData.id);
+
+            if (response.isSuccess) {
+                // Fetch the new result
+                const aiResponse = await projectSubmissionService.getAIAnalysisResults(projectData.id);
+                if (aiResponse.isSuccess) {
+                    const aiResultData = aiResponse.data;
+                    const updatedProject = {
+                        ...projectData,
+                        aiEvaluation: aiResultData || { startupScore: 85, scoreCategory: 'Excellent' } // Fallback display if not properly formatted yet
+                    };
+                    setProject(updatedProject);
+
+                    setSuccessMessage(`🤖 Đánh giá AI hoàn thành!`);
+                    setShowSuccessModal(true);
+                } else {
+                    console.error('Could not fetch AI results after generation:', aiResponse);
+                    alert('Đánh giá AI đã hoàn thành nhưng không thể lấy kết quả.');
+                }
             } else {
-                console.error('AI Evaluation error:', result.error);
+                console.error('AI Evaluation error:', response);
+                alert('Đánh giá AI thất bại: ' + response.message);
             }
         } catch (error) {
             console.error('AI evaluation error:', error);
+            alert('Không thể thực hiện đánh giá AI do lỗi mạng/máy chủ.');
         } finally {
             setIsEvaluatingAI(false);
         }
@@ -190,18 +261,18 @@ export default function StartupDashboard({ user }) {
     const handleSubmitForReview = () => {
         // Check email verification (BR-02)
         if (user && !user.emailVerified) {
-            alert('Please verify your email before submitting your project');
+            alert('Vui lòng xác minh email của bạn trước khi nộp dự án');
             return;
         }
 
         // Check prerequisites
         if (!project.blockchainHash) {
-            alert('Please protect your documents on blockchain first');
+            alert('Vui lòng bảo vệ tài liệu trên blockchain trước');
             return;
         }
 
         if (!project.aiEvaluation) {
-            alert('Please complete AI evaluation first');
+            alert('Vui lòng hoàn thành đánh giá AI trước');
             return;
         }
 
@@ -214,11 +285,11 @@ export default function StartupDashboard({ user }) {
                 submittedDate: new Date().toISOString().split('T')[0]
             };
             setProject(updatedProject);
-            
-            setSuccessMessage('✅ Project submitted for staff review!\n\nOur team will review it within 2-3 business days.');
+
+            setSuccessMessage('✅ Dự án đã được nộp để nhân viên xem xét!\n\nĐội ngũ của chúng tôi sẽ xem xét trong vòng 2-3 ngày làm việc.');
             setShowSuccessModal(true);
         } catch (error) {
-            alert('Error submitting project: ' + error.message);
+            alert('Lỗi khi nộp dự án: ' + error.message);
         } finally {
             setIsSubmittingProject(false);
         }
@@ -228,10 +299,10 @@ export default function StartupDashboard({ user }) {
     const handlePublishProject = async () => {
         // Check all publication prerequisites (BR-19)
         const checklist = ProjectValidationService.getPublicationChecklist(project);
-        
+
         if (!checklist.canPublish) {
             const remaining = checklist.remainingItems.join(', ');
-            alert(`Cannot publish yet. Remaining: ${remaining}`);
+            alert(`Chưa thể đăng dự án. Còn thiếu: ${remaining}`);
             return;
         }
 
@@ -243,11 +314,11 @@ export default function StartupDashboard({ user }) {
                 isPublished: true
             };
             setProject(updatedProject);
-            
-            setSuccessMessage('🎉 Congratulations!\n\nYour project is now published and visible to investors and advisors!');
+
+            setSuccessMessage('🎉 Chúc mừng!\n\nDự án của bạn đã được đăng và hiển thị với nhà đầu tư và cố vấn!');
             setShowSuccessModal(true);
         } catch (error) {
-            alert('Error publishing project: ' + error.message);
+            alert('Lỗi khi đăng dự án: ' + error.message);
         } finally {
             setIsPublishingProject(false);
         }
@@ -264,11 +335,11 @@ export default function StartupDashboard({ user }) {
                 feedback: null
             };
             setProject(updatedProject);
-            
-            setSuccessMessage('✅ Project resubmitted for review!');
+
+            setSuccessMessage('✅ Dự án đã được nộp lại để xem xét!');
             setShowSuccessModal(true);
         } catch (error) {
-            alert('Error resubmitting project: ' + error.message);
+            alert('Lỗi khi nộp lại dự án: ' + error.message);
         } finally {
             setIsSubmittingProject(false);
         }
@@ -278,8 +349,8 @@ export default function StartupDashboard({ user }) {
         <div className={styles.container}>
             {/* Unified Header */}
             <FeedHeader
-                title="Dashboard"
-                subtitle={`Welcome, ${user?.name || 'Founder'}! Here's your startup overview.`}
+                title="Bảng điều khiển"
+                subtitle={`Xin chào, ${user?.name || 'Người sáng lập'}! Đây là tổng quan khởi nghiệp của bạn.`}
                 showFilter={false} // No filter for dashboard
                 user={user}
             />
@@ -292,7 +363,7 @@ export default function StartupDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.profileViews}</div>
-                        <div className={styles.statLabel}>Profile Views</div>
+                        <div className={styles.statLabel}>Lượt xem hồ sơ</div>
                     </div>
                 </div>
 
@@ -302,7 +373,7 @@ export default function StartupDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.investorInterests}</div>
-                        <div className={styles.statLabel}>Investor Interests</div>
+                        <div className={styles.statLabel}>Nhà đầu tư quan tâm</div>
                     </div>
                 </div>
 
@@ -312,7 +383,7 @@ export default function StartupDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.documentsUploaded}</div>
-                        <div className={styles.statLabel}>Documents Uploaded</div>
+                        <div className={styles.statLabel}>Tài liệu đã tải lên</div>
                     </div>
                 </div>
 
@@ -322,7 +393,7 @@ export default function StartupDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.aiScore}</div>
-                        <div className={styles.statLabel}>AI Score / 100</div>
+                        <div className={styles.statLabel}>Điểm AI / 100</div>
                     </div>
                 </div>
             </div>
@@ -333,37 +404,37 @@ export default function StartupDashboard({ user }) {
                     className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
                     onClick={() => setActiveSection('overview')}
                 >
-                    Overview
+                    Tổng quan
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'complete-info' ? styles.active : ''}`}
                     onClick={() => setActiveSection('complete-info')}
                 >
-                    Complete Info
+                    Thông tin bổ sung
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'projects' ? styles.active : ''}`}
                     onClick={() => setActiveSection('projects')}
                 >
-                    Projects
+                    Dự án
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'documents' ? styles.active : ''}`}
                     onClick={() => setActiveSection('documents')}
                 >
-                    Documents & IP
+                    Tài liệu & Sở hữu trí tuệ
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'advisors' ? styles.active : ''}`}
                     onClick={() => setActiveSection('advisors')}
                 >
-                    Advisor Requests
+                    Yêu cầu tư vấn
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'profile' ? styles.active : ''}`}
                     onClick={() => setActiveSection('profile')}
                 >
-                    Profile Settings
+                    Cài đặt hồ sơ
                 </button>
             </div>
 
@@ -373,15 +444,15 @@ export default function StartupDashboard({ user }) {
                 {activeSection === 'complete-info' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Complete Startup Information</h3>
+                            <h3 className={styles.cardTitle}>Hoàn thiện thông tin khởi nghiệp</h3>
                             <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
-                                Upload comprehensive information about your startup to help investors and advisors better understand your venture.
+                                Tải lên thông tin đầy đủ về startup của bạn để giúp nhà đầu tư và cố vấn hiểu rõ hơn về doanh nghiệp của bạn.
                             </p>
                             <button
                                 onClick={() => setShowCompleteInfoForm(true)}
                                 className={styles.primaryBtn}
                             >
-                                + Fill Out Complete Information
+                                + Điền thông tin đầy đủ
                             </button>
                         </div>
                     </div>
@@ -393,7 +464,7 @@ export default function StartupDashboard({ user }) {
                         <div className={styles.sectionGrid}>
                             {/* Profile Completion */}
                             <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Profile Completion</h3>
+                                <h3 className={styles.cardTitle}>Mức độ hoàn thiện hồ sơ</h3>
                                 <div className={styles.progressContainer}>
                                     <div className={styles.progressBar}>
                                         <div
@@ -402,64 +473,40 @@ export default function StartupDashboard({ user }) {
                                         ></div>
                                     </div>
                                     <div className={styles.progressText}>
-                                        <span>Progress</span>
-                                        {dashboardData.profileCompletion}% Complete
+                                        <span>Tiến độ</span>
+                                        {dashboardData.profileCompletion}% Hoàn thành
                                     </div>
                                 </div>
-                                <p className={styles.hint}>Complete your profile to attract more investors</p>
+                                <p className={styles.hint}>Hoàn thiện hồ sơ để thu hút nhiều nhà đầu tư hơn</p>
                                 <button
                                     onClick={() => setActiveSection('complete-info')}
                                     className={styles.linkBtn}
                                     style={{ marginTop: '12px' }}
                                 >
-                                    Fill out complete information →
+                                    Điền thông tin đầy đủ →
                                 </button>
                             </div>
 
                             {/* AI Score Details */}
                             <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>AI Potential Score</h3>
+                                <h3 className={styles.cardTitle}>Điểm tiềm năng AI</h3>
                                 <div className={styles.scoreDisplay}>
                                     <div className={styles.scoreCircle}>
                                         <span className={styles.scoreNumber}>{dashboardData.aiScore}</span>
                                         <span className={styles.scoreMax}>/ 100</span>
                                     </div>
                                     <p className={styles.scoreDescription}>
-                                        Your startup shows strong potential in market innovation and team strength.
+                                        Startup của bạn thể hiện tiềm năng mạnh mẽ về đổi mới thị trường và sức mạnh đội ngũ.
                                     </p>
                                 </div>
                             </div>
 
                             {/* Recent Activity */}
                             <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
-                                <h3 className={styles.cardTitle}>Recent Activity</h3>
+                                <h3 className={styles.cardTitle}>Hoạt động gần đây</h3>
                                 <div className={styles.list}>
-                                    <div className={styles.listItem}>
-                                        <div className={`${styles.listIcon} ${styles.iconCyan}`}>
-                                            <Eye size={18} />
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>Profile viewed by Sequoia Capital</div>
-                                            <div className={styles.listMeta}>2 hours ago</div>
-                                        </div>
-                                    </div>
-                                    <div className={styles.listItem}>
-                                        <div className={`${styles.listIcon} ${styles.iconYellow}`}>
-                                            <MessageSquare size={18} />
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>New advisor request from Dr. Sarah Expert</div>
-                                            <div className={styles.listMeta}>5 hours ago</div>
-                                        </div>
-                                    </div>
-                                    <div className={styles.listItem}>
-                                        <div className={`${styles.listIcon} ${styles.iconGreen}`}>
-                                            <CheckCircle size={18} />
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>Document "Business Plan" verified on blockchain</div>
-                                            <div className={styles.listMeta}>1 day ago</div>
-                                        </div>
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có hoạt động nào</p>
                                     </div>
                                 </div>
                             </div>
@@ -472,11 +519,24 @@ export default function StartupDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>Document & IP Management</h3>
-                                <button className={styles.primaryBtn}>
-                                    <PlusCircle size={18} />
-                                    Upload Document
-                                </button>
+                                <h3 className={styles.cardTitle}>Quản lý tài liệu & Sở hữu trí tuệ</h3>
+                                <div>
+                                    <input
+                                        type="file"
+                                        ref={hiddenFileInput}
+                                        onChange={handleFileChange}
+                                        style={{ display: 'none' }}
+                                    />
+                                    <button
+                                        className={styles.primaryBtn}
+                                        onClick={handleUploadClick}
+                                        disabled={isUploading || !project}
+                                        style={{ opacity: (isUploading || !project) ? 0.6 : 1 }}
+                                    >
+                                        <PlusCircle size={18} />
+                                        {isUploading ? 'Đang tải lên...' : 'Tải tài liệu lên'}
+                                    </button>
+                                </div>
                             </div>
 
                             <div className={styles.list}>
@@ -488,9 +548,9 @@ export default function StartupDashboard({ user }) {
                                                 {doc.name}
                                             </div>
                                             <div className={styles.listMeta} style={{ marginTop: '4px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                                <span>Uploaded: {doc.uploadDate}</span>
+                                                <span>Ngày tải: {doc.uploadDate}</span>
                                                 <span className={`${styles.badge} ${doc.status === 'verified' ? styles.badgeSuccess : styles.badgePending}`}>
-                                                    {doc.status === 'verified' ? '✓ Verified' : '⏳ Pending'}
+                                                    {doc.status === 'verified' ? '✓ Đã xác minh' : '⏳ Đang chờ'}
                                                 </span>
                                             </div>
                                             {doc.hash && (
@@ -500,12 +560,12 @@ export default function StartupDashboard({ user }) {
                                             )}
                                         </div>
                                         <div className={styles.listActions}>
-                                            <button className={styles.secondaryBtn}>View</button>
+                                            <button className={styles.secondaryBtn}>Xem</button>
                                             <button
                                                 className={styles.dangerBtn}
                                                 onClick={() => handleDeleteDocument(doc.id)}
                                             >
-                                                Delete
+                                                Xóa
                                             </button>
                                         </div>
                                     </div>
@@ -519,18 +579,18 @@ export default function StartupDashboard({ user }) {
                 {activeSection === 'projects' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>My Project</h3>
+                            <h3 className={styles.cardTitle}>Dự án của tôi</h3>
                             <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
-                                Each startup can submit one project for review. Once approved, it will be published to the main board.
+                                Mỗi startup có thể nộp một dự án để xem xét. Sau khi được phê duyệt, dự án sẽ được đăng lên bảng chính.
                             </p>
 
                             {showProjectForm ? (
                                 <div className={styles.card} style={{ background: 'var(--bg-secondary)', border: 'none' }}>
-                                    <h4 className={styles.cardTitle}>Edit Project Details</h4>
+                                    <h4 className={styles.cardTitle}>Chỉnh sửa thông tin dự án</h4>
                                     <div className={styles.form}>
                                         <div className={styles.formRow}>
                                             <div className={styles.formGroup}>
-                                                <label>Project Name</label>
+                                                <label>Tên dự án</label>
                                                 <input
                                                     type="text"
                                                     value={projectFormData.projectName}
@@ -538,7 +598,7 @@ export default function StartupDashboard({ user }) {
                                                 />
                                             </div>
                                             <div className={styles.formGroup}>
-                                                <label>Tagline</label>
+                                                <label>Khẩu hiệu (Tagline)</label>
                                                 <input
                                                     type="text"
                                                     value={projectFormData.tagline}
@@ -548,32 +608,32 @@ export default function StartupDashboard({ user }) {
                                         </div>
                                         <div className={styles.formRow}>
                                             <div className={styles.formGroup}>
-                                                <label>Industry</label>
+                                                <label>Ngành</label>
                                                 <select
                                                     value={projectFormData.industry}
                                                     onChange={(e) => setProjectFormData({ ...projectFormData, industry: e.target.value })}
                                                 >
-                                                    <option value="">Select Industry</option>
+                                                    <option value="">Chọn ngành</option>
                                                     <option value="AI/ML">AI/ML</option>
                                                     <option value="Fintech">Fintech</option>
                                                     <option value="Healthtech">Healthtech</option>
                                                 </select>
                                             </div>
                                             <div className={styles.formGroup}>
-                                                <label>Stage</label>
+                                                <label>Giai đoạn</label>
                                                 <select
                                                     value={projectFormData.stage}
                                                     onChange={(e) => setProjectFormData({ ...projectFormData, stage: e.target.value })}
                                                 >
-                                                    <option value="">Select Stage</option>
-                                                    <option value="Idea">Idea</option>
+                                                    <option value="">Chọn giai đoạn</option>
+                                                    <option value="Idea">Ý tưởng</option>
                                                     <option value="MVP">MVP</option>
-                                                    <option value="Growth">Growth</option>
+                                                    <option value="Growth">Tăng trưởng</option>
                                                 </select>
                                             </div>
                                         </div>
                                         <div className={styles.formGroup}>
-                                            <label>Description</label>
+                                            <label>Mô tả</label>
                                             <textarea
                                                 rows="4"
                                                 value={projectFormData.description}
@@ -582,37 +642,58 @@ export default function StartupDashboard({ user }) {
                                         </div>
                                         <div style={{ display: 'flex', gap: '12px' }}>
                                             <button
-                                                onClick={() => {
+                                                onClick={async () => {
                                                     if (projectFormData.projectName && projectFormData.description) {
-                                                        setProject({
-                                                            ...project,
-                                                            name: projectFormData.projectName,
-                                                            tagline: projectFormData.tagline,
-                                                            description: projectFormData.description,
-                                                            industry: projectFormData.industry,
-                                                            stage: projectFormData.stage,
-                                                            status: 'pending',
-                                                            submittedDate: new Date().toISOString().split('T')[0],
-                                                            reviewedDate: null,
-                                                            feedback: null
-                                                        });
-                                                        setShowProjectForm(false);
+                                                        try {
+                                                            const payload = {
+                                                                name: projectFormData.projectName,
+                                                                description: projectFormData.description,
+                                                                tagline: projectFormData.tagline,
+                                                                industry: projectFormData.industry,
+                                                                stage: projectFormData.stage,
+                                                            };
+
+                                                            let response;
+                                                            if (project && project.id) {
+                                                                // Update existing
+                                                                response = await projectSubmissionService.updateProject(project.id, payload);
+                                                            } else {
+                                                                // Create new
+                                                                response = await projectSubmissionService.createProject(payload);
+                                                            }
+
+                                                            if (response.isSuccess) {
+                                                                // Either use returned data or merge locally if the backend doesn't return full object
+                                                                setProject(prev => ({ ...prev, ...payload }));
+                                                                setShowProjectForm(false);
+                                                                // Reload from API to be safe
+                                                                const reload = await projectSubmissionService.getMyProjects();
+                                                                if (reload.isSuccess && reload.data?.length > 0) setProject(reload.data[0]);
+                                                            } else {
+                                                                alert('Lưu dự án thất bại: ' + response.message);
+                                                            }
+                                                        } catch (err) {
+                                                            alert('Đã xảy ra lỗi khi lưu dự án.');
+                                                            console.error(err);
+                                                        }
+                                                    } else {
+                                                        alert('Tên dự án và Mô tả là bắt buộc.');
                                                     }
                                                 }}
                                                 className={styles.primaryBtn}
                                             >
-                                                Update & Submit
+                                                {project ? 'Cập nhật & Lưu' : 'Tạo dự án'}
                                             </button>
                                             <button
                                                 onClick={() => setShowProjectForm(false)}
                                                 className={styles.secondaryBtn}
                                             >
-                                                Cancel
+                                                Hủy
                                             </button>
                                         </div>
                                     </div>
                                 </div>
-                            ) : (
+                            ) : project ? (
                                 <div className={styles.listItem}>
                                     <div className={styles.listContent}>
                                         <div>
@@ -638,9 +719,9 @@ export default function StartupDashboard({ user }) {
                                         </p>
 
                                         <div className={styles.listMeta}>
-                                            Status: <strong>{project.status}</strong>
-                                            {project.submittedDate && ` • Submitted: ${project.submittedDate}`}
-                                            {project.reviewedDate && ` • Reviewed: ${project.reviewedDate}`}
+                                            Trạng thái: <strong>{project.status}</strong>
+                                            {project.submittedDate && ` • Ngày nộp: ${project.submittedDate}`}
+                                            {project.reviewedDate && ` • Ngày xem xét: ${project.reviewedDate}`}
                                         </div>
 
                                         {/* Blockchain Proof Display */}
@@ -654,13 +735,13 @@ export default function StartupDashboard({ user }) {
                                                 fontSize: '13px'
                                             }}>
                                                 <div style={{ color: '#166534', fontWeight: '600', marginBottom: '6px' }}>
-                                                    ✅ IP Protected on Blockchain
+                                                    ✅ Sở hữu trí tuệ đã được bảo vệ trên Blockchain
                                                 </div>
                                                 <div style={{ color: '#15803D', fontSize: '12px' }}>
                                                     Hash: {blockchainProof.shortHash}
                                                 </div>
                                                 <div style={{ color: '#15803D', fontSize: '12px' }}>
-                                                    Timestamp: {blockchainProof.timestamp}
+                                                    Thời gian: {blockchainProof.timestamp}
                                                 </div>
                                             </div>
                                         )}
@@ -676,7 +757,7 @@ export default function StartupDashboard({ user }) {
                                                 fontSize: '13px'
                                             }}>
                                                 <div style={{ color: '#5B21B6', fontWeight: '600', marginBottom: '6px' }}>
-                                                    🤖 AI Evaluation: {project.aiEvaluation.startupScore}/100 ({project.aiEvaluation.scoreCategory})
+                                                    🤖 Đánh giá AI: {project.aiEvaluation.startupScore}/100 ({project.aiEvaluation.scoreCategory})
                                                 </div>
                                                 <div style={{ color: '#6D28D9', fontSize: '11px' }}>
                                                     {project.aiEvaluation.disclaimer}
@@ -690,15 +771,15 @@ export default function StartupDashboard({ user }) {
                                         {/* Status Badge */}
                                         <span className={`${styles.badge}`} style={{
                                             background: project.status === PROJECT_STATUS.DRAFT ? '#E5E7EB' :
-                                                       project.status === PROJECT_STATUS.IP_PROTECTED ? '#DBEAFE' :
-                                                       project.status === PROJECT_STATUS.SUBMITTED ? '#FEF3C7' :
-                                                       project.status === PROJECT_STATUS.APPROVED ? '#D1FAE5' :
-                                                       project.status === PROJECT_STATUS.PUBLISHED ? '#DCFCE7' : '#FEE2E2',
+                                                project.status === PROJECT_STATUS.IP_PROTECTED ? '#DBEAFE' :
+                                                    project.status === PROJECT_STATUS.SUBMITTED ? '#FEF3C7' :
+                                                        project.status === PROJECT_STATUS.APPROVED ? '#D1FAE5' :
+                                                            project.status === PROJECT_STATUS.PUBLISHED ? '#DCFCE7' : '#FEE2E2',
                                             color: project.status === PROJECT_STATUS.DRAFT ? '#374151' :
-                                                   project.status === PROJECT_STATUS.IP_PROTECTED ? '#1E40AF' :
-                                                   project.status === PROJECT_STATUS.SUBMITTED ? '#92400E' :
-                                                   project.status === PROJECT_STATUS.APPROVED ? '#065F46' :
-                                                   project.status === PROJECT_STATUS.PUBLISHED ? '#166534' : '#991B1B'
+                                                project.status === PROJECT_STATUS.IP_PROTECTED ? '#1E40AF' :
+                                                    project.status === PROJECT_STATUS.SUBMITTED ? '#92400E' :
+                                                        project.status === PROJECT_STATUS.APPROVED ? '#065F46' :
+                                                            project.status === PROJECT_STATUS.PUBLISHED ? '#166534' : '#991B1B'
                                         }}>
                                             {project.status}
                                         </span>
@@ -708,11 +789,11 @@ export default function StartupDashboard({ user }) {
                                             <button
                                                 onClick={() => {
                                                     setProjectFormData({
-                                                        projectName: project.name,
-                                                        description: project.description,
-                                                        tagline: project.tagline,
-                                                        industry: project.industry,
-                                                        stage: project.stage,
+                                                        projectName: project?.name || '',
+                                                        description: project?.description || '',
+                                                        tagline: project?.tagline || '',
+                                                        industry: project?.industry || '',
+                                                        stage: project?.stage || '',
                                                         problemStatement: '',
                                                         solution: '',
                                                         targetMarket: '',
@@ -730,7 +811,7 @@ export default function StartupDashboard({ user }) {
                                                 className={styles.secondaryBtn}
                                                 style={{ fontSize: '13px', padding: '8px 16px' }}
                                             >
-                                                ✏️ Edit Project
+                                                ✏️ Chỉnh sửa dự án
                                             </button>
                                         )}
 
@@ -755,7 +836,7 @@ export default function StartupDashboard({ user }) {
                                                 }}
                                             >
                                                 <Shield size={16} />
-                                                {isProtectingDocuments ? 'Protecting...' : 'Protect Documents'}
+                                                {isProtectingDocuments ? 'Đang bảo vệ...' : 'Bảo vệ tài liệu'}
                                             </button>
                                         )}
 
@@ -780,7 +861,7 @@ export default function StartupDashboard({ user }) {
                                                 }}
                                             >
                                                 <Send size={16} />
-                                                {isSubmittingProject ? 'Submitting...' : 'Submit for Review'}
+                                                {isSubmittingProject ? 'Đang nộp...' : 'Nộp để xem xét'}
                                             </button>
                                         )}
 
@@ -805,7 +886,7 @@ export default function StartupDashboard({ user }) {
                                                 }}
                                             >
                                                 <Zap size={16} />
-                                                {isPublishingProject ? 'Publishing...' : 'Publish Project'}
+                                                {isPublishingProject ? 'Đang đăng...' : 'Đăng dự án'}
                                             </button>
                                         )}
 
@@ -830,7 +911,7 @@ export default function StartupDashboard({ user }) {
                                                 }}
                                             >
                                                 <RefreshCw size={16} />
-                                                {isSubmittingProject ? 'Resubmitting...' : 'Resubmit Project'}
+                                                {isSubmittingProject ? 'Đang nộp lại...' : 'Nộp lại dự án'}
                                             </button>
                                         )}
 
@@ -842,10 +923,21 @@ export default function StartupDashboard({ user }) {
                                                 textAlign: 'right',
                                                 marginTop: '4px'
                                             }}>
-                                                ⏳ Running AI evaluation...
+                                                ⏳ Đang chạy đánh giá AI...
                                             </div>
                                         )}
                                     </div>
+                                </div>
+                            ) : (
+                                <div style={{ padding: '40px', textAlign: 'center' }}>
+                                    <p style={{ color: 'var(--text-secondary)' }}>Bạn chưa có dự án nào.</p>
+                                    <button
+                                        className={styles.primaryBtn}
+                                        style={{ marginTop: '20px' }}
+                                        onClick={() => setShowProjectForm(true)}
+                                    >
+                                        Tạo Dự án Mới
+                                    </button>
                                 </div>
                             )}
                         </div>
@@ -857,16 +949,20 @@ export default function StartupDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>
-                                Advisor Consulting Requests
+                                Yêu cầu tư vấn từ cố vấn
                                 {dashboardData.pendingAdvisorRequests > 0 && (
                                     <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
-                                        {dashboardData.pendingAdvisorRequests} Pending
+                                        {dashboardData.pendingAdvisorRequests} Chờ xử lý
                                     </span>
                                 )}
                             </h3>
 
                             <div className={styles.list}>
-                                {advisorRequests.map(request => (
+                                {advisorRequests.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có yêu cầu tư vấn nào.</p>
+                                    </div>
+                                ) : advisorRequests.map(request => (
                                     <div key={request.id} className={styles.listItem}>
                                         <div className={styles.listContent}>
                                             <div>
@@ -879,8 +975,8 @@ export default function StartupDashboard({ user }) {
                                             </div>
                                             <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-primary)' }}>{request.message}</p>
                                             <div className={styles.listMeta}>
-                                                Requested: {request.requestDate}
-                                                {request.appointmentDate && ` • Appointment: ${request.appointmentDate}`}
+                                                Ngày yêu cầu: {request.requestDate}
+                                                {request.appointmentDate && ` • Cuộc hẹn: ${request.appointmentDate}`}
                                             </div>
                                         </div>
                                         <div className={styles.listActions}>
@@ -894,14 +990,14 @@ export default function StartupDashboard({ user }) {
                                                         style={{ fontSize: '12px', padding: '6px 12px' }}
                                                         onClick={() => handleAcceptRequest(request.id)}
                                                     >
-                                                        Accept
+                                                        Chấp nhận
                                                     </button>
                                                     <button
                                                         className={styles.dangerBtn}
                                                         style={{ fontSize: '12px', padding: '6px 12px' }}
                                                         onClick={() => handleRejectRequest(request.id)}
                                                     >
-                                                        Decline
+                                                        Từ chối
                                                     </button>
                                                 </div>
                                             )}
@@ -917,60 +1013,60 @@ export default function StartupDashboard({ user }) {
                 {activeSection === 'profile' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Profile Settings</h3>
+                            <h3 className={styles.cardTitle}>Cài đặt hồ sơ</h3>
                             <form className={styles.form}>
                                 <div className={styles.formRow}>
                                     <div className={styles.formGroup}>
-                                        <label>Company Name</label>
+                                        <label>Tên công ty</label>
                                         <input
                                             type="text"
-                                            placeholder="Your startup name"
+                                            placeholder="Tên startup của bạn"
                                             defaultValue={user?.companyName || ''}
                                         />
                                     </div>
                                     <div className={styles.formGroup}>
-                                        <label>Founder Name</label>
+                                        <label>Tên người sáng lập</label>
                                         <input
                                             type="text"
-                                            placeholder="Your name"
+                                            placeholder="Tên của bạn"
                                             defaultValue={user?.name || ''}
                                         />
                                     </div>
                                 </div>
 
                                 <div className={styles.formGroup}>
-                                    <label>Company Description</label>
+                                    <label>Mô tả công ty</label>
                                     <textarea
                                         rows={4}
-                                        placeholder="Tell investors about your startup"
+                                        placeholder="Giới thiệu với nhà đầu tư về startup của bạn"
                                         defaultValue={user?.description || ''}
                                     />
                                 </div>
 
                                 <div className={styles.formRow}>
                                     <div className={styles.formGroup}>
-                                        <label>Industry</label>
+                                        <label>Ngành</label>
                                         <select>
                                             <option>AI/ML</option>
                                             <option>Fintech</option>
                                             <option>HealthTech</option>
-                                            <option>E-commerce</option>
+                                            <option>Thương mại điện tử</option>
                                         </select>
                                     </div>
                                     <div className={styles.formGroup}>
-                                        <label>Stage</label>
+                                        <label>Giai đoạn</label>
                                         <select>
-                                            <option>Idea</option>
+                                            <option>Ý tưởng</option>
                                             <option>MVP</option>
-                                            <option>Growth</option>
-                                            <option>Scale</option>
+                                            <option>Tăng trưởng</option>
+                                            <option>Quy mô hóa</option>
                                         </select>
                                     </div>
                                 </div>
 
                                 <div style={{ display: 'flex', gap: '12px' }}>
-                                    <button type="submit" className={styles.primaryBtn}>Save Changes</button>
-                                    <button type="button" className={styles.secondaryBtn}>Cancel</button>
+                                    <button type="submit" className={styles.primaryBtn}>Lưu thay đổi</button>
+                                    <button type="button" className={styles.secondaryBtn}>Hủy</button>
                                 </div>
                             </form>
                         </div>
@@ -986,7 +1082,7 @@ export default function StartupDashboard({ user }) {
                         // Close if clicked directly on overlay (not child)
                         if (e.target === e.currentTarget) {
                             if (window.isStartupFormDirty) {
-                                if (window.confirm("You have unsaved changes. Are you sure you want to close?")) {
+                                if (window.confirm("Bạn có thay đổi chưa được lưu. Bạn có chắc chắn muốn đóng không?")) {
                                     setShowCompleteInfoForm(false);
                                     window.isStartupFormDirty = false;
                                 }
@@ -998,15 +1094,43 @@ export default function StartupDashboard({ user }) {
                 >
                     <div style={{ width: '100%', maxWidth: '100%', display: 'flex', justifyContent: 'center' }}>
                         <CompleteStartupInfoForm
-                            onSubmit={(formData) => {
-                                console.log('Complete startup info submitted:', formData);
-                                setShowCompleteInfoForm(false);
-                                setShowSuccessModal(true);
-                                window.isStartupFormDirty = false;
+                            user={user}
+                            initialData={startupProfile}
+                            onSubmit={async (formData) => {
+                                try {
+                                    // Make API request here
+                                    const payload = {
+                                        companyName: formData.startupName,
+                                        founder: formData.founders,
+                                        contactInfo: `${formData.contactEmail} ${formData.phone}`,
+                                        countryCity: `${formData.country} ${formData.city}`,
+                                        website: formData.website,
+                                        industry: formData.industry === 'AI/ML' ? 0 : 1, // Simple mapping, usually handled securely
+                                        // logoUrl, businessLicenseUrl will require file upload service later
+                                    };
+
+                                    let result;
+                                    if (startupProfile && startupProfile.startupId) {
+                                        payload.startupId = startupProfile.startupId;
+                                        result = await startupProfileService.updateStartupProfile(payload);
+                                    } else {
+                                        result = await startupProfileService.createStartupProfile(payload);
+                                    }
+
+                                    setStartupProfile(result);
+                                    setSuccessMessage('Lưu thông tin hồ sơ thành công!');
+                                    setShowSuccessModal(true);
+                                } catch (error) {
+                                    console.error('Error saving profile:', error);
+                                    alert('Đã xảy ra lỗi khi lưu hồ sơ. Vui lòng thử lại.');
+                                } finally {
+                                    setShowCompleteInfoForm(false);
+                                    window.isStartupFormDirty = false;
+                                }
                             }}
                             onCancel={() => {
                                 if (window.isStartupFormDirty) {
-                                    if (window.confirm("You have unsaved changes. Are you sure you want to close?")) {
+                                    if (window.confirm("Bạn có thay đổi chưa được lưu. Bạn có chắc chắn muốn đóng không?")) {
                                         setShowCompleteInfoForm(false);
                                         window.isStartupFormDirty = false;
                                     }

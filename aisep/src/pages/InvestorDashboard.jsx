@@ -9,31 +9,18 @@ import FeedHeader from '../components/feed/FeedHeader';
  */
 export default function InvestorDashboard({ user }) {
     const [activeSection, setActiveSection] = useState('overview');
-    const [watchlist, setWatchlist] = useState([
-        { id: 1, name: 'TechStartup AI', stage: 'Series A', industry: 'AI/ML', score: 85, followers: 234 },
-        { id: 2, name: 'FinApp Solutions', stage: 'Seed', industry: 'Fintech', score: 78, followers: 156 },
-        { id: 3, name: 'HealthPro Tech', stage: 'MVP', industry: 'HealthTech', score: 72, followers: 89 }
-    ]);
-
-    const [sentInterests, setSentInterests] = useState([
-        { id: 1, startupName: 'CloudData Inc', stage: 'Series A', sentDate: '2024-01-15', status: 'pending' },
-        { id: 2, startupName: 'AI Analytics', stage: 'Seed', sentDate: '2024-01-10', status: 'accepted' },
-        { id: 3, startupName: 'BlockChain Lab', stage: 'Series B', sentDate: '2024-01-08', status: 'pending' }
-    ]);
-
-    const [activeInvestments] = useState([
-        { id: 1, startupName: 'VRFuture Labs', amount: '$500K', date: '2023-06-15', stage: 'Series A', equity: '2.5%' },
-        { id: 2, startupName: 'QuantumTech', amount: '$250K', date: '2023-09-20', stage: 'Seed', equity: '1.2%' }
-    ]);
+    const [watchlist, setWatchlist] = useState([]);
+    const [sentInterests, setSentInterests] = useState([]);
+    const [activeInvestments, setActiveInvestments] = useState([]);
 
     const dashboardData = {
-        totalInvested: '$750K',
+        totalInvested: '$0',
         activeInvestments: activeInvestments.length,
-        portfolioValue: '$1.2M',
+        portfolioValue: '$0',
         watchlistCount: watchlist.length,
         sentInterestsCount: sentInterests.length,
         acceptedInterests: sentInterests.filter(i => i.status === 'accepted').length,
-        monthlyActivity: [2, 5, 8, 12, 10, 15, 18, 22, 25, 28, 32, 38]
+        monthlyActivity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     };
 
     const handleRemoveFromWatchlist = (id) => {
@@ -48,8 +35,8 @@ export default function InvestorDashboard({ user }) {
         <div className={styles.container}>
             {/* Unified Header */}
             <FeedHeader
-                title="Investor Dashboard"
-                subtitle={`Welcome, ${user?.name || 'Investor'}! Manage your investments and discover startups.`}
+                title="Bảng điều khiển Nhà đầu tư"
+                subtitle={`Xin chào, ${user?.name || 'Nhà đầu tư'}! Quản lý đầu tư và khám phá startup.`}
                 showFilter={false}
                 user={user}
             />
@@ -62,7 +49,7 @@ export default function InvestorDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.totalInvested}</div>
-                        <div className={styles.statLabel}>Total Invested</div>
+                        <div className={styles.statLabel}>Tổng đầu tư</div>
                     </div>
                 </div>
 
@@ -72,7 +59,7 @@ export default function InvestorDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.activeInvestments}</div>
-                        <div className={styles.statLabel}>Active Investments</div>
+                        <div className={styles.statLabel}>Đang đầu tư</div>
                     </div>
                 </div>
 
@@ -82,7 +69,7 @@ export default function InvestorDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.watchlistCount}</div>
-                        <div className={styles.statLabel}>Watchlist</div>
+                        <div className={styles.statLabel}>Danh sách theo dõi</div>
                     </div>
                 </div>
 
@@ -92,7 +79,7 @@ export default function InvestorDashboard({ user }) {
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.acceptedInterests}</div>
-                        <div className={styles.statLabel}>Accepted Pitches</div>
+                        <div className={styles.statLabel}>Pitch được chấp nhận</div>
                     </div>
                 </div>
             </div>
@@ -103,31 +90,31 @@ export default function InvestorDashboard({ user }) {
                     className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
                     onClick={() => setActiveSection('overview')}
                 >
-                    Overview
+                    Tổng quan
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'investments' ? styles.active : ''}`}
                     onClick={() => setActiveSection('investments')}
                 >
-                    Active Investments
+                    Đang đầu tư
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'watchlist' ? styles.active : ''}`}
                     onClick={() => setActiveSection('watchlist')}
                 >
-                    Watchlist
+                    Theo dõi
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'interests' ? styles.active : ''}`}
                     onClick={() => setActiveSection('interests')}
                 >
-                    Sent Interests
+                    Quan tâm đã gửi
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'preferences' ? styles.active : ''}`}
                     onClick={() => setActiveSection('preferences')}
                 >
-                    Preferences
+                    Sở thích đầu tư
                 </button>
             </div>
 
@@ -139,22 +126,22 @@ export default function InvestorDashboard({ user }) {
                         <div className={styles.sectionGrid}>
                             {/* Portfolio Summary */}
                             <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
-                                <h3 className={styles.cardTitle}>Portfolio Summary</h3>
+                                <h3 className={styles.cardTitle}>Tổng quan danh mục</h3>
                                 <div className={styles.metricsGrid}>
                                     <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Portfolio Value</div>
+                                        <div className={styles.metricLabel}>Giá trị danh mục</div>
                                         <div className={styles.metricValue}>{dashboardData.portfolioValue}</div>
                                     </div>
                                     <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Active Investments</div>
+                                        <div className={styles.metricLabel}>Đang đầu tư</div>
                                         <div className={styles.metricValue}>{dashboardData.activeInvestments}</div>
                                     </div>
                                     <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Total Deployed</div>
+                                        <div className={styles.metricLabel}>Tổng đã giải ngân</div>
                                         <div className={styles.metricValue}>{dashboardData.totalInvested}</div>
                                     </div>
                                     <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Accepted Interests</div>
+                                        <div className={styles.metricLabel}>Quan tâm được chấp nhận</div>
                                         <div className={styles.metricValue}>{dashboardData.acceptedInterests}</div>
                                     </div>
                                 </div>
@@ -162,57 +149,33 @@ export default function InvestorDashboard({ user }) {
 
                             {/* Recent Activity */}
                             <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Recent Activity</h3>
+                                <h3 className={styles.cardTitle}>Hoạt động gần đây</h3>
                                 <div className={styles.list}>
-                                    <div className={styles.listItem}>
-                                        <div className={`${styles.listIcon} ${styles.iconGreen}`}>
-                                            <CheckCircle size={18} />
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>Interest accepted by TechStartup AI</div>
-                                            <div className={styles.listMeta}>3 hours ago</div>
-                                        </div>
-                                    </div>
-                                    <div className={styles.listItem}>
-                                        <div className={`${styles.listIcon} ${styles.iconCyan}`}>
-                                            <Eye size={18} />
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>New startup added to watchlist: FinApp</div>
-                                            <div className={styles.listMeta}>1 day ago</div>
-                                        </div>
-                                    </div>
-                                    <div className={styles.listItem}>
-                                        <div className={`${styles.listIcon} ${styles.iconPurple}`}>
-                                            <TrendingUp size={18} />
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>AI Score updated for CloudData Inc (82/100)</div>
-                                            <div className={styles.listMeta}>2 days ago</div>
-                                        </div>
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có hoạt động nào.</p>
                                     </div>
                                 </div>
                             </div>
 
                             {/* Quick Stats */}
                             <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Quick Stats</h3>
+                                <h3 className={styles.cardTitle}>Thống kê nhanh</h3>
                                 <div className={styles.list}>
                                     <div className={styles.listItem} style={{ justifyContent: 'space-between' }}>
-                                        <span className={styles.listSubtitle}>Average AI Score</span>
-                                        <strong>79/100</strong>
+                                        <span className={styles.listSubtitle}>Điểm AI trung bình</span>
+                                        <strong>-</strong>
                                     </div>
                                     <div className={styles.listItem} style={{ justifyContent: 'space-between' }}>
-                                        <span className={styles.listSubtitle}>Preferred Stage</span>
-                                        <strong>Series A</strong>
+                                        <span className={styles.listSubtitle}>Giai đoạn ưu tiên</span>
+                                        <strong>-</strong>
                                     </div>
                                     <div className={styles.listItem} style={{ justifyContent: 'space-between' }}>
-                                        <span className={styles.listSubtitle}>Top Industry</span>
-                                        <strong>AI/ML</strong>
+                                        <span className={styles.listSubtitle}>Ngành hàng đầu</span>
+                                        <strong>-</strong>
                                     </div>
                                     <div className={styles.listItem} style={{ justifyContent: 'space-between' }}>
-                                        <span className={styles.listSubtitle}>Success Rate</span>
-                                        <strong>67%</strong>
+                                        <span className={styles.listSubtitle}>Tỷ lệ thành công</span>
+                                        <strong>0%</strong>
                                     </div>
                                 </div>
                             </div>
@@ -224,9 +187,13 @@ export default function InvestorDashboard({ user }) {
                 {activeSection === 'investments' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Active Investments</h3>
+                            <h3 className={styles.cardTitle}>Đầu tư đang hoạt động</h3>
                             <div className={styles.list}>
-                                {activeInvestments.map(investment => (
+                                {activeInvestments.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có khoản đầu tư nào đang hoạt động.</p>
+                                    </div>
+                                ) : activeInvestments.map(investment => (
                                     <div key={investment.id} className={styles.listItem}>
                                         <div className={styles.listContent}>
                                             <h4 className={styles.listTitle}>{investment.startupName}</h4>
@@ -253,9 +220,13 @@ export default function InvestorDashboard({ user }) {
                 {activeSection === 'watchlist' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>My Watchlist ({watchlist.length})</h3>
+                            <h3 className={styles.cardTitle}>Danh sách theo dõi ({watchlist.length})</h3>
                             <div className={styles.list}>
-                                {watchlist.map(item => (
+                                {watchlist.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Danh sách theo dõi của bạn đang trống.</p>
+                                    </div>
+                                ) : watchlist.map(item => (
                                     <div key={item.id} className={styles.listItem}>
                                         <div className={styles.listContent}>
                                             <h4 className={styles.listTitle}>{item.name}</h4>
@@ -288,10 +259,14 @@ export default function InvestorDashboard({ user }) {
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>
-                                Sent Interests ({sentInterests.length})
+                                Quan tâm đã gửi ({sentInterests.length})
                             </h3>
                             <div className={styles.list}>
-                                {sentInterests.map(interest => (
+                                {sentInterests.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Bạn chưa gửi quan tâm đến startup nào.</p>
+                                    </div>
+                                ) : sentInterests.map(interest => (
                                     <div key={interest.id} className={styles.listItem}>
                                         <div className={styles.listContent}>
                                             <h4 className={styles.listTitle}>{interest.startupName}</h4>
@@ -302,14 +277,14 @@ export default function InvestorDashboard({ user }) {
                                         </div>
                                         <div className={styles.listActions} style={{ alignItems: 'center' }}>
                                             <span className={`${styles.badge} ${interest.status === 'pending' ? styles.badgePending : styles.badgeSuccess}`}>
-                                                {interest.status === 'pending' ? '⏳ Pending' : '✓ Accepted'}
+                                                {interest.status === 'pending' ? '⏳ Chờ xử lý' : '✓ Đã chấp nhận'}
                                             </span>
                                             {interest.status === 'pending' && (
                                                 <button
                                                     className={styles.dangerBtn}
                                                     onClick={() => handleWithdrawInterest(interest.id)}
                                                 >
-                                                    Withdraw
+                                                    Rút lại
                                                 </button>
                                             )}
                                         </div>
@@ -324,21 +299,21 @@ export default function InvestorDashboard({ user }) {
                 {activeSection === 'preferences' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Investment Preferences</h3>
+                            <h3 className={styles.cardTitle}>Sở thích đầu tư</h3>
                             <form className={styles.form}>
                                 <div className={styles.formGroup}>
-                                    <label>Preferred Industries</label>
+                                    <label>Ngành ưu tiên</label>
                                     <div className={styles.checkboxGroup}>
                                         <label><input type="checkbox" defaultChecked /> AI/ML</label>
                                         <label><input type="checkbox" defaultChecked /> Fintech</label>
                                         <label><input type="checkbox" /> HealthTech</label>
-                                        <label><input type="checkbox" /> E-commerce</label>
+                                        <label><input type="checkbox" /> Thương mại điện tử</label>
                                         <label><input type="checkbox" /> SaaS</label>
                                     </div>
                                 </div>
 
                                 <div className={styles.formGroup}>
-                                    <label>Preferred Stages</label>
+                                    <label>Giai đoạn ưu tiên</label>
                                     <div className={styles.checkboxGroup}>
                                         <label><input type="checkbox" /> Pre-Seed</label>
                                         <label><input type="checkbox" defaultChecked /> Seed</label>
@@ -349,17 +324,17 @@ export default function InvestorDashboard({ user }) {
 
                                 <div className={styles.formRow}>
                                     <div className={styles.formGroup}>
-                                        <label>Minimum AI Score</label>
+                                        <label>Điểm AI tối thiểu</label>
                                         <input type="number" min="0" max="100" defaultValue="70" />
                                     </div>
                                     <div className={styles.formGroup}>
-                                        <label>Typical Check Size</label>
-                                        <input type="text" placeholder="e.g., $250K - $1M" />
+                                        <label>Quy mô đầu tư thông thường</label>
+                                        <input type="text" placeholder="VD: 250 triệu - 1 tỷ VND" />
                                     </div>
                                 </div>
 
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '16px' }}>
-                                    <button type="submit" className={styles.primaryBtn}>Save Preferences</button>
+                                    <button type="submit" className={styles.primaryBtn}>Lưu sở thích</button>
                                 </div>
                             </form>
                         </div>

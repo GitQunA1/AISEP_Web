@@ -14,7 +14,6 @@ function DashboardLayout({
   children,
   onShowRegister,
   onShowLogin,
-  onShowProfile,
   onShowHome,
   onShowAdvisors,
   onShowInvestors,
@@ -38,7 +37,6 @@ function DashboardLayout({
           onClose={closeSidebar}
           onShowRegister={onShowRegister}
           onShowLogin={onShowLogin}
-          onShowProfile={onShowProfile}
           onShowHome={onShowHome}
           onShowAdvisors={onShowAdvisors}
           onShowInvestors={onShowInvestors}
@@ -71,7 +69,6 @@ function DashboardLayout({
       {/* Mobile Bottom Navigation - Kept outside strict grid flow if fixed, or handled by media queries */}
       <BottomNav
         user={user}
-        onShowProfile={onShowProfile}
         onShowHome={onShowHome}
         onShowAdvisors={onShowAdvisors}
         onShowInvestors={onShowInvestors}

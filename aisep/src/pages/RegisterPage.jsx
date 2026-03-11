@@ -18,19 +18,19 @@ function RegisterPage({ selectedRole, onBack, onComplete }) {
   const roleMap = {
     startup: {
       component: StartupRegisterForm,
-      title: 'Startup Registration',
+      title: 'Đăng ký Startup',
     },
     investor: {
       component: InvestorRegisterForm,
-      title: 'Investor Registration',
+      title: 'Đăng ký Nhà đầu tư',
     },
     advisor: {
       component: AdvisorRegisterForm,
-      title: 'Advisor Registration',
+      title: 'Đăng ký Cố vấn',
     },
     operation_staff: {
       component: OperationStaffRegisterForm,
-      title: 'Operation Staff Registration',
+      title: 'Đăng ký Nhân viên vận hành',
     },
   };
 
@@ -39,7 +39,7 @@ function RegisterPage({ selectedRole, onBack, onComplete }) {
   if (!roleConfig) {
     return (
       <div style={{ padding: '32px', textAlign: 'center' }}>
-        <p>Please select a valid role</p>
+        <p>Vui lòng chọn vai trò hợp lệ.</p>
       </div>
     );
   }

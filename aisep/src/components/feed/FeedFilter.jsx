@@ -22,22 +22,22 @@ function FeedFilter({ startups = [], onFilterChange, user }) {
     'Fintech',
     'Healthtech',
     'EdTech',
-    'E-commerce',
+    'Thương mại điện tử',
     'SaaS',
     'Logistics',
-    'Real Estate',
+    'Bất động sản',
     'Climate Tech',
-    'Other'
+    'Khác'
   ];
 
   const stages = [
-    'Idea',
+    'Ý tưởng',
     'MVP',
-    'Early Traction',
-    'Growth',
+    'Tăng trưởng sớm',
+    'Tăng trưởng',
     'Series A',
     'Series B+',
-    'Mature'
+    'Trưởng thành'
   ];
 
   const fundingStages = [
@@ -46,7 +46,7 @@ function FeedFilter({ startups = [], onFilterChange, user }) {
     'Series A',
     'Series B',
     'Series C+',
-    'Not Raising'
+    'Không huy động'
   ];
 
   const handleFilterChange = (filterName, value) => {
@@ -88,14 +88,14 @@ function FeedFilter({ startups = [], onFilterChange, user }) {
         onClick={() => setShowFilters(!showFilters)}
       >
         <Filter size={20} />
-        <span>Filter</span>
+        <span>Bộ lọc</span>
         {hasActiveFilters && <span className={styles.badge}>1</span>}
       </button>
 
       {showFilters && (
         <div className={styles.filterPanel}>
           <div className={styles.filterHeader}>
-            <h3>Filter Projects</h3>
+            <h3>Lọc dự án</h3>
             <button
               className={styles.closeFilterBtn}
               onClick={() => setShowFilters(false)}
@@ -107,13 +107,13 @@ function FeedFilter({ startups = [], onFilterChange, user }) {
           <div className={styles.filterContent}>
             {/* Industry Filter */}
             <div className={styles.filterGroup}>
-              <label htmlFor="industry-filter">Industry</label>
+              <label htmlFor="industry-filter">Ngành nghề</label>
               <select
                 id="industry-filter"
                 value={filters.industry}
                 onChange={(e) => handleFilterChange('industry', e.target.value)}
               >
-                <option value="">All Industries</option>
+                <option value="">Tất cả ngành nghề</option>
                 {industries.map((ind) => (
                   <option key={ind} value={ind}>
                     {ind}
@@ -124,13 +124,13 @@ function FeedFilter({ startups = [], onFilterChange, user }) {
 
             {/* Stage Filter */}
             <div className={styles.filterGroup}>
-              <label htmlFor="stage-filter">Stage</label>
+              <label htmlFor="stage-filter">Giai đoạn</label>
               <select
                 id="stage-filter"
                 value={filters.stage}
                 onChange={(e) => handleFilterChange('stage', e.target.value)}
               >
-                <option value="">All Stages</option>
+                <option value="">Tất cả giai đoạn</option>
                 {stages.map((s) => (
                   <option key={s} value={s}>
                     {s}
@@ -141,13 +141,13 @@ function FeedFilter({ startups = [], onFilterChange, user }) {
 
             {/* Funding Stage Filter */}
             <div className={styles.filterGroup}>
-              <label htmlFor="funding-filter">Funding Status</label>
+              <label htmlFor="funding-filter">Trạng thái gọi vốn</label>
               <select
                 id="funding-filter"
                 value={filters.fundingStage}
                 onChange={(e) => handleFilterChange('fundingStage', e.target.value)}
               >
-                <option value="">All Statuses</option>
+                <option value="">Tất cả trạng thái</option>
                 {fundingStages.map((f) => (
                   <option key={f} value={f}>
                     {f}
@@ -159,7 +159,7 @@ function FeedFilter({ startups = [], onFilterChange, user }) {
             {/* AI Score Filter */}
             <div className={styles.filterGroup}>
               <label htmlFor="score-filter">
-                Minimum AI Score: {filters.minScore}
+                Điểm AI tối thiểu: {filters.minScore}
               </label>
               <input
                 type="range"
@@ -184,14 +184,14 @@ function FeedFilter({ startups = [], onFilterChange, user }) {
                 className={styles.clearBtn}
                 onClick={handleClearFilters}
               >
-                Clear Filters
+                Xóa bộ lọc
               </button>
             )}
             <button
               className={styles.applyBtn}
               onClick={() => setShowFilters(false)}
             >
-              Apply
+              Áp dụng
             </button>
           </div>
         </div>

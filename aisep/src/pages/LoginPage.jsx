@@ -1,55 +1,54 @@
 import { useState } from 'react';
-import { ArrowLeft, Rocket, Eye, EyeOff, ChevronDown } from 'lucide-react';
-import { loginUser, getDemoAccounts } from '../data/mockAuth';
+import { ArrowLeft, Rocket, Eye, EyeOff } from 'lucide-react';
+import authService from '../services/authService';
 import styles from './LoginPage.module.css';
 
 export default function LoginPage({ onLoginSuccess, onShowRegister, onBack }) {
-  const [email, setEmail] = useState('demo@startup.com');
-  const [password, setPassword] = useState('Demo@123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [showDemoDropdown, setShowDemoDropdown] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
     setIsLoading(true);
 
-    // Simulate API call delay
-    setTimeout(() => {
-      const result = loginUser(email, password);
+    try {
+      const response = await authService.login({ email, password });
 
-      if (result.success) {
-        onLoginSuccess(result.user, result.token);
+      // Check for success using multiple possible backend structures
+      const accessToken = response?.accessToken || response?.token || response?.data?.accessToken;
+      const refreshToken = response?.refreshToken || response?.data?.refreshToken;
+      const isActuallySuccess = !!accessToken;
+
+      if (isActuallySuccess) {
+        const user = response?.user || response?.data?.user || { email, role: 'startup' };
+        // Trigger successful login redirect
+        onLoginSuccess(user, accessToken, refreshToken);
       } else {
-        setError(result.error);
+        setError(response?.message || 'Email hoặc mật khẩu không đúng.');
       }
+    } catch (err) {
+      setError(err.message || 'Không thể kết nối đến máy chủ. Vui lòng thử lại sau.');
+    } finally {
       setIsLoading(false);
-    }, 500);
+    }
   };
-
-  const handleQuickLogin = (account) => {
-    setEmail(account.email);
-    setPassword(account.password);
-    setError('');
-    setShowDemoDropdown(false);
-  };
-
-  const demoAccounts = getDemoAccounts();
 
   return (
     <div className={styles.container}>
       {/* Mobile Top Bar */}
       <header className={styles.mobileHeader}>
-        <button className={styles.mobileBackButton} onClick={onBack} aria-label="Back">
+        <button className={styles.mobileBackButton} onClick={onBack} aria-label="Quay lại">
           <ArrowLeft size={24} />
         </button>
         <div className={styles.headerLogo}>
           <Rocket size={20} className={styles.headerLogoIcon} />
           <span className={styles.headerLogoText}>AISEP</span>
         </div>
-        <div style={{ width: 40 }} /> {/* Spacer */}
+        <div style={{ width: 40 }} />
       </header>
 
       {/* Main Content */}
@@ -61,7 +60,7 @@ export default function LoginPage({ onLoginSuccess, onShowRegister, onBack }) {
             <span className={styles.logoText}>AISEP</span>
           </div>
 
-          <h1 className={styles.title}>Sign in to AISEP</h1>
+          <h1 className={styles.title}>Đăng nhập vào AISEP</h1>
 
           {/* Login Form */}
           <form onSubmit={handleLogin} className={styles.form}>
@@ -72,44 +71,11 @@ export default function LoginPage({ onLoginSuccess, onShowRegister, onBack }) {
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="Email address"
+                  placeholder="Địa chỉ email"
                   className={styles.input}
                   required
+                  autoComplete="email"
                 />
-                {/* Demo Dropdown Button - Desktop Only */}
-                <button
-                  type="button"
-                  className={styles.demoDropdownBtn}
-                  onClick={() => setShowDemoDropdown(!showDemoDropdown)}
-                  title="Quick demo login"
-                >
-                  <ChevronDown size={20} />
-                </button>
-
-                {/* Demo Dropdown Menu */}
-                {showDemoDropdown && (
-                  <div className={styles.demoDropdown}>
-                    {demoAccounts.map((acc, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handleQuickLogin(acc)}
-                        className={styles.demoDropdownItem}
-                      >
-                        <span className={styles.demoIcon}>
-                          {acc.role === 'startup' && '🚀'}
-                          {acc.role === 'investor' && '💰'}
-                          {acc.role === 'advisor' && '👨‍💼'}
-                          {acc.role === 'operation_staff' && '⚙️'}
-                        </span>
-                        <div className={styles.demoInfo}>
-                          <div className={styles.demoName}>{acc.name}</div>
-                          <div className={styles.demoEmail}>{acc.email}</div>
-                        </div>
-                      </button>
-                    ))}
-                  </div>
-                )}
               </div>
             </div>
 
@@ -120,14 +86,16 @@ export default function LoginPage({ onLoginSuccess, onShowRegister, onBack }) {
                   type={showPassword ? 'text' : 'password'}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Password"
+                  placeholder="Mật khẩu"
                   className={styles.input}
                   required
+                  autoComplete="current-password"
                 />
                 <button
                   type="button"
                   className={styles.passwordToggle}
                   onClick={() => setShowPassword(!showPassword)}
+                  aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
@@ -141,32 +109,32 @@ export default function LoginPage({ onLoginSuccess, onShowRegister, onBack }) {
               className={styles.loginButton}
               disabled={isLoading}
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? 'Đang đăng nhập...' : 'Đăng nhập'}
             </button>
 
             <button
               type="button"
               className={styles.forgotButton}
             >
-              Forgot password?
+              Quên mật khẩu?
             </button>
           </form>
 
           <div className={styles.divider}>
-            <span>or</span>
+            <span>hoặc</span>
           </div>
 
           <div className={styles.signupPrompt}>
-            Don't have an account?{' '}
+            Chưa có tài khoản?{' '}
             <button onClick={onShowRegister} className={styles.signupLink}>
-              Sign up
+              Đăng ký ngay
             </button>
           </div>
 
-          {/* Desktop Back Button - Moved to bottom */}
+          {/* Desktop Back Button */}
           <button className={styles.desktopBackButton} onClick={onBack}>
             <ArrowLeft size={20} />
-            <span>Back to Home</span>
+            <span>Quay lại trang chủ</span>
           </button>
         </div>
       </div>

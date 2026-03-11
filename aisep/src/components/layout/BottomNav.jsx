@@ -13,7 +13,6 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
     { icon: Search, label: 'Explore', href: '#' },
     { icon: TrendingUp, label: 'Investors', href: '#', hideFor: ['investor'] },
     { icon: Users, label: 'Advisors', href: '#', hideFor: ['advisor'] },
-    { icon: User, label: 'Profile', href: '#' },
   ];
 
   const handleClick = (e, label) => {
@@ -23,9 +22,6 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
     }
     if (label === 'Dashboard' && onShowDashboard) {
       onShowDashboard();
-    }
-    if (label === 'Profile' && onShowProfile) {
-      onShowProfile();
     }
     if (label === 'Advisors' && onShowAdvisors) {
       onShowAdvisors();
@@ -41,10 +37,6 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
         .filter(item => {
           // Hide Dashboard when user is not logged in
           if (item.showWhenLoggedIn && !user) {
-            return false;
-          }
-          // Hide Profile when user is not logged in
-          if (item.label === 'Profile' && !user) {
             return false;
           }
           // Hide items for specific roles

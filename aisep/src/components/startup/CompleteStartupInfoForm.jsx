@@ -11,7 +11,7 @@ import styles from '../auth/RegisterForms.module.css';
  * Implements BR-02 (email verification), BR-05 (required fields), BR-06 (validation)
  * Steps 1-6: Basic, Business, Market, Team, Documents, Review
  */
-export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyChange, user }) {
+export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyChange, user, initialData }) {
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 6;
 
@@ -55,6 +55,23 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
 
   const [errors, setErrors] = useState({});
   const [emailVerificationError, setEmailVerificationError] = useState('');
+
+  // Pre-populate data if editing an existing profile
+  useEffect(() => {
+    if (initialData) {
+      setFormData(prev => ({
+        ...prev,
+        startupName: initialData.companyName || prev.startupName,
+        founders: initialData.founder || prev.founders,
+        contactEmail: initialData.contactInfo ? initialData.contactInfo.split(' ')[0] : prev.contactEmail,
+        phone: initialData.contactInfo && initialData.contactInfo.split(' ').length > 1 ? initialData.contactInfo.split(' ')[1] : prev.phone,
+        country: initialData.countryCity ? initialData.countryCity.split(',')[0] : prev.country,
+        city: initialData.countryCity && initialData.countryCity.split(',').length > 1 ? initialData.countryCity.split(',')[1].trim() : prev.city,
+        website: initialData.website || prev.website,
+        industry: initialData.industry === 0 ? 'AI/ML' : prev.industry,
+      }));
+    }
+  }, [initialData]);
 
   // Check for dirty state
   useEffect(() => {
@@ -182,38 +199,18 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
       {/* BODY */}
       <div className={styles.cardBody}>
 
-        {/* BR-02: Email Verification Warning */}
-        {emailVerificationError && (
-          <div style={{
-            background: '#FEF2F2',
-            border: '1px solid #FECACA',
-            borderRadius: '12px',
-            padding: '16px',
-            marginBottom: '24px',
-            display: 'flex',
-            gap: '12px',
-            alignItems: 'flex-start'
-          }}>
-            <AlertCircle size={20} color="#DC2626" style={{ marginTop: '2px', flexShrink: 0 }} />
-            <div>
-              <div style={{ fontWeight: '600', color: '#991B1B', marginBottom: '4px' }}>Email Verification Required</div>
-              <div style={{ fontSize: '14px', color: '#7F1D1D' }}>
-                {emailVerificationError}
-              </div>
-            </div>
-          </div>
-        )}
+
 
         {/* Step 1: Basic Info */}
         {currentStep === 1 && (
           <div className={styles.stepContainer}>
             <div>
-              <h2 className={styles.stepTitle}>Basic Information</h2>
-              <p className={styles.stepSubtitle}>Let's start with the essentials (Step A)</p>
+              <h2 className={styles.stepTitle}>Thông tin cơ bản</h2>
+              <p className={styles.stepSubtitle}>Bắt đầu với các thông tin thiết yếu (Bước 1)</p>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Startup Name <span className={styles.required}>*</span></label>
+              <label className={styles.label}>Tên Startup <span className={styles.required}>*</span></label>
               <input
                 type="text"
                 name="startupName"
@@ -226,7 +223,7 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Project Name <span className={styles.required}>*</span></label>
+              <label className={styles.label}>Tên Dự án <span className={styles.required}>*</span></label>
               <input
                 type="text"
                 name="projectName"
@@ -237,7 +234,7 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
               />
               {errors.projectName && <p className={styles.errorText}>{errors.projectName}</p>}
               <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                The name of your project/product
+                Tên sản phẩm / dự án của bạn
               </p>
             </div>
 
@@ -294,7 +291,7 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Founder(s) <span className={styles.required}>*</span></label>
+              <label className={styles.label}>Nhà sáng lập <span className={styles.required}>*</span></label>
               <input
                 type="text"
                 name="founders"
@@ -308,7 +305,7 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
 
             <div className={styles.twoColumnGrid}>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Contact Email <span className={styles.required}>*</span></label>
+                <label className={styles.label}>Email liên hệ <span className={styles.required}>*</span></label>
                 <input
                   type="email"
                   name="contactEmail"
@@ -320,7 +317,7 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
                 {errors.contactEmail && <p className={styles.errorText}>{errors.contactEmail}</p>}
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Phone</label>
+                <label className={styles.label}>Điện thoại</label>
                 <input
                   type="tel"
                   name="phone"
@@ -334,19 +331,19 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
 
             <div className={styles.twoColumnGrid}>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Country <span className={styles.required}>*</span></label>
+                <label className={styles.label}>Quốc gia <span className={styles.required}>*</span></label>
                 <input
                   type="text"
                   name="country"
                   value={formData.country}
                   onChange={handleInputChange}
                   className={`${styles.input} ${errors.country ? styles.inputError : ''}`}
-                  placeholder="e.g. Vietnam"
+                  placeholder="Ví dụ: Việt Nam"
                 />
                 {errors.country && <p className={styles.errorText}>{errors.country}</p>}
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.label}>City</label>
+                <label className={styles.label}>Thành phố</label>
                 <input
                   type="text"
                   name="city"
@@ -376,119 +373,119 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
         {currentStep === 2 && (
           <div className={styles.stepContainer}>
             <div>
-              <h2 className={styles.stepTitle}>Business Details</h2>
-              <p className={styles.stepSubtitle}>Describe your solution (Step B)</p>
+              <h2 className={styles.stepTitle}>Thông tin kinh doanh</h2>
+              <p className={styles.stepSubtitle}>Mô tả giải pháp của bạn (Bước 2)</p>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Category <span className={styles.required}>*</span></label>
+              <label className={styles.label}>Danh mục <span className={styles.required}>*</span></label>
               <select
                 name="category"
                 value={formData.category}
                 onChange={handleInputChange}
                 className={`${styles.select} ${errors.category ? styles.inputError : ''}`}
               >
-                <option value="">Select Category</option>
+                <option value="">Chọn danh mục</option>
                 <option value="AI/ML">AI/ML</option>
                 <option value="Blockchain">Blockchain</option>
                 <option value="IoT">IoT</option>
                 <option value="Mobile">Mobile</option>
                 <option value="Web">Web</option>
                 <option value="Desktop">Desktop</option>
-                <option value="Other">Other</option>
+                <option value="Other">Khác</option>
               </select>
               {errors.category && <p className={styles.errorText}>{errors.category}</p>}
               <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                Primary technology category of your project
+                Danh mục công nghệ chính của dự án
               </p>
             </div>
 
             <div className={styles.twoColumnGrid}>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Industry <span className={styles.required}>*</span></label>
+                <label className={styles.label}>Lĩnh vực <span className={styles.required}>*</span></label>
                 <select
                   name="industry"
                   value={formData.industry}
                   onChange={handleInputChange}
                   className={`${styles.select} ${errors.industry ? styles.inputError : ''}`}
                 >
-                  <option value="">Select Industry</option>
+                  <option value="">Chọn lĩnh vực</option>
                   <option value="AI/ML">AI/ML</option>
                   <option value="Fintech">Fintech</option>
                   <option value="HealthTech">HealthTech</option>
                   <option value="SaaS">SaaS</option>
                   <option value="E-commerce">E-commerce</option>
-                  <option value="Other">Other</option>
+                  <option value="Other">Khác</option>
                 </select>
                 {errors.industry && <p className={styles.errorText}>{errors.industry}</p>}
               </div>
 
               <div className={styles.formGroup}>
-                <label className={styles.label}>Stage <span className={styles.required}>*</span></label>
+                <label className={styles.label}>Giai đoạn <span className={styles.required}>*</span></label>
                 <select
                   name="stage"
                   value={formData.stage}
                   onChange={handleInputChange}
                   className={`${styles.select} ${errors.stage ? styles.inputError : ''}`}
                 >
-                  <option value="">Select Stage</option>
-                  <option value="idea">Idea</option>
+                  <option value="">Chọn giai đoạn</option>
+                  <option value="idea">Ý tưởng</option>
                   <option value="mvp">MVP</option>
-                  <option value="early">Early</option>
-                  <option value="growth">Growth</option>
+                  <option value="early">Giai đoạn đầu</option>
+                  <option value="growth">Tăng trưởng</option>
                 </select>
                 {errors.stage && <p className={styles.errorText}>{errors.stage}</p>}
               </div>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Short Description <span className={styles.required}>*</span></label>
+              <label className={styles.label}>Mô tả ngắn <span className={styles.required}>*</span></label>
               <textarea
                 name="shortDescription"
                 value={formData.shortDescription}
                 onChange={handleInputChange}
                 className={`${styles.textarea} ${errors.shortDescription ? styles.inputError : ''}`}
-                placeholder="Brief description of your project (20-255 characters)"
+                placeholder="Mô tả ngắn về dự án (20-255 ký tự)"
                 style={{ minHeight: '60px' }}
               />
               {errors.shortDescription && <p className={styles.errorText}>{errors.shortDescription}</p>}
               <p style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                {formData.shortDescription.length} / 255 characters
+                {formData.shortDescription.length} / 255 ký tự
               </p>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Problem Statement <span className={styles.required}>*</span></label>
+              <label className={styles.label}>Vấn đề cần giải quyết <span className={styles.required}>*</span></label>
               <textarea
                 name="problemStatement"
                 value={formData.problemStatement}
                 onChange={handleInputChange}
                 className={`${styles.textarea} ${errors.problemStatement ? styles.inputError : ''}`}
-                placeholder="What core problem are you solving?"
+                placeholder="Vấn đề cốt lõi mà bạn đang giải quyết là gì?"
               />
               {errors.problemStatement && <p className={styles.errorText}>{errors.problemStatement}</p>}
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Solution Description <span className={styles.required}>*</span></label>
+              <label className={styles.label}>Mô tả giải pháp <span className={styles.required}>*</span></label>
               <textarea
                 name="solutionDescription"
                 value={formData.solutionDescription}
                 onChange={handleInputChange}
                 className={`${styles.textarea} ${errors.solutionDescription ? styles.inputError : ''}`}
-                placeholder="How does your product solve it?"
+                placeholder="Sản phẩm của bạn giải quyết vấn đề đó như thế nào?"
               />
               {errors.solutionDescription && <p className={styles.errorText}>{errors.solutionDescription}</p>}
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Unique Value Proposition</label>
+              <label className={styles.label}>Điểm khác biệt</label>
               <textarea
                 name="uniqueValueProposition"
                 value={formData.uniqueValueProposition}
                 onChange={handleInputChange}
                 className={styles.textarea}
-                placeholder="What makes you different?"
+                placeholder="Điều gì làm bạn khác biệt so với đối thủ?"
                 style={{ minHeight: '100px' }}
               />
             </div>
@@ -499,67 +496,67 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
         {currentStep === 3 && (
           <div className={styles.stepContainer}>
             <div>
-              <h2 className={styles.stepTitle}>Market & Model</h2>
-              <p className={styles.stepSubtitle}>Your business potential (Step C)</p>
+              <h2 className={styles.stepTitle}>Thị trường & Mô hình</h2>
+              <p className={styles.stepSubtitle}>Tiềm năng kinh doanh của bạn (Bước 3)</p>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Target Customers</label>
+              <label className={styles.label}>Khách hàng mục tiêu</label>
               <input
                 type="text"
                 name="targetCustomers"
                 value={formData.targetCustomers}
                 onChange={handleInputChange}
                 className={styles.input}
-                placeholder="e.g. Gen Z, SMEs in SE Asia"
+                placeholder="Ví dụ: Gen Z, doanh nghiệp vừa và nhỏ tại Đông Nam Á"
               />
             </div>
 
             <div className={styles.twoColumnGrid}>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Market Size</label>
+                <label className={styles.label}>Quy mô thị trường</label>
                 <input
                   type="text"
                   name="marketSize"
                   value={formData.marketSize}
                   onChange={handleInputChange}
                   className={styles.input}
-                  placeholder="e.g. $5B TAM"
+                  placeholder="Ví dụ: $5B TAM"
                 />
               </div>
               <div className={styles.formGroup}>
-                <label className={styles.label}>Current Revenue</label>
+                <label className={styles.label}>Doanh thu hiện tại</label>
                 <input
                   type="text"
                   name="currentRevenue"
                   value={formData.currentRevenue}
                   onChange={handleInputChange}
                   className={styles.input}
-                  placeholder="e.g. $10k MRR"
+                  placeholder="Ví dụ: $10k MRR"
                 />
               </div>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Business Model</label>
+              <label className={styles.label}>Mô hình kinh doanh</label>
               <textarea
                 name="businessModel"
                 value={formData.businessModel}
                 onChange={handleInputChange}
                 className={styles.textarea}
-                placeholder="How do you make money?"
+                placeholder="Bạn kiếm tiền như thế nào?"
                 style={{ minHeight: '100px' }}
               />
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Competitors</label>
+              <label className={styles.label}>Đối thủ cạnh tranh</label>
               <textarea
                 name="competitors"
                 value={formData.competitors}
                 onChange={handleInputChange}
                 className={styles.textarea}
-                placeholder="Who are your main competitors?"
+                placeholder="Các đối thủ chính của bạn là ai?"
                 style={{ minHeight: '100px' }}
               />
             </div>
@@ -570,41 +567,41 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
         {currentStep === 4 && (
           <div className={styles.stepContainer}>
             <div>
-              <h2 className={styles.stepTitle}>Team Info</h2>
-              <p className={styles.stepSubtitle}>Who is building this? (Step D)</p>
+              <h2 className={styles.stepTitle}>Thông tin nhóm</h2>
+              <p className={styles.stepSubtitle}>Ai đang xây dựng dự án này? (Bước 4)</p>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Team Members</label>
+              <label className={styles.label}>Thành viên nhóm</label>
               <textarea
                 name="teamMembers"
                 value={formData.teamMembers}
                 onChange={handleInputChange}
                 className={styles.textarea}
-                placeholder="List key members and their roles"
+                placeholder="Liệt kê các thành viên chủ chốt và vai trò của họ"
               />
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Key Skills</label>
+              <label className={styles.label}>Kỹ năng chính</label>
               <textarea
                 name="keySkills"
                 value={formData.keySkills}
                 onChange={handleInputChange}
                 className={styles.textarea}
-                placeholder="e.g. Python, Marketing, Sales"
+                placeholder="Ví dụ: Python, Marketing, Sales"
                 style={{ minHeight: '100px' }}
               />
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Experience</label>
+              <label className={styles.label}>Kinh nghiệm</label>
               <textarea
                 name="experience"
                 value={formData.experience}
                 onChange={handleInputChange}
                 className={styles.textarea}
-                placeholder="Relevant past experience of the team"
+                placeholder="Kinh nghiệm liên quan của nhóm"
                 style={{ minHeight: '100px' }}
               />
             </div>
@@ -615,12 +612,12 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
         {currentStep === 5 && (
           <div className={styles.stepContainer}>
             <div>
-              <h2 className={styles.stepTitle}>Documents</h2>
-              <p className={styles.stepSubtitle}>Upload verification files (Step E)</p>
+              <h2 className={styles.stepTitle}>Tài liệu</h2>
+              <p className={styles.stepSubtitle}>Tải lên các tài liệu xác minh (Bước 5)</p>
             </div>
 
             <FileUpload
-              label="Pitch Deck (Required)"
+              label="Pitch Deck (Bắt buộc)"
               required
               accept=".pdf,.ppt,.pptx"
               onFileSelect={(f) => handleFileSelect('pitchDeck', f)}
@@ -628,7 +625,7 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
             />
 
             <FileUpload
-              label="Business Plan (Optional)"
+              label="Kế hoạch kinh doanh (Tùy chọn)"
               accept=".pdf,.docx,.doc"
               onFileSelect={(f) => handleFileSelect('businessPlan', f)}
             />
@@ -653,9 +650,9 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
           onClick={currentStep === 1 ? onCancel : handlePrevious}
           className={styles.secondaryButton}
         >
-          {currentStep === 1 ? 'Cancel' : (
+          {currentStep === 1 ? 'Hủy' : (
             <>
-              <ChevronLeft size={20} /> Previous
+              <ChevronLeft size={20} /> Quay lại
             </>
           )}
         </button>
@@ -664,18 +661,12 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
           onClick={currentStep === totalSteps ? handleSubmit : handleNext}
           className={styles.primaryButton}
         >
-          {currentStep === totalSteps ? 'Confirm & Submit' : (
+          {currentStep === totalSteps ? 'Xác nhận & Gửi' : (
             <>
-              Next Step <ChevronRight size={20} />
+              Bước tiếp theo <ChevronRight size={20} />
             </>
           )}
         </button>
-        {/* BR-02: Disable submit if email not verified */}
-        {currentStep === totalSteps && emailVerificationError && (
-          <p style={{ fontSize: '12px', color: '#DC2626', marginTop: '8px', textAlign: 'center' }}>
-            Please verify your email to submit
-          </p>
-        )}
       </div>
     </div>
   );

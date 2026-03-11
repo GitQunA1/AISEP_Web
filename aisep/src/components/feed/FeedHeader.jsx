@@ -8,7 +8,7 @@ import FeedFilter from './FeedFilter';
  * @param {object} user - Current user object
  * @param {function} onFilterChange - Callback when filters change
  */
-function FeedHeader({ user, onFilterChange, title = "Discover Projects", subtitle = "Explore innovative AI-powered projects", showFilter = true }) {
+function FeedHeader({ user, onFilterChange, title = "Khám phá dự án", subtitle = "Khám phá các dự án sáng tạo được hỗ trợ bởi AI", showFilter = true }) {
   return (
     <>
       <div className={styles.feedHeader}>

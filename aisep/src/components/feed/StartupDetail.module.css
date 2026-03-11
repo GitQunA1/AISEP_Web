@@ -1,0 +1,393 @@
+/* StartupDetail.module.css - Startup Profile Page (mirrors InvestorDetail design) */
+
+.container {
+    width: 100%;
+    background-color: var(--bg-primary);
+    min-height: 100vh;
+    padding-bottom: 60px;
+    border-left: 1px solid var(--border-color);
+    border-right: 1px solid var(--border-color);
+}
+
+/* ─── Top Nav ─── */
+.topNav {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background-color: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 0 16px;
+    height: 53px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+:global([data-theme='dark']) .topNav {
+    background-color: rgba(0, 0, 0, 0.65);
+}
+
+.backBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: transparent;
+    border: none;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background-color 0.2s;
+    flex-shrink: 0;
+}
+
+.backBtn:hover { background-color: var(--bg-hover); }
+
+.navTitle h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.2;
+}
+
+.navTitle span {
+    font-size: 13px;
+    color: var(--text-secondary);
+}
+
+/* ─── Cover Banner ─── */
+.coverBanner {
+    width: 100%;
+    height: 120px;
+    background: linear-gradient(135deg, #6366f1 0%, #06b6d4 60%, #10b981 100%);
+}
+
+@media (max-width: 768px) {
+    .coverBanner { height: 100px; }
+}
+
+/* ─── Profile Header ─── */
+.profileHeader {
+    padding: 0 var(--spacing-lg);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.headerTop {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.avatarSection {
+    margin-top: -60px;
+    margin-bottom: var(--spacing-md);
+}
+
+.avatar {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6366f1, #06b6d4);
+    border: 4px solid var(--bg-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 44px;
+    font-weight: 700;
+    color: white;
+    overflow: hidden;
+}
+
+.logoImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+@media (max-width: 768px) {
+    .avatarSection { margin-top: -50px; }
+    .avatar { width: 100px; height: 100px; font-size: 36px; }
+}
+
+.headerActions {
+    margin-top: var(--spacing-md);
+}
+
+.approvedChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+    border-radius: 9999px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+/* ─── Profile Info ─── */
+.profileInfo {
+    padding-bottom: var(--spacing-lg);
+}
+
+.nameSection { margin-bottom: var(--spacing-sm); }
+
+.name {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 6px;
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.industryBadge {
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: rgba(99, 102, 241, 0.12);
+    color: #6366f1;
+    border: 1px solid rgba(99, 102, 241, 0.25);
+}
+
+:global([data-theme='dark']) .industryBadge {
+    background: rgba(99, 102, 241, 0.2);
+    color: #818cf8;
+}
+
+.bio {
+    font-size: 15px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    margin: var(--spacing-sm) 0;
+}
+
+.metadata {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin: var(--spacing-sm) 0;
+    flex-wrap: wrap;
+}
+
+.metaItem {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: var(--text-secondary);
+    font-size: 14px;
+}
+
+.metaLink {
+    color: var(--primary-blue);
+    text-decoration: none;
+}
+.metaLink:hover { text-decoration: underline; }
+
+/* ─── Stats ─── */
+.stats {
+    display: flex;
+    gap: var(--spacing-lg);
+    margin-top: var(--spacing-md);
+}
+
+.stat { display: flex; gap: 4px; }
+
+.statValue { font-weight: 700; color: var(--text-primary); }
+.statLabel { color: var(--text-secondary); }
+
+/* ─── Tabs ─── */
+.tabs {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.tab {
+    flex: 1;
+    min-width: max-content;
+    padding: 16px 0;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s;
+}
+
+.tab:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.tab.active { color: var(--text-primary); }
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 10%;
+    right: 10%;
+    height: 4px;
+    background-color: var(--primary-blue);
+    border-radius: 4px 4px 0 0;
+}
+
+/* ─── Tab Content ─── */
+.tabContent {
+    padding: var(--spacing-lg);
+}
+
+@media (max-width: 600px) {
+    .tabContent { padding: 16px 12px; }
+}
+
+.overview {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-xl);
+}
+
+/* ─── Cards ─── */
+.card {
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    border: 1px solid var(--border-color);
+}
+
+.cardTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-top: 0;
+    margin-bottom: 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.description {
+    color: var(--text-secondary);
+    line-height: 1.6;
+    font-size: 15px;
+}
+
+/* ─── Stats Grid ─── */
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--spacing-md);
+}
+
+@media (min-width: 769px) {
+    .statsGrid { grid-template-columns: repeat(4, 1fr); }
+}
+
+.statCard {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: var(--spacing-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.statIconLg {
+    color: var(--primary-blue);
+    margin-bottom: 12px;
+}
+
+.cardLabel {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 4px;
+}
+
+.cardValueSmall {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* ─── Contact ─── */
+.contactList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.contactItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--text-primary);
+    font-size: 15px;
+}
+
+.contactItem svg { color: var(--primary-blue); flex-shrink: 0; }
+
+.websiteLink {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary-blue);
+    font-size: 15px;
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.websiteLink:hover { text-decoration: underline; }
+
+/* ─── Empty / Error / Loading ─── */
+.emptyState {
+    text-align: center;
+    padding: 64px 20px;
+}
+
+.emptyIcon { margin-bottom: 16px; }
+
+.emptyState h3 { color: var(--text-primary); margin-bottom: 8px; }
+.emptyState p  { color: var(--text-secondary); }
+
+.backLinkBtn {
+    margin-top: 20px;
+    background: none;
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    padding: 8px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.backLinkBtn:hover { background: var(--bg-hover); }
+
+.loadingState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    padding: 100px 20px;
+    color: var(--text-secondary);
+    font-weight: 500;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+
+.spinIcon { animation: spin 1s linear infinite; }
