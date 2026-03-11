@@ -1,0 +1,381 @@
+/**
+ * AIEvaluationService.js
+ * AI-powered evaluation of startup projects
+ * Implements: BR-10 (trigger after IP protection), BR-11 (analysis scope),
+ *             BR-12 (output: score, strengths, weaknesses, risks), BR-13 (reference only),
+ *             BR-14 (read-only results)
+ */
+
+class AIEvaluationService {
+  /**
+   * BR-10: Run AI evaluation after IP protection
+   * Analyzes project metadata and documents
+   * @param {object} project - Project object with data
+   * @param {File[]} documents - Uploaded documents
+   * @returns {Promise<object>} - AI evaluation result
+   */
+  static async evaluateProject(project, documents = []) {
+    // BR-10: Can only run after blockchain protection
+    if (!project.blockchainHash || !project.transactionHash) {
+      return {
+        success: false,
+        error: 'Project must be IP protected before AI evaluation',
+        evaluation: null
+      };
+    }
+
+    try {
+      // Simulate AI processing time
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // BR-11: Analyze project metadata
+      const metadataAnalysis = this._analyzeMetadata(project);
+
+      // BR-11: Analyze uploaded documents
+      const documentAnalysis = await this._analyzeDocuments(documents);
+
+      // BR-12: Generate AI evaluation results
+      const evaluation = {
+        id: this._generateEvaluationId(),
+        projectId: project.id,
+        evaluatedAt: new Date().toISOString(),
+        
+        // BR-12: Startup Score (0-100)
+        startupScore: this._calculateScore(metadataAnalysis, documentAnalysis),
+        
+        // BR-12: Strengths
+        strengths: this._identifyStrengths(metadataAnalysis, documentAnalysis),
+        
+        // BR-12: Weaknesses
+        weaknesses: this._identifyWeaknesses(metadataAnalysis, documentAnalysis),
+        
+        // BR-12: Risk Indicators
+        riskIndicators: this._identifyRisks(metadataAnalysis, documentAnalysis),
+        
+        // BR-13: Disclaimer that this is reference only
+        disclaimer: 'This AI Score is for reference only and does not determine investment decisions.',
+        
+        // BR-14: Results are read-only
+        isReadOnly: true,
+        
+        // Additional metadata
+        analysisMetadata: {
+          metadataScore: metadataAnalysis.overallScore,
+          documentScore: documentAnalysis.overallScore,
+          documentCount: documents.length,
+          analysisVersion: '1.0'
+        }
+      };
+
+      console.log('[AI EVALUATION] Analysis complete:', {
+        projectId: project.id,
+        score: evaluation.startupScore,
+        strengthsCount: evaluation.strengths.length,
+        weaknessesCount: evaluation.weaknesses.length,
+        risksCount: evaluation.riskIndicators.length
+      });
+
+      return {
+        success: true,
+        error: null,
+        evaluation
+      };
+    } catch (error) {
+      console.error('[AI EVALUATION] Evaluation failed:', error);
+      return {
+        success: false,
+        error: error.message,
+        evaluation: null
+      };
+    }
+  }
+
+  /**
+   * BR-11: Analyze project metadata
+   * @param {object} project - Project object
+   * @returns {object} - Metadata analysis
+   */
+  static _analyzeMetadata(project) {
+    let score = 50; // Base score
+
+    // Positive factors
+    if (project.projectName && project.projectName.length > 3) score += 5;
+    if (project.shortDescription && project.shortDescription.length >= 20) score += 5;
+    if (project.solutionDescription && project.solutionDescription.length > 50) score += 8;
+    if (project.stage && ['growth', 'early'].includes(project.stage.toLowerCase())) score += 10;
+    if (project.category) score += 5;
+    if (project.industry) score += 5;
+    if (project.currentRevenue && project.currentRevenue !== '') score += 15;
+    if (project.marketSize && project.marketSize !== '') score += 10;
+    if (project.uniqueValueProposition && project.uniqueValueProposition.length > 20) score += 7;
+
+    return {
+      overallScore: Math.min(score, 100),
+      hasProjectName: !!project.projectName,
+      hasDescription: !!project.shortDescription,
+      hasSolution: !!project.solutionDescription,
+      stage: project.stage,
+      hasRevenue: !!project.currentRevenue,
+      hasMarketSize: !!project.marketSize,
+      teamSize: project.teamMembers ? (project.teamMembers.match(/,/g) || []).length + 1 : 0
+    };
+  }
+
+  /**
+   * BR-11: Analyze uploaded documents
+   * @param {File[]} documents - Document files
+   * @returns {Promise<object>} - Document analysis
+   */
+  static async _analyzeDocuments(documents) {
+    if (!documents || documents.length === 0) {
+      return {
+        overallScore: 30,
+        documentCount: 0,
+        hasPitchDeck: false,
+        hasBusinessPlan: false,
+        avgDocumentSize: 0,
+        analysisDetail: 'No documents provided'
+      };
+    }
+
+    let score = 50;
+    let totalSize = 0;
+
+    const documentTypes = documents.map(d => ({
+      name: d.name,
+      size: d.size,
+      type: d.type
+    }));
+
+    // Document presence boosts score
+    score += Math.min(documents.length * 15, 30);
+
+    // Document size analysis (larger documents usually more detailed)
+    totalSize = documentTypes.reduce((sum, doc) => sum + doc.size, 0);
+    const avgSize = totalSize / documents.length;
+
+    if (avgSize > 100 * 1024) score += 10; // > 100KB
+    if (avgSize > 500 * 1024) score += 5;  // > 500KB
+
+    // Document type analysis
+    const hasBusinessPlan = documentTypes.some(d => d.name.toLowerCase().includes('business') || d.name.toLowerCase().includes('plan'));
+    const hasPitchDeck = documentTypes.some(d => d.name.toLowerCase().includes('pitch') || d.name.toLowerCase().includes('deck'));
+    const hasTechnical = documentTypes.some(d => d.name.toLowerCase().includes('technical') || d.name.toLowerCase().includes('architecture'));
+
+    if (hasBusinessPlan) score += 15;
+    if (hasPitchDeck) score += 15;
+    if (hasTechnical) score += 10;
+
+    return {
+      overallScore: Math.min(score, 100),
+      documentCount: documents.length,
+      hasPitchDeck,
+      hasBusinessPlan,
+      hasTechnical,
+      avgDocumentSize,
+      totalSize,
+      documentTypes
+    };
+  }
+
+  /**
+   * BR-12: Calculate startup score
+   * @param {object} metadataAnalysis - Metadata analysis result
+   * @param {object} documentAnalysis - Document analysis result
+   * @returns {number} - Final score 0-100
+   */
+  static _calculateScore(metadataAnalysis, documentAnalysis) {
+    // Weighted average: 60% metadata, 40% documents
+    const score = (metadataAnalysis.overallScore * 0.6) + (documentAnalysis.overallScore * 0.4);
+    return Math.round(score);
+  }
+
+  /**
+   * BR-12: Identify project strengths
+   * @param {object} metadataAnalysis
+   * @param {object} documentAnalysis
+   * @returns {array} - List of strengths
+   */
+  static _identifyStrengths(metadataAnalysis, documentAnalysis) {
+    const strengths = [];
+
+    if (metadataAnalysis.hasRevenue) {
+      strengths.push('Existing revenue generation demonstrates market traction');
+    }
+
+    if (metadataAnalysis.hasMarketSize) {
+      strengths.push('Clear market sizing and opportunity identification');
+    }
+
+    if (metadataAnalysis.stage && ['growth', 'early'].includes(metadataAnalysis.stage.toLowerCase())) {
+      strengths.push(`Already at ${metadataAnalysis.stage} stage with established product-market fit indicators`);
+    }
+
+    if (metadataAnalysis.teamSize >= 3) {
+      strengths.push(`Strong team with ${metadataAnalysis.teamSize} members`);
+    } else if (metadataAnalysis.teamSize > 0) {
+      strengths.push('Founding team identified');
+    }
+
+    if (documentAnalysis.hasPitchDeck && documentAnalysis.hasBusinessPlan) {
+      strengths.push('Complete documentation with both pitch deck and business plan');
+    }
+
+    if (documentAnalysis.hasTechnical) {
+      strengths.push('Technical architecture properly documented');
+    }
+
+    if (strengths.length === 0) {
+      strengths.push('Project submitted with foundational information');
+    }
+
+    return strengths;
+  }
+
+  /**
+   * BR-12: Identify project weaknesses
+   * @param {object} metadataAnalysis
+   * @param {object} documentAnalysis
+   * @returns {array} - List of weaknesses
+   */
+  static _identifyWeaknesses(metadataAnalysis, documentAnalysis) {
+    const weaknesses = [];
+
+    if (!metadataAnalysis.hasRevenue) {
+      weaknesses.push('No revenue yet - pre-revenue stage');
+    }
+
+    if (!metadataAnalysis.hasSolution) {
+      weaknesses.push('Solution description needs more detail');
+    }
+
+    if (metadataAnalysis.stage && metadataAnalysis.stage.toLowerCase() === 'idea') {
+      weaknesses.push('Still in idea phase - concept validation needed');
+    }
+
+    if (documentAnalysis.documentCount < 2) {
+      weaknesses.push('Limited supporting documentation');
+    }
+
+    if (!documentAnalysis.hasBusinessPlan) {
+      weaknesses.push('Business plan not provided');
+    }
+
+    if (!documentAnalysis.hasTechnical && metadataAnalysis.category?.includes('AI')) {
+      weaknesses.push('Technical architecture not documented for AI/ML project');
+    }
+
+    if (weaknesses.length === 0) {
+      weaknesses.push('Project documentation is comprehensive');
+    }
+
+    return weaknesses;
+  }
+
+  /**
+   * BR-12: Identify risk indicators
+   * @param {object} metadataAnalysis
+   * @param {object} documentAnalysis
+   * @returns {array} - List of risk indicators
+   */
+  static _identifyRisks(metadataAnalysis, documentAnalysis) {
+    const risks = [];
+
+    if (metadataAnalysis.stage === 'idea') {
+      risks.push({
+        level: 'HIGH',
+        description: 'Early stage - execution and market validation are primary risks'
+      });
+    }
+
+    if (!metadataAnalysis.hasMarketSize) {
+      risks.push({
+        level: 'MEDIUM',
+        description: 'Market size not clearly defined - market opportunity risk'
+      });
+    }
+
+    if (metadataAnalysis.teamSize < 2) {
+      risks.push({
+        level: 'MEDIUM',
+        description: 'Small founding team - key person dependency risk'
+      });
+    }
+
+    if (documentAnalysis.documentCount === 0) {
+      risks.push({
+        level: 'HIGH',
+        description: 'No supporting documentation - planning and execution risk'
+      });
+    }
+
+    if (!metadataAnalysis.hasRevenue && metadataAnalysis.stage !== 'growth') {
+      risks.push({
+        level: 'MEDIUM',
+        description: 'No proven revenue model yet'
+      });
+    }
+
+    if (risks.length === 0) {
+      risks.push({
+        level: 'LOW',
+        description: 'Risk profile appears well-managed'
+      });
+    }
+
+    return risks;
+  }
+
+  /**
+   * Helper: Generate unique evaluation ID
+   * @returns {string}
+   */
+  static _generateEvaluationId() {
+    return 'eval_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  }
+
+  /**
+   * Get evaluation display data
+   * BR-13: Includes disclaimer about reference-only nature
+   * @param {object} evaluation - Evaluation object
+   * @returns {object} - Display-ready evaluation
+   */
+  static getEvaluationDisplay(evaluation) {
+    if (!evaluation) {
+      return null;
+    }
+
+    return {
+      ...evaluation,
+      scoreCategory: this._scoreToCategory(evaluation.startupScore),
+      scoreDescription: this._scoreToDescription(evaluation.startupScore),
+      disclaimer: evaluation.disclaimer // BR-13
+    };
+  }
+
+  /**
+   * Helper: Convert score to category
+   * @param {number} score
+   * @returns {string}
+   */
+  static _scoreToCategory(score) {
+    if (score >= 80) return 'Excellent';
+    if (score >= 60) return 'Good';
+    if (score >= 40) return 'Fair';
+    return 'Needs Improvement';
+  }
+
+  /**
+   * Helper: Convert score to description
+   * @param {number} score
+   * @returns {string}
+   */
+  static _scoreToDescription(score) {
+    if (score >= 80) return 'Project shows strong potential with solid fundamentals';
+    if (score >= 60) return 'Project has good foundation with some areas for improvement';
+    if (score >= 40) return 'Project needs development in key areas';
+    return 'Project requires significant refinement before investment consideration';
+  }
+}
+
+export default AIEvaluationService;

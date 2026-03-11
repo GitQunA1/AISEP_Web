@@ -11,7 +11,7 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
     { icon: Home, label: 'Home', href: '#' },
     { icon: LayoutDashboard, label: 'Dashboard', href: '#', showWhenLoggedIn: true },
     { icon: Search, label: 'Explore', href: '#' },
-    { icon: TrendingUp, label: 'Investors', href: '#' },
+    { icon: TrendingUp, label: 'Investors', href: '#', hideFor: ['investor'] },
     { icon: Users, label: 'Advisors', href: '#', hideFor: ['advisor'] },
     { icon: User, label: 'Profile', href: '#' },
   ];

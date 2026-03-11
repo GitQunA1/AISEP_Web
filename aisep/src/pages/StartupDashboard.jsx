@@ -1,9 +1,13 @@
 import React, { useState } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye } from 'lucide-react';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, RefreshCw } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import SuccessModal from '../components/common/SuccessModal';
 import FeedHeader from '../components/feed/FeedHeader';
+import ProjectValidationService from '../services/ProjectValidation.js';
+import BlockchainService from '../services/BlockchainService.js';
+import AIEvaluationService from '../services/AIEvaluationService.js';
+import { PROJECT_STATUS, isUserEditable } from '../constants/ProjectStatus.js';
 
 /**
  * StartupDashboard - Comprehensive dashboard for startup founders
@@ -13,17 +17,32 @@ export default function StartupDashboard({ user }) {
     const [activeSection, setActiveSection] = useState('overview');
     const [showCompleteInfoForm, setShowCompleteInfoForm] = useState(false);
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [isProtectingDocuments, setIsProtectingDocuments] = useState(false);
+    const [isEvaluatingAI, setIsEvaluatingAI] = useState(false);
+    const [isSubmittingProject, setIsSubmittingProject] = useState(false);
+    const [isPublishingProject, setIsPublishingProject] = useState(false);
+    const [blockchainProof, setBlockchainProof] = useState(null);
     const [project, setProject] = useState({
         id: 1,
         name: 'AI Analytics Platform',
         tagline: 'Real-time data analytics with AI',
-        status: 'pending',
-        submittedDate: '2024-01-15',
+        status: PROJECT_STATUS.DRAFT,
+        createdAt: '2024-01-15',
+        submittedDate: null,
         reviewedDate: null,
         feedback: null,
         description: 'A comprehensive AI-powered analytics platform for real-time data insights',
         industry: 'AI/ML',
-        stage: 'MVP'
+        stage: 'MVP',
+        // BR-08: Blockchain fields
+        blockchainHash: null,
+        transactionHash: null,
+        ipProtectionDate: null,
+        // BR-10: AI Evaluation fields
+        aiEvaluation: null,
+        // BR-19: Publication fields
+        isPublished: false
     });
     const [showProjectForm, setShowProjectForm] = useState(false);
     const [projectFormData, setProjectFormData] = useState({
@@ -95,6 +114,164 @@ export default function StartupDashboard({ user }) {
 
     const handleDeleteDocument = (id) => {
         setDocuments(documents.filter(doc => doc.id !== id));
+    };
+
+    // BR-08: Protect Documents on Blockchain
+    const handleProtectDocuments = async () => {
+        setIsProtectingDocuments(true);
+        try {
+            // Get files from documents state
+            const filesToProtect = documents
+                .filter(doc => doc.type && ['pdf', 'docx', 'xlsx'].includes(doc.type))
+                .map(doc => new File([new ArrayBuffer()], doc.name, { type: 'application/octet-stream' }));
+
+            if (filesToProtect.length === 0) {
+                alert('Please upload at least one document before protecting on blockchain');
+                setIsProtectingDocuments(false);
+                return;
+            }
+
+            const result = await BlockchainService.protectDocumentsOnBlockchain(filesToProtect, project.id);
+            
+            if (result.success) {
+                // Update project with blockchain info
+                const updatedProject = {
+                    ...project,
+                    blockchainHash: result.blockchainHash,
+                    transactionHash: result.transactionHash,
+                    ipProtectionDate: result.timestamp,
+                    status: PROJECT_STATUS.IP_PROTECTED
+                };
+                setProject(updatedProject);
+                setBlockchainProof(BlockchainService.getBlockchainProof(updatedProject));
+                
+                setSuccessMessage('✅ Documents protected on blockchain successfully!');
+                setShowSuccessModal(true);
+
+                // Auto-trigger AI Evaluation (BR-10)
+                setTimeout(() => handleAIEvaluation(updatedProject), 1500);
+            } else {
+                alert('Failed to protect documents: ' + result.error);
+            }
+        } catch (error) {
+            console.error('Protection error:', error);
+            alert('Error protecting documents: ' + error.message);
+        } finally {
+            setIsProtectingDocuments(false);
+        }
+    };
+
+    // BR-10: Trigger AI Evaluation
+    const handleAIEvaluation = async (projectData) => {
+        setIsEvaluatingAI(true);
+        try {
+            const result = await AIEvaluationService.evaluateProject(projectData, documents);
+            
+            if (result.success) {
+                const updatedProject = {
+                    ...projectData,
+                    aiEvaluation: result.evaluation
+                };
+                setProject(updatedProject);
+                
+                setSuccessMessage(`🤖 AI Evaluation Complete!\n\nScore: ${result.evaluation.startupScore}/100 (${result.evaluation.scoreCategory})`);
+                setShowSuccessModal(true);
+            } else {
+                console.error('AI Evaluation error:', result.error);
+            }
+        } catch (error) {
+            console.error('AI evaluation error:', error);
+        } finally {
+            setIsEvaluatingAI(false);
+        }
+    };
+
+    // BR-15: Submit Project for Staff Review
+    const handleSubmitForReview = () => {
+        // Check email verification (BR-02)
+        if (user && !user.emailVerified) {
+            alert('Please verify your email before submitting your project');
+            return;
+        }
+
+        // Check prerequisites
+        if (!project.blockchainHash) {
+            alert('Please protect your documents on blockchain first');
+            return;
+        }
+
+        if (!project.aiEvaluation) {
+            alert('Please complete AI evaluation first');
+            return;
+        }
+
+        setIsSubmittingProject(true);
+        try {
+            // Update status to SUBMITTED
+            const updatedProject = {
+                ...project,
+                status: PROJECT_STATUS.SUBMITTED,
+                submittedDate: new Date().toISOString().split('T')[0]
+            };
+            setProject(updatedProject);
+            
+            setSuccessMessage('✅ Project submitted for staff review!\n\nOur team will review it within 2-3 business days.');
+            setShowSuccessModal(true);
+        } catch (error) {
+            alert('Error submitting project: ' + error.message);
+        } finally {
+            setIsSubmittingProject(false);
+        }
+    };
+
+    // BR-19: Publish Project
+    const handlePublishProject = async () => {
+        // Check all publication prerequisites (BR-19)
+        const checklist = ProjectValidationService.getPublicationChecklist(project);
+        
+        if (!checklist.canPublish) {
+            const remaining = checklist.remainingItems.join(', ');
+            alert(`Cannot publish yet. Remaining: ${remaining}`);
+            return;
+        }
+
+        setIsPublishingProject(true);
+        try {
+            const updatedProject = {
+                ...project,
+                status: PROJECT_STATUS.PUBLISHED,
+                isPublished: true
+            };
+            setProject(updatedProject);
+            
+            setSuccessMessage('🎉 Congratulations!\n\nYour project is now published and visible to investors and advisors!');
+            setShowSuccessModal(true);
+        } catch (error) {
+            alert('Error publishing project: ' + error.message);
+        } finally {
+            setIsPublishingProject(false);
+        }
+    };
+
+    // BR-18: Resubmit After Rejection
+    const handleResubmitProject = () => {
+        setIsSubmittingProject(true);
+        try {
+            const updatedProject = {
+                ...project,
+                status: PROJECT_STATUS.SUBMITTED,
+                submittedDate: new Date().toISOString().split('T')[0],
+                feedback: null
+            };
+            setProject(updatedProject);
+            
+            setSuccessMessage('✅ Project resubmitted for review!');
+            setShowSuccessModal(true);
+        } catch (error) {
+            alert('Error resubmitting project: ' + error.message);
+        } finally {
+            setIsSubmittingProject(false);
+        }
     };
 
     return (
@@ -461,41 +638,213 @@ export default function StartupDashboard({ user }) {
                                         </p>
 
                                         <div className={styles.listMeta}>
-                                            Submitted: {project.submittedDate}
+                                            Status: <strong>{project.status}</strong>
+                                            {project.submittedDate && ` • Submitted: ${project.submittedDate}`}
                                             {project.reviewedDate && ` • Reviewed: ${project.reviewedDate}`}
                                         </div>
+
+                                        {/* Blockchain Proof Display */}
+                                        {blockchainProof && blockchainProof.available && (
+                                            <div style={{
+                                                background: '#F0FDF4',
+                                                border: '1px solid #86EFAC',
+                                                borderRadius: '8px',
+                                                padding: '12px',
+                                                marginTop: '12px',
+                                                fontSize: '13px'
+                                            }}>
+                                                <div style={{ color: '#166534', fontWeight: '600', marginBottom: '6px' }}>
+                                                    ✅ IP Protected on Blockchain
+                                                </div>
+                                                <div style={{ color: '#15803D', fontSize: '12px' }}>
+                                                    Hash: {blockchainProof.shortHash}
+                                                </div>
+                                                <div style={{ color: '#15803D', fontSize: '12px' }}>
+                                                    Timestamp: {blockchainProof.timestamp}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* AI Evaluation Display */}
+                                        {project.aiEvaluation && (
+                                            <div style={{
+                                                background: '#F5F3FF',
+                                                border: '1px solid #C4B5FD',
+                                                borderRadius: '8px',
+                                                padding: '12px',
+                                                marginTop: '12px',
+                                                fontSize: '13px'
+                                            }}>
+                                                <div style={{ color: '#5B21B6', fontWeight: '600', marginBottom: '6px' }}>
+                                                    🤖 AI Evaluation: {project.aiEvaluation.startupScore}/100 ({project.aiEvaluation.scoreCategory})
+                                                </div>
+                                                <div style={{ color: '#6D28D9', fontSize: '11px' }}>
+                                                    {project.aiEvaluation.disclaimer}
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className={styles.listActions}>
-                                        <span className={`${styles.badge} ${project.status === 'pending' ? styles.badgePending : styles.badgeSuccess}`}>
-                                            {project.status === 'pending' ? 'Pending Review' : 'Approved'}
+
+                                    {/* Action Buttons */}
+                                    <div className={styles.listActions} style={{ display: 'flex', flexDirection: 'column', gap: '8px', alignItems: 'flex-end' }}>
+                                        {/* Status Badge */}
+                                        <span className={`${styles.badge}`} style={{
+                                            background: project.status === PROJECT_STATUS.DRAFT ? '#E5E7EB' :
+                                                       project.status === PROJECT_STATUS.IP_PROTECTED ? '#DBEAFE' :
+                                                       project.status === PROJECT_STATUS.SUBMITTED ? '#FEF3C7' :
+                                                       project.status === PROJECT_STATUS.APPROVED ? '#D1FAE5' :
+                                                       project.status === PROJECT_STATUS.PUBLISHED ? '#DCFCE7' : '#FEE2E2',
+                                            color: project.status === PROJECT_STATUS.DRAFT ? '#374151' :
+                                                   project.status === PROJECT_STATUS.IP_PROTECTED ? '#1E40AF' :
+                                                   project.status === PROJECT_STATUS.SUBMITTED ? '#92400E' :
+                                                   project.status === PROJECT_STATUS.APPROVED ? '#065F46' :
+                                                   project.status === PROJECT_STATUS.PUBLISHED ? '#166534' : '#991B1B'
+                                        }}>
+                                            {project.status}
                                         </span>
-                                        <button
-                                            onClick={() => {
-                                                setProjectFormData({
-                                                    projectName: project.name,
-                                                    description: project.description,
-                                                    tagline: project.tagline,
-                                                    industry: project.industry,
-                                                    stage: project.stage,
-                                                    problemStatement: '',
-                                                    solution: '',
-                                                    targetMarket: '',
-                                                    teamSize: '',
-                                                    fundingStage: '',
-                                                    fundingAmount: '',
-                                                    currentRevenue: '',
-                                                    monthlyBurn: '',
-                                                    website: '',
-                                                    videoLink: '',
-                                                    keyFeatures: '',
-                                                });
-                                                setShowProjectForm(true);
-                                            }}
-                                            className={styles.secondaryBtn}
-                                            style={{ fontSize: '13px', padding: '8px 16px' }}
-                                        >
-                                            Edit Project
-                                        </button>
+
+                                        {/* Edit Button - Only if editable */}
+                                        {isUserEditable(project.status) && (
+                                            <button
+                                                onClick={() => {
+                                                    setProjectFormData({
+                                                        projectName: project.name,
+                                                        description: project.description,
+                                                        tagline: project.tagline,
+                                                        industry: project.industry,
+                                                        stage: project.stage,
+                                                        problemStatement: '',
+                                                        solution: '',
+                                                        targetMarket: '',
+                                                        teamSize: '',
+                                                        fundingStage: '',
+                                                        fundingAmount: '',
+                                                        currentRevenue: '',
+                                                        monthlyBurn: '',
+                                                        website: '',
+                                                        videoLink: '',
+                                                        keyFeatures: '',
+                                                    });
+                                                    setShowProjectForm(true);
+                                                }}
+                                                className={styles.secondaryBtn}
+                                                style={{ fontSize: '13px', padding: '8px 16px' }}
+                                            >
+                                                ✏️ Edit Project
+                                            </button>
+                                        )}
+
+                                        {/* BR-08: Protect Documents Button */}
+                                        {!project.blockchainHash && project.status === PROJECT_STATUS.DRAFT && (
+                                            <button
+                                                onClick={handleProtectDocuments}
+                                                disabled={isProtectingDocuments}
+                                                style={{
+                                                    padding: '10px 16px',
+                                                    background: '#3B82F6',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    cursor: isProtectingDocuments ? 'not-allowed' : 'pointer',
+                                                    fontSize: '13px',
+                                                    fontWeight: '600',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    opacity: isProtectingDocuments ? 0.6 : 1
+                                                }}
+                                            >
+                                                <Shield size={16} />
+                                                {isProtectingDocuments ? 'Protecting...' : 'Protect Documents'}
+                                            </button>
+                                        )}
+
+                                        {/* BR-15: Submit for Review Button */}
+                                        {project.status === PROJECT_STATUS.IP_PROTECTED && project.aiEvaluation && (
+                                            <button
+                                                onClick={handleSubmitForReview}
+                                                disabled={isSubmittingProject}
+                                                style={{
+                                                    padding: '10px 16px',
+                                                    background: '#F59E0B',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    cursor: isSubmittingProject ? 'not-allowed' : 'pointer',
+                                                    fontSize: '13px',
+                                                    fontWeight: '600',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    opacity: isSubmittingProject ? 0.6 : 1
+                                                }}
+                                            >
+                                                <Send size={16} />
+                                                {isSubmittingProject ? 'Submitting...' : 'Submit for Review'}
+                                            </button>
+                                        )}
+
+                                        {/* BR-19: Publish Button */}
+                                        {project.status === PROJECT_STATUS.APPROVED && (
+                                            <button
+                                                onClick={handlePublishProject}
+                                                disabled={isPublishingProject}
+                                                style={{
+                                                    padding: '10px 16px',
+                                                    background: '#10B981',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    cursor: isPublishingProject ? 'not-allowed' : 'pointer',
+                                                    fontSize: '13px',
+                                                    fontWeight: '600',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    opacity: isPublishingProject ? 0.6 : 1
+                                                }}
+                                            >
+                                                <Zap size={16} />
+                                                {isPublishingProject ? 'Publishing...' : 'Publish Project'}
+                                            </button>
+                                        )}
+
+                                        {/* BR-18: Resubmit After Rejection */}
+                                        {project.status === PROJECT_STATUS.REJECTED && (
+                                            <button
+                                                onClick={handleResubmitProject}
+                                                disabled={isSubmittingProject}
+                                                style={{
+                                                    padding: '10px 16px',
+                                                    background: '#8B5CF6',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '6px',
+                                                    cursor: isSubmittingProject ? 'not-allowed' : 'pointer',
+                                                    fontSize: '13px',
+                                                    fontWeight: '600',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '6px',
+                                                    opacity: isSubmittingProject ? 0.6 : 1
+                                                }}
+                                            >
+                                                <RefreshCw size={16} />
+                                                {isSubmittingProject ? 'Resubmitting...' : 'Resubmit Project'}
+                                            </button>
+                                        )}
+
+                                        {/* Publication Checklist for IP_PROTECTED status */}
+                                        {project.status === PROJECT_STATUS.IP_PROTECTED && !project.aiEvaluation && (
+                                            <div style={{
+                                                fontSize: '12px',
+                                                color: '#6B7280',
+                                                textAlign: 'right',
+                                                marginTop: '4px'
+                                            }}>
+                                                ⏳ Running AI evaluation...
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             )}
@@ -677,8 +1026,8 @@ export default function StartupDashboard({ user }) {
             {showSuccessModal && (
                 <SuccessModal
                     onClose={() => setShowSuccessModal(false)}
-                    title="Profile Submitted Successfully!"
-                    message="Thank you for completing your startup profile. Our team will review your information and get back to you soon."
+                    title={successMessage.split('\n')[0] || 'Success!'}
+                    message={successMessage.split('\n').slice(1).join('\n') || successMessage}
                 />
             )}
         </div>
