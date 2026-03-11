@@ -1,0 +1,111 @@
+.feedHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--spacing-md) var(--spacing-lg);
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  position: relative;
+  /* Scrolls with page */
+  /* Top/Z-index removed */
+  transition: background-color var(--transition-base), border-color var(--transition-base);
+  gap: var(--spacing-lg);
+}
+
+.headerContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.titleSection {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.title {
+  font-size: var(--font-size-xl);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 var(--spacing-xs) 0;
+  transition: color var(--transition-base);
+}
+
+.subtitle {
+  font-size: var(--font-size-sm);
+  color: var(--text-secondary);
+  margin: 0;
+  transition: color var(--transition-base);
+}
+
+.postBtn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #1f2937;
+  color: white;
+  border: none;
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.postBtn:hover {
+  background: #111827;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.postBtn:active {
+  transform: translateY(0);
+}
+
+.themeToggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
+  border-radius: 50%;
+  background-color: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  padding: 0;
+  font-size: inherit;
+  flex-shrink: 0;
+}
+
+.themeToggle:hover {
+  background-color: var(--bg-hover);
+  color: var(--primary-blue);
+}
+
+@media (max-width: 768px) {
+  .feedHeader {
+    padding: var(--spacing-sm) var(--spacing-md);
+    position: relative;
+    /* Override sticky - should scroll away on mobile */
+    top: auto;
+  }
+
+  .title {
+    font-size: var(--font-size-lg);
+  }
+
+  .themeToggle {
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    min-height: 36px;
+  }
+}

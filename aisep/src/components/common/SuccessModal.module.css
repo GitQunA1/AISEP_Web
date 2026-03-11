@@ -1,0 +1,145 @@
+/* Overlay */
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.6);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+/* Modal */
+.modal {
+    background-color: var(--bg-primary);
+    border-radius: 20px;
+    width: 100%;
+    max-width: 480px;
+    padding: 40px 32px 32px 32px;
+    position: relative;
+    text-align: center;
+    animation: slideUp 0.3s ease-out;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+@keyframes slideUp {
+    from {
+        transform: translateY(30px);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+/* Close Button */
+.closeButton {
+    position: absolute;
+    top: 16px;
+    right: 16px;
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s;
+}
+
+.closeButton:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+/* Icon */
+.iconContainer {
+    margin-bottom: 24px;
+}
+
+.successIcon {
+    color: #10b981;
+    animation: scaleIn 0.4s ease-out 0.2s both;
+}
+
+@keyframes scaleIn {
+    from {
+        transform: scale(0);
+    }
+
+    to {
+        transform: scale(1);
+    }
+}
+
+/* Title */
+.title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 16px 0;
+}
+
+/* Message */
+.message {
+    font-size: 15px;
+    color: var(--text-secondary);
+    line-height: 1.6;
+    margin: 0 0 32px 0;
+    max-width: 400px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Primary Button */
+.primaryButton {
+    width: 100%;
+    padding: 14px 24px;
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 9999px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.primaryButton:hover {
+    background-color: #1a8cd8;
+}
+
+/* Mobile Responsive */
+@media (max-width: 767px) {
+    .modal {
+        padding: 32px 24px 24px 24px;
+        max-width: 100%;
+    }
+
+    .title {
+        font-size: 20px;
+    }
+
+    .message {
+        font-size: 14px;
+    }
+}

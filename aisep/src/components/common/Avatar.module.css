@@ -1,0 +1,59 @@
+.avatar {
+  border-radius: var(--radius-full);
+  object-fit: cover;
+  background-color: var(--border-light);
+}
+
+.avatar--sm {
+  width: 40px;
+  height: 40px;
+}
+
+.avatar--md {
+  width: 48px;
+  height: 48px;
+}
+
+.avatar--lg {
+  width: 64px;
+  height: 64px;
+}
+
+/* Fallback Avatar with First Letter */
+.avatarFallback {
+  border-radius: var(--radius-full);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-weight: 700;
+  color: white;
+}
+
+.avatarFallback--sm {
+  width: 40px;
+  height: 40px;
+}
+
+.avatarFallback--md {
+  width: 48px;
+  height: 48px;
+}
+
+.avatarFallback--lg {
+  width: 64px;
+  height: 64px;
+}
+
+.fallbackText {
+  font-size: var(--font-size-base);
+  font-weight: 700;
+}
+
+.avatarFallback--sm .fallbackText {
+  font-size: 14px;
+}
+
+.avatarFallback--lg .fallbackText {
+  font-size: 24px;
+}

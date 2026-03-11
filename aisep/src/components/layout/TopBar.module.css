@@ -1,0 +1,53 @@
+.topBar {
+  /* Fixed Positioning */
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 60px;
+  /* Explicit height */
+
+  /* Visuals */
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  z-index: 40;
+  /* Above content (1), below Sidebar (50+) */
+
+  /* Layout */
+  display: none;
+  /* Hidden on Desktop */
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+.logoSection {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.title {
+  font-size: var(--font-size-lg);
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.menuButton {
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: var(--spacing-sm);
+}
+
+@media (max-width: 1023px) {
+  .topBar {
+    display: flex;
+  }
+}

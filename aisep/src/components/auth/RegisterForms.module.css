@@ -1,0 +1,427 @@
+/* =========================================
+   1. MAIN CARD STRUCTURE (The Container)
+   ========================================= */
+
+/* The wrapper for the whole form area */
+.formCard {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* --- DESKTOP VIEW (> 768px) --- */
+/* Implements the "Fixed Modal" look */
+@media (min-width: 768px) {
+  .formCard {
+    width: 100%;
+    max-width: 800px;
+    /* Increased width for better review step visibility */
+    height: auto;
+    /* Allow it to shrink if content is small */
+    max-height: 90vh;
+    /* KEY FIX: Constrain height to viewport */
+    margin: 0 auto;
+    /* Center horizontally */
+
+    /* Card Styling */
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.08);
+
+    /* Layout Logic */
+    overflow: hidden;
+    /* Clip content so scrollbar stays inside */
+    display: flex;
+    /* Ensure flex context */
+    flex-direction: column;
+    position: relative;
+  }
+}
+
+/* --- MOBILE VIEW (< 768px) --- */
+/* Implements the "Full Screen" look */
+@media (max-width: 767px) {
+  .formCard {
+    min-height: 100vh;
+    width: 100%;
+    border: none;
+    box-shadow: none;
+    padding-bottom: 100px;
+    /* Space for fixed footer */
+  }
+}
+
+/* =========================================
+   2. CARD SECTIONS (Header, Body, Footer)
+   ========================================= */
+
+/* --- HEADER: Progress Bar & Titles --- */
+.cardHeader {
+  flex-shrink: 0;
+  /* Never shrink */
+  background-color: var(--bg-primary);
+  z-index: 10;
+}
+
+@media (min-width: 768px) {
+  .cardHeader {
+    padding: 32px 40px 0 40px;
+    /* Restored spacious padding */
+    margin-bottom: 32px;
+    /* Restored spacious margin */
+  }
+}
+
+@media (max-width: 767px) {
+  .cardHeader {
+    padding: 24px 20px 0 20px;
+    margin-bottom: 24px;
+  }
+}
+
+/* --- BODY: The Scrollable Input Area --- */
+.cardBody {
+  flex: 1;
+  /* Take up all remaining space */
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  /* Restored spacious gap */
+}
+
+/* Desktop: Scroll INSIDE this area */
+@media (min-width: 768px) {
+  .cardBody {
+    padding: 0 40px 40px 40px;
+    /* Restored spacious padding */
+    overflow-y: auto;
+    /* KEY FIX: Scroll internally */
+
+    /* Thin Scrollbar Styling */
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+  }
+
+  .cardBody::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .cardBody::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .cardBody::-webkit-scrollbar-thumb {
+    background-color: #cfd9de;
+    border-radius: 4px;
+  }
+}
+
+/* Mobile: Natural flow */
+@media (max-width: 767px) {
+  .cardBody {
+    padding: 0 20px;
+    overflow: visible;
+  }
+}
+
+/* --- FOOTER: The Action Buttons --- */
+.cardFooter {
+  display: flex;
+  gap: 16px;
+  background-color: var(--bg-primary);
+}
+
+/* Desktop: Pinned to bottom of card */
+@media (min-width: 768px) {
+  .cardFooter {
+    flex-shrink: 0;
+    /* Never shrink */
+    padding: 24px 40px 32px 40px;
+    /* Restored spacious padding */
+    border-top: 1px solid var(--border-color);
+  }
+}
+
+/* Mobile: Fixed to bottom of screen */
+@media (max-width: 767px) {
+  .cardFooter {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 16px;
+    gap: 12px;
+    flex-direction: row;
+    /* Keep buttons side by side */
+    border-top: 1px solid var(--border-color);
+    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+    z-index: 100;
+  }
+}
+
+/* =========================================
+   3. INTERNAL COMPONENTS
+   ========================================= */
+
+/* Progress Bar */
+.progressBar {
+  height: 4px;
+  background-color: var(--border-color);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-bottom: 12px;
+  /* Restored margin */
+}
+
+.progressFill {
+  height: 100%;
+  background-color: var(--primary-blue);
+  transition: width 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.stepIndicator {
+  font-size: 0.8125rem;
+  /* Restored size */
+  color: var(--text-secondary);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Typography */
+.stepTitle {
+  font-size: 1.75rem;
+  /* Restored size */
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+  /* Restored margin */
+}
+
+.stepSubtitle {
+  font-size: 1rem;
+  /* Restored size */
+  color: var(--text-secondary);
+  margin: 0;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+/* Form Groups & Inputs */
+.stepContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  /* Restored gap */
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  /* Restored gap */
+}
+
+.label {
+  font-size: 0.9375rem;
+  /* Restored size */
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.required {
+  color: var(--primary-blue);
+}
+
+/* High Contrast Inputs */
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 16px;
+  /* Restored padding */
+  font-size: 1rem;
+  font-family: inherit;
+  background-color: var(--bg-secondary);
+  border: 1px solid #cfd9de;
+  border-radius: 10px;
+  /* Slightly rounder */
+  color: var(--text-primary);
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  background-color: var(--bg-primary);
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.15);
+  /* Thicker focus ring */
+}
+
+.inputError {
+  border-color: #e74c3c;
+  background-color: rgba(231, 76, 60, 0.05);
+}
+
+.errorText {
+  font-size: 0.8125rem;
+  color: #e74c3c;
+  margin-top: 6px;
+  font-weight: 600;
+}
+
+/* Grid for Desktop Inputs */
+.twoColumnGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+
+@media (max-width: 640px) {
+  .twoColumnGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Buttons */
+.primaryButton {
+  flex: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  border: none;
+  border-radius: 9999px;
+  background-color: var(--primary-blue);
+  color: white;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.primaryButton:hover {
+  background-color: #1a91da;
+}
+
+@media (max-width: 767px) {
+  .primaryButton {
+    height: 56px;
+    font-size: 1.0625rem;
+  }
+}
+
+.secondaryButton {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  border: 1px solid #cfd9de;
+  border-radius: 9999px;
+  background-color: transparent;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.secondaryButton:hover {
+  background-color: var(--bg-hover);
+}
+
+@media (max-width: 767px) {
+  .secondaryButton {
+    height: 56px;
+    font-size: 1.0625rem;
+  }
+}
+
+/* Select Arrow Fix */
+.select {
+  appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23536471' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 16px center;
+  background-size: 20px;
+  padding-right: 44px;
+  cursor: pointer;
+}
+
+/* Pills & Tags */
+.pillGroup,
+.radioGroup,
+.tagGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+/* Increased Gap */
+.pill,
+.radioLabel,
+.tag {
+  padding: 12px 20px;
+  /* Larger hit area */
+  background-color: var(--bg-secondary);
+  border: 1px solid #cfd9de;
+  border-radius: 9999px;
+  color: var(--text-primary);
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tag {
+  border-radius: 12px;
+}
+
+.pill:hover,
+.radioLabel:hover,
+.tag:hover {
+  background-color: #e7e7e8;
+  border-color: #b9cad3;
+}
+
+.pillActive,
+.tagActive,
+.radioLabel input:checked+span {
+  background-color: var(--primary-blue) !important;
+  color: white !important;
+  border-color: var(--primary-blue) !important;
+}
+
+.radioLabel input {
+  display: none;
+}
+
+/* Hide default radio */
+
+.textarea {
+  min-height: 140px;
+  resize: vertical;
+}
+
+.charCount {
+  text-align: right;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.kycInfo {
+  padding: 20px;
+  background-color: rgba(29, 155, 240, 0.05);
+  border: 1px solid rgba(29, 155, 240, 0.2);
+  border-radius: 12px;
+  color: var(--text-primary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}

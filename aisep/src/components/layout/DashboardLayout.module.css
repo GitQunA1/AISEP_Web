@@ -1,0 +1,114 @@
+/* GLOBAL RESET for this layout */
+:global(body) {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    /* CRITICAL: Kills the browser's default scrollbar */
+}
+
+/* THE GRID CONTAINER */
+.mainContainer {
+    display: grid;
+    /* Fixed Sidebar (275px) | Fluid Feed (1fr) | Fixed Right Panel (350px) */
+    grid-template-columns: 275px 1fr 350px;
+    grid-template-rows: 100vh;
+    /* Force exact viewport height */
+    width: 100%;
+    /* Fits perfectly within the body */
+    height: 100vh;
+    background-color: var(--bg-primary);
+    overflow: hidden;
+    /* Prevents ANY outer scrolling */
+}
+
+/* COLUMN 1: LEFT SIDEBAR */
+.leftSidebar {
+    height: 100%;
+    /* border-right removed */
+    display: flex;
+    flex-direction: column;
+    /* PREVENT SCROLL HERE: The internal Sidebar component handles its own overflow if needed, 
+     or acts as a static container. */
+    overflow: hidden;
+}
+
+/* COLUMN 2: CENTER FEED (The ONLY thing that scrolls) */
+.mainContent {
+    height: 100%;
+    overflow-y: auto;
+    /* Internal scrolling for the feed */
+    /* border-right removed */
+    scroll-behavior: smooth;
+    /* Hide scrollbar for cleaner look */
+    scrollbar-width: thin;
+}
+
+.dashboardContainer {
+    flex: 1;
+    /* Ensure children can expand */
+    width: 100%;
+}
+
+/* COLUMN 3: RIGHT PANEL */
+.rightPanel {
+    height: 100%;
+    overflow-y: auto;
+    /* Independent scrolling */
+    display: block;
+}
+
+/* RESPONSIVE: Mobile/Tablet (< 1024px) */
+@media (max-width: 1023px) {
+    .mainContainer {
+        display: block;
+        /* Switch to normal block layout for mobile */
+        height: auto;
+        overflow-y: auto;
+        /* Allow window scroll on mobile */
+    }
+
+    .leftSidebar,
+    .rightPanel {
+        display: none;
+        /* Hidden - Sidebar becomes Drawer */
+    }
+
+    .mainContent {
+        height: auto;
+        border: none;
+        overflow: visible;
+    }
+}
+
+
+/* Scrollbar styling - CRITICAL: Must be defined here to override browser defaults */
+.mainContent::-webkit-scrollbar,
+.rightPanel::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
+}
+
+.mainContent::-webkit-scrollbar-track,
+.rightPanel::-webkit-scrollbar-track {
+    background: var(--bg-primary) !important;
+}
+
+.mainContent::-webkit-scrollbar-thumb,
+.rightPanel::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb) !important;
+    border-radius: 99px !important;
+    border: 2px solid var(--bg-primary) !important;
+    /* Creates padding effect */
+}
+
+.mainContent::-webkit-scrollbar-thumb:hover,
+.rightPanel::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover) !important;
+}
+
+/* Firefox scrollbar */
+.mainContent,
+.rightPanel {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--bg-primary);
+}

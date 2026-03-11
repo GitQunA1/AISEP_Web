@@ -1,0 +1,270 @@
+/* Container - Full Page */
+.container {
+  min-height: 100vh;
+  width: 100%;
+  background-color: var(--bg-primary);
+  display: flex;
+  flex-direction: column;
+  color: var(--text-primary);
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* --- MOBILE HEADER (Fixed Top - Visible < 768px) --- */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 53px;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  display: none;
+  /* Hidden on Desktop */
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+}
+
+/* Mobile Back Button */
+.mobileBackButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s ease;
+}
+
+.mobileBackButton:hover {
+  background-color: var(--hover-bg);
+}
+
+/* Mobile Header Logo */
+.headerLogo {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  font-size: 18px;
+}
+
+/* --- MAIN CONTENT WRAPPER --- */
+.contentWrapper {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  gap: 24px;
+  width: 100%;
+  margin-top: 53px;
+  /* Offset for mobile header */
+}
+
+/* --- DESKTOP LOGO (Centered Top - Visible > 768px) --- */
+.desktopLogo {
+  display: none;
+  /* Hidden on Mobile */
+  align-items: center;
+  gap: 12px;
+  font-weight: 800;
+  font-size: 32px;
+  /* Large size */
+  letter-spacing: -0.5px;
+  margin-bottom: 16px;
+}
+
+/* Shared Logo Styles */
+.logoIcon,
+.headerLogoIcon {
+  color: var(--primary-color);
+  /* Rocket is Blue */
+}
+
+.logoText,
+.headerLogoText {
+  color: var(--text-primary);
+  /* Text is Black/White - NOT Blue */
+}
+
+/* --- TYPOGRAPHY --- */
+.heading {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0;
+  text-align: center;
+  letter-spacing: -0.5px;
+}
+
+.subheading {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin: 0;
+  text-align: center;
+  max-width: 500px;
+  line-height: 1.5;
+}
+
+/* --- CARDS GRID SYSTEM --- */
+.cardsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  /* Stacked on mobile */
+  gap: 20px;
+  width: 100%;
+  max-width: 400px;
+  margin-top: 24px;
+}
+
+/* --- CARD COMPONENT (The "Pop" Style) --- */
+.card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 32px 24px;
+
+  /* Visual Definition */
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  /* Visible Border */
+  border-radius: 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+  /* Subtle Shadow */
+
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Hover Effect */
+.card:hover {
+  border-color: var(--primary-color);
+  /* Blue Border */
+  background-color: rgba(29, 155, 240, 0.03);
+  /* Faint Blue Tint */
+  transform: translateY(-4px);
+  /* Lift Up */
+  box-shadow: 0 12px 24px rgba(29, 155, 240, 0.12);
+  /* Blue Shadow Glow */
+}
+
+/* Icon Circle */
+.iconWrapper {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  background-color: rgba(29, 155, 240, 0.1);
+  /* Light Blue Circle */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--primary-color);
+  margin-bottom: 8px;
+  transition: transform 0.2s ease;
+}
+
+.card:hover .iconWrapper {
+  transform: scale(1.1);
+}
+
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.cardDescription {
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* --- DESKTOP BACK BUTTON (The Outline Fix) --- */
+.desktopBackButton {
+  /* Hidden on Mobile - Shown only on Desktop */
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+
+  margin-top: 48px;
+  padding: 12px 32px;
+
+  /* Outline Style */
+  background-color: transparent;
+  border: 1px solid var(--border-color);
+  /* Visible Border */
+  border-radius: 9999px;
+  /* Pill Shape */
+
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.desktopBackButton:hover {
+  border-color: var(--primary-color);
+  color: var(--primary-color);
+  background-color: rgba(29, 155, 240, 0.05);
+}
+
+/* --- MEDIA QUERIES --- */
+
+/* Mobile (< 768px) */
+@media (max-width: 767px) {
+  .header {
+    display: flex;
+  }
+
+  /* Show fixed header */
+}
+
+/* Desktop (> 768px) */
+@media (min-width: 768px) {
+  .contentWrapper {
+    margin-top: 0;
+    padding-top: 60px;
+    max-width: 1100px;
+    margin-inline: auto;
+    /* Center page */
+  }
+
+  .heading {
+    font-size: 2.5rem;
+  }
+
+  .desktopLogo {
+    display: flex;
+  }
+
+  /* Show big logo */
+
+  .cardsGrid {
+    grid-template-columns: repeat(4, 1fr);
+    /* 4 Cards in a row */
+    max-width: 1200px;
+    gap: 24px;
+  }
+
+  .desktopBackButton {
+    display: flex;
+  }
+
+  /* Show bottom button */
+}

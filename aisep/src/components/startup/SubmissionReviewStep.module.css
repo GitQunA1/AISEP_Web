@@ -1,0 +1,270 @@
+/* Review Container */
+.reviewContainer {
+    padding: 0;
+}
+
+.reviewHeader {
+    margin-bottom: 32px;
+}
+
+.reviewTitle {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 8px 0;
+}
+
+.reviewSubtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin: 0;
+    line-height: 1.5;
+}
+
+/* Summary Grid */
+.summaryGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+/* Summary Card */
+.summaryCard {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    transition: box-shadow 0.2s;
+}
+
+.summaryCard:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+}
+
+.cardTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.editButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.editButton:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--text-secondary);
+}
+
+.cardBody {
+    padding: 20px;
+}
+
+/* Field Row */
+.fieldRow {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.fieldRow:last-child {
+    border-bottom: none;
+}
+
+.fieldLabel {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    min-width: 160px;
+    flex-shrink: 0;
+}
+
+.fieldValue {
+    font-size: 14px;
+    color: var(--text-primary);
+    flex: 1;
+    word-break: break-word;
+}
+
+/* Logo Preview */
+.logoPreview {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+}
+
+.logoImage {
+    width: 60px;
+    height: 60px;
+    object-fit: cover;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+/* Files Section */
+.filesSection {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.fileGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.fileLabel {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+/* File Card */
+.fileCard {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 16px;
+    background-color: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+
+.fileInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.fileName {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    margin-bottom: 4px;
+}
+
+.fileSize {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* File Actions */
+.fileActions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.fileActionButton {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 6px 12px;
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.fileActionButton:hover {
+    background-color: var(--bg-hover);
+}
+
+.fileActionButton.deleteButton {
+    color: #f4212e;
+    border-color: #f4212e;
+}
+
+.fileActionButton.deleteButton:hover {
+    background-color: rgba(244, 33, 46, 0.1);
+}
+
+/* Mobile Responsive */
+@media (max-width: 767px) {
+    .reviewHeader {
+        margin-bottom: 24px;
+    }
+
+    .reviewTitle {
+        font-size: 20px;
+    }
+
+    .cardHeader {
+        padding: 14px 16px;
+    }
+
+    .cardTitle {
+        font-size: 16px;
+    }
+
+    .cardBody {
+        padding: 16px;
+    }
+
+    .fieldRow {
+        flex-direction: column;
+        gap: 4px;
+        padding: 12px 0;
+    }
+
+    .fieldLabel {
+        min-width: unset;
+        font-size: 13px;
+    }
+
+    .fieldValue {
+        font-size: 14px;
+    }
+
+    .fileCard {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+    }
+
+    .fileActions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .fileActionButton {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .editButton span {
+        display: none;
+    }
+}

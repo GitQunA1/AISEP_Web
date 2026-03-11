@@ -1,0 +1,166 @@
+.filterRowContainer {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: relative;
+    width: 100%;
+    padding: 4px 0;
+}
+
+.label {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    min-width: 60px;
+}
+
+.scrollWrapper {
+    position: relative;
+    flex: 1;
+    min-width: 0;
+    /* Crucial for flex item to shrink below content size */
+    display: flex;
+    align-items: center;
+}
+
+.pillsContainer {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scroll-behavior: smooth;
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+    padding: 4px 0;
+    /* Space for shadow/focus rings */
+    width: 100%;
+}
+
+.pillsContainer::-webkit-scrollbar {
+    display: none;
+    /* Chrome/Safari */
+}
+
+.pill {
+    padding: 6px 14px;
+    border-radius: 9999px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: all 0.2s;
+    flex-shrink: 0;
+}
+
+.pill:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--text-secondary);
+}
+
+.pill.active {
+    background-color: var(--primary-blue);
+    border-color: var(--primary-blue);
+    color: white;
+}
+
+.pill.active:hover {
+    background-color: #1a8cd8;
+    /* Darker blue */
+    border-color: #1a8cd8;
+}
+
+/* Arrow Containers */
+.arrowContainer {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    pointer-events: none;
+    /* Let clicks pass through if invisible */
+    opacity: 0;
+    transition: opacity 0.2s;
+    z-index: 10;
+}
+
+.arrowContainer.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.leftArrow {
+    left: 0;
+}
+
+.rightArrow {
+    right: 0;
+}
+
+/* Arrow Buttons */
+.arrowButton {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: var(--bg-primary);
+    /* Or slightly transparent */
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    transition: all 0.2s;
+    z-index: 11;
+    /* Above blur */
+}
+
+.arrowButton:hover {
+    background-color: var(--bg-hover);
+    transform: scale(1.05);
+}
+
+/* Blur Effects */
+.blurLeft,
+.blurRight {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    pointer-events: none;
+    z-index: 5;
+}
+
+.blurLeft {
+    left: 0;
+    background: linear-gradient(to right, var(--bg-primary) 0%, transparent 100%);
+    /* If bg-primary is not opaque, verify theme transparency. Assuming it's a solid color. */
+}
+
+.blurRight {
+    right: 0;
+    background: linear-gradient(to left, var(--bg-primary) 0%, transparent 100%);
+}
+
+/* Mobile Adjustments */
+@media (max-width: 600px) {
+    .label {
+        display: block;
+        /* User requested visibility */
+        margin-right: 8px;
+        /* Add spacing */
+    }
+
+    .filterRowContainer {
+        gap: 0;
+    }
+
+    .sideButton {
+        /* Usually mobile users swipe, so arrows might be less critical but user asked for them. */
+    }
+}
