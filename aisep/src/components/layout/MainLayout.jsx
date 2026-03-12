@@ -8,6 +8,7 @@ import BottomNav from './BottomNav';
 import FeedHeader from '../feed/FeedHeader';
 import StartupCard from '../feed/StartupCard';
 import StartupDetail from '../feed/StartupDetail';
+import ProjectSubmissionForm from '../startup/ProjectSubmissionForm';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import AdvisorsPage from '../../pages/AdvisorsPage';
 import InvestorDiscovery from '../investors/InvestorDiscovery';
@@ -21,6 +22,7 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
   const [isPremium] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedStartupId, setSelectedStartupId] = useState(null);
+  const [showProjectForm, setShowProjectForm] = useState(false);
 
   // Fetch all projects (we use getAllProjects to get public feed)
   const [allStartups, setAllStartups] = useState([]);
@@ -147,6 +149,7 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
               <FeedHeader
                 user={user}
                 onFilterChange={handleFilterChange}
+                onShowProjectForm={() => setShowProjectForm(true)}
               />
               {isLoading ? (
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
@@ -185,15 +188,16 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
         <RightPanel />
       </div>
 
-      {/* Mobile Bottom Navigation - Kept outside strict grid flow if fixed, or handled by media queries */}
-      <BottomNav
-        user={user}
-        onShowHome={onShowHome}
-        onShowAdvisors={onShowAdvisors}
-        onShowInvestors={onShowInvestors}
-        onShowDashboard={onShowDashboard}
-        activeTab={showAdvisors ? 'Advisors' : showInvestors ? 'Investors' : 'Home'}
-      />
+      {/* Project Submission Form Modal */}
+      {showProjectForm && (
+        <ProjectSubmissionForm
+          onClose={() => setShowProjectForm(false)}
+          onSuccess={(data) => {
+            setShowProjectForm(false);
+          }}
+          user={user}
+        />
+      )}
 
     </div>
   );
