@@ -6,6 +6,16 @@ import apiClient from './apiClient';
  */
 export const projectSubmissionService = {
   /**
+   * Submit startup project information
+   * @param {Object} projectData - Must contain: projectName, shortDescription, developmentStage, problemStatement, solutionDescription, targetCustomers, uniqueValueProposition, marketSize, businessModel, revenue, competitors, teamMembers, keySkills, teamExperience
+   * @returns {Promise<any>}
+   */
+  submitStartupInfo: async (projectData) => {
+    const response = await apiClient.post('/api/Projects', projectData);
+    return response;
+  },
+
+  /**
    * Creates a new startup project
    * @param {Object} projectData 
    * @returns {Promise<any>} The newly created project ID inside response.data
@@ -91,5 +101,7 @@ export const projectSubmissionService = {
     return response;
   }
 };
+
+
 
 export default projectSubmissionService;

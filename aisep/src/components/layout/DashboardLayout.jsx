@@ -18,6 +18,7 @@ function DashboardLayout({
   onShowAdvisors,
   onShowInvestors,
   onShowDashboard,
+  onShowAI,
   user,
   onLogout,
   activeView = 'dashboard'
@@ -41,6 +42,7 @@ function DashboardLayout({
           onShowAdvisors={onShowAdvisors}
           onShowInvestors={onShowInvestors}
           onShowDashboard={onShowDashboard}
+          onShowAI={onShowAI}
           onMenuItemClick={closeSidebar}
           user={user}
           onLogout={onLogout}
@@ -51,9 +53,7 @@ function DashboardLayout({
       {/* 2. Main Content (Scrollable) */}
       <main className={`${styles.mainContent} mainContent`}>
         {/* Mobile Top Bar */}
-        <div className="md:hidden">
-          <TopBar onMenuClick={openSidebar} />
-        </div>
+        <TopBar onMenuClick={openSidebar} />
 
         {/* Dashboard Content */}
         <div className={styles.dashboardContainer}>
@@ -73,6 +73,7 @@ function DashboardLayout({
         onShowAdvisors={onShowAdvisors}
         onShowInvestors={onShowInvestors}
         onShowDashboard={onShowDashboard}
+        onShowAI={onShowAI}
         activeTab="Dashboard"
       />
     </div>

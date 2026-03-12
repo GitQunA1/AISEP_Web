@@ -1,18 +1,18 @@
 import React from 'react';
-import { Home, Search, TrendingUp, Users, User, LayoutDashboard } from 'lucide-react';
+import { Home, Search, TrendingUp, Users, User, LayoutDashboard, Sparkles } from 'lucide-react';
 import styles from './BottomNav.module.css';
 
 /**
  * BottomNav Component - Bottom navigation bar (Mobile only)
  * Contains main navigation icons at the bottom of screen
  */
-function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInvestors, onShowDashboard, activeTab }) {
+function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInvestors, onShowDashboard, onShowAI, activeTab }) {
   const navItems = [
-    { icon: Home, label: 'Home', href: '#' },
-    { icon: LayoutDashboard, label: 'Dashboard', href: '#', showWhenLoggedIn: true },
-    { icon: Search, label: 'Explore', href: '#' },
-    { icon: TrendingUp, label: 'Investors', href: '#', hideFor: ['investor'] },
-    { icon: Users, label: 'Advisors', href: '#', hideFor: ['advisor'] },
+    { icon: Home, label: 'Home', displayLabel: 'Trang chủ', href: '#' },
+    { icon: Sparkles, label: 'AI', displayLabel: 'Trợ lý AI', id: 'ai' },
+    { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Dashboard', href: '#', showWhenLoggedIn: true },
+    { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#', hideFor: ['investor'] },
+    { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor'] },
   ];
 
   const handleClick = (e, label) => {
@@ -28,6 +28,9 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
     }
     if (label === 'Investors' && onShowInvestors) {
       onShowInvestors();
+    }
+    if (label === 'AI' && onShowAI) {
+      onShowAI();
     }
   };
 
@@ -53,7 +56,7 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
             onClick={(e) => handleClick(e, item.label)}
           >
             <item.icon size={24} />
-            <span className={styles.label}>{item.label}</span>
+            <span className={styles.label}>{item.displayLabel || item.label}</span>
           </a>
         ))}
     </nav>

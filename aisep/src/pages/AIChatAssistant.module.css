@@ -1,0 +1,290 @@
+/* Container */
+.aiContainer {
+    height: 100%;
+    width: 100%;
+    display: flex;
+    flex-direction: row; /* Desktop side-by-side */
+    background-color: var(--bg-primary);
+    overflow: hidden; /* Main container docs not scroll on desktop */
+    position: relative;
+    box-sizing: border-box;
+}
+
+/* Chat Column (Left Side) */
+.chatColumn {
+    flex: 1; /* Takes all remaining space */
+    display: flex;
+    flex-direction: column;
+    min-width: 0; /* Prevents flex overflow */
+    position: relative;
+    height: 100%;
+    overflow-x: hidden; /* Contains the sliding sidebar animation */
+}
+
+/* Header */
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+    flex-shrink: 0; /* Never shrink the header */
+}
+
+.headerTitle { display: flex; align-items: center; gap: 12px; }
+.aiIcon { width: 40px; height: 40px; border-radius: 10px; background: linear-gradient(135deg, var(--primary-blue), #ec4899); display: flex; align-items: center; justify-content: center; color: white; }
+.headerTitle h1 { font-size: 18px; font-weight: 700; margin: 0; color: var(--text-primary); }
+.headerTitle p { font-size: 12px; color: var(--text-secondary); margin: 0; }
+.historyBtn { display: flex; align-items: center; gap: 8px; padding: 8px 16px; background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 9999px; color: var(--text-primary); font-weight: 600; font-size: 14px; cursor: pointer; transition: all 0.2s; }
+.historyBtn:hover { background-color: var(--bg-hover); }
+.historyActive { background-color: var(--primary-blue); color: white; border-color: var(--primary-blue); }
+
+/* Chat Scroll Area */
+.chatScrollArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto; /* This area scrolls vertically on desktop */
+    padding: 24px 24px 0 24px; /* Internal padding */
+}
+
+/* Welcome Area */
+.welcomeSection { width: 100%; max-width: 800px; margin: 60px auto; text-align: center; }
+.welcomeHero { margin-bottom: 40px; }
+.botHeroIcon { color: var(--primary-blue); margin-bottom: 16px; animation: float 3s ease-in-out infinite; }
+@keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+.welcomeHero h2 { font-size: 28px; font-weight: 800; color: var(--text-primary); margin-bottom: 12px; }
+.welcomeHero p { color: var(--text-secondary); font-size: 16px; }
+
+/* Features Grid */
+.featuresGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+.featureCard { background-color: var(--bg-secondary); padding: 20px; border-radius: 16px; border: 1px solid var(--border-color); text-align: left; }
+.fIcon { color: var(--primary-blue); margin-bottom: 12px; }
+.featureCard h3 { font-size: 15px; font-weight: 700; margin-bottom: 8px; color: var(--text-primary); }
+.featureCard p { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+
+/* Message List */
+.messageList {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    padding-bottom: 24px;
+    width: 100%;
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+/* Bubbles */
+.messageWrapper { display: flex; gap: 16px; max-width: 85%; width: 100%; }
+.assistantRow { align-self: flex-start; }
+.userRow { align-self: flex-end; flex-direction: row-reverse; }
+
+.messageAvatar { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1px solid var(--border-color); background-color: rgba(29, 155, 240, 0.1); color: var(--primary-blue); }
+
+.messageContent { display: flex; flex-direction: column; gap: 4px; }
+.userRow .messageContent { align-items: flex-end; }
+.assistantRow .messageContent { align-items: flex-start; }
+
+.messageBubble { padding: 14px 18px; border-radius: 20px; font-size: 15px; line-height: 1.6; }
+.assistantRow .messageBubble { background-color: var(--bg-secondary); color: var(--text-primary); border-top-left-radius: 4px; border: 1px solid var(--border-color); }
+.userRow .messageBubble { background-color: var(--primary-blue); color: white; border-top-right-radius: 4px; box-shadow: 0 2px 8px rgba(29, 155, 240, 0.2); }
+
+.msgTime { font-size: 11px; opacity: 0.6; color: var(--text-secondary); padding: 0 4px; }
+
+/* Suggestion Area */
+.suggestionArea { padding: 0 0 16px 0; margin-top: auto; }
+.suggestionTitle { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; color: var(--text-secondary); margin-bottom: 12px; }
+.suggestions { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; scrollbar-width: none; }
+.suggestions::-webkit-scrollbar { display: none; }
+.suggestionChip { display: flex; align-items: center; gap: 8px; padding: 10px 16px; background-color: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: 9999px; color: var(--text-primary); font-size: 13px; white-space: nowrap; cursor: pointer; transition: all 0.2s; }
+.suggestionChip:hover { border-color: var(--primary-blue); background-color: rgba(29, 155, 240, 0.05); color: var(--primary-blue); transform: translateY(-2px); }
+
+/* Sticky Input Area */
+.inputStickyWrapper {
+    position: sticky;
+    bottom: 0;
+    padding: 16px 0 24px 0;
+    background: linear-gradient(180deg, transparent, var(--bg-primary) 20%);
+    z-index: 10;
+    margin-top: auto; /* Push to bottom naturally if chat is short */
+    width: 100%;
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.inputContainer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    transition: all 0.2s;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+}
+.inputContainer:focus-within { border-color: var(--primary-blue); box-shadow: 0 4px 20px rgba(29, 155, 240, 0.15); }
+
+.inputActions { display: flex; gap: 4px; }
+.chatInput { flex: 1; background: none; border: none; padding: 8px; color: var(--text-primary); font-size: 15px; }
+.chatInput:focus { outline: none; }
+.iconBtn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: none; border: none; color: var(--text-secondary); cursor: pointer; border-radius: 50%; transition: all 0.2s; }
+.iconBtn:hover { background-color: var(--bg-hover); color: var(--text-primary); }
+.sendBtn { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background-color: var(--border-color); color: white; border: none; border-radius: 50%; cursor: pointer; transition: all 0.2s; }
+.sendActive { background-color: var(--primary-blue); }
+.disclaimer { font-size: 11px; color: var(--text-secondary); text-align: center; margin-top: 12px; }
+
+/* Widgets Section */
+/* Widgets Section Container */
+.widgetsSection {
+    width: 350px;
+    flex-shrink: 0;
+    height: 100%;
+    overflow-y: auto;
+    border-left: 1px solid var(--border-color);
+    background-color: var(--bg-primary);
+}
+
+/* Override rules for RightPanel when used inside AI Chat */
+/* We use !important because RightPanel has its own strong defaults */
+.aiRightPanelOverride {
+    width: 100% !important;
+    max-width: none !important;
+    flex: none !important;
+    height: auto !important;
+    min-height: 100% !important;
+    position: static !important;
+    padding: 24px !important;
+    background-color: transparent !important;
+    display: flex !important; /* Ensure it overrides the mobile display:none */
+}
+
+/* History Sidebar Backdrop Overlay */
+.historyOverlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5); /* Simple opaque black for dimming without lag */
+    z-index: 90; /* Below the sidebar (100), above the chat content */
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease-out, visibility 0.2s ease-out;
+    cursor: pointer;
+}
+
+.historyOverlay.open {
+    opacity: 1;
+    visibility: visible;
+}
+
+/* History Sidebar (Mock) */
+.historySidebar { 
+    position: absolute; 
+    top: 0; 
+    right: 0; 
+    bottom: 0; 
+    width: 300px; 
+    background-color: var(--bg-primary); 
+    border-left: 1px solid var(--border-color); 
+    display: flex; 
+    flex-direction: column; 
+    z-index: 100; 
+    box-shadow: -5px 0 25px rgba(0,0,0,0.1); 
+    transform: translateX(100%);
+    visibility: hidden;
+    transition: transform 0.3s ease-out, visibility 0.3s ease-out;
+}
+
+.historySidebar.open {
+    transform: translateX(0);
+    visibility: visible;
+}
+
+.historyHeader { padding: 20px; border-bottom: 1px solid var(--border-color); }
+.historyHeader h3 { font-size: 16px; font-weight: 700; margin-bottom: 16px; }
+.newChatBtn { width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px; background-color: var(--primary-blue); color: white; border: none; border-radius: 8px; font-weight: 600; font-size: 14px; cursor: pointer; transition: opacity 0.2s; }
+.newChatBtn:hover { opacity: 0.9; }
+.historyList { flex: 1; overflow-y: auto; padding: 12px; }
+.historyItem { display: flex; align-items: center; gap: 12px; padding: 14px; border-radius: 8px; color: var(--text-primary); font-size: 14px; cursor: pointer; transition: background-color 0.2s; }
+.historyItem span { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+.historyItem:hover { background-color: var(--bg-hover); color: var(--primary-blue); }
+
+/* Responsive Adjustments */
+@media (max-width: 1199px) { /* Tablet Breakpoint */
+    .aiContainer {
+        flex-direction: column; /* Stack chat and widgets */
+        overflow-y: auto; /* Allow scrolling the whole container when stacked */
+    }
+    
+    .chatColumn {
+        flex: none; /* Let height flow naturally */
+        height: auto;
+        overflow: visible;
+    }
+
+    .chatScrollArea {
+        overflow: visible; /* Let aiContainer handle the scroll */
+        padding: 16px 16px 0 16px;
+    }
+    
+    .widgetsSection {
+        display: none; /* Hide entirely on tablet/mobile like other pages */
+    }
+
+    .featuresGrid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    
+    .hideOnMobile {
+        display: none;
+    }
+}
+
+@media (max-width: 767px) { /* Mobile Breakpoint */
+    .chatScrollArea {
+        padding: 8px 16px 0 16px;
+    }
+
+    .welcomeSection { margin: 30px auto; }
+    .welcomeHero h2 { font-size: 24px; }
+    
+    .featuresGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .messageWrapper {
+        max-width: 95%;
+    }
+
+    .messageBubble {
+        padding: 12px 14px;
+        font-size: 14px;
+    }
+
+    .inputStickyWrapper {
+        padding: 12px 0 16px 0; /* Add bottom padding to float above widgets clearly */
+    }
+    
+    .inputContainer {
+        padding: 6px 10px;
+    }
+    
+    .chatInput {
+        font-size: 14px;
+    }
+
+    .historySidebar {
+        width: 100%;
+        max-width: 320px;
+    }
+}
+

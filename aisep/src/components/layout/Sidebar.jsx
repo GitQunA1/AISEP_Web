@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard } from 'lucide-react';
+import { Home, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
@@ -19,6 +19,7 @@ function Sidebar({
   onShowInvestors,
   onShowAdvisors,
   onShowDashboard,
+  onShowAI,
   onMenuItemClick,
   user,
   onLogout,
@@ -28,8 +29,8 @@ function Sidebar({
 
   const navItems = [
     { icon: Home, label: 'Home', displayLabel: 'Trang chủ', href: '#' },
+    { icon: Sparkles, label: 'Trợ lý AI', displayLabel: 'Trợ lý AI', href: '#' },
     { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
-    { icon: Search, label: 'Explore', displayLabel: 'Khám phá', href: '#' },
     { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#', hideFor: ['investor'] },
     { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor'] },
   ];
@@ -58,6 +59,10 @@ function Sidebar({
     // Navigate to investors when clicking Investors
     if (label === 'Investors' && onShowInvestors) {
       onShowInvestors();
+    }
+
+    if (label === 'Trợ lý AI' && onShowAI) {
+      onShowAI();
     }
 
     onMenuItemClick?.();
@@ -137,6 +142,7 @@ function Sidebar({
                   if (activeView === 'profile') return 'Profile';
                   if (activeView === 'advisors') return 'Advisors';
                   if (activeView === 'investors') return 'Investors';
+                  if (activeView === 'ai') return 'Trợ lý AI';
                   return 'Home';
                 };
                 const isActive = item.label === getActiveLabel();

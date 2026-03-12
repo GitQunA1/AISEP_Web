@@ -43,14 +43,14 @@
 }
 
 /* Hide on desktop */
-@media (min-width: 769px) {
+@media (min-width: 1024px) {
   .bottomNav {
     display: none;
   }
 }
 
 /* Show on mobile */
-@media (max-width: 768px) {
+@media (max-width: 1023px) {
   .bottomNav {
     display: flex;
   }

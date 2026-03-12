@@ -1,0 +1,216 @@
+.formCard {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.cardHeader {
+  border-bottom: 1px solid var(--border-color);
+}
+
+.progressBar {
+  height: 4px;
+  background: var(--bg-hover);
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--primary-blue);
+  transition: width 0.3s ease;
+}
+
+.stepIndicator {
+  padding: 12px 24px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.cardBody {
+  padding: 24px;
+}
+
+.stepContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.stepTitle {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.stepSubtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.required {
+  color: #f4212e;
+  margin-left: 2px;
+}
+
+.input, .textarea, .select {
+  width: 100%;
+  padding: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 15px;
+  transition: all 0.2s ease;
+}
+
+.input:focus, .textarea:focus, .select:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 1px var(--primary-blue);
+}
+
+.inputError {
+  border-color: #f4212e;
+}
+
+.errorText {
+  color: #f4212e;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.radioGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.radioLabel {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.radioLabel:hover {
+  background: var(--bg-hover);
+}
+
+.radioLabel input:checked + span {
+  font-weight: 700;
+}
+
+.hintBox {
+  padding: 16px;
+  background: rgba(29, 155, 240, 0.05);
+  border: 1px solid rgba(29, 155, 240, 0.1);
+  border-radius: 12px;
+  margin-top: 20px;
+}
+
+.hintText {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.hintHighlight {
+  color: var(--primary-blue);
+  font-weight: 700;
+}
+
+.errorBanner {
+  padding: 12px 16px;
+  background: rgba(244, 33, 46, 0.1);
+  border: 1px solid rgba(244, 33, 46, 0.2);
+  border-radius: 8px;
+  color: #f4212e;
+  margin-bottom: 20px;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cardFooter {
+  padding: 24px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  background: var(--bg-primary);
+}
+
+.primaryButton {
+  flex: 1;
+  padding: 12px 24px;
+  background: var(--primary-blue);
+  color: white;
+  border: none;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background-color: #1a8cd8;
+  transform: translateY(-1px);
+}
+
+.secondaryButton {
+  flex: 1;
+  padding: 12px 24px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.secondaryButton:hover:not(:disabled) {
+  background-color: var(--bg-hover);
+}
+
+@media (max-width: 600px) {
+  .cardFooter {
+    flex-direction: column-reverse;
+  }
+}

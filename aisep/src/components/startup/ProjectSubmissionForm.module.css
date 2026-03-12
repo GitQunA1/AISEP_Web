@@ -1,0 +1,336 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modalContent {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  max-width: 600px;
+  width: 100%;
+  max-height: 90vh;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: slideUp 0.3s ease-out;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden; /* Ensures child elements don't break the rounded corners */
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px;
+  border-bottom: 1px solid var(--border-color);
+  position: sticky;
+  top: 0;
+  background: var(--bg-primary);
+  z-index: 10;
+}
+
+.headerTitle {
+  margin: 0 0 4px 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.headerSubtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 8px;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.closeButton:hover {
+  background-color: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.progressBarTrack {
+  height: 4px;
+  background: var(--bg-secondary);
+  position: relative;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: var(--primary-blue);
+  transition: width 0.3s ease;
+}
+
+.formContent {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.errorBanner {
+  background-color: rgba(244, 33, 46, 0.1);
+  color: #f4212e;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-size: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.errorHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+}
+
+.errorList {
+  margin: 0;
+  padding-left: 26px;
+  list-style-type: disc;
+}
+
+.errorList li {
+  margin-bottom: 4px;
+}
+
+.errorList li:last-child {
+  margin-bottom: 0;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.required {
+  color: #f4212e;
+  margin-left: 2px;
+}
+
+.input,
+.textarea,
+.select {
+  width: 100%;
+  padding: 12px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 15px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 1px var(--primary-blue);
+}
+
+.errorText {
+  color: #f4212e;
+  font-size: 12px;
+  margin-top: 4px;
+}
+
+.labelRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.addMemberBtn {
+  background: none;
+  border: none;
+  color: var(--primary-blue);
+  font-size: 13px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.addMemberBtn:hover {
+  background-color: var(--bg-hover);
+}
+
+.membersList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.memberRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.removeMemberBtn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.removeMemberBtn:hover:not(:disabled) {
+  background-color: rgba(244, 33, 46, 0.1);
+  color: #f4212e;
+}
+
+.removeMemberBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
+.hintText {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-top: -2px;
+  line-height: 1.4;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.actions {
+  display: flex;
+  gap: 12px;
+  padding: 24px;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  border-radius: 0 0 16px 16px;
+}
+
+.primaryBtn {
+  flex: 1;
+  padding: 12px 24px;
+  background-color: var(--primary-blue);
+  color: white;
+  border: none;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.primaryBtn:hover:not(:disabled) {
+  background-color: #1a8cd8;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondaryBtn {
+  flex: 1;
+  padding: 12px 24px;
+  background-color: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.secondaryBtn:hover {
+  background-color: var(--bg-hover);
+}
+
+.successBtn {
+  flex: 1;
+  padding: 12px 24px;
+  background-color: #17bf63;
+  color: white;
+  border: none;
+  border-radius: 9999px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.successBtn:hover:not(:disabled) {
+  background-color: #14a656;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 600px) {
+  .modalContent {
+    border-radius: 0;
+    max-height: 100vh;
+    height: 100vh;
+  }
+
+  .row {
+    grid-template-columns: 1fr;
+  }
+}

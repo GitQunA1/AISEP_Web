@@ -24,7 +24,38 @@ export default function LoginPage({ onLoginSuccess, onShowRegister, onBack }) {
       const isActuallySuccess = !!accessToken;
 
       if (isActuallySuccess) {
-        const user = response?.user || response?.data?.user || { email, role: 'startup' };
+        // Decode the JWT access token to extract user claims
+        // The backend returns standard .NET Identity Claim URIs
+        let decodedToken = {};
+        try {
+          const payloadBase64 = accessToken.split('.')[1];
+          // Base64Url to Base64
+          const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          decodedToken = JSON.parse(jsonPayload);
+        } catch (e) {
+          console.error("Failed to decode token", e);
+        }
+
+        const fallbackData = response?.data || response;
+        const rawUser = fallbackData?.user || fallbackData;
+        
+        // C# Claim URIs
+        const claimId = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
+        const claimEmail = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'];
+        const claimName = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'];
+        const claimRole = decodedToken['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'];
+
+        // Build a normalized user object with guaranteed userId field
+        const user = {
+          userId: claimId || rawUser?.id || rawUser?.userId || rawUser?.Id || fallbackData?.id || fallbackData?.userId,
+          name: claimName || rawUser?.name || rawUser?.fullName || rawUser?.Name || email.split('@')[0],
+          email: claimEmail || rawUser?.email || rawUser?.Email || email,
+          role: claimRole || (rawUser?.role !== undefined ? rawUser.role : (rawUser?.Role !== undefined ? rawUser.Role : 'startup')),
+        };
+        
         // Trigger successful login redirect
         onLoginSuccess(user, accessToken, refreshToken);
       } else {

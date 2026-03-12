@@ -51,6 +51,14 @@ const MESSAGE_MAP = {
   'Not Found': 'Không tìm thấy tài nguyên được yêu cầu.',
   'Internal Server Error': 'Lỗi máy chủ nội bộ. Vui lòng thử lại sau.',
   'Bad Request': 'Yêu cầu không hợp lệ. Vui lòng kiểm tra lại thông tin.',
+  
+  // --- Projects ---
+  'Project created successfully': 'Dự án đã được đăng thành công!',
+  'Project updated successfully.': 'Cập nhật dự án thành công!',
+  'Project approved successfully.': 'Dự án đã được duyệt thành công!',
+  'Project rejected successfully.': 'Dự án đã bị từ chối.',
+  'Project not found.': 'Không tìm thấy thông tin dự án.',
+  'Failed to submit project': 'Không thể gửi dự án. Vui lòng thử lại sau.',
 };
 
 /**

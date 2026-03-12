@@ -42,7 +42,7 @@ export default function InvestorDiscovery({ user }) {
                         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(inv.organizationName || inv.userName)}&background=random`,
                         location: inv.investmentRegion || 'Chưa cập nhật',
                         portfolioSize: 'N/A', // Not in this specific API
-                        ticketSize: inv.investmentAmount ? `$${inv.investmentAmount.toLocaleString()}` : 'N/A',
+                        ticketSize: inv.investmentAmount ? `${inv.investmentAmount.toLocaleString()} VND` : 'N/A',
                         verified: true // Assume verified for demo unless field exists
                     }));
                     setInvestors(formatted);

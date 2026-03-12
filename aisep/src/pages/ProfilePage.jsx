@@ -55,11 +55,11 @@ export default function ProfilePage({ user, onShowAdvisors }) {
                     </div>
 
                     <div className={styles.bio}>
-                        {user.role === 'startup' && user.companyName && (
+                        {(user.role?.toLowerCase() === 'startup' || user.role === 0) && user.companyName && (
                             <p>Building {user.companyName} | Innovating in AI-powered solutions</p>
                         )}
-                        {user.role === 'investor' && <p>Investor | Looking for promising AI startups</p>}
-                        {user.role === 'advisor' && <p>Advisor | Helping startups scale and succeed</p>}
+                        {(user.role?.toLowerCase() === 'investor' || user.role === 1) && <p>Investor | Looking for promising AI startups</p>}
+                        {(user.role?.toLowerCase() === 'advisor' || user.role === 2) && <p>Advisor | Helping startups scale and succeed</p>}
                     </div>
 
                     <div className={styles.metadata}>
@@ -106,7 +106,7 @@ function OverviewTab({ user }) {
                     <div className={styles.cardValue}>8</div>
                     <div className={styles.cardLabel}>Interests</div>
                 </div>
-                {user.role === 'startup' && (
+                {(user.role?.toLowerCase() === 'startup' || user.role === 0) && (
                     <>
                         <div className={styles.statCard}>
                             <div className={styles.cardValue}>3</div>
@@ -118,7 +118,7 @@ function OverviewTab({ user }) {
                         </div>
                     </>
                 )}
-                {user.role === 'investor' && (
+                {(user.role?.toLowerCase() === 'investor' || user.role === 1) && (
                     <>
                         <div className={styles.statCard}>
                             <div className={styles.cardValue}>12</div>
@@ -130,7 +130,7 @@ function OverviewTab({ user }) {
                         </div>
                     </>
                 )}
-                {user.role === 'advisor' && (
+                {(user.role?.toLowerCase() === 'advisor' || user.role === 2) && (
                     <>
                         <div className={styles.statCard}>
                             <div className={styles.cardValue}>15</div>
@@ -166,7 +166,7 @@ function ProfileTab({ user }) {
                     <label>Name</label>
                     <input type="text" defaultValue={user.name || ''} />
                 </div>
-                {user.role === 'startup' && (
+                {(user.role?.toLowerCase() === 'startup' || user.role === 0) && (
                     <div className={styles.formGroup}>
                         <label>Company Name</label>
                         <input type="text" defaultValue={user.companyName} />
@@ -193,7 +193,7 @@ function DocumentsTab({ user }) {
 
 function AdvisorsTab({ user, onShowAdvisors }) {
     // Show the booking management for startups
-    if (user.role === 'startup') {
+    if (user.role?.toLowerCase() === 'startup' || user.role === 0) {
         return <StartupAdvisorsList onExploreAdvisors={onShowAdvisors} />;
     }
 
