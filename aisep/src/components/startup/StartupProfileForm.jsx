@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import styles from '../auth/RegisterForms.module.css';
+import { Check, AlertCircle, Loader2 } from 'lucide-react';
+import styles from './StartupProfileForm.module.css';
 import startupProfileService from '../../services/startupProfileService';
 
 /**
  * StartupProfileForm - Form for updating startup profile information
- * Fields: companyName, logoUrl, founder, contactInfo, countryCity, website, industry, businessLicenseUrl
+ * Improved with professional styling and theme support.
  */
 export default function StartupProfileForm({ initialData, user, onSuccess }) {
   const [formData, setFormData] = useState({
@@ -64,18 +65,32 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
 
     setIsSubmitting(true);
     try {
-      const response = await startupProfileService.updateStartupProfile(formData);
+      // Determine if we should create or update
+      const isUpdate = !!(initialData && (initialData.id || initialData.startupId));
+      let response;
+      
+      if (isUpdate) {
+        // Ensure ID is included in payload for update
+        const payload = {
+          ...formData,
+          startupId: initialData.startupId || initialData.id
+        };
+        response = await startupProfileService.updateStartupProfile(payload);
+      } else {
+        response = await startupProfileService.createStartupProfile(formData);
+      }
       
       if (response && response.isSuccess) {
-        setSuccessMessage('✅ Thông tin startup đã được cập nhật thành công!');
+        setSuccessMessage(isUpdate ? 'Thông tin startup đã được cập nhật thành công!' : 'Hồ sơ startup đã được tạo thành công!');
         if (onSuccess) {
-          onSuccess(formData);
+          // Return the full data from response if available, or current formData
+          onSuccess(response.data || formData);
         }
       } else {
-        setErrors({ submit: response?.message || 'Cập nhật thất bại. Vui lòng thử lại.' });
+        setErrors({ submit: response?.message || (isUpdate ? 'Cập nhật thất bại. Vui lòng thử lại.' : 'Tạo hồ sơ thất bại. Vui lòng thử lại.') });
       }
     } catch (error) {
-      console.error('Error updating profile:', error);
+      console.error('Error saving profile:', error);
       setErrors({ submit: error?.message || 'Lỗi kết nối. Vui lòng kiểm tra kết nối mạng.' });
     } finally {
       setIsSubmitting(false);
@@ -83,39 +98,29 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
   };
 
   return (
-    <div className={styles.card} style={{ padding: '24px' }}>
-      <h3 className={styles.cardTitle}>Thông tin Startup</h3>
-      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '20px' }}>
-        Cập nhật thông tin công ty để nhà đầu tư và cố vấn hiểu rõ hơn về doanh nghiệp của bạn.
+    <div className={styles.formCard}>
+      <h3 className={styles.title}>
+        {initialData ? 'Cập nhật Thông tin Startup' : 'Tạo Hồ sơ Startup'}
+      </h3>
+      <p className={styles.subtitle}>
+        {initialData 
+          ? 'Cập nhật thông tin công ty để nhà đầu tư và cố vấn hiểu rõ hơn về doanh nghiệp của bạn.' 
+          : 'Vì bạn chưa có hồ sơ, vui lòng điền các thông tin cơ bản của doanh nghiệp để bắt đầu.'}
       </p>
 
       <form onSubmit={handleSubmit} className={styles.form}>
         {/* Error Message */}
         {errors.submit && (
-          <div style={{
-            padding: '12px',
-            background: '#fee',
-            border: '1px solid #fcc',
-            borderRadius: '6px',
-            color: '#c33',
-            marginBottom: '16px',
-            fontSize: '14px'
-          }}>
+          <div className={styles.errorBanner}>
+            <AlertCircle size={18} />
             {errors.submit}
           </div>
         )}
 
         {/* Success Message */}
         {successMessage && (
-          <div style={{
-            padding: '12px',
-            background: '#efe',
-            border: '1px solid #cfc',
-            borderRadius: '6px',
-            color: '#3c3',
-            marginBottom: '16px',
-            fontSize: '14px'
-          }}>
+          <div className={styles.successBanner}>
+            <Check size={18} />
             {successMessage}
           </div>
         )}
@@ -123,7 +128,9 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
         {/* Row 1: Company Name & Founder */}
         <div className={styles.formRow}>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Tên công ty <span className={styles.required}>*</span></label>
+            <label className={styles.label}>
+              Tên công ty <span className={styles.required}>*</span>
+            </label>
             <input
               type="text"
               name="companyName"
@@ -136,7 +143,9 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.label}>Người sáng lập <span className={styles.required}>*</span></label>
+            <label className={styles.label}>
+              Người sáng lập <span className={styles.required}>*</span>
+            </label>
             <input
               type="text"
               name="founder"
@@ -152,7 +161,9 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
         {/* Row 2: Contact & Location */}
         <div className={styles.formRow}>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Thông tin liên hệ <span className={styles.required}>*</span></label>
+            <label className={styles.label}>
+              Thông tin liên hệ <span className={styles.required}>*</span>
+            </label>
             <input
               type="text"
               name="contactInfo"
@@ -165,7 +176,9 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.label}>Địa phương <span className={styles.required}>*</span></label>
+            <label className={styles.label}>
+              Địa phương <span className={styles.required}>*</span>
+            </label>
             <input
               type="text"
               name="countryCity"
@@ -181,7 +194,9 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
         {/* Row 3: Website & Industry */}
         <div className={styles.formRow}>
           <div className={styles.formGroup}>
-            <label className={styles.label}>Website <span className={styles.required}>*</span></label>
+            <label className={styles.label}>
+              Website <span className={styles.required}>*</span>
+            </label>
             <input
               type="url"
               name="website"
@@ -242,51 +257,24 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
         </div>
 
         {/* Buttons */}
-        <div style={{ marginTop: '32px' }}>
-          <button
-            type="submit"
-            disabled={isSubmitting}
-            className={styles.primaryBtn}
-            style={{
-              width: '100%',
-              padding: '16px 24px',
-              fontSize: '16px',
-              fontWeight: '700',
-              backgroundColor: isSubmitting ? '#9CA3AF' : '#3B82F6',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: isSubmitting ? 'not-allowed' : 'pointer',
-              opacity: isSubmitting ? 0.6 : 1,
-              transition: 'all 0.3s ease',
-              boxShadow: isSubmitting ? 'none' : '0 4px 12px rgba(59, 130, 246, 0.4)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px'
-            }}
-          >
-            {isSubmitting ? (
-              <>
-                <span style={{ animation: 'spin 1s infinite linear', display: 'inline-block' }}>⏳</span>
-                Đang cập nhật thông tin...
-              </>
-            ) : (
-              <>
-                <span style={{ fontSize: '18px' }}>✔️</span>
-                Cập nhật thông tin startup
-              </>
-            )}
-          </button>
-        </div>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className={styles.submitBtn}
+        >
+          {isSubmitting ? (
+            <>
+              <Loader2 size={18} className={styles.spin} />
+              {initialData ? 'Đang cập nhật thông tin...' : 'Đang tạo hồ sơ...'}
+            </>
+          ) : (
+            <>
+              <Check size={18} />
+              {initialData ? 'Cập nhật thông tin startup' : 'Tạo hồ sơ startup ngay'}
+            </>
+          )}
+        </button>
       </form>
-      
-      <style>{`
-        @keyframes spin {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

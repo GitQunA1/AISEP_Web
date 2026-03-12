@@ -236,9 +236,91 @@
 }
 
 /* =========================================
+   SIDEBAR - TABLET (Icon Only)
+   ========================================= */
+@media (max-width: 1199px) and (min-width: 768px) {
+  .sidebar {
+    padding: 24px 12px;
+  }
+
+  .sidebarHeader {
+    justify-content: center;
+    padding-left: 0;
+  }
+
+  .logo span {
+    display: none;
+  }
+  
+  .logo {
+    justify-content: center;
+  }
+
+  .navItem {
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .navItem span {
+    display: none; /* Hide text, icon only */
+  }
+
+  .themeToggle span {
+    display: none;
+  }
+
+  .themeToggle {
+    justify-content: center;
+    padding: 12px;
+  }
+
+  .profileSection {
+    padding: 8px;
+    justify-content: center;
+    border: none;
+  }
+
+  .profileInfo, .logoutButton {
+    display: none;
+  }
+
+  .profileDisplay {
+    justify-content: center;
+    margin: 0;
+  }
+  
+  .authSection {
+    align-items: center;
+  }
+  
+  .signInBtn, .registerBtn {
+    font-size: 0;
+    padding: 12px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+
+  .signInBtn::after {
+    content: "In";
+    font-size: 14px;
+    font-weight: bold;
+  }
+
+  .registerBtn::after {
+    content: "Up";
+    font-size: 14px;
+    font-weight: bold;
+  }
+}
+
+/* =========================================
    SIDEBAR - MOBILE (Slide-Out Drawer)
    ========================================= */
-@media (max-width: 768px) {
+@media (max-width: 1023px) {
 
   /* Hide navigation items on mobile (they're in bottom tabs) */
   .navDesktopOnly {
@@ -312,7 +394,6 @@
     opacity: 0;
     visibility: hidden;
     transition: opacity 0.35s ease, visibility 0.35s ease;
-    backdrop-filter: blur(2px);
   }
 
   .backdropOpen {

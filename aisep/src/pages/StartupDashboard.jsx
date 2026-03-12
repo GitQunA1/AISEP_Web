@@ -12,6 +12,8 @@ import projectSubmissionService from '../services/projectSubmissionService.js';
 import startupProfileService from '../services/startupProfileService.js';
 import { PROJECT_STATUS, isUserEditable } from '../constants/ProjectStatus.js';
 
+import StartupProfileBanner from '../components/startup/StartupProfileBanner';
+
 /**
  * StartupDashboard - Comprehensive dashboard for startup founders
  * Features: Overview stats, Profile completion, Documents, AI Score, Advisor requests
@@ -34,6 +36,7 @@ export default function StartupDashboard({ user }) {
 
     // Default form data
     const [showProjectForm, setShowProjectForm] = useState(false);
+
     const [projectFormData, setProjectFormData] = useState({
         projectName: '',
         description: '',
@@ -60,6 +63,14 @@ export default function StartupDashboard({ user }) {
                 if (user && user.userId) {
                     const profileData = await startupProfileService.getStartupProfileByUserId(user.userId);
                     setStartupProfile(profileData);
+
+                    // Check for auto-setup flag in URL
+                    const params = new URLSearchParams(window.location.search);
+                    if (!profileData && params.get('setup') === 'true') {
+                        setActiveSection('complete-info');
+                        // Clean URL
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                    }
                 }
 
                 // 2. Fetch project
@@ -140,7 +151,8 @@ export default function StartupDashboard({ user }) {
 
     const handleUploadClick = () => {
         if (!project || !project.id) {
-            alert('Vui lòng tạo dự án trước khi tải tài liệu lên.');
+            setSuccessMessage('⚠️ Vui lòng tạo dự án trước khi tải tài liệu lên.');
+            setShowSuccessModal(true);
             return;
         }
         hiddenFileInput.current.click();
@@ -166,11 +178,13 @@ export default function StartupDashboard({ user }) {
                 setSuccessMessage('Tải tài liệu lên thành công!');
                 setShowSuccessModal(true);
             } else {
-                alert('Tải lên thất bại: ' + response.message);
+                setSuccessMessage('❌ Tải lên thất bại: ' + response.message);
+                setShowSuccessModal(true);
             }
         } catch (error) {
             console.error('Upload Error:', error);
-            alert('Không thể tải tài liệu lên.');
+            setSuccessMessage('❌ Không thể tải tài liệu lên do lỗi hệ thống.');
+            setShowSuccessModal(true);
         } finally {
             setIsUploading(false);
             e.target.value = ''; // Reset input
@@ -187,7 +201,8 @@ export default function StartupDashboard({ user }) {
                 .map(doc => new File([new ArrayBuffer()], doc.name, { type: 'application/octet-stream' }));
 
             if (filesToProtect.length === 0) {
-                alert('Vui lòng tải lên ít nhất một tài liệu trước khi bảo vệ trên blockchain');
+                setSuccessMessage('⚠️ Vui lòng tải lên ít nhất một tài liệu trước khi bảo vệ trên blockchain');
+                setShowSuccessModal(true);
                 setIsProtectingDocuments(false);
                 return;
             }
@@ -212,11 +227,13 @@ export default function StartupDashboard({ user }) {
                 // Auto-trigger AI Evaluation (BR-10)
                 setTimeout(() => handleAIEvaluation(updatedProject), 1500);
             } else {
-                alert('Không thể bảo vệ tài liệu: ' + result.error);
+                setSuccessMessage('❌ Không thể bảo vệ tài liệu: ' + result.error);
+                setShowSuccessModal(true);
             }
         } catch (error) {
             console.error('Protection error:', error);
-            alert('Lỗi bảo vệ tài liệu: ' + error.message);
+            setSuccessMessage('❌ Lỗi bảo vệ tài liệu: ' + error.message);
+            setShowSuccessModal(true);
         } finally {
             setIsProtectingDocuments(false);
         }
@@ -244,15 +261,18 @@ export default function StartupDashboard({ user }) {
                     setShowSuccessModal(true);
                 } else {
                     console.error('Could not fetch AI results after generation:', aiResponse);
-                    alert('Đánh giá AI đã hoàn thành nhưng không thể lấy kết quả.');
+                    setSuccessMessage('⚠️ Đánh giá AI đã hoàn thành nhưng không thể lấy kết quả.');
+                    setShowSuccessModal(true);
                 }
             } else {
                 console.error('AI Evaluation error:', response);
-                alert('Đánh giá AI thất bại: ' + response.message);
+                setSuccessMessage('❌ Đánh giá AI thất bại: ' + response.message);
+                setShowSuccessModal(true);
             }
         } catch (error) {
             console.error('AI evaluation error:', error);
-            alert('Không thể thực hiện đánh giá AI do lỗi mạng/máy chủ.');
+            setSuccessMessage('❌ Không thể thực hiện đánh giá AI do lỗi mạng/máy chủ.');
+            setShowSuccessModal(true);
         } finally {
             setIsEvaluatingAI(false);
         }
@@ -262,18 +282,21 @@ export default function StartupDashboard({ user }) {
     const handleSubmitForReview = () => {
         // Check email verification (BR-02)
         if (user && !user.emailVerified) {
-            alert('Vui lòng xác minh email của bạn trước khi nộp dự án');
+            setSuccessMessage('⚠️ Vui lòng xác minh email của bạn trước khi nộp dự án');
+            setShowSuccessModal(true);
             return;
         }
 
         // Check prerequisites
         if (!project.blockchainHash) {
-            alert('Vui lòng bảo vệ tài liệu trên blockchain trước');
+            setSuccessMessage('⚠️ Vui lòng bảo vệ tài liệu trên blockchain trước');
+            setShowSuccessModal(true);
             return;
         }
 
         if (!project.aiEvaluation) {
-            alert('Vui lòng hoàn thành đánh giá AI trước');
+            setSuccessMessage('⚠️ Vui lòng hoàn thành đánh giá AI trước');
+            setShowSuccessModal(true);
             return;
         }
 
@@ -303,7 +326,8 @@ export default function StartupDashboard({ user }) {
 
         if (!checklist.canPublish) {
             const remaining = checklist.remainingItems.join(', ');
-            alert(`Chưa thể đăng dự án. Còn thiếu: ${remaining}`);
+            setSuccessMessage(`⚠️ Chưa thể đăng dự án. Còn thiếu: ${remaining}`);
+            setShowSuccessModal(true);
             return;
         }
 
@@ -355,6 +379,12 @@ export default function StartupDashboard({ user }) {
                 showFilter={false} // No filter for dashboard
                 user={user}
             />
+
+            {!isLoadingInitialData && !startupProfile && (
+                <StartupProfileBanner 
+                    onRedirect={() => setActiveSection('complete-info')}
+                />
+            )}
 
             {/* Quick Stats */}
             <div className={styles.statsGrid}>
@@ -495,10 +525,10 @@ export default function StartupDashboard({ user }) {
                             </div>
 
                             {/* Recent Activity */}
-                            <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
+                            <div className={`${styles.card} ${styles.fullWidth}`}>
                                 <h3 className={styles.cardTitle}>Hoạt động gần đây</h3>
                                 <div className={styles.list}>
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                    <div className={styles.emptyState}>
                                         <p>Chưa có hoạt động nào</p>
                                     </div>
                                 </div>
@@ -524,7 +554,6 @@ export default function StartupDashboard({ user }) {
                                         className={styles.primaryBtn}
                                         onClick={handleUploadClick}
                                         disabled={isUploading || !project}
-                                        style={{ opacity: (isUploading || !project) ? 0.6 : 1 }}
                                     >
                                         <PlusCircle size={18} />
                                         {isUploading ? 'Đang tải lên...' : 'Tải tài liệu lên'}
@@ -589,43 +618,41 @@ export default function StartupDashboard({ user }) {
                                 ) : advisorRequests.map(request => (
                                     <div key={request.id} className={styles.listItem}>
                                         <div className={styles.listContent}>
-                                            <div>
-                                                <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                            <div className={styles.flexBetween}>
+                                                <h4 className={styles.listItemTitle}>
                                                     {request.advisorName}
                                                 </h4>
-                                                <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ display: 'inline-block', marginBottom: '8px' }}>
+                                                <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`}>
+                                                    {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                                                </span>
+                                            </div>
+                                            <div className={styles.mb8}>
+                                                <span className={`${styles.badge} ${styles.badgeInfo}`}>
                                                     {request.expertise}
                                                 </span>
                                             </div>
-                                            <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-primary)' }}>{request.message}</p>
+                                            <p className={styles.subtitle}>{request.message}</p>
                                             <div className={styles.listMeta}>
                                                 Ngày yêu cầu: {request.requestDate}
                                                 {request.appointmentDate && ` • Cuộc hẹn: ${request.appointmentDate}`}
                                             </div>
                                         </div>
-                                        <div className={styles.listActions}>
-                                            <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`}>
-                                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                                            </span>
-                                            {request.status === 'pending' && (
-                                                <div style={{ display: 'flex', gap: '8px', marginTop: '8px' }}>
-                                                    <button
-                                                        className={styles.primaryBtn}
-                                                        style={{ fontSize: '12px', padding: '6px 12px' }}
-                                                        onClick={() => handleAcceptRequest(request.id)}
-                                                    >
-                                                        Chấp nhận
-                                                    </button>
-                                                    <button
-                                                        className={styles.dangerBtn}
-                                                        style={{ fontSize: '12px', padding: '6px 12px' }}
-                                                        onClick={() => handleRejectRequest(request.id)}
-                                                    >
-                                                        Từ chối
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                                        {request.status === 'pending' && (
+                                            <div className={styles.listActions}>
+                                                <button
+                                                    className={`${styles.primaryBtn} ${styles.smallBtn}`}
+                                                    onClick={() => handleAcceptRequest(request.id)}
+                                                >
+                                                    Chấp nhận
+                                                </button>
+                                                <button
+                                                    className={`${styles.dangerBtn} ${styles.smallBtn}`}
+                                                    onClick={() => handleRejectRequest(request.id)}
+                                                >
+                                                    Từ chối
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 ))}
                             </div>
@@ -716,7 +743,7 @@ export default function StartupDashboard({ user }) {
                         }
                     }}
                 >
-                    <div style={{ width: '100%', maxWidth: '100%', display: 'flex', justifyContent: 'center' }}>
+                    <div className={styles.flexCenter}>
                         <CompleteStartupInfoForm
                             user={user}
                             initialData={startupProfile}
@@ -746,7 +773,8 @@ export default function StartupDashboard({ user }) {
                                     setShowSuccessModal(true);
                                 } catch (error) {
                                     console.error('Error saving profile:', error);
-                                    alert('Đã xảy ra lỗi khi lưu hồ sơ. Vui lòng thử lại.');
+                                    setSuccessMessage('❌ Đã xảy ra lỗi khi lưu hồ sơ. Vui lòng thử lại.');
+                                    setShowSuccessModal(true);
                                 } finally {
                                     setShowCompleteInfoForm(false);
                                     window.isStartupFormDirty = false;

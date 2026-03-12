@@ -11,18 +11,26 @@ import StartupDetail from '../feed/StartupDetail';
 import ProjectSubmissionForm from '../startup/ProjectSubmissionForm';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import AdvisorsPage from '../../pages/AdvisorsPage';
+import AdvisorDetailView from '../profile/AdvisorDetailView';
 import InvestorDiscovery from '../investors/InvestorDiscovery';
+import AIChatAssistant from '../../pages/AIChatAssistant';
+
+import ProfileRequiredModal from '../startup/ProfileRequiredModal';
+import startupProfileService from '../../services/startupProfileService';
 
 /**
  * MainLayout Component - Main application layout
  * Handles strictly defined 3-column grid layout (desktop) vs single column (mobile)
  * Locks viewport width/height to prevent scrolling
  */
-function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, onShowInvestors, onShowDashboard, user, onLogout, showAdvisors = false, showInvestors = false, activeView = 'main' }) {
+function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, onShowInvestors, onShowDashboard, onShowAI, user, onLogout, showAdvisors = false, showInvestors = false, showAI = false, activeView = 'main' }) {
   const [isPremium] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedStartupId, setSelectedStartupId] = useState(null);
   const [showProjectForm, setShowProjectForm] = useState(false);
+  const [hasStartupProfile, setHasStartupProfile] = useState(null); // null means checking
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [selectedAdvisor, setSelectedAdvisor] = useState(null);
 
   // Fetch all projects (we use getAllProjects to get public feed)
   const [allStartups, setAllStartups] = useState([]);
@@ -35,6 +43,32 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
     minScore: 0,
     fundingStage: '',
   });
+
+  React.useEffect(() => {
+    const checkProfile = async () => {
+      const userRole = (user?.role !== undefined && user?.role !== null) ? user.role.toString().toLowerCase() : '';
+      if (user && (userRole === 'startup' || userRole === '0') && user.userId) {
+        try {
+          const profile = await startupProfileService.getStartupProfileByUserId(user.userId);
+          const hasProfile = !!profile;
+          setHasStartupProfile(hasProfile);
+
+          // If redirected with setup=true and no profile, show modal
+          const params = new URLSearchParams(window.location.search);
+          if (!hasProfile && params.get('setup') === 'true') {
+            setShowProfileModal(true);
+            // Clean URL
+            window.history.replaceState({}, document.title, window.location.pathname);
+          }
+        } catch (err) {
+          console.error("Failed to check profile", err);
+        }
+      } else {
+        setHasStartupProfile(true);
+      }
+    };
+    checkProfile();
+  }, [user]);
 
   React.useEffect(() => {
     // Only fetch if we are showing the main feed
@@ -103,7 +137,7 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
   };
 
   return (
-    <div className={styles.mainContainer}>
+    <div className={`${styles.mainContainer} ${showAI ? styles.aiMode : ''}`}>
 
       {/* 1. Left Sidebar (Fixed) */}
       <div className={styles.leftSidebar}>
@@ -117,6 +151,7 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
           onShowAdvisors={onShowAdvisors}
           onShowInvestors={onShowInvestors}
           onShowDashboard={onShowDashboard}
+          onShowAI={onShowAI}
           onMenuItemClick={closeMobileMenu}
           user={user}
           onLogout={onLogout}
@@ -125,18 +160,26 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
       </div>
 
       {/* 2. Main Feed (Scrollable) */}
-      <main className={styles.mainContent}>
+      <main className={`${styles.mainContent} ${showAI ? styles.noScroll : ''}`}>
         {/* MOBILE HEADER (Fixed Top) */}
-        {/* Pass the toggle function to the Hamburger Button */}
-        <div className="md:hidden">
-          <TopBar onMenuClick={toggleMobileMenu} />
-        </div>
+        {/* TopBar visibility is controlled by CSS (display: none on desktop) */}
+        <TopBar onMenuClick={toggleMobileMenu} />
 
         {/* Feed Content or Profile Page */}
         {showAdvisors ? (
-          <AdvisorsPage />
+          selectedAdvisor ? (
+            <AdvisorDetailView
+              user={user}
+              advisor={selectedAdvisor}
+              onBack={() => setSelectedAdvisor(null)}
+            />
+          ) : (
+            <AdvisorsPage user={user} onSelectAdvisor={(advisor) => setSelectedAdvisor(advisor)} />
+          )
         ) : showInvestors ? (
           <InvestorDiscovery user={user} />
+        ) : showAI ? (
+          <AIChatAssistant />
         ) : selectedStartupId ? (
           <StartupDetail
             startupId={selectedStartupId}
@@ -149,8 +192,22 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
               <FeedHeader
                 user={user}
                 onFilterChange={handleFilterChange}
-                onShowProjectForm={() => setShowProjectForm(true)}
+                onShowProjectForm={() => {
+                  const userRole = (user?.role !== undefined && user?.role !== null) ? user.role.toString().toLowerCase() : '';
+                  if ((userRole === 'startup' || userRole === '0') && !hasStartupProfile) {
+                    setShowProfileModal(true);
+                  } else {
+                    setShowProjectForm(true);
+                  }
+                }}
               />
+
+              {showProfileModal && (
+                <ProfileRequiredModal
+                  onRedirect={() => onShowDashboard()}
+                  onDismiss={() => setShowProfileModal(false)}
+                />
+              )}
               {isLoading ? (
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
                   <p>Đang tải dự án...</p>
@@ -198,6 +255,17 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
           user={user}
         />
       )}
+
+      {/* Mobile Bottom Navigation */}
+      <BottomNav
+        user={user}
+        onShowHome={onShowHome}
+        onShowAdvisors={onShowAdvisors}
+        onShowInvestors={onShowInvestors}
+        onShowDashboard={onShowDashboard}
+        onShowAI={onShowAI}
+        activeTab={activeView === 'main' ? 'Home' : activeView === 'advisors' ? 'Advisors' : activeView === 'investors' ? 'Investors' : activeView === 'ai' ? 'AI' : ''}
+      />
 
     </div>
   );

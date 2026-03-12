@@ -1,12 +1,10 @@
-/* Container */
-/* Container */
+/* AdvisorsPage.module.css - Refined Card Design */
+
 .container {
     background-color: transparent;
-    /* Transparent for card gap effect */
     min-height: 100vh;
     width: 100%;
     max-width: 680px;
-    /* Constrained stream width */
     margin: 0 auto;
     padding-bottom: 60px;
 }
@@ -16,17 +14,6 @@
     background-color: var(--bg-primary);
     border-bottom: 1px solid var(--border-color);
     margin-bottom: 16px;
-    /* Gap before list */
-}
-
-/* Header */
-/* Old Header Styles Removed - using FeedHeader */
-
-.headerTitle {
-    font-size: var(--font-size-xl);
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
 }
 
 .searchContainer {
@@ -48,13 +35,12 @@
     width: 100%;
     height: 44px;
     padding: 10px 10px 10px 50px !important;
-    /* Force padding */
     border-radius: 9999px;
     background-color: var(--bg-secondary);
     border: 1px solid transparent;
     color: var(--text-primary);
     font-size: 15px;
-    transition: background-color 0.2s, border-color 0.2s;
+    transition: all 0.2s;
 }
 
 .searchInput:focus {
@@ -69,28 +55,27 @@
     display: flex;
     flex-direction: column;
     gap: 16px;
-    /* Separated cards */
 }
 
-.advisorItem {
-    display: flex;
+/* Refined Advisor Card */
+.advisorCard {
     padding: 16px;
     border: 1px solid var(--border-color);
     border-radius: 12px;
     background-color: var(--bg-secondary);
-    cursor: auto;
     transition: background-color 0.2s;
-    gap: 12px;
+    display: flex;
+    flex-direction: column;
 }
 
-@media (min-width: 641px) {
-    .advisorItem {
-        padding: var(--spacing-md);
-    }
-}
-
-.advisorItem:hover {
+.advisorCard:hover {
     background-color: var(--bg-hover);
+}
+
+.cardHeader {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
 }
 
 .avatar {
@@ -98,32 +83,31 @@
     height: 48px;
     border-radius: 50%;
     object-fit: cover;
-    background-color: var(--border-color);
-    /* Fallback */
     flex-shrink: 0;
 }
 
-.advisorContent {
+.advisorInfo {
     flex: 1;
-    display: flex;
-    flex-direction: column;
+    min-width: 0;
 }
 
-.advisorHeader {
+.nameRow {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-}
-
-.nameInfo {
-    display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
 }
 
 .name {
-    font-weight: 700;
     font-size: 15px;
+    font-weight: 700;
     color: var(--text-primary);
+}
+
+.verifiedBadge {
+    color: var(--primary-blue);
+    flex-shrink: 0;
 }
 
 .handle {
@@ -131,84 +115,86 @@
     color: var(--text-secondary);
 }
 
-.followBtn {
-    background-color: var(--text-primary);
-    /* Inverted for high contrast */
-    color: var(--bg-primary);
-    border: none;
-    border-radius: 9999px;
-    padding: 6px 16px;
-    font-weight: 700;
-    font-size: 14px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+/* Expertise Tags */
+.expertiseTags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
-.followBtn:hover {
-    opacity: 0.9;
-}
-
-.followBtn.following {
-    background-color: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-primary);
-}
-
-.followBtn.following:hover {
-    border-color: #f4212e;
-    color: #f4212e;
-    background-color: rgba(244, 33, 46, 0.1);
-}
-
-/* Before hover it says "Following", on hover it says "Unfollow" (handled in JS) */
-
-.expertiseChip {
-    display: inline-block;
-    background-color: var(--bg-secondary);
-    color: var(--text-secondary);
-    font-size: 12px;
-    padding: 2px 8px;
+.expertiseTag {
+    padding: 2px 10px;
     border-radius: 4px;
-    margin-top: 4px;
-    align-self: flex-start;
+    background-color: rgba(29, 155, 240, 0.1);
+    color: var(--primary-blue);
+    font-size: 12px;
+    font-weight: 600;
+    border: 1px solid rgba(29, 155, 240, 0.2);
 }
 
 .bio {
-    margin-top: 4px;
     font-size: 15px;
     color: var(--text-primary);
     line-height: 1.5;
+    margin: 0 0 12px 0;
 }
 
-.stats {
+/* Metadata */
+.metadata {
     display: flex;
     gap: 16px;
-    margin-top: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
 }
 
-.statItem {
+.metaItem {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 6px;
     font-size: 13px;
     color: var(--text-secondary);
 }
 
-.statItem svg {
-    width: 16px;
-    height: 16px;
+/* Actions */
+.actions {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
-@media (max-width: 600px) {
-    .container {
-        border-right: none;
-        border-left: none;
-    }
+.connectBtn {
+    background-color: var(--text-primary);
+    color: var(--bg-primary);
+    border: none;
+    border-radius: 9999px;
+    padding: 8px 20px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
 
-    /* Add spacing for cards on mobile */
-    .list {
-        padding: 0 12px;
-    }
+.connectBtn:hover {
+    opacity: 0.9;
+}
+
+.viewProfileBtn {
+    background-color: transparent;
+    color: var(--text-primary);
+    border: 1.5px solid var(--text-secondary);
+    border-radius: 9999px;
+    padding: 8px 20px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.viewProfileBtn:hover {
+    background-color: var(--bg-secondary);
+    border-color: var(--text-primary);
 }
 
 /* EMPTY STATE */
@@ -240,4 +226,20 @@
     margin: 0;
     max-width: 400px;
     line-height: 1.5;
+}
+
+@media (max-width: 600px) {
+    .feed {
+        padding: 0 12px;
+    }
+    
+    .actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .actions button {
+        width: 100%;
+        justify-content: center;
+    }
 }

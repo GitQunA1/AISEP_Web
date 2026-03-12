@@ -17,13 +17,20 @@
   /* Fixed Sidebar (275px) | Fluid Feed (1fr) | Fixed Right Panel (350px) */
   grid-template-columns: 275px 1fr 350px;
   grid-template-rows: 100vh;
-  /* Force exact viewport height */
   width: 100%;
-  /* Fits perfectly within the body */
   height: 100vh;
   background-color: var(--bg-primary);
   overflow: hidden;
-  /* Prevents ANY outer scrolling */
+  transition: grid-template-columns 0.3s ease;
+}
+
+.mainContainer.aiMode {
+  /* In AI mode, the AI component handles the right panel internally */
+  grid-template-columns: 275px 1fr;
+}
+
+.mainContainer.aiMode .rightPanel {
+  display: none;
 }
 
 /* COLUMN 1: LEFT SIDEBAR */
@@ -39,9 +46,11 @@
 .mainContent {
   height: 100%;
   overflow-y: auto;
-  /* border-right: 1px solid var(--border-color); <-- REMOVED */
   scroll-behavior: smooth;
-  /* scrollbar-width handled globally now */
+}
+
+.noScroll {
+  overflow: hidden !important;
 }
 
 /* COLUMN 3: RIGHT PANEL */
@@ -73,14 +82,34 @@
   background-color: transparent;
 }
 
-/* RESPONSIVE: Mobile/Tablet (< 1024px) */
-@media (max-width: 1023px) {
+/* RESPONSIVE: Tablet (768px - 1199px) */
+@media (max-width: 1199px) and (min-width: 768px) {
+  .mainContainer {
+    grid-template-columns: 80px 1fr; /* Collapsed sidebar */
+  }
 
-  /* ... existing styles for mainContainer/rightPanel/leftSidebar ... */
+  .mainContainer.aiMode {
+    grid-template-columns: 80px 1fr;
+  }
+
+  .rightPanel {
+    display: none; /* Generic right panel hidden, AI handles its own */
+  }
+}
+
+/* RESPONSIVE: Mobile (< 768px) */
+@media (max-width: 767px) {
   .mainContainer {
     display: block;
     height: auto;
     overflow-y: auto;
+  }
+  
+  .mainContainer.aiMode {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden;
   }
 
   .rightPanel {
@@ -109,7 +138,15 @@
     padding-left: 16px;
     padding-right: 16px;
     padding-top: 10px;
-    /* Bit tighter on mobile */
+  }
+
+  /* Specific fix for AI Chat Assistant on Mobile */
+  .noScroll {
+    overflow: hidden !important;
+    height: calc(100vh - 120px); /* Viewport minus TopBar (60px) and BottomNav (60px) */
+    display: flex; /* Make it a flex container */
+    flex-direction: column;
+    padding-bottom: 0; /* Remove padding for flex container */
   }
 }
 

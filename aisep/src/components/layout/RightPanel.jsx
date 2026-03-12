@@ -7,7 +7,7 @@ import startupProfileService from '../../services/startupProfileService';
 /**
  * RightPanel Component - Right sidebar with dynamic featured content
  */
-function RightPanel() {
+function RightPanel({ className }) {
   const [topRatedStartups, setTopRatedStartups] = useState([]);
   const [trendingSectors, setTrendingSectors] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -70,7 +70,7 @@ function RightPanel() {
   };
 
   return (
-    <aside className={styles.rightPanel}>
+    <aside className={`${styles.rightPanel} ${className || ''}`}>
       {/* Top AI-Rated Startups */}
       <div className={styles.widget}>
         <div className={styles.widgetHeader}>

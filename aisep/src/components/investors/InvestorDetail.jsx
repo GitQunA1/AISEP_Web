@@ -145,7 +145,7 @@ export default function InvestorDetail({ investorId, onBack, user }) {
                             </div>
                         )}
                         <div className={styles.stat}>
-                            <span className={styles.statValue}>${investor.investmentAmount?.toLocaleString() || '0'}</span>
+                            <span className={styles.statValue}>{investor.investmentAmount?.toLocaleString() || '0'} VND</span>
                             <span className={styles.statLabel}>Đã triển khai</span>
                         </div>
                     </div>
@@ -191,7 +191,7 @@ export default function InvestorDetail({ investorId, onBack, user }) {
                             <div className={styles.statCard}>
                                 <Wallet size={24} className={styles.statIconLg} />
                                 <div className={styles.cardLabel}>Kích cỡ vé đầu tư</div>
-                                <div className={styles.cardValueSmall}>${investor.investmentAmount?.toLocaleString() || 'N/A'}</div>
+                                <div className={styles.cardValueSmall}>{investor.investmentAmount?.toLocaleString() || 'N/A'} VND</div>
                             </div>
                             <div className={styles.statCard}>
                                 <Briefcase size={24} className={styles.statIconLg} />

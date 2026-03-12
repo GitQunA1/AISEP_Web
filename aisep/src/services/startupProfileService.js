@@ -15,13 +15,20 @@ const startupProfileService = {
           pageSize: 1
         }
       });
-      if (response && response.data && response.data.items && response.data.items.length > 0) {
-        return response.data.items[0];
+      
+      const items = response?.data?.items || response?.items || [];
+      if (items.length > 0) {
+        // Explicitly check that the returned startup belongs to the logged in user
+        // Since backend currently omits userId in StartupResponse, this will safely return null
+        // rather than auto-mapping a random startup to the current user's profile.
+        const match = items.find(s => s.userId === userId || s.UserId === userId);
+        return match || null;
       }
       return null;
     } catch (error) {
       console.error('Error fetching startup profile by userId:', error);
-      throw error;
+      // If it's a 404 or fails, treat it as "no profile" to prevent blocking the UI layout
+      return null;
     }
   },
 

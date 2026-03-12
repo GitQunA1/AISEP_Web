@@ -1,10 +1,10 @@
 import React from 'react';
-import { ChevronRight, ChevronLeft } from 'lucide-react';
-import styles from '../auth/RegisterForms.module.css';
+import { ChevronRight, ChevronLeft, AlertCircle, Sparkles } from 'lucide-react';
+import styles from './FormContentSteps.module.css';
 
 /**
  * FormContentSteps - Form content for 6 steps
- * Extracted to separate component to prevent input re-render issues
+ * Improved with professional styling and theme support.
  */
 export default function FormContentSteps({
   currentStep,
@@ -19,51 +19,29 @@ export default function FormContentSteps({
   handlePrevious,
   handleSubmit
 }) {
-  const stageLabels = {
-    'idea': '🔍 Ý tưởng',
-    'mvp': '🛠️ MVP',
-    'customers': '👥 Có khách hàng',
-    'growth': '📈 Tăng trưởng'
-  };
-
   return (
     <div className={styles.formCard}>
       <div className={styles.cardHeader}>
         <div className={styles.progressBar}>
           <div className={styles.progressFill} style={{ width: `${(currentStep / totalSteps) * 100}%` }} />
         </div>
-        <p className={styles.stepIndicator}>Step {currentStep} of {totalSteps}</p>
+        <p className={styles.stepIndicator}>Bước {currentStep} trên {totalSteps}</p>
       </div>
 
       {/* BODY */}
       <div className={styles.cardBody}>
-        {/* Email Verification Error Alert */}
+        {/* Error Alerts */}
         {emailVerificationError && (
-          <div style={{
-            padding: '12px 16px',
-            background: '#FEE2E2',
-            border: '1px solid #FCA5A5',
-            borderRadius: '8px',
-            marginBottom: '16px',
-            color: '#991B1B',
-            fontSize: '14px'
-          }}>
-            ⚠️ {emailVerificationError}
+          <div className={styles.errorBanner}>
+            <AlertCircle size={18} />
+            {emailVerificationError}
           </div>
         )}
 
-        {/* Submit Error Alert */}
         {submitError && (
-          <div style={{
-            padding: '12px 16px',
-            background: '#FEE2E2',
-            border: '1px solid #FCA5A5',
-            borderRadius: '8px',
-            marginBottom: '16px',
-            color: '#991B1B',
-            fontSize: '14px'
-          }}>
-            ❌ {submitError}
+          <div className={styles.errorBanner}>
+            <AlertCircle size={18} />
+            {submitError}
           </div>
         )}
 
@@ -72,7 +50,7 @@ export default function FormContentSteps({
           <div className={styles.stepContainer}>
             <div>
               <h2 className={styles.stepTitle}>1️ Thông tin cơ bản dự án</h2>
-              <p className={styles.stepSubtitle}>Bắt đầu với những thông tin thiết yếu (Bước 1)</p>
+              <p className={styles.stepSubtitle}>Bắt đầu với những thông tin thiết yếu</p>
             </div>
 
             <div className={styles.formGroup}>
@@ -124,8 +102,8 @@ export default function FormContentSteps({
 
             <div className={styles.formGroup}>
               <label className={styles.label}>Giai đoạn hiện tại <span className={styles.required}>*</span></label>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '8px' }}>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+              <div className={styles.radioGroup}>
+                <label className={styles.radioLabel}>
                   <input
                     type="radio"
                     name="stage"
@@ -133,9 +111,9 @@ export default function FormContentSteps({
                     checked={formData.stage === 'idea'}
                     onChange={handleInputChange}
                   />
-                  ☐ Chỉ có ý tưởng
+                  <span>🔍 Chỉ có ý tưởng</span>
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <label className={styles.radioLabel}>
                   <input
                     type="radio"
                     name="stage"
@@ -143,9 +121,9 @@ export default function FormContentSteps({
                     checked={formData.stage === 'mvp'}
                     onChange={handleInputChange}
                   />
-                  ☐ Đã có sản phẩm thử
+                  <span>🛠️ Đã có sản phẩm thử</span>
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <label className={styles.radioLabel}>
                   <input
                     type="radio"
                     name="stage"
@@ -153,9 +131,9 @@ export default function FormContentSteps({
                     checked={formData.stage === 'customers'}
                     onChange={handleInputChange}
                   />
-                  ☐ Đã có khách hàng
+                  <span>👥 Đã có khách hàng</span>
                 </label>
-                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                <label className={styles.radioLabel}>
                   <input
                     type="radio"
                     name="stage"
@@ -163,7 +141,7 @@ export default function FormContentSteps({
                     checked={formData.stage === 'growth'}
                     onChange={handleInputChange}
                   />
-                  ☐ Đang tăng trưởng
+                  <span>📈 Đang tăng trưởng</span>
                 </label>
               </div>
               {errors.stage && <p className={styles.errorText}>{errors.stage}</p>}
@@ -176,7 +154,7 @@ export default function FormContentSteps({
           <div className={styles.stepContainer}>
             <div>
               <h2 className={styles.stepTitle}>2️ Vấn đề bạn muốn giải quyết</h2>
-              <p className={styles.stepSubtitle}>Mô tả rõ vấn đề cốt lõi (Bước 2)</p>
+              <p className={styles.stepSubtitle}>Mô tả rõ vấn đề cốt lõi</p>
             </div>
 
             <div className={styles.formGroup}>
@@ -187,7 +165,7 @@ export default function FormContentSteps({
                 onChange={handleInputChange}
                 className={`${styles.textarea} ${errors.problemDescription ? styles.inputError : ''}`}
                 placeholder="Mô tả chi tiết vấn đề mà bạn phát hiện..."
-                style={{ minHeight: '100px' }}
+                rows={4}
               />
               {errors.problemDescription && <p className={styles.errorText}>{errors.problemDescription}</p>}
             </div>
@@ -200,20 +178,20 @@ export default function FormContentSteps({
                 onChange={handleInputChange}
                 className={`${styles.textarea} ${errors.problemAffects ? styles.inputError : ''}`}
                 placeholder="Nhóm người hoặc loại doanh nghiệp gặp vấn đề này..."
-                style={{ minHeight: '80px' }}
+                rows={3}
               />
               {errors.problemAffects && <p className={styles.errorText}>{errors.problemAffects}</p>}
             </div>
 
             <div className={styles.formGroup}>
               <label className={styles.label}>Vấn đề này xảy ra thường xuyên không?</label>
-              <textarea
+              <input
+                type="text"
                 name="problemFrequency"
                 value={formData.problemFrequency}
                 onChange={handleInputChange}
-                className={styles.textarea}
+                className={styles.input}
                 placeholder="Ví dụ: Hàng ngày, hàng tuần, hàng tháng..."
-                style={{ minHeight: '60px' }}
               />
             </div>
 
@@ -225,7 +203,7 @@ export default function FormContentSteps({
                 onChange={handleInputChange}
                 className={`${styles.textarea} ${errors.currentSolution ? styles.inputError : ''}`}
                 placeholder="Phương pháp, công cụ, hoặc cách làm hiện tại của họ..."
-                style={{ minHeight: '100px' }}
+                rows={3}
               />
               {errors.currentSolution && <p className={styles.errorText}>{errors.currentSolution}</p>}
             </div>
@@ -237,7 +215,7 @@ export default function FormContentSteps({
           <div className={styles.stepContainer}>
             <div>
               <h2 className={styles.stepTitle}>3️ Giải pháp của bạn</h2>
-              <p className={styles.stepSubtitle}>Mô tả cách bạn giải quyết vấn đề (Bước 3)</p>
+              <p className={styles.stepSubtitle}>Mô tả cách bạn giải quyết vấn đề</p>
             </div>
 
             <div className={styles.formGroup}>
@@ -248,7 +226,7 @@ export default function FormContentSteps({
                 onChange={handleInputChange}
                 className={`${styles.textarea} ${errors.proposedSolution ? styles.inputError : ''}`}
                 placeholder="Mô tả chi tiết giải pháp, sản phẩm, hoặc dịch vụ của bạn..."
-                style={{ minHeight: '120px' }}
+                rows={4}
               />
               {errors.proposedSolution && <p className={styles.errorText}>{errors.proposedSolution}</p>}
             </div>
@@ -261,7 +239,7 @@ export default function FormContentSteps({
                 onChange={handleInputChange}
                 className={`${styles.textarea} ${errors.differentiator ? styles.inputError : ''}`}
                 placeholder="Điểm nổi bật, lợi thế, hoặc cải tiến so với phương pháp hiện tại..."
-                style={{ minHeight: '100px' }}
+                rows={3}
               />
               {errors.differentiator && <p className={styles.errorText}>{errors.differentiator}</p>}
             </div>
@@ -274,7 +252,7 @@ export default function FormContentSteps({
                 onChange={handleInputChange}
                 className={`${styles.textarea} ${errors.minimumViable ? styles.inputError : ''}`}
                 placeholder="Mô tả MVP, bước đầu tiên, hoặc phiên bản tối giản có thể bắt đầu..."
-                style={{ minHeight: '100px' }}
+                rows={3}
               />
               {errors.minimumViable && <p className={styles.errorText}>{errors.minimumViable}</p>}
             </div>
@@ -286,7 +264,7 @@ export default function FormContentSteps({
           <div className={styles.stepContainer}>
             <div>
               <h2 className={styles.stepTitle}>4️ Khách hàng & Thị trường</h2>
-              <p className={styles.stepSubtitle}>Thông tin phụ thuộc vào giai đoạn (Bước 4)</p>
+              <p className={styles.stepSubtitle}>Thông tin phụ thuộc vào giai đoạn</p>
             </div>
 
             {/* For Idea Stage */}
@@ -300,7 +278,7 @@ export default function FormContentSteps({
                     onChange={handleInputChange}
                     className={`${styles.textarea} ${errors.idealCustomerBuyer ? styles.inputError : ''}`}
                     placeholder="Vẽ hình ảnh khách hàng lý tưởng của bạn..."
-                    style={{ minHeight: '100px' }}
+                    rows={4}
                   />
                   {errors.idealCustomerBuyer && <p className={styles.errorText}>{errors.idealCustomerBuyer}</p>}
                 </div>
@@ -313,7 +291,7 @@ export default function FormContentSteps({
                     onChange={handleInputChange}
                     className={styles.textarea}
                     placeholder="Dự kiến mức giá họ sẵn sàng trả là bao nhiêu?"
-                    style={{ minHeight: '80px' }}
+                    rows={3}
                   />
                 </div>
               </>
@@ -356,7 +334,7 @@ export default function FormContentSteps({
                     onChange={handleInputChange}
                     className={styles.textarea}
                     placeholder="Ví dụ: Tăng 20% MoM, tăng 3x trong năm qua"
-                    style={{ minHeight: '80px' }}
+                    rows={3}
                   />
                 </div>
               </>
@@ -369,7 +347,7 @@ export default function FormContentSteps({
           <div className={styles.stepContainer}>
             <div>
               <h2 className={styles.stepTitle}>5️ Mô hình kiếm tiền</h2>
-              <p className={styles.stepSubtitle}>Cách bạn tạo doanh thu (Bước 5)</p>
+              <p className={styles.stepSubtitle}>Cách bạn tạo doanh thu</p>
             </div>
 
             <div className={styles.formGroup}>
@@ -380,7 +358,7 @@ export default function FormContentSteps({
                 onChange={handleInputChange}
                 className={`${styles.textarea} ${errors.revenueMethod ? styles.inputError : ''}`}
                 placeholder="Mô tả chi tiết mô hình doanh thu, nguồn tiền của bạn..."
-                style={{ minHeight: '100px' }}
+                rows={4}
               />
               {errors.revenueMethod && <p className={styles.errorText}>{errors.revenueMethod}</p>}
             </div>
@@ -411,7 +389,7 @@ export default function FormContentSteps({
                 onChange={handleInputChange}
                 className={`${styles.textarea} ${errors.pricingStrategy ? styles.inputError : ''}`}
                 placeholder="Ví dụ: Free tier + Premium ($9.99/tháng), Pay-per-use, v.v..."
-                style={{ minHeight: '100px' }}
+                rows={3}
               />
               {errors.pricingStrategy && <p className={styles.errorText}>{errors.pricingStrategy}</p>}
             </div>
@@ -423,7 +401,7 @@ export default function FormContentSteps({
           <div className={styles.stepContainer}>
             <div>
               <h2 className={styles.stepTitle}>6️ Đội ngũ</h2>
-              <p className={styles.stepSubtitle}>Ai đang xây dựng dự án này? (Bước 6)</p>
+              <p className={styles.stepSubtitle}>Ai đang xây dựng dự án này?</p>
             </div>
 
             <div className={styles.formGroup}>
@@ -446,11 +424,8 @@ export default function FormContentSteps({
                 value={formData.teamRoles}
                 onChange={handleInputChange}
                 className={`${styles.textarea} ${errors.teamRoles ? styles.inputError : ''}`}
-                placeholder="Ví dụ: 
-Jane (CEO) - Quản lý & Marketing
-John (Tech Lead) - Backend Developer
-Sarah (Designer) - UI/UX"
-                style={{ minHeight: '120px' }}
+                placeholder="Ví dụ: Jane (CEO) - Quản lý, John (CTO) - Kỹ thuật..."
+                rows={4}
               />
               {errors.teamRoles && <p className={styles.errorText}>{errors.teamRoles}</p>}
             </div>
@@ -466,18 +441,16 @@ Sarah (Designer) - UI/UX"
                 <option value="">Chọn loại hình làm việc</option>
                 <option value="fulltime">Full-time toàn bộ</option>
                 <option value="parttime">Part-time toàn bộ</option>
-                <option value="mixed">Kết hợp (một số full-time, một số part-time)</option>
+                <option value="mixed">Kết hợp</option>
                 <option value="other">Khác</option>
               </select>
               {errors.employmentType && <p className={styles.errorText}>{errors.employmentType}</p>}
             </div>
 
-            <div style={{ padding: '16px', background: 'rgba(59, 130, 246, 0.1)', borderRadius: '8px', marginTop: '20px' }}>
-              <p style={{ fontSize: '14px', lineHeight: '1.5', color: 'var(--text-primary)' }}>
-                ✨ <strong>AI sẽ đánh giá:</strong>
-                <br /> • Logic của mô hình doanh thu
-                <br /> • Tính thực tế và khả thi
-                <br /> • Khớp giữa vấn đề - giải pháp - thị trường
+            <div className={styles.hintBox}>
+              <p className={styles.hintText}>
+                <Sparkles size={18} className={styles.hintHighlight} style={{ marginRight: '8px', verticalAlign: 'middle' }} />
+                <span className={styles.hintHighlight}>AI sẽ đánh giá:</span> Logic mô hình doanh thu, tính khả thi, và mức độ phù hợp giữa vấn đề - giải pháp - thị trường.
               </p>
             </div>
           </div>
@@ -502,15 +475,9 @@ Sarah (Designer) - UI/UX"
           onClick={currentStep === totalSteps ? handleSubmit : handleNext}
           className={styles.primaryButton}
           disabled={isSubmitting}
-          style={{
-            opacity: isSubmitting ? 0.6 : 1,
-            cursor: isSubmitting ? 'not-allowed' : 'pointer'
-          }}
         >
           {isSubmitting ? (
-            <>
-              ⏳ Đang gửi...
-            </>
+            '⏳ Đang gửi...'
           ) : currentStep === totalSteps ? (
             'Gửi dự án'
           ) : (

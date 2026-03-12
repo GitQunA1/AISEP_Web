@@ -43,27 +43,32 @@
   transition: color var(--transition-base);
 }
 
-.postBtn {
-  display: flex;
+.primaryBtn {
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  background: #1f2937;
+  padding: 10px 20px;
+  background-color: var(--primary-blue);
   color: white;
   border: none;
-  padding: 10px 16px;
-  border-radius: 6px;
+  border-radius: 9999px;
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
-  flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(29, 155, 240, 0.2);
 }
 
-.postBtn:hover {
-  background: #111827;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+.primaryBtn:hover {
+  background-color: #1a8cd8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(29, 155, 240, 0.3);
+}
+
+.primaryBtn:active {
+  transform: translateY(0);
 }
 
 .postBtn:active {
