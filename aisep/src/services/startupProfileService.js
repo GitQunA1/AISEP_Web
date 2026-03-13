@@ -19,9 +19,8 @@ const startupProfileService = {
       const items = response?.data?.items || response?.items || [];
       if (items.length > 0) {
         // Explicitly check that the returned startup belongs to the logged in user
-        // Since backend currently omits userId in StartupResponse, this will safely return null
-        // rather than auto-mapping a random startup to the current user's profile.
-        const match = items.find(s => s.userId === userId || s.UserId === userId);
+        // Using loose equality (==) since localStorage/JWT might store userId as a string while API returns a number.
+        const match = items.find(s => s.userId == userId || s.UserId == userId);
         return match || null;
       }
       return null;
@@ -70,7 +69,18 @@ const startupProfileService = {
    */
   createStartupProfile: async (startupData) => {
     try {
-      return await apiClient.post('/api/Startups', startupData);
+      const formData = new FormData();
+      Object.keys(startupData).forEach(key => {
+        if (startupData[key] !== null && startupData[key] !== undefined) {
+          // Flatten objects if needed, but for files we append directly
+          formData.append(key, startupData[key]);
+        }
+      });
+      
+      const response = await apiClient.post('/api/Startups', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response;
     } catch (error) {
       console.error('Error creating startup profile:', error);
       throw error;
@@ -84,7 +94,25 @@ const startupProfileService = {
    */
   updateStartupProfile: async (startupData) => {
     try {
-      return await apiClient.put('/api/Startups', startupData);
+      const { userId, LogoFile, BusinessLicenseFile, ...restData } = startupData;
+      
+      const formData = new FormData();
+      
+      // Append text fields
+      Object.keys(restData).forEach(key => {
+        if (restData[key] !== null && restData[key] !== undefined) {
+          formData.append(key, restData[key]);
+        }
+      });
+      
+      // Append files with exact names matching backend [FromForm] UpdateStartupRequest
+      if (LogoFile) formData.append('LogoFile', LogoFile);
+      if (BusinessLicenseFile) formData.append('BusinessLicenseFile', BusinessLicenseFile);
+      
+      const response = await apiClient.put(`/api/Startups/${userId}`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response;
     } catch (error) {
       console.error('Error updating startup profile:', error);
       throw error;

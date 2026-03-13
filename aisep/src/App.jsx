@@ -12,11 +12,24 @@ import OperationStaffDashboard from './pages/OperationStaffDashboard';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import authService from './services/authService';
 import startupProfileService from './services/startupProfileService';
+import SessionExpiredModal from './components/auth/SessionExpiredModal';
 
 function App() {
   const [currentView, setCurrentView] = useState('main'); // 'login', 'main', 'roleSelection', 'register'
   const [selectedRole, setSelectedRole] = useState(null);
   const [user, setUser] = useState(null);
+  const [isSessionExpired, setIsSessionExpired] = useState(false);
+
+  // Listen for global session_expired events from apiClient
+  useEffect(() => {
+    const handleSessionExpired = () => {
+      setIsSessionExpired(true);
+      setUser(null);
+    };
+
+    window.addEventListener('session_expired', handleSessionExpired);
+    return () => window.removeEventListener('session_expired', handleSessionExpired);
+  }, []);
 
   // Load user from localStorage on mount
   useEffect(() => {
@@ -61,6 +74,7 @@ function App() {
     localStorage.setItem('aisep_token', accessToken);
     localStorage.setItem('aisep_refresh_token', refreshToken);
     setUser(userData);
+    setIsSessionExpired(false); // Reset session expired flag
 
     // After login, if role is startup, check if they have a profile
     const userRole = (userData.role !== undefined && userData.role !== null) ? userData.role.toString().toLowerCase() : '';
@@ -148,6 +162,19 @@ function App() {
 
   return (
     <>
+      {isSessionExpired && (
+        <SessionExpiredModal
+          onLogin={() => {
+            setIsSessionExpired(false);
+            setCurrentView('login');
+          }}
+          onHome={() => {
+            setIsSessionExpired(false);
+            setCurrentView('main');
+          }}
+        />
+      )}
+
       {currentView === 'login' ? (
         <LoginPage
           onLoginSuccess={handleLoginSuccess}

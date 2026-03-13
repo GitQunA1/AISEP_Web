@@ -76,13 +76,18 @@ apiClient.interceptors.response.use(
         }
       }
 
-      // If no refresh token or refresh failed, clear session and redirect
+      // Capture whether there was a token before we delete it
+      const originalToken = localStorage.getItem('aisep_token');
+
+      // If no refresh token or refresh failed, clear session and dispatch event
       localStorage.removeItem('aisep_token');
       localStorage.removeItem('aisep_refresh_token');
       localStorage.removeItem('aisep_user');
       
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/') {
-        window.location.href = '/login';
+      // Dispatch an event so App.jsx can show the SessionExpiredModal
+      // ONLY if they had a token previously (not a guest encountering a 401)
+      if (originalToken && window.location.pathname !== '/login') {
+        window.dispatchEvent(new CustomEvent('session_expired'));
       }
     }
 

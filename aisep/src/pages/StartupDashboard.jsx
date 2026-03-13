@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, RefreshCw } from 'lucide-react';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, RefreshCw, X, ArrowRight } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
@@ -10,7 +10,7 @@ import BlockchainService from '../services/BlockchainService.js';
 import AIEvaluationService from '../services/AIEvaluationService.js';
 import projectSubmissionService from '../services/projectSubmissionService.js';
 import startupProfileService from '../services/startupProfileService.js';
-import { PROJECT_STATUS, isUserEditable } from '../constants/ProjectStatus.js';
+import { PROJECT_STATUS, isUserEditable, STATUS_LABELS, STATUS_COLORS } from '../constants/ProjectStatus.js';
 
 import StartupProfileBanner from '../components/startup/StartupProfileBanner';
 
@@ -29,9 +29,12 @@ export default function StartupDashboard({ user }) {
     const [isPublishingProject, setIsPublishingProject] = useState(false);
     const [blockchainProof, setBlockchainProof] = useState(null);
     const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
+    const [showDetailModal, setShowDetailModal] = useState(false);
+    const [detailProject, setDetailProject] = useState(null);
 
     // We start with null, then fetch. If no project, we show empty state / Create form
     const [project, setProject] = useState(null);
+    const [myProjects, setMyProjects] = useState([]);
     const [startupProfile, setStartupProfile] = useState(null);
 
     // Default form data
@@ -73,21 +76,26 @@ export default function StartupDashboard({ user }) {
                     }
                 }
 
-                // 2. Fetch project
+                // 2. Fetch projects
                 const response = await projectSubmissionService.getMyProjects();
-                if (response.isSuccess && response.data && response.data.length > 0) {
-                    const loadedProject = response.data[0];
-                    setProject(loadedProject);
+                if (response.success && response.data) {
+                    const projects = Array.isArray(response.data) ? response.data : (response.data.items || []);
+                    setMyProjects(projects);
+                    
+                    if (projects.length > 0) {
+                        const loadedProject = projects[0];
+                        setProject(loadedProject);
 
-                    // Pre-fill form data for updates
-                    setProjectFormData({
-                        ...projectFormData,
-                        projectName: loadedProject.name || loadedProject.projectName || '',
-                        description: loadedProject.description || '',
-                        tagline: loadedProject.tagline || '',
-                        industry: loadedProject.industry || '',
-                        stage: loadedProject.stage || '',
-                    });
+                        // Pre-fill form data for updates
+                        setProjectFormData({
+                            ...projectFormData,
+                            projectName: loadedProject.name || loadedProject.projectName || '',
+                            description: loadedProject.description || '',
+                            tagline: loadedProject.tagline || '',
+                            industry: loadedProject.industry || '',
+                            stage: loadedProject.stage || '',
+                        });
+                    }
                 }
             } catch (err) {
                 console.error("Failed to load dashboard data:", err);
@@ -165,7 +173,7 @@ export default function StartupDashboard({ user }) {
         setIsUploading(true);
         try {
             const response = await projectSubmissionService.uploadDocument(project.id, file);
-            if (response.isSuccess) {
+            if (response.success) {
                 // The API might return the document object or we just add a local representation
                 const newDoc = response.data || {
                     id: Math.random(),
@@ -178,12 +186,12 @@ export default function StartupDashboard({ user }) {
                 setSuccessMessage('Tải tài liệu lên thành công!');
                 setShowSuccessModal(true);
             } else {
-                setSuccessMessage('❌ Tải lên thất bại: ' + response.message);
+                setSuccessMessage('Tải lên thất bại: ' + response.message);
                 setShowSuccessModal(true);
             }
         } catch (error) {
             console.error('Upload Error:', error);
-            setSuccessMessage('❌ Không thể tải tài liệu lên do lỗi hệ thống.');
+            setSuccessMessage('Không thể tải tài liệu lên do lỗi hệ thống.');
             setShowSuccessModal(true);
         } finally {
             setIsUploading(false);
@@ -201,7 +209,7 @@ export default function StartupDashboard({ user }) {
                 .map(doc => new File([new ArrayBuffer()], doc.name, { type: 'application/octet-stream' }));
 
             if (filesToProtect.length === 0) {
-                setSuccessMessage('⚠️ Vui lòng tải lên ít nhất một tài liệu trước khi bảo vệ trên blockchain');
+                setSuccessMessage('Vui lòng tải lên ít nhất một tài liệu trước khi bảo vệ trên blockchain');
                 setShowSuccessModal(true);
                 setIsProtectingDocuments(false);
                 return;
@@ -221,18 +229,18 @@ export default function StartupDashboard({ user }) {
                 setProject(updatedProject);
                 setBlockchainProof(BlockchainService.getBlockchainProof(updatedProject));
 
-                setSuccessMessage('✅ Tài liệu đã được bảo vệ trên blockchain thành công!');
+                setSuccessMessage('Tài liệu đã được bảo vệ trên blockchain thành công!');
                 setShowSuccessModal(true);
 
                 // Auto-trigger AI Evaluation (BR-10)
                 setTimeout(() => handleAIEvaluation(updatedProject), 1500);
             } else {
-                setSuccessMessage('❌ Không thể bảo vệ tài liệu: ' + result.error);
+                setSuccessMessage('Không thể bảo vệ tài liệu: ' + result.error);
                 setShowSuccessModal(true);
             }
         } catch (error) {
             console.error('Protection error:', error);
-            setSuccessMessage('❌ Lỗi bảo vệ tài liệu: ' + error.message);
+            setSuccessMessage('Lỗi bảo vệ tài liệu: ' + error.message);
             setShowSuccessModal(true);
         } finally {
             setIsProtectingDocuments(false);
@@ -246,10 +254,10 @@ export default function StartupDashboard({ user }) {
             // The AI Evaluation flow
             const response = await projectSubmissionService.triggerAIAnalysis(projectData.id);
 
-            if (response.isSuccess) {
+            if (response.success) {
                 // Fetch the new result
                 const aiResponse = await projectSubmissionService.getAIAnalysisResults(projectData.id);
-                if (aiResponse.isSuccess) {
+                if (aiResponse.success) {
                     const aiResultData = aiResponse.data;
                     const updatedProject = {
                         ...projectData,
@@ -257,7 +265,7 @@ export default function StartupDashboard({ user }) {
                     };
                     setProject(updatedProject);
 
-                    setSuccessMessage(`🤖 Đánh giá AI hoàn thành!`);
+                    setSuccessMessage('Đánh giá AI hoàn thành!');
                     setShowSuccessModal(true);
                 } else {
                     console.error('Could not fetch AI results after generation:', aiResponse);
@@ -266,12 +274,12 @@ export default function StartupDashboard({ user }) {
                 }
             } else {
                 console.error('AI Evaluation error:', response);
-                setSuccessMessage('❌ Đánh giá AI thất bại: ' + response.message);
+                setSuccessMessage('Đánh giá AI thất bại: ' + response.message);
                 setShowSuccessModal(true);
             }
         } catch (error) {
             console.error('AI evaluation error:', error);
-            setSuccessMessage('❌ Không thể thực hiện đánh giá AI do lỗi mạng/máy chủ.');
+            setSuccessMessage('Không thể thực hiện đánh giá AI do lỗi mạng/máy chủ.');
             setShowSuccessModal(true);
         } finally {
             setIsEvaluatingAI(false);
@@ -282,20 +290,20 @@ export default function StartupDashboard({ user }) {
     const handleSubmitForReview = () => {
         // Check email verification (BR-02)
         if (user && !user.emailVerified) {
-            setSuccessMessage('⚠️ Vui lòng xác minh email của bạn trước khi nộp dự án');
+            setSuccessMessage('Vui lòng xác minh email của bạn trước khi nộp dự án');
             setShowSuccessModal(true);
             return;
         }
 
         // Check prerequisites
         if (!project.blockchainHash) {
-            setSuccessMessage('⚠️ Vui lòng bảo vệ tài liệu trên blockchain trước');
+            setSuccessMessage('Vui lòng bảo vệ tài liệu trên blockchain trước');
             setShowSuccessModal(true);
             return;
         }
 
         if (!project.aiEvaluation) {
-            setSuccessMessage('⚠️ Vui lòng hoàn thành đánh giá AI trước');
+            setSuccessMessage('Vui lòng hoàn thành đánh giá AI trước');
             setShowSuccessModal(true);
             return;
         }
@@ -310,7 +318,7 @@ export default function StartupDashboard({ user }) {
             };
             setProject(updatedProject);
 
-            setSuccessMessage('✅ Dự án đã được nộp để nhân viên xem xét!\n\nĐội ngũ của chúng tôi sẽ xem xét trong vòng 2-3 ngày làm việc.');
+            setSuccessMessage('Dự án đã được nộp để nhân viên xem xét!\n\nĐội ngũ của chúng tôi sẽ xem xét trong vòng 2-3 ngày làm việc.');
             setShowSuccessModal(true);
         } catch (error) {
             alert('Lỗi khi nộp dự án: ' + error.message);
@@ -340,7 +348,7 @@ export default function StartupDashboard({ user }) {
             };
             setProject(updatedProject);
 
-            setSuccessMessage('🎉 Chúc mừng!\n\nDự án của bạn đã được đăng và hiển thị với nhà đầu tư và cố vấn!');
+            setSuccessMessage('Chúc mừng!\n\nDự án của bạn đã được đăng và hiển thị với nhà đầu tư và cố vấn!');
             setShowSuccessModal(true);
         } catch (error) {
             alert('Lỗi khi đăng dự án: ' + error.message);
@@ -361,7 +369,7 @@ export default function StartupDashboard({ user }) {
             };
             setProject(updatedProject);
 
-            setSuccessMessage('✅ Dự án đã được nộp lại để xem xét!');
+            setSuccessMessage('Dự án đã được nộp lại để xem xét!');
             setShowSuccessModal(true);
         } catch (error) {
             alert('Lỗi khi nộp lại dự án: ' + error.message);
@@ -451,6 +459,12 @@ export default function StartupDashboard({ user }) {
                     Tài liệu & Sở hữu trí tuệ
                 </button>
                 <button
+                    className={`${styles.tab} ${activeSection === 'my-projects' ? styles.active : ''}`}
+                    onClick={() => setActiveSection('my-projects')}
+                >
+                    Dự án của tôi
+                </button>
+                <button
                     className={`${styles.tab} ${activeSection === 'advisors' ? styles.active : ''}`}
                     onClick={() => setActiveSection('advisors')}
                 >
@@ -474,7 +488,7 @@ export default function StartupDashboard({ user }) {
                             user={user}
                             onSuccess={(data) => {
                                 setStartupProfile(data);
-                                setSuccessMessage('✅ Cập nhật thông tin startup thành công!');
+                                setSuccessMessage('Cập nhật thông tin startup thành công!');
                                 setShowSuccessModal(true);
                             }}
                         />
@@ -592,6 +606,60 @@ export default function StartupDashboard({ user }) {
                                         </div>
                                     </div>
                                 ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* My Projects Section */}
+                {activeSection === 'my-projects' && (
+                    <div className={styles.section}>
+                        <div className={styles.card}>
+                            <h3 className={styles.cardTitle}>Danh sách dự án của tôi</h3>
+                            <div className={styles.list}>
+                                {myProjects.length === 0 ? (
+                                    <div className={styles.emptyState}>
+                                        <p>Bạn chưa đăng dự án nào.</p>
+                                    </div>
+                                ) : (
+                                    myProjects.map(p => (
+                                        <div key={p.id || p.projectId} className={styles.listItem}>
+                                            <div className={styles.listContent}>
+                                                    <div className={styles.flexCenter} style={{ gap: '12px', marginBottom: '4px' }}>
+                                                        <h4 className={styles.listItemTitle} style={{ margin: 0 }}>
+                                                            {p.name || p.projectName}
+                                                        </h4>
+                                                        <span 
+                                                            className={styles.badge} 
+                                                            style={{ 
+                                                                backgroundColor: `${STATUS_COLORS[p.status || 'Draft']}15`,
+                                                                color: STATUS_COLORS[p.status || 'Draft'],
+                                                                border: `1px solid ${STATUS_COLORS[p.status || 'Draft']}30`
+                                                            }}
+                                                        >
+                                                            {STATUS_LABELS[p.status || 'Draft'] || 'Nháp'}
+                                                        </span>
+                                                    </div>
+                                                <p className={styles.subtitle} style={{ margin: '4px 0' }}>{p.shortDescription || p.description}</p>
+                                                <div className={styles.listMeta}>
+                                                    <span>Giai đoạn: {p.developmentStage === 0 ? 'Ý tưởng' : p.developmentStage === 1 ? 'MVP' : 'Tăng trưởng'}</span>
+                                                    {p.submittedDate && <span> • Nộp ngày: {p.submittedDate}</span>}
+                                                </div>
+                                            </div>
+                                            <div className={styles.listActions}>
+                                                <button 
+                                                    className={styles.secondaryBtn} 
+                                                    onClick={() => { 
+                                                        setDetailProject(p); 
+                                                        setShowDetailModal(true);
+                                                    }}
+                                                >
+                                                    Chi tiết
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>
@@ -805,6 +873,144 @@ export default function StartupDashboard({ user }) {
                     title={successMessage.split('\n')[0] || 'Success!'}
                     message={successMessage.split('\n').slice(1).join('\n') || successMessage}
                 />
+            )}
+
+            {/* Project Detail Modal */}
+            {showDetailModal && detailProject && (
+                <div 
+                    className={styles.modalOverlay} 
+                    onClick={(e) => e.target === e.currentTarget && setShowDetailModal(false)}
+                >
+                    <div className={styles.modalContent} style={{ maxWidth: '800px', width: '90%' }}>
+                        <div className={styles.cardHeader} style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', margin: '0' }}>
+                            <div>
+                                <h2 className={styles.headerTitle} style={{ margin: '0 0 8px 0' }}>{detailProject.projectName || detailProject.name}</h2>
+                                <span 
+                                    className={styles.badge} 
+                                    style={{ 
+                                        backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}15`,
+                                        color: STATUS_COLORS[detailProject.status || 'Draft'],
+                                        border: `1px solid ${STATUS_COLORS[detailProject.status || 'Draft']}30`
+                                    }}
+                                >
+                                    {STATUS_LABELS[detailProject.status || 'Draft'] || 'Nháp'}
+                                </span>
+                            </div>
+                            <button onClick={() => setShowDetailModal(false)} className={styles.closeButton} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
+                                <X size={24} />
+                            </button>
+                        </div>
+                        
+                        <div style={{ padding: '24px', overflowY: 'auto' }}>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>1. Thông tin cơ bản</h4>
+                                    
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Mô tả ngắn</label>
+                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.shortDescription}</p>
+                                    </div>
+                                    
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Giai đoạn phát triển</label>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <TrendingUp size={16} color="var(--primary-blue)" />
+                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
+                                                {detailProject.developmentStage === 0 ? 'Ý tưởng (Idea)' : detailProject.developmentStage === 1 ? 'MVP' : 'Vận hành (Growth)'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Vấn đề cần giải quyết</label>
+                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.problemStatement}</p>
+                                    </div>
+                                    
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Giải pháp đề xuất</label>
+                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.solutionDescription}</p>
+                                    </div>
+                                </div>
+                                
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>2. Thị trường & Mô hình</h4>
+                                    
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Khách hàng mục tiêu</label>
+                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.targetCustomers}</p>
+                                    </div>
+                                    
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Giá trị độc đáo (UVP)</label>
+                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.uniqueValueProposition}</p>
+                                    </div>
+                                    
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                        <div className={styles.formGroup}>
+                                            <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Quy mô thị trường</label>
+                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '700' }}>
+                                                {detailProject.marketSize ? `${detailProject.marketSize.toLocaleString()} VND` : '—'}
+                                            </p>
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                            <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Doanh thu</label>
+                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '700' }}>
+                                                {detailProject.revenue ? `${detailProject.revenue.toLocaleString()} VND` : '—'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Mô hình kinh doanh</label>
+                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.businessModel}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ marginTop: '32px', borderTop: '1px solid var(--border-color)', paddingTop: '32px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                        <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>3. Đội ngũ</h4>
+                                        
+                                        <div className={styles.formGroup}>
+                                            <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Thành viên & Vai trò</label>
+                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{detailProject.teamMembers}</p>
+                                        </div>
+                                        
+                                        <div className={styles.formGroup}>
+                                            <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Kỹ năng cốt lõi</label>
+                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)' }}>{detailProject.keySkills}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                        <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>4. Cạnh tranh</h4>
+                                        
+                                        <div className={styles.formGroup}>
+                                            <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Kinh nghiệm đội ngũ</label>
+                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.teamExperience}</p>
+                                        </div>
+                                        
+                                        <div className={styles.formGroup}>
+                                            <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Đối thủ cạnh tranh</label>
+                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.competitors}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div className={styles.actions} style={{ padding: '20px 24px', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', display: 'flex' }}>
+                            <button 
+                                className={styles.secondaryBtn} 
+                                style={{ flex: '1', borderRadius: '9999px' }}
+                                onClick={() => setShowDetailModal(false)}
+                            >
+                                Đóng
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
         </div>
     );

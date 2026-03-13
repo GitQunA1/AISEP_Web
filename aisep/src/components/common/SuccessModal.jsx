@@ -22,15 +22,15 @@ export default function SuccessModal({ onClose, title, message }) {
                 </div>
 
                 <h2 className={styles.title}>
-                    {title || 'Submission Successful!'}
+                    {title || 'Thành công!'}
                 </h2>
 
                 <p className={styles.message}>
-                    {message || 'Your startup profile has been submitted successfully. Our team will review it and get back to you soon.'}
+                    {message || 'Thông tin đã được lưu thành công.'}
                 </p>
 
                 <button className={styles.primaryButton} onClick={onClose}>
-                    Done
+                    Xong
                 </button>
             </div>
         </div>

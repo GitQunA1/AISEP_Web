@@ -9,7 +9,7 @@ export default defineConfig({
     proxy: {
       // Forward all /api requests to the backend, bypassing CORS
       '/api': {
-        target: 'http://3.106.185.201:5000',
+        target: 'https://api.aisep.tech',
         changeOrigin: true,
         secure: false,
       }
