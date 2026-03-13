@@ -27,14 +27,15 @@
 /* Modal */
 .modal {
     background-color: var(--bg-primary);
-    border-radius: 20px;
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
     width: 100%;
     max-width: 480px;
     padding: 40px 32px 32px 32px;
     position: relative;
     text-align: center;
     animation: slideUp 0.3s ease-out;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
 }
 
 @keyframes slideUp {

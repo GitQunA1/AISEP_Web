@@ -10,18 +10,41 @@ export const projectSubmissionService = {
    * @param {Object} projectData - Must contain: projectName, shortDescription, developmentStage, problemStatement, solutionDescription, targetCustomers, uniqueValueProposition, marketSize, businessModel, revenue, competitors, teamMembers, keySkills, teamExperience
    * @returns {Promise<any>}
    */
+  /**
+   * Submit startup project information
+   * @param {Object} projectData 
+   * @returns {Promise<any>}
+   */
   submitStartupInfo: async (projectData) => {
-    const response = await apiClient.post('/api/Projects', projectData);
+    const formData = new FormData();
+    Object.keys(projectData).forEach(key => {
+      if (projectData[key] !== null && projectData[key] !== undefined) {
+        formData.append(key, projectData[key]);
+      }
+    });
+
+    const response = await apiClient.post('/api/Projects', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response;
   },
 
   /**
    * Creates a new startup project
    * @param {Object} projectData 
-   * @returns {Promise<any>} The newly created project ID inside response.data
+   * @returns {Promise<any>}
    */
   createProject: async (projectData) => {
-    const response = await apiClient.post('/api/Projects', projectData);
+    const formData = new FormData();
+    Object.keys(projectData).forEach(key => {
+      if (projectData[key] !== null && projectData[key] !== undefined) {
+        formData.append(key, projectData[key]);
+      }
+    });
+
+    const response = await apiClient.post('/api/Projects', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return response;
   },
 
@@ -32,8 +55,17 @@ export const projectSubmissionService = {
    * @returns {Promise<any>}
    */
   updateProject: async (id, projectData) => {
-      const response = await apiClient.put(`/api/Projects/${id}`, projectData);
-      return response;
+    const formData = new FormData();
+    Object.keys(projectData).forEach(key => {
+      if (projectData[key] !== null && projectData[key] !== undefined) {
+        formData.append(key, projectData[key]);
+      }
+    });
+
+    const response = await apiClient.put(`/api/Projects/${id}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+    return response;
   },
 
   /**
@@ -83,10 +115,15 @@ export const projectSubmissionService = {
     try {
       // Empty SieveModel query gets defaults
       const response = await apiClient.get('/api/Projects/my');
-      return response;
+      if (response && (response.success || response.isSuccess)) {
+        return response;
+      } else {
+        // If the response indicates failure but isn't a 404, throw an error
+        throw new Error(response?.message || 'Failed to fetch projects.');
+      }
     } catch (error) {
       if (error?.response?.status === 404) {
-        return { isSuccess: true, data: [] };
+        return { success: true, data: [] };
       }
       throw error;
     }

@@ -6,19 +6,23 @@
 
 // Define all valid project statuses
 const PROJECT_STATUS = {
-  DRAFT: 'DRAFT',                          // BR-03: Unpublished projects
-  IP_PROTECTED: 'IP_PROTECTED',            // BR-08: Blockchain hash confirmed
-  SUBMITTED: 'SUBMITTED',                  // BR-19: Sent for staff review
-  APPROVED: 'APPROVED',                    // BR-17: Staff approved
-  PUBLISHED: 'PUBLISHED',                  // BR-19: Live on platform
-  REJECTED: 'REJECTED'                     // BR-17: Staff rejected
+  DRAFT: 'Draft',
+  IP_PROTECTED: 'IpProtected',
+  PENDING: 'Pending',
+  SUBMITTED: 'Submitted',
+  APPROVED: 'Approved',
+  PUBLISHED: 'Published',
+  REJECTED: 'Rejected'
 };
 
 // Status transition rules
 const VALID_TRANSITIONS = {
   [PROJECT_STATUS.DRAFT]: [
-    PROJECT_STATUS.IP_PROTECTED,
+    PROJECT_STATUS.SUBMITTED,
     PROJECT_STATUS.REJECTED
+  ],
+  [PROJECT_STATUS.PENDING]: [
+    PROJECT_STATUS.SUBMITTED
   ],
   [PROJECT_STATUS.IP_PROTECTED]: [
     PROJECT_STATUS.SUBMITTED
@@ -30,26 +34,28 @@ const VALID_TRANSITIONS = {
   [PROJECT_STATUS.APPROVED]: [
     PROJECT_STATUS.PUBLISHED
   ],
-  [PROJECT_STATUS.PUBLISHED]: [],          // BR-20: No status change for published
+  [PROJECT_STATUS.PUBLISHED]: [],
   [PROJECT_STATUS.REJECTED]: [
-    PROJECT_STATUS.DRAFT                   // BR-18: Allow re-editing
+    PROJECT_STATUS.SUBMITTED
   ]
 };
 
-// Status display labels
+// Status display labels - Simplified to 4 as requested
 const STATUS_LABELS = {
-  [PROJECT_STATUS.DRAFT]: 'Draft',
-  [PROJECT_STATUS.IP_PROTECTED]: 'IP Protected',
-  [PROJECT_STATUS.SUBMITTED]: 'Under Review',
-  [PROJECT_STATUS.APPROVED]: 'Approved',
-  [PROJECT_STATUS.PUBLISHED]: 'Published',
-  [PROJECT_STATUS.REJECTED]: 'Rejected'
+  [PROJECT_STATUS.DRAFT]: 'Đang chờ duyệt',
+  [PROJECT_STATUS.IP_PROTECTED]: 'Đang chờ duyệt',
+  [PROJECT_STATUS.PENDING]: 'Đang chờ duyệt',
+  [PROJECT_STATUS.SUBMITTED]: 'Đang chờ duyệt',
+  [PROJECT_STATUS.APPROVED]: 'Đã duyệt',
+  [PROJECT_STATUS.PUBLISHED]: 'Đã công khai',
+  [PROJECT_STATUS.REJECTED]: 'Bị từ chối'
 };
 
 // Status colors for UI
 const STATUS_COLORS = {
-  [PROJECT_STATUS.DRAFT]: '#6B7280',        // Gray
-  [PROJECT_STATUS.IP_PROTECTED]: '#3B82F6', // Blue
+  [PROJECT_STATUS.DRAFT]: '#F59E0B',        // Amber (using Submitted's color)
+  [PROJECT_STATUS.IP_PROTECTED]: '#F59E0B', // Amber
+  [PROJECT_STATUS.PENDING]: '#F59E0B',      // Amber
   [PROJECT_STATUS.SUBMITTED]: '#F59E0B',    // Amber
   [PROJECT_STATUS.APPROVED]: '#10B981',     // Green
   [PROJECT_STATUS.PUBLISHED]: '#059669',    // Dark Green

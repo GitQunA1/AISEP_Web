@@ -145,3 +145,39 @@
     grid-template-columns: 1fr;
   }
 }
+
+.fileInputWrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  background: rgba(29, 155, 240, 0.03);
+  border: 1px dashed var(--border-color);
+  border-radius: 8px;
+}
+
+.fileInput {
+  font-size: 14px;
+  color: var(--text-primary);
+}
+
+.fileHint {
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.currentFile {
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--primary-blue);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.currentFile a {
+  color: var(--primary-blue);
+  text-decoration: underline;
+  font-weight: 600;
+}

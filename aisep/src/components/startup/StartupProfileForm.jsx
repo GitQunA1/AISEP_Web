@@ -18,6 +18,9 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
     industry: 0,
     businessLicenseUrl: '',
   });
+  
+  const [logoFile, setLogoFile] = useState(null);
+  const [licenseFile, setLicenseFile] = useState(null);
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -26,15 +29,27 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
   // Pre-populate form with existing data
   useEffect(() => {
     if (initialData) {
+      // Map API string Enum to corresponding integer index for the <select> element
+      let industryVal = initialData.industry || 0;
+      if (typeof industryVal === 'string') {
+        const industryMap = {
+          'Fintech': 0, 'Edtech': 1, 'Healthtech': 2, 'Agritech': 3,
+          'E_Commerce': 4, 'Logistics': 5, 'Proptech': 6, 'Cleantech': 7,
+          'SaaS': 8, 'AI_BigData': 9, 'Web3_Crypto': 10, 'Food_Beverage': 11,
+          'Manufacturing': 12, 'Media_Entertainment': 13, 'Other': 14
+        };
+        industryVal = industryMap[industryVal] !== undefined ? industryMap[industryVal] : 0;
+      }
+
       setFormData({
-        companyName: initialData.companyName || '',
-        logoUrl: initialData.logoUrl || '',
-        founder: initialData.founder || '',
-        contactInfo: initialData.contactInfo || '',
-        countryCity: initialData.countryCity || '',
-        website: initialData.website || '',
-        industry: initialData.industry || 0,
-        businessLicenseUrl: initialData.businessLicenseUrl || '',
+        companyName: initialData.companyName || initialData.CompanyName || '',
+        logoUrl: initialData.logoUrl || initialData.LogoUrl || '',
+        founder: initialData.founder || initialData.Founder || '',
+        contactInfo: initialData.contactInfo || initialData.ContactInfo || '',
+        countryCity: initialData.countryCity || initialData.CountryCity || '',
+        website: initialData.website || initialData.Website || '',
+        industry: industryVal,
+        businessLicenseUrl: initialData.businessLicenseUrl || initialData.BusinessLicenseUrl || '',
       });
     }
   }, [initialData]);
@@ -65,32 +80,59 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
 
     setIsSubmitting(true);
     try {
+      // Create FormData properly for multipart/form-data
+      const dataPayload = new FormData();
+      
+      // Append basic fields
+      dataPayload.append('companyName', formData.companyName);
+      dataPayload.append('founder', formData.founder);
+      dataPayload.append('contactInfo', formData.contactInfo);
+      dataPayload.append('countryCity', formData.countryCity);
+      dataPayload.append('website', formData.website);
+      dataPayload.append('industry', formData.industry);
+      
+      // Append files with keys matching backend IFormFile properties
+      if (logoFile) {
+        dataPayload.append('LogoFile', logoFile);
+      }
+      if (licenseFile) {
+        dataPayload.append('BusinessLicenseFile', licenseFile);
+      }
+
       // Determine if we should create or update
       const isUpdate = !!(initialData && (initialData.id || initialData.startupId));
       let response;
       
       if (isUpdate) {
         // Ensure ID is included in payload for update
-        const payload = {
-          ...formData,
-          startupId: initialData.startupId || initialData.id
-        };
-        response = await startupProfileService.updateStartupProfile(payload);
+        const targetId = user?.userId || initialData?.userId || initialData.startupId || initialData.id;
+        response = await startupProfileService.updateStartupProfile({ 
+          ...Object.fromEntries(dataPayload), 
+          LogoFile: logoFile, 
+          BusinessLicenseFile: licenseFile, 
+          userId: targetId 
+        });
       } else {
-        response = await startupProfileService.createStartupProfile(formData);
+        response = await startupProfileService.createStartupProfile({ 
+          ...Object.fromEntries(dataPayload), 
+          LogoFile: logoFile, 
+          BusinessLicenseFile: licenseFile 
+        });
       }
       
-      if (response && response.isSuccess) {
+      if (response && (response.isSuccess || response.success)) {
         setSuccessMessage(isUpdate ? 'Thông tin startup đã được cập nhật thành công!' : 'Hồ sơ startup đã được tạo thành công!');
         if (onSuccess) {
-          // Return the full data from response if available, or current formData
-          onSuccess(response.data || formData);
+          // Priority: response.data (actual updated object) -> response (if it is the object) -> formData (fallback)
+          const updatedData = response.data || (response.companyName ? response : null) || formData;
+          onSuccess(updatedData);
         }
       } else {
         setErrors({ submit: response?.message || (isUpdate ? 'Cập nhật thất bại. Vui lòng thử lại.' : 'Tạo hồ sơ thất bại. Vui lòng thử lại.') });
       }
     } catch (error) {
       console.error('Error saving profile:', error);
+      // Backend validation messages might come directly via catch block from apiClient reject
       setErrors({ submit: error?.message || 'Lỗi kết nối. Vui lòng kiểm tra kết nối mạng.' });
     } finally {
       setIsSubmitting(false);
@@ -216,43 +258,66 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
               onChange={handleInputChange}
               className={styles.select}
             >
-              <option value="0">Chọn lĩnh vực</option>
-              <option value="1">Nông nghiệp</option>
-              <option value="2">Giáo dục</option>
-              <option value="3">Công nghệ</option>
-              <option value="4">Xã hội</option>
-              <option value="5">Y tế</option>
-              <option value="6">Fintech</option>
-              <option value="7">E-commerce</option>
-              <option value="8">Khác</option>
+              {/* Mapped exactly to AISEP.DAL.Enums.Industry */}
+              <option value="0">Fintech</option>
+              <option value="1">Edtech</option>
+              <option value="2">Healthtech</option>
+              <option value="3">Agritech</option>
+              <option value="4">E-Commerce</option>
+              <option value="5">Logistics</option>
+              <option value="6">Proptech</option>
+              <option value="7">Cleantech</option>
+              <option value="8">SaaS</option>
+              <option value="9">AI & Big Data</option>
+              <option value="10">Web3 & Crypto</option>
+              <option value="11">Food & Beverage</option>
+              <option value="12">Manufacturing</option>
+              <option value="13">Media & Entertainment</option>
+              <option value="14">Khác (Other)</option>
             </select>
           </div>
         </div>
 
-        {/* Row 4: URLs */}
+        {/* Row 4: File Uploads */}
         <div className={styles.formRow}>
           <div className={styles.formGroup}>
-            <label className={styles.label}>URL Logo</label>
-            <input
-              type="url"
-              name="logoUrl"
-              value={formData.logoUrl}
-              onChange={handleInputChange}
-              className={styles.input}
-              placeholder="https://example.com/logo.png"
-            />
+            <label className={styles.label}>Tải lên Logo</label>
+            <div className={styles.fileInputWrapper}>
+              <input
+                type="file"
+                name="logoFile"
+                accept="image/png, image/jpeg, image/jpg, image/webp"
+                onChange={(e) => setLogoFile(e.target.files[0])}
+                className={styles.fileInput}
+              />
+              <span className={styles.fileHint}>Định dạng hỗ trợ: PNG, JPG, JPEG, WEBP</span>
+              {formData.logoUrl && !logoFile && (
+                <div className={styles.currentFile}>
+                  <span>Hiện tại: </span>
+                  <a href={formData.logoUrl} target="_blank" rel="noreferrer">Xem ảnh</a>
+                </div>
+              )}
+            </div>
           </div>
 
           <div className={styles.formGroup}>
-            <label className={styles.label}>URL Giấy phép kinh doanh</label>
-            <input
-              type="url"
-              name="businessLicenseUrl"
-              value={formData.businessLicenseUrl}
-              onChange={handleInputChange}
-              className={styles.input}
-              placeholder="https://example.com/license.pdf"
-            />
+            <label className={styles.label}>Giấy phép kinh doanh</label>
+            <div className={styles.fileInputWrapper}>
+              <input
+                type="file"
+                name="licenseFile"
+                accept="image/png, image/jpeg, image/jpg, application/pdf"
+                onChange={(e) => setLicenseFile(e.target.files[0])}
+                className={styles.fileInput}
+              />
+              <span className={styles.fileHint}>Định dạng hỗ trợ: PNG, JPG, PDF</span>
+              {formData.businessLicenseUrl && !licenseFile && (
+                <div className={styles.currentFile}>
+                  <span>Hiện tại: </span>
+                  <a href={formData.businessLicenseUrl} target="_blank" rel="noreferrer">Xem tài liệu</a>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
