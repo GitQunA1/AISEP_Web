@@ -9,6 +9,13 @@
     padding-bottom: 60px;
 }
 
+@media (max-width: 1439px) and (min-width: 1024px) {
+    .container {
+        max-width: 100%;
+        margin: 0;
+    }
+}
+
 .searchSection {
     padding: var(--spacing-md);
     background-color: var(--bg-primary);
@@ -229,7 +236,7 @@
 }
 
 @media (max-width: 600px) {
-    .feed {
+    .list {
         padding: 0 12px;
     }
     

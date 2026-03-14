@@ -11,8 +11,8 @@
   /* Visuals */
   background-color: var(--bg-primary);
   border-bottom: 1px solid var(--border-color);
-  z-index: 40;
-  /* Above content (1), below Sidebar (50+) */
+  z-index: 1000;
+  /* Above content, below Sidebar drawer (1100) */
 
   /* Layout */
   display: none;

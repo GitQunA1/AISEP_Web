@@ -14,14 +14,31 @@
 /* THE GRID CONTAINER */
 .mainContainer {
   display: grid;
-  /* Fixed Sidebar (275px) | Fluid Feed (1fr) | Fixed Right Panel (350px) */
+  /* Wide Desktop (>= 1440px): 275px sidebar */
+  /* Large Tablet/Laptop (1024px - 1439px): 80px sidebar */
   grid-template-columns: 275px 1fr 350px;
   grid-template-rows: 100vh;
   width: 100%;
   height: 100vh;
   background-color: var(--bg-primary);
   overflow: hidden;
-  transition: grid-template-columns 0.3s ease;
+  transition: all 0.3s ease;
+}
+
+/* Tablet/Laptop Phase (1024px - 1439px) */
+@media (max-width: 1439px) and (min-width: 1024px) {
+  .mainContainer {
+    grid-template-columns: 80px 1fr 350px;
+  }
+
+  .mainContent {
+    padding: 0 24px;
+  }
+
+  .feedStreamWrapper {
+    max-width: 100%;
+    margin: 0;
+  }
 }
 
 .mainContainer.aiMode {
@@ -82,23 +99,15 @@
   background-color: transparent;
 }
 
-/* RESPONSIVE: Tablet (768px - 1199px) */
-@media (max-width: 1199px) and (min-width: 768px) {
-  .mainContainer {
-    grid-template-columns: 80px 1fr; /* Collapsed sidebar */
-  }
-
+/* RESPONSIVE: Tablet AI Mode Adjustment */
+@media (max-width: 1439px) and (min-width: 1024px) {
   .mainContainer.aiMode {
     grid-template-columns: 80px 1fr;
   }
-
-  .rightPanel {
-    display: none; /* Generic right panel hidden, AI handles its own */
-  }
 }
 
-/* RESPONSIVE: Mobile (< 768px) */
-@media (max-width: 767px) {
+/* RESPONSIVE: Mobile & Tablet Drawer (< 1024px) */
+@media (max-width: 1023px) {
   .mainContainer {
     display: block;
     height: auto;
@@ -147,6 +156,13 @@
     display: flex; /* Make it a flex container */
     flex-direction: column;
     padding-bottom: 0; /* Remove padding for flex container */
+  }
+
+  @media (max-width: 350px) {
+    .feedStreamWrapper {
+      padding-left: 10px;
+      padding-right: 10px;
+    }
   }
 }
 

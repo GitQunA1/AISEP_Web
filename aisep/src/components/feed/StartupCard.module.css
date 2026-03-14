@@ -57,11 +57,11 @@
   margin-bottom: 4px;
 }
 
-.infoGroup {
+.metaGroup {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
   gap: 6px;
+  flex-shrink: 0;
 }
 
 .name {
@@ -69,6 +69,11 @@
   font-weight: 700;
   color: var(--text-primary);
   margin: 0;
+  flex: 1;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .nameClickable {
@@ -115,6 +120,7 @@
   display: flex;
   gap: 6px;
   margin-bottom: 6px;
+  flex-wrap: wrap;
 }
 
 /* DESCRIPTION */
@@ -157,6 +163,7 @@
   font-size: 13px;
   font-weight: 500;
   color: var(--text-secondary);
+  line-height: 1.3;
 }
 
 .subscribeBtn {
@@ -221,4 +228,38 @@
 
 .bookmarked {
   color: var(--primary-blue);
+}
+
+@media (max-width: 360px) {
+  .card {
+    gap: 10px;
+    padding: 12px;
+  }
+  
+  .headerRow {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .metaGroup {
+    width: 100%;
+    justify-content: flex-start;
+  }
+  
+  .menuBtn {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+  }
+  
+  .premiumTease {
+    flex-wrap: wrap;
+    padding: 10px;
+  }
+  
+  .subscribeBtn {
+    width: 100%;
+    margin-top: 4px;
+    text-align: center;
+  }
 }
