@@ -4,6 +4,8 @@ import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
 import SuccessModal from '../components/common/SuccessModal';
+import ProjectSelectorModal from '../components/common/ProjectSelectorModal';
+import BlockchainVerificationModal from '../components/common/BlockchainVerificationModal';
 import FeedHeader from '../components/feed/FeedHeader';
 import ProjectValidationService from '../services/ProjectValidation.js';
 import BlockchainService from '../services/BlockchainService.js';
@@ -154,44 +156,148 @@ export default function StartupDashboard({ user }) {
         setDocuments(documents.filter(doc => doc.id !== id));
     };
 
+    const handleVerifyDocumentByID = async (documentId) => {
+        const idToVerify = documentId || documentIdInput.trim();
+        
+        if (!idToVerify) {
+            setSuccessMessage('❌ Vui lòng nhập Document ID');
+            setShowSuccessModal(true);
+            return;
+        }
+
+        setIsVerifying(true);
+        try {
+            const response = await projectSubmissionService.verifyDocument(idToVerify);
+            if (response?.success && response?.data) {
+                setVerificationData(response.data);
+                const doc = documents.find(d => d.id === idToVerify || d.documentId === idToVerify);
+                setVerificationDocumentName(doc?.name || doc?.fileName || `Document #${idToVerify}`);
+                setShowVerificationModal(true);
+                setDocumentIdInput(''); // Reset input after successful verification
+            } else {
+                setSuccessMessage('❌ Xác thực thất bại: ' + (response?.message || 'Không thể xác thực tài liệu'));
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('Verify Error:', error);
+            const errorMessage = error?.response?.data?.message || error?.message || 'Vui lòng thử lại';
+            setSuccessMessage('❌ Lỗi xác thực: ' + errorMessage);
+            setShowSuccessModal(true);
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+
     const [isUploading, setIsUploading] = useState(false);
+    const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+    const [showProjectSelector, setShowProjectSelector] = useState(false);
+    const [selectedProjectIdForUpload, setSelectedProjectIdForUpload] = useState(null);
+    
+    // Blockchain Verification States
+    const [showVerificationModal, setShowVerificationModal] = useState(false);
+    const [verificationData, setVerificationData] = useState(null);
+    const [verificationDocumentName, setVerificationDocumentName] = useState('');
+    const [documentIdInput, setDocumentIdInput] = useState('');
+    const [isVerifying, setIsVerifying] = useState(false);
+    
     const hiddenFileInput = React.useRef(null);
 
+    // Fetch documents from API
+    const handleFetchDocuments = async (projectId) => {
+        setIsLoadingDocuments(true);
+        try {
+            const response = await projectSubmissionService.getDocuments(projectId);
+            if (response.success && response.data) {
+                const docsList = Array.isArray(response.data) ? response.data : [];
+                setDocuments(docsList);
+            } else if (response.data) {
+                // In case API returns array directly
+                setDocuments(Array.isArray(response.data) ? response.data : []);
+            }
+        } catch (error) {
+            console.error('Error fetching documents:', error);
+            setDocuments([]);
+        } finally {
+            setIsLoadingDocuments(false);
+        }
+    };
+
+    // Fetch documents when documents tab is active
+    React.useEffect(() => {
+        if (activeSection === 'documents') {
+            const projectId = project?.id || 'test-project-001';
+            handleFetchDocuments(projectId);
+        }
+    }, [activeSection, project]);
+
     const handleUploadClick = () => {
-        if (!project || !project.id) {
+        // Check if user has any projects
+        if (!myProjects || myProjects.length === 0) {
             setSuccessMessage('⚠️ Vui lòng tạo dự án trước khi tải tài liệu lên.');
             setShowSuccessModal(true);
             return;
         }
-        hiddenFileInput.current.click();
+        // Show project selector modal
+        setShowProjectSelector(true);
+    };
+
+    const handleSelectProjectForUpload = (selectedProject) => {
+        const projectId = selectedProject.id || selectedProject.projectId;
+        setSelectedProjectIdForUpload(projectId);
+        setShowProjectSelector(false);
+        // Trigger file input after project is selected
+        setTimeout(() => {
+            hiddenFileInput.current?.click();
+        }, 100);
     };
 
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
+        // Validate file type - only PDF, JPG, PNG allowed
+        const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png'];
+        const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
+        const fileExtension = file.name.split('.').pop()?.toLowerCase();
+        
+        if (!allowedMimeTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
+            setSuccessMessage('❌ Định dạng file không hỗ trợ. Vui lòng sử dụng PDF, JPG hoặc PNG.');
+            setShowSuccessModal(true);
+            e.target.value = ''; // Reset input
+            return;
+        }
+
+        // Check if project ID was selected
+        if (!selectedProjectIdForUpload) {
+            setSuccessMessage('⚠️ Vui lòng chọn dự án trước khi tải tài liệu lên.');
+            setShowSuccessModal(true);
+            e.target.value = ''; // Reset input
+            return;
+        }
+
         setIsUploading(true);
         try {
-            const response = await projectSubmissionService.uploadDocument(project.id, file);
+            const projectId = selectedProjectIdForUpload; // Use selected project ID
+            const documentType = 'PitchDeck'; // Document type - can be expanded later
+            const response = await projectSubmissionService.uploadDocument(projectId, file, documentType);
             if (response.success) {
-                // The API might return the document object or we just add a local representation
-                const newDoc = response.data || {
-                    id: Math.random(),
-                    name: file.name,
-                    type: file.name.split('.').pop(),
-                    uploadDate: new Date().toISOString().split('T')[0],
-                    status: 'pending'
-                };
-                setDocuments(prev => [...prev, newDoc]);
-                setSuccessMessage('Tải tài liệu lên thành công!');
+                // Document uploaded and saved to blockchain (backend handles automatically)
+                setSuccessMessage('✓ Tải tài liệu lên thành công! Tài liệu đã được lưu lên blockchain.');
                 setShowSuccessModal(true);
+                setSelectedProjectIdForUpload(null); // Reset for next upload
             } else {
-                setSuccessMessage('Tải lên thất bại: ' + response.message);
+                setSuccessMessage('❌ Tải lên thất bại: ' + (response.message || 'Lỗi không xác định'));
                 setShowSuccessModal(true);
             }
         } catch (error) {
             console.error('Upload Error:', error);
-            setSuccessMessage('Không thể tải tài liệu lên do lỗi hệ thống.');
+            // Extract error message from response if available
+            const errorMessage = error?.response?.data?.message || error?.message || 'Vui lòng thử lại';
+            if (error?.response?.status === 400 && errorMessage.includes('not valid')) {
+                setSuccessMessage('❌ Lỗi: ProjectId không hợp lệ. Vui lòng chọn dự án khác.');
+            } else {
+                setSuccessMessage('❌ Không thể tải tài liệu lên: ' + errorMessage);
+            }
             setShowSuccessModal(true);
         } finally {
             setIsUploading(false);
@@ -567,7 +673,7 @@ export default function StartupDashboard({ user }) {
                                     <button
                                         className={styles.primaryBtn}
                                         onClick={handleUploadClick}
-                                        disabled={isUploading || !project}
+                                        disabled={isUploading} /* Temporarily disabled project check for testing */
                                     >
                                         <PlusCircle size={18} />
                                         {isUploading ? 'Đang tải lên...' : 'Tải tài liệu lên'}
@@ -576,7 +682,16 @@ export default function StartupDashboard({ user }) {
                             </div>
 
                             <div className={styles.list}>
-                                {documents.map(doc => (
+                                {isLoadingDocuments ? (
+                                    <div className={styles.emptyState}>
+                                        <p>⏳ Đang tải danh sách tài liệu...</p>
+                                    </div>
+                                ) : documents.length === 0 ? (
+                                    <div className={styles.emptyState}>
+                                        <p>Chưa có tài liệu nào được tải lên.</p>
+                                    </div>
+                                ) : (
+                                    documents.map(doc => (
                                     <div key={doc.id} className={styles.listItem}>
                                         <div className={styles.listContent}>
                                             <div className={styles.listTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -605,7 +720,83 @@ export default function StartupDashboard({ user }) {
                                             </button>
                                         </div>
                                     </div>
-                                ))}
+                                ))
+                                )}
+                            </div>
+
+                            {/* Document Verification Section */}
+                            <div style={{
+                                marginTop: '32px',
+                                paddingTop: '32px',
+                                borderTop: '1px solid var(--border-color)'
+                            }}>
+                                <h4 style={{
+                                    margin: '0 0 16px 0',
+                                    fontSize: '16px',
+                                    fontWeight: '600',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}>
+                                    <Shield size={20} style={{ color: 'var(--primary-blue)' }} />
+                                    Xác thực tài liệu trên Blockchain
+                                </h4>
+                                <p style={{
+                                    margin: '0 0 16px 0',
+                                    fontSize: '13px',
+                                    color: 'var(--text-secondary)'
+                                }}>
+                                    Nhập Document ID để kiểm tra chi tiết xác thực trên blockchain
+                                </p>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: '1fr auto',
+                                    gap: '12px',
+                                    maxWidth: '500px'
+                                }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Nhập Document ID (ví dụ: 1, 2, 3...)"
+                                        value={documentIdInput}
+                                        onChange={(e) => setDocumentIdInput(e.target.value)}
+                                        onKeyPress={(e) => e.key === 'Enter' && handleVerifyDocumentByID()}
+                                        disabled={isVerifying}
+                                        style={{
+                                            padding: '12px 16px',
+                                            border: '1px solid var(--border-color)',
+                                            borderRadius: '6px',
+                                            fontSize: '14px',
+                                            fontFamily: 'inherit',
+                                            backgroundColor: isVerifying ? '#f1f5f9' : 'white',
+                                            color: 'var(--text-primary)',
+                                            cursor: isVerifying ? 'not-allowed' : 'text'
+                                        }}
+                                    />
+                                    <button
+                                        onClick={() => handleVerifyDocumentByID()}
+                                        disabled={isVerifying || !documentIdInput.trim()}
+                                        className={styles.primaryBtn}
+                                        style={{
+                                            padding: '12px 24px',
+                                            minWidth: '120px',
+                                            opacity: isVerifying || !documentIdInput.trim() ? 0.6 : 1,
+                                            cursor: isVerifying || !documentIdInput.trim() ? 'not-allowed' : 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '6px'
+                                        }}
+                                    >
+                                        {isVerifying ? (
+                                            <>⏳ Đang xác thực...</>
+                                        ) : (
+                                            <>
+                                                <Shield size={16} />
+                                                Xác thực
+                                            </>
+                                        )}
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -872,6 +1063,27 @@ export default function StartupDashboard({ user }) {
                     onClose={() => setShowSuccessModal(false)}
                     title={successMessage.split('\n')[0] || 'Success!'}
                     message={successMessage.split('\n').slice(1).join('\n') || successMessage}
+                />
+            )}
+
+            {/* Blockchain Verification Modal */}
+            <BlockchainVerificationModal
+                isOpen={showVerificationModal}
+                verificationData={verificationData}
+                documentName={verificationDocumentName}
+                onClose={() => {
+                    setShowVerificationModal(false);
+                    setVerificationData(null);
+                }}
+            />
+
+            {/* Project Selector Modal */}
+            {showProjectSelector && (
+                <ProjectSelectorModal
+                    projects={myProjects}
+                    onSelect={handleSelectProjectForUpload}
+                    onCancel={() => setShowProjectSelector(false)}
+                    isLoading={isLoadingInitialData}
                 />
             )}
 

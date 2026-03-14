@@ -2,6 +2,10 @@ import React, { useState } from 'react';
 import { FileCheck, CheckCircle, AlertCircle, Users, Activity, Settings, Trash2, Download, Eye } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
+import SuccessModal from '../components/common/SuccessModal';
+import ErrorModal from '../components/common/ErrorModal';
+import RejectionReasonModal from '../components/common/RejectionReasonModal';
+import projectSubmissionService from '../services/projectSubmissionService';
 
 /**
  * OperationStaffDashboard - Dashboard for Operation Staff
@@ -10,14 +14,21 @@ import FeedHeader from '../components/feed/FeedHeader';
 export default function OperationStaffDashboard({ user }) {
     const [activeSection, setActiveSection] = useState('overview');
 
+    const [draftProjects, setDraftProjects] = useState([]);
+    const [isLoadingProjects, setIsLoadingProjects] = useState(false);
     const [projectSubmissions, setProjectSubmissions] = useState([]);
     const [pendingDocuments, setPendingDocuments] = useState([]);
     const [pendingApprovals, setPendingApprovals] = useState([]);
     const [pendingRequests, setPendingRequests] = useState([]);
+    const [showModal, setShowModal] = useState(false);
+    const [modalType, setModalType] = useState('success'); // 'success' or 'error'
+    const [modalMessage, setModalMessage] = useState('');
+    const [showRejectionModal, setShowRejectionModal] = useState(false);
+    const [selectedProject, setSelectedProject] = useState(null);
 
     const dashboardData = {
         pendingDocuments: pendingDocuments.length,
-        pendingApprovals: pendingApprovals.length,
+        pendingApprovals: pendingApprovals.length + draftProjects.length,
         pendingRequests: pendingRequests.length,
         verifiedDocuments: 0,
         approvedUsers: 0,
@@ -25,6 +36,29 @@ export default function OperationStaffDashboard({ user }) {
         documentVerificationRate: '0%',
         averageApprovalTime: '-'
     };
+
+    // Fetch draft projects on component mount
+    React.useEffect(() => {
+        const fetchDraftProjects = async () => {
+            setIsLoadingProjects(true);
+            try {
+                const response = await projectSubmissionService.getDraftProjects();
+                if (response.success && response.data) {
+                    const projects = response.data.items || [];
+                    setDraftProjects(projects);
+                }
+            } catch (error) {
+                console.error('Error fetching draft projects:', error);
+                setDraftProjects([]);
+            } finally {
+                setIsLoadingProjects(false);
+            }
+        };
+        
+        if (activeSection === 'projects') {
+            fetchDraftProjects();
+        }
+    }, [activeSection]);
 
     const handleVerifyDocument = (id) => {
         setPendingDocuments(pendingDocuments.map(doc =>
@@ -62,16 +96,55 @@ export default function OperationStaffDashboard({ user }) {
         ));
     };
 
-    const handleApproveProject = (id) => {
-        setProjectSubmissions(projectSubmissions.map(proj =>
-            proj.id === id ? { ...proj, status: 'approved' } : proj
-        ));
+    const handleApproveProject = async (projectId) => {
+        try {
+            const response = await projectSubmissionService.approveProject(projectId);
+            if (response?.success) {
+                setDraftProjects(draftProjects.filter(p => p.projectId !== projectId));
+                setModalType('success');
+                setModalMessage('✓ Dự án đã được phê duyệt thành công!');
+                setShowModal(true);
+            } else {
+                setModalType('error');
+                setModalMessage('❌ Phê duyệt thất bại: ' + (response?.message || 'Lỗi không xác định'));
+                setShowModal(true);
+            }
+        } catch (error) {
+            console.error('Error approving project:', error);
+            setModalType('error');
+            setModalMessage('❌ Lỗi phê duyệt dự án: ' + (error?.response?.data?.message || error?.message || 'Vui lòng thử lại'));
+            setShowModal(true);
+        }
     };
 
-    const handleRejectProject = (id) => {
-        setProjectSubmissions(projectSubmissions.map(proj =>
-            proj.id === id ? { ...proj, status: 'rejected' } : proj
-        ));
+    const handleRejectProject = async (projectId, reason = null) => {
+        // If reason not provided, show modal to collect it
+        if (!reason) {
+            const project = draftProjects.find(p => p.projectId === projectId);
+            setSelectedProject(project);
+            setShowRejectionModal(true);
+            return;
+        }
+        
+        // If reason provided, submit rejection
+        try {
+            const response = await projectSubmissionService.rejectProject(projectId, reason);
+            if (response?.success) {
+                setDraftProjects(draftProjects.filter(p => p.projectId !== projectId));
+                setModalType('success');
+                setModalMessage('✓ Dự án đã bị từ chối!');
+                setShowModal(true);
+            } else {
+                setModalType('error');
+                setModalMessage('❌ Từ chối thất bại: ' + (response?.message || 'Lỗi không xác định'));
+                setShowModal(true);
+            }
+        } catch (error) {
+            console.error('Error rejecting project:', error);
+            setModalType('error');
+            setModalMessage('❌ Lỗi từ chối dự án: ' + (error?.response?.data?.message || error?.message || 'Vui lòng thử lại'));
+            setShowModal(true);
+        }
     };
 
     return (
@@ -173,43 +246,69 @@ export default function OperationStaffDashboard({ user }) {
                 {activeSection === 'projects' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Dự án chờ phê duyệt</h3>
+                            <h3 className={styles.cardTitle}>Duyệt dự án ({draftProjects.length})</h3>
                             <div className={styles.list}>
-                                {projectSubmissions.filter(p => p.status === 'pending').map(project => (
-                                    <div key={project.id} className={styles.listItem}>
-                                        <div className={styles.listContent}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
-                                                <h4 className={styles.listTitle}>{project.projectName}</h4>
-                                                <span className={styles.listMeta}>bởi {project.startupName}</span>
-                                            </div>
-                                            <div className={styles.listSubtitle} style={{ marginBottom: '8px' }}>{project.tagline}</div>
-                                            <div className={styles.listMeta}>
-                                                Ngành: {project.industry} | Giai đoạn: {project.stage} | Nộp ngày: {project.submittedDate}
-                                            </div>
-                                            <p style={{ marginTop: '8px', fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.4' }}>
-                                                {project.description}
-                                            </p>
-                                        </div>
-                                        <div className={styles.listActions}>
-                                            <button
-                                                onClick={() => handleApproveProject(project.id)}
-                                                className={styles.primaryBtn}
-                                            >
-                                                ✓ Phê duyệt
-                                            </button>
-                                            <button
-                                                onClick={() => handleRejectProject(project.id)}
-                                                className={styles.dangerBtn}
-                                            >
-                                                ✗ Từ chối
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                                {projectSubmissions.filter(p => p.status === 'pending').length === 0 && (
+                                {isLoadingProjects ? (
                                     <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                        Chưa có dự án nào chờ phê duyệt
+                                        ⏳ Đang tải danh sách dự án...
                                     </div>
+                                ) : draftProjects.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                        Không có dự án nào chờ phê duyệt
+                                    </div>
+                                ) : (
+                                    draftProjects.map(project => (
+                                        <div key={project.projectId} className={styles.listItem}>
+                                            <div className={styles.listContent}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                    <h4 className={styles.listTitle}>{project.projectName}</h4>
+                                                    <span style={{ 
+                                                        background: '#fef3c7', 
+                                                        color: '#92400e', 
+                                                        padding: '2px 8px', 
+                                                        borderRadius: '4px', 
+                                                        fontSize: '12px',
+                                                        fontWeight: '600'
+                                                    }}>
+                                                        {project.status || 'Draft'}
+                                                    </span>
+                                                </div>
+                                                <div className={styles.listSubtitle} style={{ marginBottom: '8px' }}>
+                                                    {project.shortDescription}
+                                                </div>
+                                                <div className={styles.listMeta} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', marginBottom: '8px' }}>
+                                                    <span>📊 Giai đoạn: <strong>{project.developmentStage}</strong></span>
+                                                    <span>💼 Mô hình: {project.businessModel}</span>
+                                                    <span>🎯 Khách hàng: {project.targetCustomers}</span>
+                                                </div>
+                                                <p style={{ marginTop: '8px', fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.4' }}>
+                                                    <strong>Vấn đề:</strong> {project.problemStatement}
+                                                </p>
+                                                <p style={{ marginTop: '6px', fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.4' }}>
+                                                    <strong>Giải pháp:</strong> {project.solutionDescription}
+                                                </p>
+                                                <div style={{ marginTop: '8px', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                                    📅 Nộp ngày: {new Date(project.createdAt).toLocaleDateString('vi-VN')} | 👥 Đội: {project.teamMembers}
+                                                </div>
+                                            </div>
+                                            <div className={styles.listActions} style={{ flexDirection: 'column', gap: '8px' }}>
+                                                <button
+                                                    onClick={() => handleApproveProject(project.projectId)}
+                                                    className={styles.primaryBtn}
+                                                    style={{ width: '100%' }}
+                                                >
+                                                    ✓ Phê duyệt
+                                                </button>
+                                                <button
+                                                    onClick={() => handleRejectProject(project.projectId)}
+                                                    className={styles.dangerBtn}
+                                                    style={{ width: '100%' }}
+                                                >
+                                                    ✗ Từ chối
+                                                </button>
+                                            </div>
+                                        </div>
+                                    ))
                                 )}
                             </div>
 
@@ -506,6 +605,36 @@ export default function OperationStaffDashboard({ user }) {
                     </div>
                 )}
             </div>
+
+            {/* Success/Error Modal */}
+            {showModal && (
+                modalType === 'success' ? (
+                    <SuccessModal
+                        message={modalMessage}
+                        onClose={() => setShowModal(false)}
+                    />
+                ) : (
+                    <ErrorModal
+                        message={modalMessage}
+                        onClose={() => setShowModal(false)}
+                    />
+                )
+            )}
+
+            {/* Rejection Reason Modal */}
+            {showRejectionModal && selectedProject && (
+                <RejectionReasonModal
+                    projectName={selectedProject.projectName}
+                    onSubmit={(reason) => {
+                        setShowRejectionModal(false);
+                        handleRejectProject(selectedProject.projectId, reason);
+                    }}
+                    onCancel={() => {
+                        setShowRejectionModal(false);
+                        setSelectedProject(null);
+                    }}
+                />
+            )}
         </div>
     );
 }
