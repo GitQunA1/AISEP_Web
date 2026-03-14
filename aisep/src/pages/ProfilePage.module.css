@@ -1,9 +1,16 @@
 .container {
     width: 100%;
     max-width: 680px;
-    /* Updated to 680px */
+    margin: 0 auto;
     background-color: var(--bg-primary);
     padding-bottom: 60px;
+}
+
+@media (max-width: 1439px) and (min-width: 1024px) {
+    .container {
+        max-width: 100%;
+        margin: 0;
+    }
 }
 
 .message {

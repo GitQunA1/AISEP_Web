@@ -1,10 +1,17 @@
-/* Container */
 .container {
     width: 100%;
-    background-color: transparent;
     max-width: 680px;
     margin: 0 auto;
+    background-color: transparent;
+    min-height: 100vh;
     padding-bottom: 60px;
+}
+
+@media (max-width: 1439px) and (min-width: 1024px) {
+    .container {
+        max-width: 100%;
+        margin: 0;
+    }
 }
 
 .searchSection {

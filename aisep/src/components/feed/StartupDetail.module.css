@@ -2,11 +2,22 @@
 
 .container {
     width: 100%;
+    max-width: 680px;
+    margin: 0 auto;
     background-color: var(--bg-primary);
     min-height: 100vh;
     padding-bottom: 60px;
     border-left: 1px solid var(--border-color);
     border-right: 1px solid var(--border-color);
+}
+
+@media (max-width: 1439px) and (min-width: 1024px) {
+    .container {
+        max-width: 100%;
+        margin: 0;
+        border-left: none;
+        border-right: none;
+    }
 }
 
 /* ─── Top Nav ─── */

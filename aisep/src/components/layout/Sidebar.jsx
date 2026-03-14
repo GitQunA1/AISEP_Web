@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles } from 'lucide-react';
+import { Home, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
@@ -115,8 +115,8 @@ function Sidebar({
             </button>
           </div>
 
-          {/* Navigation Links - Desktop Only */}
-          <nav className={`${styles.nav} ${styles.navDesktopOnly}`}>
+          {/* Navigation Links */}
+          <nav className={styles.nav}>
             {navItems
               .filter(item => {
                 // Hide Dashboard when user is not logged in
@@ -200,16 +200,17 @@ function Sidebar({
             /* Not Logged In: Show Auth Buttons */
             <div className={styles.authSection}>
               <button className={styles.signInBtn} onClick={handleLoginClick}>
-                Đăng nhập
+                <LogIn className={styles.authIcon} size={20} />
+                <span className={styles.btnText}>Đăng nhập</span>
               </button>
 
-              <Button
-                variant="primary"
+              <button
                 className={styles.registerBtn}
                 onClick={handleRegisterClick}
               >
-                Tạo tài khoản
-              </Button>
+                <UserPlus className={styles.authIcon} size={20} />
+                <span className={styles.btnText}>Tạo tài khoản</span>
+              </button>
             </div>
           )}
         </div>

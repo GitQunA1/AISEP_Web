@@ -115,10 +115,33 @@
 
 .signInBtn:hover {
   background-color: var(--bg-hover);
+  border-color: var(--primary-blue);
+  color: var(--primary-blue);
 }
 
 .registerBtn {
   width: 100%;
+  padding: 12px;
+  background-color: var(--primary-blue);
+  color: white;
+  border: 1px solid var(--primary-blue);
+  border-radius: 9999px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.registerBtn:hover {
+  background-color: #1a91da;
+  border-color: #1a91da;
+}
+
+.authIcon {
+  display: none;
 }
 
 /* --- THEME TOGGLE --- */
@@ -138,6 +161,19 @@
   cursor: pointer;
   transition: all 0.2s ease;
   margin-bottom: 16px;
+}
+
+.authIcon {
+  display: none;
+  color: var(--primary-blue);
+}
+
+.registerBtn .authIcon {
+  color: white; /* White icon on blue button */
+}
+
+.btnText {
+  display: block;
 }
 
 .themeToggle:hover {
@@ -236,9 +272,9 @@
 }
 
 /* =========================================
-   SIDEBAR - TABLET (Icon Only)
+   SIDEBAR - TABLET & LAPTOP (Icon Only)
    ========================================= */
-@media (max-width: 1199px) and (min-width: 768px) {
+@media (max-width: 1439px) and (min-width: 1024px) {
   .sidebar {
     padding: 24px 12px;
   }
@@ -278,10 +314,16 @@
     padding: 8px;
     justify-content: center;
     border: none;
+    flex-direction: column;
+    gap: 12px;
   }
 
-  .profileInfo, .logoutButton {
+  .profileInfo {
     display: none;
+  }
+
+  .logoutButton {
+    display: flex;
   }
 
   .profileDisplay {
@@ -294,26 +336,26 @@
   }
   
   .signInBtn, .registerBtn {
-    font-size: 0;
-    padding: 12px;
+    padding: 0;
     width: 48px;
     height: 48px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
+    background-color: transparent !important;
+    border: 1px solid var(--primary-blue) !important;
+    color: var(--primary-blue) !important;
+    overflow: hidden;
   }
 
-  .signInBtn::after {
-    content: "In";
-    font-size: 14px;
-    font-weight: bold;
+  .authIcon {
+    display: block !important;
+    color: var(--primary-blue) !important;
   }
 
-  .registerBtn::after {
-    content: "Up";
-    font-size: 14px;
-    font-weight: bold;
+  .btnText {
+    display: none !important;
   }
 }
 
@@ -322,10 +364,6 @@
    ========================================= */
 @media (max-width: 1023px) {
 
-  /* Hide navigation items on mobile (they're in bottom tabs) */
-  .navDesktopOnly {
-    display: none;
-  }
 
   .sidebar {
     position: fixed;
@@ -351,6 +389,10 @@
     /* Flex layout for mobile */
     display: flex;
     flex-direction: column;
+  }
+
+  .nav {
+    display: none;
   }
 
   /* The "Open" State */

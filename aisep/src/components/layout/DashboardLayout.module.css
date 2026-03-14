@@ -9,7 +9,8 @@
 /* THE GRID CONTAINER */
 .mainContainer {
     display: grid;
-    /* Fixed Sidebar (275px) | Fluid Feed (1fr) | Fixed Right Panel (350px) */
+    /* Wide Desktop (>= 1440px): 275px sidebar */
+    /* Large Tablet/Laptop (1024px - 1439px): 80px sidebar */
     grid-template-columns: 275px 1fr 350px;
     grid-template-rows: 100vh;
     /* Force exact viewport height */
@@ -19,6 +20,18 @@
     background-color: var(--bg-primary);
     overflow: hidden;
     /* Prevents ANY outer scrolling */
+    transition: all 0.3s ease;
+}
+
+/* Tablet/Laptop Phase (1024px - 1439px) */
+@media (max-width: 1439px) and (min-width: 1024px) {
+    .mainContainer {
+        grid-template-columns: 80px 1fr 350px;
+    }
+
+    .mainContent {
+        padding: 0 16px;
+    }
 }
 
 /* COLUMN 1: LEFT SIDEBAR */

@@ -59,23 +59,23 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile }) {
 
         {/* ROW 1: HEADLINE (Name, Badges, Time, Menu) */}
         <div className={styles.headerRow}>
-          <div className={styles.infoGroup}>
             <h3
               className={`${styles.name} ${onViewProfile ? styles.nameClickable : ''}`}
               onClick={() => onViewProfile && onViewProfile(startup.startupId ?? startup.id)}
             >
               {startup.name}
             </h3>
-            {/* Verified/Score Badge */}
-            <Badge
-              label="Điểm AI: cập nhật"
-              variant="updating"
-              showIcon={true}
-              size="sm"
-            />
-            <span className={styles.separator}>·</span>
-            <span className={styles.time}>{startup.timestamp}</span>
-          </div>
+            <div className={styles.metaGroup}>
+              {/* Verified/Score Badge */}
+              <Badge
+                label="Điểm AI: cập nhật"
+                variant="updating"
+                showIcon={true}
+                size="sm"
+              />
+              <span className={styles.separator}>·</span>
+              <span className={styles.time}>{startup.timestamp}</span>
+            </div>
 
           <button className={styles.menuBtn}>
             <MoreHorizontal size={18} />
