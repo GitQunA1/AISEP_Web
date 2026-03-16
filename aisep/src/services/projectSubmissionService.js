@@ -69,14 +69,26 @@ export const projectSubmissionService = {
   },
 
   /**
+   * Get documents for a specific project
+   * @param {string|number} projectId 
+   * @returns {Promise<any>}
+   */
+  getDocuments: async (projectId) => {
+    const response = await apiClient.get(`/api/projects/${projectId}/documents`);
+    return response;
+  },
+
+  /**
    * Uploads a document to a specific project
    * @param {string|number} projectId 
    * @param {File} file - The file to upload
+   * @param {string} documentType - Type of document (e.g., 'PitchDeck')
    * @returns {Promise<any>}
    */
-  uploadDocument: async (projectId, file) => {
+  uploadDocument: async (projectId, file, documentType = 'PitchDeck') => {
     const formData = new FormData();
     formData.append('file', file);
+    formData.append('documentType', documentType);
     
     // Explicitly set multipart/form-data for this call
     const response = await apiClient.post(`/api/projects/${projectId}/documents`, formData, {
@@ -136,6 +148,59 @@ export const projectSubmissionService = {
   getAllProjects: async () => {
     const response = await apiClient.get('/api/Projects');
     return response;
+  },
+
+  /**
+   * Get Draft Projects for review (Operation Staff)
+   * @returns {Promise<any>}
+   */
+  getDraftProjects: async () => {
+    try {
+      const response = await apiClient.get('/api/Projects/drafts');
+      return response;
+    } catch (error) {
+      console.error('Error fetching draft projects:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Approve a project
+   * @param {number} projectId 
+   * @returns {Promise<any>}
+   */
+  approveProject: async (projectId) => {
+    const response = await apiClient.patch(`/api/Projects/${projectId}/approve`);
+    return response;
+  },
+
+  /**
+   * Reject a project
+   * @param {number} projectId 
+   * @param {string} rejectionReason 
+   * @returns {Promise<any>}
+   */
+  rejectProject: async (projectId, rejectionReason) => {
+    const response = await apiClient.patch(`/api/Projects/${projectId}/reject`, {
+      rejectionReason
+    });
+    return response;
+  },
+
+  /**
+   * Verify a document by ID
+   * @param {number} documentId 
+   * @returns {Promise<any>}
+   */
+  verifyDocument: async (documentId) => {
+    try {
+      const response = await apiClient.get(`/api/documents/${documentId}/verify`);
+      // response.data contains: { isAuthentic, txHash, timestampOnBlockchain, message }
+      return response;
+    } catch (error) {
+      console.error('Error verifying document:', error);
+      throw error;
+    }
   }
 };
 

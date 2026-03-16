@@ -49,7 +49,7 @@ export default function FormContentSteps({
         {currentStep === 1 && (
           <div className={styles.stepContainer}>
             <div>
-              <h2 className={styles.stepTitle}>1️ Thông tin cơ bản dự án</h2>
+              <h2 className={styles.stepTitle}>1. Thông tin cơ bản dự án</h2>
               <p className={styles.stepSubtitle}>Bắt đầu với những thông tin thiết yếu</p>
             </div>
 
@@ -111,7 +111,7 @@ export default function FormContentSteps({
                     checked={formData.stage === 'idea'}
                     onChange={handleInputChange}
                   />
-                  <span>🔍 Chỉ có ý tưởng</span>
+                  <span>Chỉ có ý tưởng</span>
                 </label>
                 <label className={styles.radioLabel}>
                   <input
@@ -121,7 +121,7 @@ export default function FormContentSteps({
                     checked={formData.stage === 'mvp'}
                     onChange={handleInputChange}
                   />
-                  <span>🛠️ Đã có sản phẩm thử</span>
+                  <span>Đã có sản phẩm thử</span>
                 </label>
                 <label className={styles.radioLabel}>
                   <input
@@ -131,7 +131,7 @@ export default function FormContentSteps({
                     checked={formData.stage === 'customers'}
                     onChange={handleInputChange}
                   />
-                  <span>👥 Đã có khách hàng</span>
+                  <span>Đã có khách hàng</span>
                 </label>
                 <label className={styles.radioLabel}>
                   <input
@@ -141,7 +141,7 @@ export default function FormContentSteps({
                     checked={formData.stage === 'growth'}
                     onChange={handleInputChange}
                   />
-                  <span>📈 Đang tăng trưởng</span>
+                  <span>Đang tăng trưởng</span>
                 </label>
               </div>
               {errors.stage && <p className={styles.errorText}>{errors.stage}</p>}
@@ -153,7 +153,7 @@ export default function FormContentSteps({
         {currentStep === 2 && (
           <div className={styles.stepContainer}>
             <div>
-              <h2 className={styles.stepTitle}>2️ Vấn đề bạn muốn giải quyết</h2>
+              <h2 className={styles.stepTitle}>2. Vấn đề bạn muốn giải quyết</h2>
               <p className={styles.stepSubtitle}>Mô tả rõ vấn đề cốt lõi</p>
             </div>
 
@@ -214,7 +214,7 @@ export default function FormContentSteps({
         {currentStep === 3 && (
           <div className={styles.stepContainer}>
             <div>
-              <h2 className={styles.stepTitle}>3️ Giải pháp của bạn</h2>
+              <h2 className={styles.stepTitle}>3. Giải pháp của bạn</h2>
               <p className={styles.stepSubtitle}>Mô tả cách bạn giải quyết vấn đề</p>
             </div>
 
@@ -263,7 +263,7 @@ export default function FormContentSteps({
         {currentStep === 4 && (
           <div className={styles.stepContainer}>
             <div>
-              <h2 className={styles.stepTitle}>4️ Khách hàng & Thị trường</h2>
+              <h2 className={styles.stepTitle}>4. Khách hàng & Thị trường</h2>
               <p className={styles.stepSubtitle}>Thông tin phụ thuộc vào giai đoạn</p>
             </div>
 
@@ -346,7 +346,7 @@ export default function FormContentSteps({
         {currentStep === 5 && (
           <div className={styles.stepContainer}>
             <div>
-              <h2 className={styles.stepTitle}>5️ Mô hình kiếm tiền</h2>
+              <h2 className={styles.stepTitle}>5. Mô hình kiếm tiền</h2>
               <p className={styles.stepSubtitle}>Cách bạn tạo doanh thu</p>
             </div>
 
@@ -400,7 +400,7 @@ export default function FormContentSteps({
         {currentStep === 6 && (
           <div className={styles.stepContainer}>
             <div>
-              <h2 className={styles.stepTitle}>6️ Đội ngũ</h2>
+              <h2 className={styles.stepTitle}>6. Đội ngũ</h2>
               <p className={styles.stepSubtitle}>Ai đang xây dựng dự án này?</p>
             </div>
 
@@ -477,7 +477,7 @@ export default function FormContentSteps({
           disabled={isSubmitting}
         >
           {isSubmitting ? (
-            '⏳ Đang gửi...'
+            'Đang gửi...'
           ) : currentStep === totalSteps ? (
             'Gửi dự án'
           ) : (

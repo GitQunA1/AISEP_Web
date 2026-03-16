@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Check, AlertCircle, Loader2 } from 'lucide-react';
+import { Check, AlertCircle, Loader2, Upload, X, FileText, Globe, User, MapPin, Briefcase, Tag, Mail, ExternalLink } from 'lucide-react';
 import styles from './StartupProfileForm.module.css';
 import startupProfileService from '../../services/startupProfileService';
 
@@ -104,8 +104,8 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
       let response;
       
       if (isUpdate) {
-        // Ensure ID is included in payload for update
-        const targetId = user?.userId || initialData?.userId || initialData.startupId || initialData.id;
+        // Fix: Use the startup's own ID for update, not the userId
+        const targetId = initialData.id || initialData.startupId;
         response = await startupProfileService.updateStartupProfile({ 
           ...Object.fromEntries(dataPayload), 
           LogoFile: logoFile, 
@@ -150,195 +150,307 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
           : 'Vì bạn chưa có hồ sơ, vui lòng điền các thông tin cơ bản của doanh nghiệp để bắt đầu.'}
       </p>
 
-      <form onSubmit={handleSubmit} className={styles.form}>
-        {/* Error Message */}
+      <form onSubmit={handleSubmit} className={styles.formContainer}>
+        {/* Section 1: Basic Information */}
+        <section className={styles.formSection}>
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionIcon}>
+              <Briefcase size={20} />
+            </div>
+            <div>
+              <h4 className={styles.sectionTitle}>Thông tin cơ bản</h4>
+              <p className={styles.sectionSubtitle}>Các thông tin chính về doanh nghiệp của bạn</p>
+            </div>
+          </div>
+          
+          <div className={styles.formGrid}>
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                Tên công ty <span className={styles.required}>*</span>
+              </label>
+              <div className={styles.inputWrapper}>
+                <Briefcase className={styles.fieldIcon} size={18} />
+                <input
+                  type="text"
+                  name="companyName"
+                  value={formData.companyName}
+                  onChange={handleInputChange}
+                  className={`${styles.input} ${errors.companyName ? styles.inputError : ''}`}
+                  placeholder="Ví dụ: TechStartup Vietnam"
+                />
+              </div>
+              {errors.companyName && <span className={styles.errorText}>{errors.companyName}</span>}
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                Người sáng lập <span className={styles.required}>*</span>
+              </label>
+              <div className={styles.inputWrapper}>
+                <User className={styles.fieldIcon} size={18} />
+                <input
+                  type="text"
+                  name="founder"
+                  value={formData.founder}
+                  onChange={handleInputChange}
+                  className={`${styles.input} ${errors.founder ? styles.inputError : ''}`}
+                  placeholder="Tên người sáng lập"
+                />
+              </div>
+              {errors.founder && <span className={styles.errorText}>{errors.founder}</span>}
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                Thông tin liên hệ <span className={styles.required}>*</span>
+              </label>
+              <div className={styles.inputWrapper}>
+                <Mail className={styles.fieldIcon} size={18} />
+                <input
+                  type="text"
+                  name="contactInfo"
+                  value={formData.contactInfo}
+                  onChange={handleInputChange}
+                  className={`${styles.input} ${errors.contactInfo ? styles.inputError : ''}`}
+                  placeholder="Email hoặc số điện thoại"
+                />
+              </div>
+              {errors.contactInfo && <span className={styles.errorText}>{errors.contactInfo}</span>}
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                Địa phương <span className={styles.required}>*</span>
+              </label>
+              <div className={styles.inputWrapper}>
+                <MapPin className={styles.fieldIcon} size={18} />
+                <input
+                  type="text"
+                  name="countryCity"
+                  value={formData.countryCity}
+                  onChange={handleInputChange}
+                  className={`${styles.input} ${errors.countryCity ? styles.inputError : ''}`}
+                  placeholder="Tỉnh/Thành phố"
+                />
+              </div>
+              {errors.countryCity && <span className={styles.errorText}>{errors.countryCity}</span>}
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                Website <span className={styles.required}>*</span>
+              </label>
+              <div className={styles.inputWrapper}>
+                <Globe className={styles.fieldIcon} size={18} />
+                <input
+                  type="url"
+                  name="website"
+                  value={formData.website}
+                  onChange={handleInputChange}
+                  className={`${styles.input} ${errors.website ? styles.inputError : ''}`}
+                  placeholder="https://example.com"
+                />
+              </div>
+              {errors.website && <span className={styles.errorText}>{errors.website}</span>}
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Lĩnh vực</label>
+              <div className={styles.inputWrapper}>
+                <Tag className={styles.fieldIcon} size={18} />
+                <select
+                  name="industry"
+                  value={formData.industry}
+                  onChange={handleInputChange}
+                  className={styles.select}
+                >
+                  <option value="0">Fintech</option>
+                  <option value="1">Edtech</option>
+                  <option value="2">Healthtech</option>
+                  <option value="3">Agritech</option>
+                  <option value="4">E-Commerce</option>
+                  <option value="5">Logistics</option>
+                  <option value="6">Proptech</option>
+                  <option value="7">Cleantech</option>
+                  <option value="8">SaaS</option>
+                  <option value="9">AI & Big Data</option>
+                  <option value="10">Web3 & Crypto</option>
+                  <option value="11">Food & Beverage</option>
+                  <option value="12">Manufacturing</option>
+                  <option value="13">Media & Entertainment</option>
+                  <option value="14">Khác (Other)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <hr className={styles.divider} />
+
+        {/* Section 2: Branding & Legal */}
+        <section className={styles.formSection}>
+          <div className={styles.sectionHeader}>
+            <div className={styles.sectionIcon}>
+              <Upload size={20} />
+            </div>
+            <div>
+              <h4 className={styles.sectionTitle}>Hình ảnh & Pháp lý</h4>
+              <p className={styles.sectionSubtitle}>Tải lên logo và giấy phép kinh doanh của bạn</p>
+            </div>
+          </div>
+
+          <div className={styles.uploadRow}>
+            {/* Logo Upload */}
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Logo công ty</label>
+              <div 
+                className={`${styles.uploadCard} ${logoFile || formData.logoUrl ? styles.hasFile : ''}`}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add(styles.dragOver); }}
+                onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove(styles.dragOver); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove(styles.dragOver);
+                  const file = e.dataTransfer.files[0];
+                  if (file && file.type.startsWith('image/')) setLogoFile(file);
+                }}
+              >
+                <input
+                  type="file"
+                  id="logoUpload"
+                  accept="image/png, image/jpeg, image/jpg, image/webp"
+                  onChange={(e) => setLogoFile(e.target.files[0])}
+                  className={styles.hiddenInput}
+                />
+                <label htmlFor="logoUpload" className={styles.uploadLabel}>
+                  {logoFile || formData.logoUrl ? (
+                    <div className={styles.previewContainer}>
+                      <img src={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} alt="Logo Preview" className={styles.logoPreview} />
+                      <div className={styles.previewActions}>
+                        <a 
+                          href={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} 
+                          target="_blank" 
+                          rel="noreferrer" 
+                          className={styles.viewBtn}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <ExternalLink size={18} />
+                        </a>
+                        <button type="button" className={styles.removeBtn} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLogoFile(null); if (!logoFile) setFormData(p => ({...p, logoUrl: ''})); }}>
+                          <X size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.uploadPlaceholder}>
+                      <Upload size={20} className={styles.uploadIcon} />
+                      <div className={styles.uploadText}>
+                        <span className={styles.uploadLink}>Tải Logo</span>
+                      </div>
+                    </div>
+                  )}
+                </label>
+              </div>
+            </div>
+
+            {/* License Upload */}
+            <div className={styles.formGroup}>
+              <label className={styles.label}>Giấy phép kinh doanh</label>
+              <div 
+                className={`${styles.uploadCard} ${licenseFile || formData.businessLicenseUrl ? styles.hasFile : ''}`}
+                onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add(styles.dragOver); }}
+                onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove(styles.dragOver); }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.classList.remove(styles.dragOver);
+                  const file = e.dataTransfer.files[0];
+                  if (file) setLicenseFile(file);
+                }}
+              >
+                <input
+                  type="file"
+                  id="licenseUpload"
+                  accept="image/png, image/jpeg, image/jpg, application/pdf"
+                  onChange={(e) => setLicenseFile(e.target.files[0])}
+                  className={styles.hiddenInput}
+                />
+                <label htmlFor="licenseUpload" className={styles.uploadLabel}>
+                  {licenseFile || formData.businessLicenseUrl ? (
+                    <div className={styles.filePreviewMini}>
+                      <FileText size={20} className={styles.fileIcon} />
+                      <div className={styles.fileInfoMini}>
+                        <span className={styles.fileNameMini}>
+                          {licenseFile ? licenseFile.name : 'Giấy phép hiện tại'}
+                        </span>
+                      </div>
+                      <div className={styles.fileActionsMini}>
+                        {(licenseFile || formData.businessLicenseUrl) && (
+                          <a 
+                            href={licenseFile ? URL.createObjectURL(licenseFile) : formData.businessLicenseUrl} 
+                            target="_blank" 
+                            rel="noreferrer" 
+                            className={styles.viewBtnMini}
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <ExternalLink size={18} />
+                          </a>
+                        )}
+                        <button type="button" className={styles.removeBtnMini} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLicenseFile(null); if (!licenseFile) setFormData(p => ({...p, businessLicenseUrl: ''})); }}>
+                          <X size={18} />
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.uploadPlaceholder}>
+                      <FileText size={20} className={styles.uploadIcon} />
+                      <div className={styles.uploadText}>
+                        <span className={styles.uploadLink}>Tải Giấy phép</span>
+                      </div>
+                    </div>
+                  )}
+                </label>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Error/Success Feedbacks */}
         {errors.submit && (
           <div className={styles.errorBanner}>
             <AlertCircle size={18} />
-            {errors.submit}
+            <span>{errors.submit}</span>
           </div>
         )}
 
-        {/* Success Message */}
         {successMessage && (
           <div className={styles.successBanner}>
             <Check size={18} />
-            {successMessage}
+            <span>{successMessage}</span>
           </div>
         )}
 
-        {/* Row 1: Company Name & Founder */}
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>
-              Tên công ty <span className={styles.required}>*</span>
-            </label>
-            <input
-              type="text"
-              name="companyName"
-              value={formData.companyName}
-              onChange={handleInputChange}
-              className={`${styles.input} ${errors.companyName ? styles.inputError : ''}`}
-              placeholder="Ví dụ: TechStartup Vietnam"
-            />
-            {errors.companyName && <span className={styles.errorText}>{errors.companyName}</span>}
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>
-              Người sáng lập <span className={styles.required}>*</span>
-            </label>
-            <input
-              type="text"
-              name="founder"
-              value={formData.founder}
-              onChange={handleInputChange}
-              className={`${styles.input} ${errors.founder ? styles.inputError : ''}`}
-              placeholder="Tên người sáng lập"
-            />
-            {errors.founder && <span className={styles.errorText}>{errors.founder}</span>}
-          </div>
+        {/* Footer Actions */}
+        <div className={styles.formFooter}>
+          <button type="button" className={styles.cancelBtn} onClick={() => window.location.reload()}>
+            Hủy thay đổi
+          </button>
+          <button
+            type="submit"
+            disabled={isSubmitting}
+            className={styles.saveBtn}
+          >
+            {isSubmitting ? (
+              <>
+                <Loader2 size={18} className={styles.spin} />
+                <span>Đang xử lý...</span>
+              </>
+            ) : (
+              <>
+                <Check size={18} />
+                <span>{initialData ? 'Lưu thay đổi' : 'Tạo hồ sơ ngay'}</span>
+              </>
+            )}
+          </button>
         </div>
-
-        {/* Row 2: Contact & Location */}
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>
-              Thông tin liên hệ <span className={styles.required}>*</span>
-            </label>
-            <input
-              type="text"
-              name="contactInfo"
-              value={formData.contactInfo}
-              onChange={handleInputChange}
-              className={`${styles.input} ${errors.contactInfo ? styles.inputError : ''}`}
-              placeholder="Email hoặc số điện thoại"
-            />
-            {errors.contactInfo && <span className={styles.errorText}>{errors.contactInfo}</span>}
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>
-              Địa phương <span className={styles.required}>*</span>
-            </label>
-            <input
-              type="text"
-              name="countryCity"
-              value={formData.countryCity}
-              onChange={handleInputChange}
-              className={`${styles.input} ${errors.countryCity ? styles.inputError : ''}`}
-              placeholder="Tỉnh/Thành phố"
-            />
-            {errors.countryCity && <span className={styles.errorText}>{errors.countryCity}</span>}
-          </div>
-        </div>
-
-        {/* Row 3: Website & Industry */}
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>
-              Website <span className={styles.required}>*</span>
-            </label>
-            <input
-              type="url"
-              name="website"
-              value={formData.website}
-              onChange={handleInputChange}
-              className={`${styles.input} ${errors.website ? styles.inputError : ''}`}
-              placeholder="https://example.com"
-            />
-            {errors.website && <span className={styles.errorText}>{errors.website}</span>}
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Lĩnh vực</label>
-            <select
-              name="industry"
-              value={formData.industry}
-              onChange={handleInputChange}
-              className={styles.select}
-            >
-              {/* Mapped exactly to AISEP.DAL.Enums.Industry */}
-              <option value="0">Fintech</option>
-              <option value="1">Edtech</option>
-              <option value="2">Healthtech</option>
-              <option value="3">Agritech</option>
-              <option value="4">E-Commerce</option>
-              <option value="5">Logistics</option>
-              <option value="6">Proptech</option>
-              <option value="7">Cleantech</option>
-              <option value="8">SaaS</option>
-              <option value="9">AI & Big Data</option>
-              <option value="10">Web3 & Crypto</option>
-              <option value="11">Food & Beverage</option>
-              <option value="12">Manufacturing</option>
-              <option value="13">Media & Entertainment</option>
-              <option value="14">Khác (Other)</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Row 4: File Uploads */}
-        <div className={styles.formRow}>
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Tải lên Logo</label>
-            <div className={styles.fileInputWrapper}>
-              <input
-                type="file"
-                name="logoFile"
-                accept="image/png, image/jpeg, image/jpg, image/webp"
-                onChange={(e) => setLogoFile(e.target.files[0])}
-                className={styles.fileInput}
-              />
-              <span className={styles.fileHint}>Định dạng hỗ trợ: PNG, JPG, JPEG, WEBP</span>
-              {formData.logoUrl && !logoFile && (
-                <div className={styles.currentFile}>
-                  <span>Hiện tại: </span>
-                  <a href={formData.logoUrl} target="_blank" rel="noreferrer">Xem ảnh</a>
-                </div>
-              )}
-            </div>
-          </div>
-
-          <div className={styles.formGroup}>
-            <label className={styles.label}>Giấy phép kinh doanh</label>
-            <div className={styles.fileInputWrapper}>
-              <input
-                type="file"
-                name="licenseFile"
-                accept="image/png, image/jpeg, image/jpg, application/pdf"
-                onChange={(e) => setLicenseFile(e.target.files[0])}
-                className={styles.fileInput}
-              />
-              <span className={styles.fileHint}>Định dạng hỗ trợ: PNG, JPG, PDF</span>
-              {formData.businessLicenseUrl && !licenseFile && (
-                <div className={styles.currentFile}>
-                  <span>Hiện tại: </span>
-                  <a href={formData.businessLicenseUrl} target="_blank" rel="noreferrer">Xem tài liệu</a>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Buttons */}
-        <button
-          type="submit"
-          disabled={isSubmitting}
-          className={styles.submitBtn}
-        >
-          {isSubmitting ? (
-            <>
-              <Loader2 size={18} className={styles.spin} />
-              {initialData ? 'Đang cập nhật thông tin...' : 'Đang tạo hồ sơ...'}
-            </>
-          ) : (
-            <>
-              <Check size={18} />
-              {initialData ? 'Cập nhật thông tin startup' : 'Tạo hồ sơ startup ngay'}
-            </>
-          )}
-        </button>
       </form>
     </div>
   );

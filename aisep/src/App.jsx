@@ -201,7 +201,7 @@ function App() {
             <InvestorDashboard user={user} />
           ) : user?.role?.toString().toLowerCase() === 'advisor' || user?.role === 2 ? (
             <AdvisorDashboard user={user} />
-          ) : user?.role?.toString().toLowerCase() === 'operation_staff' || user?.role === 3 ? (
+          ) : user?.role?.toString().toLowerCase() === 'operation_staff' || user?.role?.toString().toLowerCase() === 'staff' || user?.role === 3 ? (
             <OperationStaffDashboard user={user} />
           ) : (
             <div style={{ padding: '20px', textAlign: 'center' }}>

@@ -5,13 +5,14 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.6);
+    background-color: rgba(0, 0, 0, 0.7);
     z-index: 2000;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    animation: fadeIn 0.2s ease-out;
+    backdrop-filter: blur(8px);
+    animation: fadeIn 0.3s ease-out;
 }
 
 @keyframes fadeIn {
@@ -111,6 +112,13 @@
     margin-right: auto;
 }
 
+/* Button Group */
+.buttonGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
 /* Primary Button */
 .primaryButton {
     width: 100%;
@@ -122,11 +130,31 @@
     font-size: 16px;
     font-weight: 700;
     cursor: pointer;
-    transition: background-color 0.2s;
+    transition: all 0.2s;
 }
 
 .primaryButton:hover {
     background-color: #1a8cd8;
+    transform: translateY(-2px);
+}
+
+/* Secondary Button */
+.secondaryButton {
+    width: 100%;
+    padding: 14px 24px;
+    background-color: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.secondaryButton:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--text-secondary);
 }
 
 /* Mobile Responsive */
@@ -142,5 +170,14 @@
 
     .message {
         font-size: 14px;
+    }
+
+    .buttonGroup {
+        gap: 10px;
+    }
+
+    .primaryButton, .secondaryButton {
+        padding: 12px 20px;
+        font-size: 15px;
     }
 }
