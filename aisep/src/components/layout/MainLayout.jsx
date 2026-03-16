@@ -17,6 +17,7 @@ import AIChatAssistant from '../../pages/AIChatAssistant';
 
 import ProfileRequiredModal from '../startup/ProfileRequiredModal';
 import startupProfileService from '../../services/startupProfileService';
+import SuccessModal from '../common/SuccessModal';
 
 /**
  * MainLayout Component - Main application layout
@@ -31,6 +32,7 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
   const [hasStartupProfile, setHasStartupProfile] = useState(null); // null means checking
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [selectedAdvisor, setSelectedAdvisor] = useState(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Fetch all projects (we use getAllProjects to get public feed)
   const [allStartups, setAllStartups] = useState([]);
@@ -82,7 +84,7 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
         if (res.statusCode === 200 && res.data && res.data.items) {
           // Filter for published projects and map to UI model
           const publishedProjects = res.data.items
-            .filter(p => p.status === 'Published')
+            .filter(p => p.status === 'Approved')
             .map(p => ({
               ...p,
               id: p.projectId,
@@ -98,7 +100,7 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
                 ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)
                 : [],
               aiScore: p.score || 0,
-              timestamp: new Date(p.publishedAt).toLocaleDateString('vi-VN'),
+              timestamp: new Date(p.approvedAt || p.createdAt).toLocaleDateString('vi-VN'),
               logo: null
             }));
 
@@ -251,8 +253,23 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
           onClose={() => setShowProjectForm(false)}
           onSuccess={(data) => {
             setShowProjectForm(false);
+            setShowSuccessModal(true);
           }}
           user={user}
+        />
+      )}
+
+      {/* Project Submission Success Modal */}
+      {showSuccessModal && (
+        <SuccessModal
+          onClose={() => setShowSuccessModal(false)}
+          title="Đăng Dự Án Thành Công!"
+          message={
+            <span style={{ lineHeight: '1.6' }}>
+              Dự án của bạn đã được gửi thành công. Bạn có thể tải lên các tài liệu bổ sung (Pitch Deck, Business Plan) bất cứ lúc nào tại mục <strong>Quản lý dự án</strong> trong <strong>Startup Dashboard</strong>.
+            </span>
+          }
+          primaryBtnText="Tuyệt vời"
         />
       )}
 

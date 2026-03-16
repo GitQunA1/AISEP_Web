@@ -70,26 +70,36 @@
     display: block;
 }
 
-/* RESPONSIVE: Mobile/Tablet (< 1024px) */
-@media (max-width: 1023px) {
+/* RESPONSIVE: Mobile/Tablet (< 1280px) */
+@media (max-width: 1279px) {
     .mainContainer {
-        display: block;
-        /* Switch to normal block layout for mobile */
+        display: flex;
+        flex-direction: column;
         height: auto;
         overflow-y: auto;
-        /* Allow window scroll on mobile */
+        width: 100%;
     }
 
     .leftSidebar,
     .rightPanel {
         display: none;
-        /* Hidden - Sidebar becomes Drawer */
+        /* Sidebar becomes Drawer, Right panel hidden as requested */
     }
 
     .mainContent {
         height: auto;
         border: none;
         overflow: visible;
+        width: 100%;
+        padding-bottom: 20px;
+    }
+}
+
+/* Tablet refinement (768px - 1279px) */
+@media (min-width: 768px) and (max-width: 1279px) {
+    .mainContent, .rightPanel {
+        padding-left: 24px;
+        padding-right: 24px;
     }
 }
 

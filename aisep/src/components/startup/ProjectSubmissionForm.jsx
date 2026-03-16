@@ -111,7 +111,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
         marketSize: parseInt(formData.marketSize) || 0,
         revenue: parseInt(formData.revenue) || 0,
         teamMembers: formData.teamMembers
-          .map(m => `${m.name.trim()} (${m.role.trim()})`)
+          .map(m => m.name.trim())
           .join(', '),
       };
 

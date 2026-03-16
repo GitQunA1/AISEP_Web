@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, RefreshCw, X, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2 } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
 import SuccessModal from '../components/common/SuccessModal';
-import ProjectSelectorModal from '../components/common/ProjectSelectorModal';
 import BlockchainVerificationModal from '../components/common/BlockchainVerificationModal';
 import FeedHeader from '../components/feed/FeedHeader';
 import ProjectValidationService from '../services/ProjectValidation.js';
@@ -21,28 +20,47 @@ import StartupProfileBanner from '../components/startup/StartupProfileBanner';
  * Features: Overview stats, Profile completion, Documents, AI Score, Advisor requests
  */
 export default function StartupDashboard({ user }) {
-    const [activeSection, setActiveSection] = useState('overview');
-    const [showCompleteInfoForm, setShowCompleteInfoForm] = useState(false);
-    const [showSuccessModal, setShowSuccessModal] = useState(false);
-    const [successMessage, setSuccessMessage] = useState('');
-    const [isProtectingDocuments, setIsProtectingDocuments] = useState(false);
-    const [isEvaluatingAI, setIsEvaluatingAI] = useState(false);
-    const [isSubmittingProject, setIsSubmittingProject] = useState(false);
-    const [isPublishingProject, setIsPublishingProject] = useState(false);
-    const [blockchainProof, setBlockchainProof] = useState(null);
-    const [isLoadingInitialData, setIsLoadingInitialData] = useState(true);
-    const [showDetailModal, setShowDetailModal] = useState(false);
-    const [detailProject, setDetailProject] = useState(null);
+    const [activeSection, setActiveSection] = React.useState('overview');
+    const [showCompleteInfoForm, setShowCompleteInfoForm] = React.useState(false);
+    const [successMessage, setSuccessMessage] = React.useState('');
+    const [successTitle, setSuccessTitle] = React.useState('');
+    const [successPrimaryBtn, setSuccessPrimaryBtn] = React.useState('');
+    const [successSecondaryBtn, setSuccessSecondaryBtn] = React.useState('');
+    const [onSuccessSecondaryClick, setOnSuccessSecondaryClick] = React.useState(null);
+    const [isProtectingDocuments, setIsProtectingDocuments] = React.useState(false);
+    const [isEvaluatingAI, setIsEvaluatingAI] = React.useState(false);
+    const [isSubmittingProject, setIsSubmittingProject] = React.useState(false);
+    const [showSuccessModal, setShowSuccessModal] = React.useState(false);
+    const [isLoadingDocuments, setIsLoadingDocuments] = React.useState(false);
+    const [isUploading, setIsUploading] = React.useState(false);
+    const [isVerifying, setIsVerifying] = React.useState(false);
+    const [documentType, setDocumentType] = React.useState('PitchDeck');
+    const [dragActive, setDragActive] = React.useState(false);
+    const [verificationData, setVerificationData] = React.useState(null);
+    const [showVerificationModal, setShowVerificationModal] = React.useState(false);
+    const [verificationDocumentName, setVerificationDocumentName] = React.useState('');
+    const [documentIdInput, setDocumentIdInput] = React.useState('');
+    const [isPublishingProject, setIsPublishingProject] = React.useState(false);
+    const [blockchainProof, setBlockchainProof] = React.useState(null);
+    const [isLoadingInitialData, setIsLoadingInitialData] = React.useState(true);
+    const [showDetailModal, setShowDetailModal] = React.useState(false);
+    const [detailProject, setDetailProject] = React.useState(null);
+    const [project, setProject] = React.useState(null);
+    const [myProjects, setMyProjects] = React.useState([]);
+    const [startupProfile, setStartupProfile] = React.useState(null);
+    const [showProjectForm, setShowProjectForm] = React.useState(false);
+    const hiddenFileInput = React.useRef(null);
 
-    // We start with null, then fetch. If no project, we show empty state / Create form
-    const [project, setProject] = useState(null);
-    const [myProjects, setMyProjects] = useState([]);
-    const [startupProfile, setStartupProfile] = useState(null);
+    // Initialize section from localStorage if set (e.g., redirect from project creation)
+    React.useEffect(() => {
+        const savedTab = localStorage.getItem('aisep_dashboard_tab');
+        if (savedTab) {
+            setActiveSection(savedTab);
+            localStorage.removeItem('aisep_dashboard_tab');
+        }
+    }, []);
 
-    // Default form data
-    const [showProjectForm, setShowProjectForm] = useState(false);
-
-    const [projectFormData, setProjectFormData] = useState({
+    const [projectFormData, setProjectFormData] = React.useState({
         projectName: '',
         description: '',
         tagline: '',
@@ -83,7 +101,7 @@ export default function StartupDashboard({ user }) {
                 if (response.success && response.data) {
                     const projects = Array.isArray(response.data) ? response.data : (response.data.items || []);
                     setMyProjects(projects);
-                    
+
                     if (projects.length > 0) {
                         const loadedProject = projects[0];
                         setProject(loadedProject);
@@ -109,10 +127,10 @@ export default function StartupDashboard({ user }) {
         fetchDashboardData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
-    const [advisorRequests, setAdvisorRequests] = useState([]);
+    const [advisorRequests, setAdvisorRequests] = React.useState([]);
 
     // Empty documents out, we fetch them via project endpoint or soon later
-    const [documents, setDocuments] = useState([]);
+    const [documents, setDocuments] = React.useState([]);
 
     // Calculate profile completion based on startup profile data
     const calculateProfileCompletion = () => {
@@ -152,15 +170,35 @@ export default function StartupDashboard({ user }) {
         ));
     };
 
-    const handleDeleteDocument = (id) => {
-        setDocuments(documents.filter(doc => doc.id !== id));
+    /**
+     * translateError - Maps English backend error messages to Vietnamese
+     */
+    const translateError = (error) => {
+        if (!error) return 'Đã xảy ra lỗi. Vui lòng thử lại.';
+
+        const message = typeof error === 'string' ? error : (error.message || error.response?.data?.message || '');
+
+        if (message.includes('File must not exceed 10MB')) {
+            return 'Kích thước tập tin không được vượt quá 10MB.';
+        }
+        if (message.includes('File only supports PDF, JPG, PNG')) {
+            return 'Định dạng tập tin không hỗ trợ. Vui lòng sử dụng PDF, JPG hoặc PNG.';
+        }
+        if (message.includes('Unauthorized')) {
+            return 'Phiên làm việc hết hạn. Vui lòng đăng nhập lại.';
+        }
+        if (message.includes('Network Error')) {
+            return 'Lỗi kết nối mạng. Vui lòng kiểm tra lại đường truyền.';
+        }
+
+        return message || 'Đã xảy ra lỗi. Vui lòng thử lại.';
     };
 
     const handleVerifyDocumentByID = async (documentId) => {
         const idToVerify = documentId || documentIdInput.trim();
-        
+
         if (!idToVerify) {
-            setSuccessMessage('❌ Vui lòng nhập Document ID');
+            setSuccessMessage('Vui lòng nhập mã tài liệu');
             setShowSuccessModal(true);
             return;
         }
@@ -171,48 +209,67 @@ export default function StartupDashboard({ user }) {
             if (response?.success && response?.data) {
                 setVerificationData(response.data);
                 const doc = documents.find(d => d.id === idToVerify || d.documentId === idToVerify);
-                setVerificationDocumentName(doc?.name || doc?.fileName || `Document #${idToVerify}`);
+                setVerificationDocumentName(doc?.name || doc?.fileName || `Tài liệu #${idToVerify}`);
                 setShowVerificationModal(true);
                 setDocumentIdInput(''); // Reset input after successful verification
             } else {
-                setSuccessMessage('❌ Xác thực thất bại: ' + (response?.message || 'Không thể xác thực tài liệu'));
+                setSuccessMessage('Xác thực thất bại: ' + translateError(response?.message || 'Không thể xác thực tài liệu'));
                 setShowSuccessModal(true);
             }
         } catch (error) {
             console.error('Verify Error:', error);
-            const errorMessage = error?.response?.data?.message || error?.message || 'Vui lòng thử lại';
-            setSuccessMessage('❌ Lỗi xác thực: ' + errorMessage);
+            setSuccessMessage('Lỗi xác thực: ' + translateError(error));
             setShowSuccessModal(true);
         } finally {
             setIsVerifying(false);
         }
     };
 
-    const [isUploading, setIsUploading] = useState(false);
-    const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
-    const [showProjectSelector, setShowProjectSelector] = useState(false);
-    const [selectedProjectIdForUpload, setSelectedProjectIdForUpload] = useState(null);
-    
-    // Blockchain Verification States
-    const [showVerificationModal, setShowVerificationModal] = useState(false);
-    const [verificationData, setVerificationData] = useState(null);
-    const [verificationDocumentName, setVerificationDocumentName] = useState('');
-    const [documentIdInput, setDocumentIdInput] = useState('');
-    const [isVerifying, setIsVerifying] = useState(false);
-    
-    const hiddenFileInput = React.useRef(null);
+    // --- Document Management Logic ---
 
-    // Fetch documents from API
-    const handleFetchDocuments = async (projectId) => {
+    // Fetch documents when project detail opens
+    useEffect(() => {
+        if (showDetailModal && detailProject) {
+            fetchProjectDocuments(detailProject.projectId || detailProject.id);
+        }
+    }, [showDetailModal, detailProject]);
+
+    const fetchProjectDocuments = async (projectId) => {
         setIsLoadingDocuments(true);
         try {
             const response = await projectSubmissionService.getDocuments(projectId);
-            if (response.success && response.data) {
-                const docsList = Array.isArray(response.data) ? response.data : [];
-                setDocuments(docsList);
-            } else if (response.data) {
-                // In case API returns array directly
-                setDocuments(Array.isArray(response.data) ? response.data : []);
+            if (response && response.data) {
+                // Map API documents to local UI model
+                // Handle both array response and paginated response (items)
+                const docItems = Array.isArray(response.data) ? response.data : (response.data.items || []);
+
+                const truncateName = (name, maxLength = 16) => {
+                    if (!name || name.length <= maxLength) return name;
+                    const extension = name.split('.').pop();
+                    const nameParts = name.split('.');
+                    nameParts.pop();
+                    const nameWithoutExtension = nameParts.join('.');
+
+                    if (nameWithoutExtension.length > maxLength - extension.length - 3) {
+                        return nameWithoutExtension.substring(0, maxLength - extension.length - 3) + '...' + extension;
+                    }
+                    return name;
+                };
+
+                const mappedDocs = docItems.map(doc => ({
+                    id: doc.documentId,
+                    name: truncateName(doc.fileName || doc.documentType),
+                    fullName: doc.fileName || doc.documentType, // Keep full name for title/tooltips
+                    type: doc.documentType,
+                    uploadDate: new Date(doc.uploadedAt || doc.verifiedAt || new Date()).toLocaleDateString('vi-VN'),
+                    status: 'verified',
+                    hash: doc.fileHash,
+                    txHash: doc.blockchainTxHash, // Capture transaction hash
+                    url: doc.fileUrl
+                }));
+                setDocuments(mappedDocs);
+            } else {
+                setDocuments([]);
             }
         } catch (error) {
             console.error('Error fetching documents:', error);
@@ -222,87 +279,76 @@ export default function StartupDashboard({ user }) {
         }
     };
 
-    // Fetch documents when documents tab is active
-    React.useEffect(() => {
-        if (activeSection === 'documents') {
-            const projectId = project?.id || 'test-project-001';
-            handleFetchDocuments(projectId);
-        }
-    }, [activeSection, project]);
-
-    const handleUploadClick = () => {
-        // Check if user has any projects
-        if (!myProjects || myProjects.length === 0) {
-            setSuccessMessage('⚠️ Vui lòng tạo dự án trước khi tải tài liệu lên.');
-            setShowSuccessModal(true);
-            return;
-        }
-        // Show project selector modal
-        setShowProjectSelector(true);
-    };
-
-    const handleSelectProjectForUpload = (selectedProject) => {
-        const projectId = selectedProject.id || selectedProject.projectId;
-        setSelectedProjectIdForUpload(projectId);
-        setShowProjectSelector(false);
-        // Trigger file input after project is selected
-        setTimeout(() => {
-            hiddenFileInput.current?.click();
-        }, 100);
-    };
-
-    const handleFileChange = async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        // Validate file type - only PDF, JPG, PNG allowed
-        const allowedMimeTypes = ['application/pdf', 'image/jpeg', 'image/png'];
-        const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png'];
-        const fileExtension = file.name.split('.').pop()?.toLowerCase();
-        
-        if (!allowedMimeTypes.includes(file.type) && !allowedExtensions.includes(fileExtension)) {
-            setSuccessMessage('❌ Định dạng file không hỗ trợ. Vui lòng sử dụng PDF, JPG hoặc PNG.');
-            setShowSuccessModal(true);
-            e.target.value = ''; // Reset input
-            return;
-        }
-
-        // Check if project ID was selected
-        if (!selectedProjectIdForUpload) {
-            setSuccessMessage('⚠️ Vui lòng chọn dự án trước khi tải tài liệu lên.');
-            setShowSuccessModal(true);
-            e.target.value = ''; // Reset input
-            return;
-        }
-
-        setIsUploading(true);
+    // Verify a document by ID
+    const handleVerifyDocument = async (id, name, txHash) => {
+        setIsVerifying(true);
+        setVerificationDocumentName(name);
         try {
-            const projectId = selectedProjectIdForUpload; // Use selected project ID
-            const documentType = 'PitchDeck'; // Document type - can be expanded later
-            const response = await projectSubmissionService.uploadDocument(projectId, file, documentType);
-            if (response.success) {
-                // Document uploaded and saved to blockchain (backend handles automatically)
-                setSuccessMessage('✓ Tải tài liệu lên thành công! Tài liệu đã được lưu lên blockchain.');
-                setShowSuccessModal(true);
-                setSelectedProjectIdForUpload(null); // Reset for next upload
+            const res = await projectSubmissionService.verifyDocument(id);
+            if (res && res.data) {
+                // Ensure txHash is included in verification data if returned or available
+                const extendedData = {
+                    ...res.data,
+                    txHash: txHash || res.data.txHash || res.data.blockchainTxHash
+                };
+                setVerificationData(extendedData);
+                setShowVerificationModal(true);
             } else {
-                setSuccessMessage('❌ Tải lên thất bại: ' + (response.message || 'Lỗi không xác định'));
+                setSuccessMessage('Không tìm thấy thông tin xác thực cho tài liệu này.');
                 setShowSuccessModal(true);
             }
         } catch (error) {
-            console.error('Upload Error:', error);
-            // Extract error message from response if available
-            const errorMessage = error?.response?.data?.message || error?.message || 'Vui lòng thử lại';
-            if (error?.response?.status === 400 && errorMessage.includes('not valid')) {
-                setSuccessMessage('❌ Lỗi: ProjectId không hợp lệ. Vui lòng chọn dự án khác.');
+            console.error('Error verifying document:', error);
+            setSuccessMessage('Lỗi xác thực: ' + translateError(error));
+            setShowSuccessModal(true);
+        } finally {
+            setIsVerifying(false);
+        }
+    };
+
+    // Handle drag and drop
+    const handleDrop = (e) => {
+        const files = e.dataTransfer.files;
+        if (files && files.length > 0) {
+            uploadFile(files[0]);
+        }
+    };
+
+    const handleFileChange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            uploadFile(file);
+        }
+    };
+
+    const uploadFile = async (file) => {
+        if (!detailProject) return;
+
+        const projectId = detailProject.projectId || detailProject.id;
+        setIsUploading(true);
+        try {
+            const res = await projectSubmissionService.uploadDocument(projectId, file, documentType);
+            if (res && (res.success || res.isSuccess)) {
+                setSuccessMessage('Tải tài liệu lên thành công. Tài liệu đã được lưu lên blockchain.');
+                setShowSuccessModal(true);
+                fetchProjectDocuments(projectId);
             } else {
-                setSuccessMessage('❌ Không thể tải tài liệu lên: ' + errorMessage);
+                setSuccessMessage('Lỗi: ' + translateError(res?.message || 'Không thể tải tài liệu lên.'));
+                setShowSuccessModal(true);
             }
+        } catch (error) {
+            console.error('Error uploading document:', error);
+            setSuccessMessage('Lỗi tải lên: ' + translateError(error));
             setShowSuccessModal(true);
         } finally {
             setIsUploading(false);
-            e.target.value = ''; // Reset input
         }
+    };
+
+    const handleDeleteDocument = async (documentId) => {
+        if (!window.confirm('Bạn có chắc chắn muốn xóa tài liệu này?')) return;
+        alert('Tính năng xóa tài liệu đang được cập nhật.');
+        // Logic for deleting document...
     };
 
     // BR-08: Protect Documents on Blockchain
@@ -371,21 +417,21 @@ export default function StartupDashboard({ user }) {
                     };
                     setProject(updatedProject);
 
-                    setSuccessMessage('Đánh giá AI hoàn thành!');
+                    setSuccessMessage('Đánh giá AI hoàn thành.');
                     setShowSuccessModal(true);
                 } else {
                     console.error('Could not fetch AI results after generation:', aiResponse);
-                    setSuccessMessage('⚠️ Đánh giá AI đã hoàn thành nhưng không thể lấy kết quả.');
+                    setSuccessMessage('Đánh giá AI đã hoàn thành nhưng không thể lấy kết quả.');
                     setShowSuccessModal(true);
                 }
             } else {
                 console.error('AI Evaluation error:', response);
-                setSuccessMessage('Đánh giá AI thất bại: ' + response.message);
+                setSuccessMessage('Đánh giá AI thất bại: ' + translateError(response.message));
                 setShowSuccessModal(true);
             }
         } catch (error) {
             console.error('AI evaluation error:', error);
-            setSuccessMessage('Không thể thực hiện đánh giá AI do lỗi mạng/máy chủ.');
+            setSuccessMessage('Không thể thực hiện đánh giá AI do lỗi hệ thống.');
             setShowSuccessModal(true);
         } finally {
             setIsEvaluatingAI(false);
@@ -440,7 +486,7 @@ export default function StartupDashboard({ user }) {
 
         if (!checklist.canPublish) {
             const remaining = checklist.remainingItems.join(', ');
-            setSuccessMessage(`⚠️ Chưa thể đăng dự án. Còn thiếu: ${remaining}`);
+            setSuccessMessage(`Chưa thể đăng dự án. Còn thiếu: ${remaining}`);
             setShowSuccessModal(true);
             return;
         }
@@ -495,7 +541,7 @@ export default function StartupDashboard({ user }) {
             />
 
             {!isLoadingInitialData && !startupProfile && (
-                <StartupProfileBanner 
+                <StartupProfileBanner
                     onRedirect={() => setActiveSection('complete-info')}
                 />
             )}
@@ -558,12 +604,6 @@ export default function StartupDashboard({ user }) {
                     Thông tin bổ sung
                 </button>
 
-                <button
-                    className={`${styles.tab} ${activeSection === 'documents' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('documents')}
-                >
-                    Tài liệu & Sở hữu trí tuệ
-                </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'my-projects' ? styles.active : ''}`}
                     onClick={() => setActiveSection('my-projects')}
@@ -657,150 +697,6 @@ export default function StartupDashboard({ user }) {
                     </div>
                 )}
 
-                {/* Documents Section */}
-                {activeSection === 'documents' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>Quản lý tài liệu & Sở hữu trí tuệ</h3>
-                                <div>
-                                    <input
-                                        type="file"
-                                        ref={hiddenFileInput}
-                                        onChange={handleFileChange}
-                                        style={{ display: 'none' }}
-                                    />
-                                    <button
-                                        className={styles.primaryBtn}
-                                        onClick={handleUploadClick}
-                                        disabled={isUploading} /* Temporarily disabled project check for testing */
-                                    >
-                                        <PlusCircle size={18} />
-                                        {isUploading ? 'Đang tải lên...' : 'Tải tài liệu lên'}
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div className={styles.list}>
-                                {isLoadingDocuments ? (
-                                    <div className={styles.emptyState}>
-                                        <p>⏳ Đang tải danh sách tài liệu...</p>
-                                    </div>
-                                ) : documents.length === 0 ? (
-                                    <div className={styles.emptyState}>
-                                        <p>Chưa có tài liệu nào được tải lên.</p>
-                                    </div>
-                                ) : (
-                                    documents.map(doc => (
-                                    <div key={doc.id} className={styles.listItem}>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <FileText size={16} color="var(--primary-blue)" />
-                                                {doc.name}
-                                            </div>
-                                            <div className={styles.listMeta} style={{ marginTop: '4px', display: 'flex', gap: '12px', alignItems: 'center' }}>
-                                                <span>Ngày tải: {doc.uploadDate}</span>
-                                                <span className={`${styles.badge} ${doc.status === 'verified' ? styles.badgeSuccess : styles.badgePending}`}>
-                                                    {doc.status === 'verified' ? '✓ Đã xác minh' : '⏳ Đang chờ'}
-                                                </span>
-                                            </div>
-                                            {doc.hash && (
-                                                <div style={{ marginTop: '6px' }}>
-                                                    <code className={styles.codeBlock}>{doc.hash}</code>
-                                                </div>
-                                            )}
-                                        </div>
-                                        <div className={styles.listActions}>
-                                            <button className={styles.secondaryBtn}>Xem</button>
-                                            <button
-                                                className={styles.dangerBtn}
-                                                onClick={() => handleDeleteDocument(doc.id)}
-                                            >
-                                                Xóa
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))
-                                )}
-                            </div>
-
-                            {/* Document Verification Section */}
-                            <div style={{
-                                marginTop: '32px',
-                                paddingTop: '32px',
-                                borderTop: '1px solid var(--border-color)'
-                            }}>
-                                <h4 style={{
-                                    margin: '0 0 16px 0',
-                                    fontSize: '16px',
-                                    fontWeight: '600',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px'
-                                }}>
-                                    <Shield size={20} style={{ color: 'var(--primary-blue)' }} />
-                                    Xác thực tài liệu trên Blockchain
-                                </h4>
-                                <p style={{
-                                    margin: '0 0 16px 0',
-                                    fontSize: '13px',
-                                    color: 'var(--text-secondary)'
-                                }}>
-                                    Nhập Document ID để kiểm tra chi tiết xác thực trên blockchain
-                                </p>
-                                <div style={{
-                                    display: 'grid',
-                                    gridTemplateColumns: '1fr auto',
-                                    gap: '12px',
-                                    maxWidth: '500px'
-                                }}>
-                                    <input
-                                        type="text"
-                                        placeholder="Nhập Document ID (ví dụ: 1, 2, 3...)"
-                                        value={documentIdInput}
-                                        onChange={(e) => setDocumentIdInput(e.target.value)}
-                                        onKeyPress={(e) => e.key === 'Enter' && handleVerifyDocumentByID()}
-                                        disabled={isVerifying}
-                                        style={{
-                                            padding: '12px 16px',
-                                            border: '1px solid var(--border-color)',
-                                            borderRadius: '6px',
-                                            fontSize: '14px',
-                                            fontFamily: 'inherit',
-                                            backgroundColor: isVerifying ? '#f1f5f9' : 'white',
-                                            color: 'var(--text-primary)',
-                                            cursor: isVerifying ? 'not-allowed' : 'text'
-                                        }}
-                                    />
-                                    <button
-                                        onClick={() => handleVerifyDocumentByID()}
-                                        disabled={isVerifying || !documentIdInput.trim()}
-                                        className={styles.primaryBtn}
-                                        style={{
-                                            padding: '12px 24px',
-                                            minWidth: '120px',
-                                            opacity: isVerifying || !documentIdInput.trim() ? 0.6 : 1,
-                                            cursor: isVerifying || !documentIdInput.trim() ? 'not-allowed' : 'pointer',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            gap: '6px'
-                                        }}
-                                    >
-                                        {isVerifying ? (
-                                            <>⏳ Đang xác thực...</>
-                                        ) : (
-                                            <>
-                                                <Shield size={16} />
-                                                Xác thực
-                                            </>
-                                        )}
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
 
                 {/* My Projects Section */}
                 {activeSection === 'my-projects' && (
@@ -816,21 +712,21 @@ export default function StartupDashboard({ user }) {
                                     myProjects.map(p => (
                                         <div key={p.id || p.projectId} className={styles.listItem}>
                                             <div className={styles.listContent}>
-                                                    <div className={styles.flexCenter} style={{ gap: '12px', marginBottom: '4px' }}>
-                                                        <h4 className={styles.listItemTitle} style={{ margin: 0 }}>
-                                                            {p.name || p.projectName}
-                                                        </h4>
-                                                        <span 
-                                                            className={styles.badge} 
-                                                            style={{ 
-                                                                backgroundColor: `${STATUS_COLORS[p.status || 'Draft']}15`,
-                                                                color: STATUS_COLORS[p.status || 'Draft'],
-                                                                border: `1px solid ${STATUS_COLORS[p.status || 'Draft']}30`
-                                                            }}
-                                                        >
-                                                            {STATUS_LABELS[p.status || 'Draft'] || 'Nháp'}
-                                                        </span>
-                                                    </div>
+                                                <div className={styles.flexCenter} style={{ gap: '12px', marginBottom: '4px' }}>
+                                                    <h4 className={styles.listItemTitle} style={{ margin: 0 }}>
+                                                        {p.name || p.projectName}
+                                                    </h4>
+                                                    <span
+                                                        className={styles.badge}
+                                                        style={{
+                                                            backgroundColor: `${STATUS_COLORS[p.status || 'Draft']}15`,
+                                                            color: STATUS_COLORS[p.status || 'Draft'],
+                                                            border: `1px solid ${STATUS_COLORS[p.status || 'Draft']}30`
+                                                        }}
+                                                    >
+                                                        {STATUS_LABELS[p.status || 'Draft'] || 'Nháp'}
+                                                    </span>
+                                                </div>
                                                 <p className={styles.subtitle} style={{ margin: '4px 0' }}>{p.shortDescription || p.description}</p>
                                                 <div className={styles.listMeta}>
                                                     <span>Giai đoạn: {p.developmentStage === 0 ? 'Ý tưởng' : p.developmentStage === 1 ? 'MVP' : 'Tăng trưởng'}</span>
@@ -838,10 +734,10 @@ export default function StartupDashboard({ user }) {
                                                 </div>
                                             </div>
                                             <div className={styles.listActions}>
-                                                <button 
-                                                    className={styles.secondaryBtn} 
-                                                    onClick={() => { 
-                                                        setDetailProject(p); 
+                                                <button
+                                                    className={styles.secondaryBtn}
+                                                    onClick={() => {
+                                                        setDetailProject(p);
                                                         setShowDetailModal(true);
                                                     }}
                                                 >
@@ -1028,11 +924,11 @@ export default function StartupDashboard({ user }) {
                                     }
 
                                     setStartupProfile(result);
-                                    setSuccessMessage('Lưu thông tin hồ sơ thành công!');
+                                    setSuccessMessage('Lưu thông tin hồ sơ thành công.');
                                     setShowSuccessModal(true);
                                 } catch (error) {
                                     console.error('Error saving profile:', error);
-                                    setSuccessMessage('❌ Đã xảy ra lỗi khi lưu hồ sơ. Vui lòng thử lại.');
+                                    setSuccessMessage('Đã xảy ra lỗi khi lưu hồ sơ. Vui lòng thử lại.');
                                     setShowSuccessModal(true);
                                 } finally {
                                     setShowCompleteInfoForm(false);
@@ -1057,49 +953,22 @@ export default function StartupDashboard({ user }) {
                 </div>
             )}
 
-            {/* Success Modal */}
-            {showSuccessModal && (
-                <SuccessModal
-                    onClose={() => setShowSuccessModal(false)}
-                    title={successMessage.split('\n')[0] || 'Success!'}
-                    message={successMessage.split('\n').slice(1).join('\n') || successMessage}
-                />
-            )}
 
-            {/* Blockchain Verification Modal */}
-            <BlockchainVerificationModal
-                isOpen={showVerificationModal}
-                verificationData={verificationData}
-                documentName={verificationDocumentName}
-                onClose={() => {
-                    setShowVerificationModal(false);
-                    setVerificationData(null);
-                }}
-            />
-
-            {/* Project Selector Modal */}
-            {showProjectSelector && (
-                <ProjectSelectorModal
-                    projects={myProjects}
-                    onSelect={handleSelectProjectForUpload}
-                    onCancel={() => setShowProjectSelector(false)}
-                    isLoading={isLoadingInitialData}
-                />
-            )}
+            {/* Consolidated Modals at end of file */}
 
             {/* Project Detail Modal */}
             {showDetailModal && detailProject && (
-                <div 
-                    className={styles.modalOverlay} 
+                <div
+                    className={styles.modalOverlay}
                     onClick={(e) => e.target === e.currentTarget && setShowDetailModal(false)}
                 >
                     <div className={styles.modalContent} style={{ maxWidth: '800px', width: '90%' }}>
-                        <div className={styles.cardHeader} style={{ padding: '24px', borderBottom: '1px solid var(--border-color)', margin: '0' }}>
+                        <div className={styles.modalHeader}>
                             <div>
                                 <h2 className={styles.headerTitle} style={{ margin: '0 0 8px 0' }}>{detailProject.projectName || detailProject.name}</h2>
-                                <span 
-                                    className={styles.badge} 
-                                    style={{ 
+                                <span
+                                    className={styles.badge}
+                                    style={{
                                         backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}15`,
                                         color: STATUS_COLORS[detailProject.status || 'Draft'],
                                         border: `1px solid ${STATUS_COLORS[detailProject.status || 'Draft']}30`
@@ -1112,17 +981,17 @@ export default function StartupDashboard({ user }) {
                                 <X size={24} />
                             </button>
                         </div>
-                        
+
                         <div style={{ padding: '24px', overflowY: 'auto' }}>
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>1. Thông tin cơ bản</h4>
-                                    
+
                                     <div className={styles.formGroup}>
                                         <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Mô tả ngắn</label>
                                         <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.shortDescription}</p>
                                     </div>
-                                    
+
                                     <div className={styles.formGroup}>
                                         <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Giai đoạn phát triển</label>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1132,31 +1001,31 @@ export default function StartupDashboard({ user }) {
                                             </p>
                                         </div>
                                     </div>
-                                    
+
                                     <div className={styles.formGroup}>
                                         <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Vấn đề cần giải quyết</label>
                                         <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.problemStatement}</p>
                                     </div>
-                                    
+
                                     <div className={styles.formGroup}>
                                         <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Giải pháp đề xuất</label>
                                         <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.solutionDescription}</p>
                                     </div>
                                 </div>
-                                
+
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>2. Thị trường & Mô hình</h4>
-                                    
+
                                     <div className={styles.formGroup}>
                                         <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Khách hàng mục tiêu</label>
                                         <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.targetCustomers}</p>
                                     </div>
-                                    
+
                                     <div className={styles.formGroup}>
                                         <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Giá trị độc đáo (UVP)</label>
                                         <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.uniqueValueProposition}</p>
                                     </div>
-                                    
+
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                                         <div className={styles.formGroup}>
                                             <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Quy mô thị trường</label>
@@ -1171,50 +1040,168 @@ export default function StartupDashboard({ user }) {
                                             </p>
                                         </div>
                                     </div>
-                                    
+
                                     <div className={styles.formGroup}>
                                         <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Mô hình kinh doanh</label>
                                         <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.businessModel}</p>
                                     </div>
                                 </div>
-                            </div>
 
-                            <div style={{ marginTop: '32px', borderTop: '1px solid var(--border-color)', paddingTop: '32px' }}>
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                        <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>3. Đội ngũ</h4>
-                                        
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Thành viên & Vai trò</label>
-                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{detailProject.teamMembers}</p>
-                                        </div>
-                                        
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Kỹ năng cốt lõi</label>
-                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)' }}>{detailProject.keySkills}</p>
-                                        </div>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>3. Đội ngũ</h4>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Thành viên & Vai trò</label>
+                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{detailProject.teamMembers}</p>
                                     </div>
-                                    
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                        <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>4. Cạnh tranh</h4>
-                                        
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Kinh nghiệm đội ngũ</label>
-                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.teamExperience}</p>
-                                        </div>
-                                        
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Đối thủ cạnh tranh</label>
-                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.competitors}</p>
-                                        </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Kỹ năng cốt lõi</label>
+                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)' }}>{detailProject.keySkills}</p>
+                                    </div>
+                                </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                                    <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>4. Cạnh tranh</h4>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Kinh nghiệm đội ngũ</label>
+                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.teamExperience}</p>
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Đối thủ cạnh tranh</label>
+                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.competitors}</p>
                                     </div>
                                 </div>
                             </div>
+
+                            <div style={{ marginTop: '32px', borderTop: '1px solid var(--border-color)', paddingTop: '32px' }}>
+                                <h4 style={{ color: 'var(--primary-blue)', fontSize: '18px', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                    <FileText size={20} />
+                                    5. Tài liệu của dự án
+                                </h4>
+
+                                {/* Upload Section */}
+                                <div
+                                    className={`${styles.dropzone} ${dragActive ? styles.dragActive : ''}`}
+                                    onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
+                                    onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
+                                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
+                                    onDrop={(e) => { e.preventDefault(); setDragActive(false); handleDrop(e); }}
+                                >
+                                    <div className={styles.uploadControls}>
+                                        <div className={styles.uploadInfo}>
+                                            <Upload size={24} className={styles.uploadIcon} />
+                                            <div>
+                                                <p className={styles.uploadTitle}>Tải lên tài liệu mới</p>
+                                                <p className={styles.uploadSubtitle}>Kéo thả hoặc click để chọn file (PDF, Docx, Image)</p>
+                                            </div>
+                                        </div>
+                                        <div className={styles.uploadActions}>
+                                            <select
+                                                className={styles.selectSmall}
+                                                value={documentType}
+                                                onChange={(e) => setDocumentType(e.target.value)}
+                                            >
+                                                <option value="PitchDeck">Pitch Deck</option>
+                                                <option value="BusinessPlan">Kế hoạch kinh doanh</option>
+                                                <option value="FinancialPlan">Kế hoạch tài chính</option>
+                                                <option value="Legal">Pháp lý / Giấy phép</option>
+                                                <option value="Patent">Sở hữu trí tuệ / Bằng sáng chế</option>
+                                                <option value="Other">Khác</option>
+                                            </select>
+                                            <button
+                                                className={styles.uploadBtn}
+                                                onClick={() => hiddenFileInput.current.click()}
+                                                disabled={isUploading}
+                                            >
+                                                {isUploading ? 'Đang tải...' : 'Chọn file'}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <input
+                                        type="file"
+                                        ref={hiddenFileInput}
+                                        onChange={handleFileChange}
+                                        style={{ display: 'none' }}
+                                    />
+                                </div>
+
+                                {/* Documents List */}
+                                <div className={styles.docsList} style={{ marginTop: '20px' }}>
+                                    {isLoadingDocuments ? (
+                                        <div className={styles.loadingState}>
+                                            <Loader2 className={styles.spinner} size={24} />
+                                            <span>Đang tải tài liệu...</span>
+                                        </div>
+                                    ) : documents.length === 0 ? (
+                                        <div className={styles.emptyDocs}>
+                                            <p>Chưa có tài liệu nào được tải lên cho dự án này.</p>
+                                        </div>
+                                    ) : (
+                                        <div className={styles.tableWrapper}>
+                                            <table className={styles.docsTable}>
+                                                <thead>
+                                                    <tr>
+                                                        <th>Tên tài liệu</th>
+                                                        <th>Loại</th>
+                                                        <th>Ngày tải</th>
+                                                        <th>Xác thực</th>
+                                                        <th>Thao tác</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {documents.map((doc) => (
+                                                        <tr key={doc.id}>
+                                                            <td>
+                                                                <div className={styles.docNameCell}>
+                                                                    <FileText size={16} />
+                                                                    <span title={doc.fullName}>{doc.name}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td>{doc.type}</td>
+                                                            <td>{doc.uploadDate}</td>
+                                                            <td>
+                                                                <span className={styles.statusBadge}>
+                                                                    <Shield size={12} />
+                                                                    Blockchain
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                <div className={styles.tableActions}>
+                                                                    <button
+                                                                        className={styles.iconBtn}
+                                                                        title="Xem"
+                                                                        onClick={() => window.open(doc.url, '_blank')}
+                                                                    >
+                                                                        <ExternalLink size={16} />
+                                                                    </button>
+                                                                    <button
+                                                                        className={styles.iconBtn}
+                                                                        title="Xác thực"
+                                                                        onClick={() => handleVerifyDocument(doc.id, doc.fullName, doc.txHash)}
+                                                                    >
+                                                                        <Shield size={16} />
+                                                                    </button>
+                                                                    <button
+                                                                        className={styles.iconBtnDanger}
+                                                                        title="Xóa"
+                                                                        onClick={() => handleDeleteDocument(doc.id)}
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </div>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
                         </div>
-                        
+
                         <div className={styles.actions} style={{ padding: '20px 24px', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', display: 'flex' }}>
-                            <button 
-                                className={styles.secondaryBtn} 
+                            <button
+                                className={styles.secondaryBtn}
                                 style={{ flex: '1', borderRadius: '9999px' }}
                                 onClick={() => setShowDetailModal(false)}
                             >
@@ -1223,6 +1210,26 @@ export default function StartupDashboard({ user }) {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {showSuccessModal && (
+                <SuccessModal
+                    onClose={() => setShowSuccessModal(false)}
+                    title={successTitle || "Thông báo"}
+                    message={successMessage}
+                    primaryBtnText={successPrimaryBtn}
+                    secondaryBtnText={successSecondaryBtn}
+                    onSecondaryClick={onSuccessSecondaryClick}
+                />
+            )}
+
+            {showVerificationModal && (
+                <BlockchainVerificationModal
+                    isOpen={showVerificationModal}
+                    onClose={() => setShowVerificationModal(false)}
+                    verificationData={verificationData}
+                    documentName={verificationDocumentName}
+                />
             )}
         </div>
     );

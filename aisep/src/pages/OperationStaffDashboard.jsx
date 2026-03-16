@@ -262,14 +262,7 @@ export default function OperationStaffDashboard({ user }) {
                                             <div className={styles.listContent}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                                                     <h4 className={styles.listTitle}>{project.projectName}</h4>
-                                                    <span style={{ 
-                                                        background: '#fef3c7', 
-                                                        color: '#92400e', 
-                                                        padding: '2px 8px', 
-                                                        borderRadius: '4px', 
-                                                        fontSize: '12px',
-                                                        fontWeight: '600'
-                                                    }}>
+                                                    <span className={`${styles.badge} ${styles.badgePending}`}>
                                                         {project.status || 'Draft'}
                                                     </span>
                                                 </div>
@@ -295,14 +288,12 @@ export default function OperationStaffDashboard({ user }) {
                                                 <button
                                                     onClick={() => handleApproveProject(project.projectId)}
                                                     className={styles.primaryBtn}
-                                                    style={{ width: '100%' }}
                                                 >
                                                     ✓ Phê duyệt
                                                 </button>
                                                 <button
                                                     onClick={() => handleRejectProject(project.projectId)}
                                                     className={styles.dangerBtn}
-                                                    style={{ width: '100%' }}
                                                 >
                                                     ✗ Từ chối
                                                 </button>
@@ -317,7 +308,7 @@ export default function OperationStaffDashboard({ user }) {
                                     <h4 className={styles.cardTitle} style={{ fontSize: '16px' }}>Dự án đã được phê duyệt</h4>
                                     <div className={styles.list}>
                                         {projectSubmissions.filter(p => p.status === 'approved').map(project => (
-                                            <div key={project.id} className={styles.listItem} style={{ background: 'rgba(23, 191, 99, 0.05)' }}>
+                                            <div key={project.id} className={styles.listItem} style={{ backgroundColor: 'var(--bg-hover)' }}>
                                                 <div className={styles.listContent}>
                                                     <div className={styles.listTitle}>{project.projectName}</div>
                                                     <div className={`${styles.badge} ${styles.badgeSuccess}`} style={{ marginTop: '4px' }}>
@@ -389,7 +380,7 @@ export default function OperationStaffDashboard({ user }) {
                             <div className={styles.card}>
                                 <h3 className={styles.cardTitle}>Hoạt động gần đây</h3>
                                 <div className={styles.list}>
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                                         <p>Chưa có hoạt động nào.</p>
                                     </div>
                                 </div>
@@ -413,7 +404,7 @@ export default function OperationStaffDashboard({ user }) {
 
                             <div className={styles.list}>
                                 {pendingDocuments.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                                         <p>Chưa có tài liệu nào cần xác minh.</p>
                                     </div>
                                 ) : pendingDocuments.map(doc => (
@@ -471,7 +462,7 @@ export default function OperationStaffDashboard({ user }) {
 
                             <div className={styles.list}>
                                 {pendingApprovals.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                                         <p>Chưa có yêu cầu phê duyệt đăng ký người dùng nào.</p>
                                     </div>
                                 ) : pendingApprovals.map(approval => (
@@ -484,7 +475,7 @@ export default function OperationStaffDashboard({ user }) {
                                             <div className={styles.listMeta} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                                 <span>Email: {approval.email}</span>
                                                 <span>Registered: {approval.registeredDate}</span>
-                                                <span style={{ color: approval.verification === 'verified' ? '#17bf63' : '#d97706', fontWeight: '600', marginTop: '4px' }}>
+                                                <span style={{ color: 'var(--score-good)', fontWeight: '700', marginTop: '4px' }}>
                                                     {approval.verification === 'verified' ? '✓ Đã xác minh CCCD' : '⚠ Chưa xác minh danh tính'}
                                                 </span>
                                             </div>
@@ -529,7 +520,7 @@ export default function OperationStaffDashboard({ user }) {
 
                             <div className={styles.list}>
                                 {pendingRequests.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                                         <p>Chưa có yêu cầu nào đang chờ xử lý.</p>
                                     </div>
                                 ) : pendingRequests.map(request => (

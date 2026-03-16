@@ -1,5 +1,5 @@
 import React from 'react';
-import { Check, AlertCircle, Copy, X } from 'lucide-react';
+import { Check, AlertCircle, Copy, X, Activity, Shield, ExternalLink } from 'lucide-react';
 import styles from './BlockchainVerificationModal.module.css';
 
 /**
@@ -11,10 +11,28 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
 
     if (!isOpen || !verificationData) return null;
 
+    const truncateName = (name, maxLength = 16) => {
+        if (!name || name.length <= maxLength) return name;
+        const extension = name.split('.').pop();
+        const nameWithoutExtension = name.substring(0, name.lastIndexOf('.'));
+        if (nameWithoutExtension.length > maxLength - extension.length - 3) {
+            return nameWithoutExtension.substring(0, maxLength - extension.length - 3) + '...' + extension;
+        }
+        return name;
+    };
+
+    const handleViewOnEtherscan = () => {
+        if (verificationData.txHash) {
+            window.open(`https://sepolia.etherscan.io/tx/${verificationData.txHash}`, '_blank');
+        }
+    };
+
     const handleCopyTxHash = () => {
-        navigator.clipboard.writeText(verificationData.txHash);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2000);
+        if (verificationData.txHash) {
+            navigator.clipboard.writeText(verificationData.txHash);
+            setCopied(true);
+            setTimeout(() => setCopied(false), 2000);
+        }
     };
 
     return (
@@ -25,14 +43,16 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div className={styles.headerIcon}>
                             {verificationData.isAuthentic ? (
-                                <Check size={24} color="#17bf63" />
+                                <Check size={24} color="var(--score-good)" />
                             ) : (
-                                <AlertCircle size={24} color="#d97706" />
+                                <AlertCircle size={24} color="var(--score-medium)" />
                             )}
                         </div>
                         <div>
                             <h2 className={styles.modalTitle}>Xác thực Blockchain</h2>
-                            <p className={styles.documentName}>{documentName}</p>
+                            <p className={styles.documentName} title={documentName}>
+                                {truncateName(documentName, 16)}
+                            </p>
                         </div>
                     </div>
                     <button className={styles.closeBtn} onClick={onClose}>
@@ -44,15 +64,10 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                 <div className={styles.modalBody}>
                     {/* Authentication Status */}
                     <div className={styles.statusSection}>
-                        <div className={styles.statusBox} style={{
-                            borderColor: verificationData.isAuthentic ? '#17bf63' : '#d97706',
-                            backgroundColor: verificationData.isAuthentic ? 'rgba(23, 191, 99, 0.05)' : 'rgba(217, 119, 6, 0.05)'
-                        }}>
+                        <div className={`${styles.statusBox} ${verificationData.isAuthentic ? styles.statusAuthentic : styles.statusNotAuthentic}`}>
                             <div className={styles.statusLabel}>Tình trạng xác thực</div>
-                            <div className={styles.statusValue} style={{
-                                color: verificationData.isAuthentic ? '#17bf63' : '#d97706'
-                            }}>
-                                {verificationData.isAuthentic ? '✓ Được xác thực' : '⚠ Chưa xác thực'}
+                            <div className={styles.statusValue}>
+                                {verificationData.isAuthentic ? 'Đã xác thực' : 'Chưa xác thực'}
                             </div>
                         </div>
                     </div>
@@ -85,7 +100,10 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                     <div className={styles.section}>
                         <h3 className={styles.sectionTitle}>Thời gian xác thực</h3>
                         <div className={styles.timestampBox}>
-                            <span className={styles.timestamp}>⏰ {verificationData.timestampOnBlockchain}</span>
+                            <span className={styles.timestamp} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <Activity size={16} color="var(--primary-blue)" />
+                                {verificationData.timestampOnBlockchain}
+                            </span>
                         </div>
                     </div>
 
@@ -94,12 +112,12 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                         <div className={styles.detailItem}>
                             <div className={styles.detailLabel}>Dữ liệu hợp lệ</div>
                             <div className={styles.detailValue}>
-                                {verificationData.isAuthentic ? '✓ Có' : '✗ Không'}
+                                {verificationData.isAuthentic ? 'Có' : 'Không'}
                             </div>
                         </div>
                         <div className={styles.detailItem}>
                             <div className={styles.detailLabel}>Bảo vệ blockchain</div>
-                            <div className={styles.detailValue}>✓ Có</div>
+                            <div className={styles.detailValue}>Có</div>
                         </div>
                     </div>
                 </div>
@@ -107,11 +125,19 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                 {/* Footer */}
                 <div className={styles.modalFooter}>
                     <span className={styles.securityNote}>
-                        🔐 Tài liệu này được bảo vệ bởi công nghệ Blockchain
+                        <Shield size={16} /> Tài liệu này được bảo vệ bởi công nghệ Blockchain
                     </span>
-                    <button className={styles.closeConfirmBtn} onClick={onClose}>
-                        Đóng
-                    </button>
+                    <div className={styles.footerButtons}>
+                        {verificationData.txHash && (
+                            <button className={styles.secondaryBtn} onClick={handleViewOnEtherscan}>
+                                <ExternalLink size={16} style={{ marginRight: '8px' }} />
+                                Xem trên Etherscan
+                            </button>
+                        )}
+                        <button className={styles.closeConfirmBtn} onClick={onClose}>
+                            Đóng
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>

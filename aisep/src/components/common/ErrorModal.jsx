@@ -18,18 +18,18 @@ export default function ErrorModal({ onClose, title, message }) {
                 </button>
 
                 <div className={styles.iconContainer}>
-                    <AlertCircle size={64} style={{ color: '#ef4444' }} />
+                    <AlertCircle size={64} style={{ color: 'var(--score-poor)' }} />
                 </div>
 
                 <h2 className={styles.title}>
                     {title || 'Lỗi!'}
                 </h2>
 
-                <p className={styles.message} style={{ color: '#dc2626' }}>
+                <p className={styles.message} style={{ color: 'var(--text-primary)', opacity: 0.8 }}>
                     {message || 'Đã xảy ra lỗi. Vui lòng thử lại.'}
                 </p>
 
-                <button className={styles.primaryButton} onClick={onClose}>
+                <button className={styles.primaryButton} onClick={onClose} style={{ backgroundColor: 'var(--score-poor)' }}>
                     Đóng
                 </button>
             </div>

@@ -5,7 +5,7 @@ import styles from './SuccessModal.module.css';
 /**
  * SuccessModal - Shows success confirmation after form submission
  */
-export default function SuccessModal({ onClose, title, message }) {
+export default function SuccessModal({ onClose, title, message, primaryBtnText, secondaryBtnText, onSecondaryClick }) {
     return (
         <div className={styles.overlay} onClick={onClose}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
@@ -29,9 +29,16 @@ export default function SuccessModal({ onClose, title, message }) {
                     {message || 'Thông tin đã được lưu thành công.'}
                 </p>
 
-                <button className={styles.primaryButton} onClick={onClose}>
-                    Xong
-                </button>
+                <div className={styles.buttonGroup}>
+                    {secondaryBtnText && (
+                        <button className={styles.secondaryButton} onClick={onSecondaryClick || onClose}>
+                            {secondaryBtnText}
+                        </button>
+                    )}
+                    <button className={styles.primaryButton} onClick={onClose}>
+                        {primaryBtnText || 'Xong'}
+                    </button>
+                </div>
             </div>
         </div>
     );

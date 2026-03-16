@@ -82,9 +82,9 @@
   font-weight: 600;
 }
 
-/* Hide on mobile */
-@media (max-width: 1024px) {
+/* Mobile/Tablet adjustment (< 1280px) */
+@media (max-width: 1279px) {
   .rightPanel {
     display: none;
   }
-}
+}

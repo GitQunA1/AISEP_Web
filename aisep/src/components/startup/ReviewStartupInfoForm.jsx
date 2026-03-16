@@ -14,10 +14,10 @@ export default function ReviewStartupInfoForm({ formData, onConfirm, onEdit, use
 
   // Stage label map
   const stageLabels = {
-    'idea': '🔍 Ý tưởng',
-    'mvp': '🛠️ MVP',
-    'customers': '👥 Có khách hàng',
-    'growth': '📈 Tăng trưởng'
+    'idea': 'Ý tưởng',
+    'mvp': 'MVP',
+    'customers': 'Có khách hàng',
+    'growth': 'Tăng trưởng'
   };
 
   const handleUpdateProfile = async () => {
@@ -83,7 +83,7 @@ export default function ReviewStartupInfoForm({ formData, onConfirm, onEdit, use
         {updateSuccess && (
           <div className={styles.successBanner}>
             <Check size={20} />
-            ✅ Cập nhật profile thành công! Dự án đã được lưu.
+            Cập nhật profile thành công. Dự án đã được lưu.
           </div>
         )}
 
@@ -108,7 +108,7 @@ export default function ReviewStartupInfoForm({ formData, onConfirm, onEdit, use
 
           {/* Step 1 Review */}
           <div className={`${styles.section} ${styles.sectionBlue}`}>
-            <h3 className={styles.sectionTitle}>1️ Thông tin cơ bản</h3>
+            <h3 className={styles.sectionTitle}>1. Thông tin cơ bản</h3>
             <div className={styles.grid}>
               <div className={styles.field}>
                 <label className={styles.fieldLabel}>Tên dự án</label>
@@ -131,7 +131,7 @@ export default function ReviewStartupInfoForm({ formData, onConfirm, onEdit, use
 
           {/* Step 2 Review */}
           <div className={`${styles.section} ${styles.sectionYellow}`}>
-            <h3 className={styles.sectionTitle}>2️ Vấn đề cần giải quyết</h3>
+            <h3 className={styles.sectionTitle}>2. Vấn đề cần giải quyết</h3>
             <div className={styles.stack}>
               <div className={styles.field}>
                 <label className={styles.fieldLabel}>Vấn đề</label>
@@ -152,7 +152,7 @@ export default function ReviewStartupInfoForm({ formData, onConfirm, onEdit, use
 
           {/* Step 3 Review */}
           <div className={`${styles.section} ${styles.sectionGreen}`}>
-            <h3 className={styles.sectionTitle}>3️ Giải pháp của bạn</h3>
+            <h3 className={styles.sectionTitle}>3. Giải pháp của bạn</h3>
             <div className={styles.stack}>
               <div className={styles.field}>
                 <label className={styles.fieldLabel}>Giải pháp đề xuất</label>
@@ -171,7 +171,7 @@ export default function ReviewStartupInfoForm({ formData, onConfirm, onEdit, use
 
           {/* Step 4 Review */}
           <div className={`${styles.section} ${styles.sectionPurple}`}>
-            <h3 className={styles.sectionTitle}>4️ Khách hàng & Thị trường</h3>
+            <h3 className={styles.sectionTitle}>4. Khách hàng & Thị trường</h3>
             <div className={styles.stack}>
               {formData.stage === 'idea' ? (
                 <>
@@ -213,7 +213,7 @@ export default function ReviewStartupInfoForm({ formData, onConfirm, onEdit, use
 
           {/* Step 5 Review */}
           <div className={`${styles.section} ${styles.sectionPink}`}>
-            <h3 className={styles.sectionTitle}>5️ Mô hình kiếm tiền</h3>
+            <h3 className={styles.sectionTitle}>5. Mô hình kiếm tiền</h3>
             <div className={styles.stack}>
               <div className={styles.field}>
                 <label className={styles.fieldLabel}>Cách kiếm tiền</label>
@@ -222,10 +222,10 @@ export default function ReviewStartupInfoForm({ formData, onConfirm, onEdit, use
               <div className={styles.field}>
                 <label className={styles.fieldLabel}>Loại doanh thu</label>
                 <div className={styles.fieldValue}>
-                  {formData.revenueType === 'product' ? '💳 Bán sản phẩm' :
-                   formData.revenueType === 'service' ? '🔄 Thu phí dịch vụ' :
-                   formData.revenueType === 'commission' ? '💰 Hoa hồng' :
-                   formData.revenueType === 'hybrid' ? '🎯 Kết hợp nhiều cách' : formData.revenueType}
+                  {formData.revenueType === 'product' ? 'Bán sản phẩm' :
+                   formData.revenueType === 'service' ? 'Thu phí dịch vụ' :
+                   formData.revenueType === 'commission' ? 'Hoa hồng' :
+                   formData.revenueType === 'hybrid' ? 'Kết hợp nhiều cách' : formData.revenueType}
                 </div>
               </div>
               <div className={styles.field}>
@@ -237,7 +237,7 @@ export default function ReviewStartupInfoForm({ formData, onConfirm, onEdit, use
 
           {/* Step 6 Review */}
           <div className={`${styles.section} ${styles.sectionCyan}`}>
-            <h3 className={styles.sectionTitle}>6️ Đội ngũ</h3>
+            <h3 className={styles.sectionTitle}>6. Đội ngũ</h3>
             <div className={styles.stack}>
               <div className={styles.field}>
                 <label className={styles.fieldLabel}>Số lượng thành viên</label>
@@ -250,9 +250,9 @@ export default function ReviewStartupInfoForm({ formData, onConfirm, onEdit, use
               <div className={styles.field}>
                 <label className={styles.fieldLabel}>Loại hình làm việc</label>
                 <div className={styles.fieldValue}>
-                  {formData.employmentType === 'fulltime' ? '⏰ Full-time' :
-                   formData.employmentType === 'parttime' ? '⌛ Part-time' :
-                   formData.employmentType === 'mixed' ? '🔀 Kết hợp' : formData.employmentType}
+                  {formData.employmentType === 'fulltime' ? 'Full-time' :
+                   formData.employmentType === 'parttime' ? 'Part-time' :
+                   formData.employmentType === 'mixed' ? 'Kết hợp' : formData.employmentType}
                 </div>
               </div>
             </div>
