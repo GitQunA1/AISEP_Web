@@ -40,26 +40,26 @@ const VALID_TRANSITIONS = {
   ]
 };
 
-// Status display labels - Simplified to 4 as requested
+// Status display labels - Updated for the new flow
 const STATUS_LABELS = {
-  [PROJECT_STATUS.DRAFT]: 'Đang chờ duyệt',
-  [PROJECT_STATUS.IP_PROTECTED]: 'Đang chờ duyệt',
+  [PROJECT_STATUS.DRAFT]: 'Bản nháp',
+  [PROJECT_STATUS.IP_PROTECTED]: 'Bản nháp',
   [PROJECT_STATUS.PENDING]: 'Đang chờ duyệt',
   [PROJECT_STATUS.SUBMITTED]: 'Đang chờ duyệt',
-  [PROJECT_STATUS.APPROVED]: 'Đã duyệt',
+  [PROJECT_STATUS.APPROVED]: 'Đã được duyệt',
   [PROJECT_STATUS.PUBLISHED]: 'Đã công khai',
   [PROJECT_STATUS.REJECTED]: 'Bị từ chối'
 };
 
 // Status colors for UI
 const STATUS_COLORS = {
-  [PROJECT_STATUS.DRAFT]: '#F59E0B',        // Amber (using Submitted's color)
-  [PROJECT_STATUS.IP_PROTECTED]: '#F59E0B', // Amber
-  [PROJECT_STATUS.PENDING]: '#F59E0B',      // Amber
+  [PROJECT_STATUS.DRAFT]: '#64748b',        // Slate/Gray for Draft
+  [PROJECT_STATUS.IP_PROTECTED]: '#64748b', // Slate
+  [PROJECT_STATUS.PENDING]: '#F59E0B',      // Amber for Pending
   [PROJECT_STATUS.SUBMITTED]: '#F59E0B',    // Amber
-  [PROJECT_STATUS.APPROVED]: '#10B981',     // Green
+  [PROJECT_STATUS.APPROVED]: '#10B981',     // Green for Approved
   [PROJECT_STATUS.PUBLISHED]: '#059669',    // Dark Green
-  [PROJECT_STATUS.REJECTED]: '#EF4444'      // Red
+  [PROJECT_STATUS.REJECTED]: '#EF4444'      // Red for Rejected
 };
 
 // Which statuses allow editing (BR-04)

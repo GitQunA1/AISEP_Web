@@ -7,11 +7,35 @@ import projectSubmissionService from '../../services/projectSubmissionService';
  * ProjectSubmissionForm - Form for submitting new startup projects
  * Improved with professional styling and theme support.
  */
-export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
+export default function ProjectSubmissionForm({ onClose, onSuccess, user, initialData = null }) {
+  const isEdit = !!initialData;
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(initialData ? {
+    projectName: initialData.projectName || initialData.name || '',
+    shortDescription: initialData.shortDescription || '',
+    developmentStage: initialData.developmentStage?.toString() || '0',
+    problemStatement: initialData.problemStatement || '',
+    solutionDescription: initialData.solutionDescription || '',
+    targetCustomers: initialData.targetCustomers || '',
+    uniqueValueProposition: initialData.uniqueValueProposition || '',
+    marketSize: initialData.marketSize || '',
+    businessModel: initialData.businessModel || '',
+    revenue: initialData.revenue || '',
+    competitors: initialData.competitors || '',
+    teamMembers: initialData.teamMembers 
+      ? initialData.teamMembers.split(',').map(m => {
+          const [name, role] = m.trim().split('(');
+          return { 
+            name: name.trim(), 
+            role: role ? role.replace(')', '').trim() : '' 
+          };
+        })
+      : [{ name: '', role: '' }],
+    keySkills: initialData.keySkills || '',
+    teamExperience: initialData.teamExperience || '',
+  } : {
     projectName: '',
     shortDescription: '',
     developmentStage: '',
@@ -111,11 +135,14 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
         marketSize: parseInt(formData.marketSize) || 0,
         revenue: parseInt(formData.revenue) || 0,
         teamMembers: formData.teamMembers
-          .map(m => m.name.trim())
+          .filter(m => m.name.trim())
+          .map(m => m.role.trim() ? `${m.name.trim()} (${m.role.trim()})` : m.name.trim())
           .join(', '),
       };
 
-      const response = await projectSubmissionService.submitStartupInfo(payload);
+      const response = isEdit 
+        ? await projectSubmissionService.updateProject(initialData.projectId || initialData.id, payload)
+        : await projectSubmissionService.submitStartupInfo(payload);
 
       if (response && response.success) {
         onSuccess?.(formData);
@@ -140,7 +167,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
         {/* Header */}
         <div className={styles.modalHeader}>
           <div>
-            <h2 className={styles.headerTitle}>Đăng Dự Án</h2>
+            <h2 className={styles.headerTitle}>{isEdit ? 'Cập nhật dự án' : 'Đăng Dự Án'}</h2>
             <p className={styles.headerSubtitle}>Bước {currentStep} của {totalSteps}</p>
           </div>
           <button onClick={onClose} className={styles.closeButton}>

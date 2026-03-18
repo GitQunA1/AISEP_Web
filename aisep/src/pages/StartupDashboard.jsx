@@ -102,6 +102,28 @@ export default function StartupDashboard({ user }) {
                     const projects = Array.isArray(response.data) ? response.data : (response.data.items || []);
                     setMyProjects(projects);
 
+                    // Fetch documents for all projects to get total count
+                    if (projects.length > 0) {
+                        try {
+                            const allDocsPromises = projects.map(p => 
+                                projectSubmissionService.getDocuments(p.projectId || p.id)
+                            );
+                            const docsResponses = await Promise.all(allDocsPromises);
+                            
+                            const allDocuments = docsResponses.reduce((acc, res) => {
+                                if (res.success && res.data) {
+                                    const docs = Array.isArray(res.data) ? res.data : (res.data.items || []);
+                                    return [...acc, ...docs];
+                                }
+                                return acc;
+                            }, []);
+                            
+                            setDocuments(allDocuments);
+                        } catch (docErr) {
+                            console.error("Error fetching documents for total count:", docErr);
+                        }
+                    }
+
                     if (projects.length > 0) {
                         const loadedProject = projects[0];
                         setProject(loadedProject);
@@ -439,41 +461,36 @@ export default function StartupDashboard({ user }) {
     };
 
     // BR-15: Submit Project for Staff Review
-    const handleSubmitForReview = () => {
-        // Check email verification (BR-02)
-        if (user && !user.emailVerified) {
-            setSuccessMessage('Vui lòng xác minh email của bạn trước khi nộp dự án');
-            setShowSuccessModal(true);
-            return;
-        }
-
-        // Check prerequisites
-        if (!project.blockchainHash) {
-            setSuccessMessage('Vui lòng bảo vệ tài liệu trên blockchain trước');
-            setShowSuccessModal(true);
-            return;
-        }
-
-        if (!project.aiEvaluation) {
-            setSuccessMessage('Vui lòng hoàn thành đánh giá AI trước');
-            setShowSuccessModal(true);
-            return;
-        }
+    const handleSubmitProject = async (projectId) => {
+        if (!window.confirm('Bạn có chắc chắn muốn nộp dự án này để xem xét? Sau khi nộp, bạn sẽ không thể chỉnh sửa thông tin cho đến khi có kết quả.')) return;
 
         setIsSubmittingProject(true);
         try {
-            // Update status to SUBMITTED
-            const updatedProject = {
-                ...project,
-                status: PROJECT_STATUS.SUBMITTED,
-                submittedDate: new Date().toISOString().split('T')[0]
-            };
-            setProject(updatedProject);
+            const res = await projectSubmissionService.submitProject(projectId);
+            if (res && (res.success || res.isSuccess)) {
+                setSuccessMessage('Dự án đã được nộp thành công! Đội ngũ của chúng tôi sẽ xem xét trong vòng 2-3 ngày làm việc.');
+                setShowSuccessModal(true);
 
-            setSuccessMessage('Dự án đã được nộp để nhân viên xem xét!\n\nĐội ngũ của chúng tôi sẽ xem xét trong vòng 2-3 ngày làm việc.');
-            setShowSuccessModal(true);
+                // Refresh data
+                const response = await projectSubmissionService.getMyProjects();
+                if (response.success && response.data) {
+                    const projects = Array.isArray(response.data) ? response.data : (response.data.items || []);
+                    setMyProjects(projects);
+
+                    // Update detail project if open
+                    if (detailProject && (detailProject.id === projectId || detailProject.projectId === projectId)) {
+                        const updated = projects.find(p => (p.id || p.projectId) === projectId);
+                        if (updated) setDetailProject(updated);
+                    }
+                }
+            } else {
+                setSuccessMessage('Lỗi: ' + translateError(res?.message || 'Không thể nộp dự án.'));
+                setShowSuccessModal(true);
+            }
         } catch (error) {
-            alert('Lỗi khi nộp dự án: ' + error.message);
+            console.error('Error submitting project:', error);
+            setSuccessMessage('Lỗi khi nộp dự án: ' + translateError(error));
+            setShowSuccessModal(true);
         } finally {
             setIsSubmittingProject(false);
         }
@@ -616,12 +633,6 @@ export default function StartupDashboard({ user }) {
                 >
                     Yêu cầu tư vấn
                 </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'profile' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('profile')}
-                >
-                    Cài đặt hồ sơ
-                </button>
             </div>
 
             {/* Content Sections */}
@@ -710,30 +721,43 @@ export default function StartupDashboard({ user }) {
                                     </div>
                                 ) : (
                                     myProjects.map(p => (
-                                        <div key={p.id || p.projectId} className={styles.listItem}>
+                                        <div
+                                            key={p.id || p.projectId}
+                                            className={styles.listItem}
+                                            style={{ borderLeftColor: STATUS_COLORS[p.status || 'Draft'] }}
+                                        >
                                             <div className={styles.listContent}>
-                                                <div className={styles.flexCenter} style={{ gap: '12px', marginBottom: '4px' }}>
-                                                    <h4 className={styles.listItemTitle} style={{ margin: 0 }}>
+                                                <div className={styles.listItemHeader}>
+                                                    <h4 className={styles.listItemTitle}>
                                                         {p.name || p.projectName}
                                                     </h4>
                                                     <span
                                                         className={styles.badge}
                                                         style={{
-                                                            backgroundColor: `${STATUS_COLORS[p.status || 'Draft']}15`,
+                                                            backgroundColor: `${STATUS_COLORS[p.status || 'Draft']}25`,
                                                             color: STATUS_COLORS[p.status || 'Draft'],
-                                                            border: `1px solid ${STATUS_COLORS[p.status || 'Draft']}30`
+                                                            border: `1px solid ${STATUS_COLORS[p.status || 'Draft']}40`
                                                         }}
                                                     >
-                                                        {STATUS_LABELS[p.status || 'Draft'] || 'Nháp'}
+                                                        {STATUS_LABELS[p.status || 'Draft'] || 'Bản nháp'}
                                                     </span>
                                                 </div>
-                                                <p className={styles.subtitle} style={{ margin: '4px 0' }}>{p.shortDescription || p.description}</p>
+                                                <p className={styles.subtitle}>{p.shortDescription || p.description}</p>
                                                 <div className={styles.listMeta}>
                                                     <span>Giai đoạn: {p.developmentStage === 0 ? 'Ý tưởng' : p.developmentStage === 1 ? 'MVP' : 'Tăng trưởng'}</span>
                                                     {p.submittedDate && <span> • Nộp ngày: {p.submittedDate}</span>}
                                                 </div>
                                             </div>
                                             <div className={styles.listActions}>
+                                                {p.status === 'Draft' && (
+                                                    <button
+                                                        className={styles.primaryBtn}
+                                                        onClick={() => handleSubmitProject(p.id || p.projectId)}
+                                                        disabled={isSubmittingProject}
+                                                    >
+                                                        {isSubmittingProject ? '...' : 'Nộp dự án'}
+                                                    </button>
+                                                )}
                                                 <button
                                                     className={styles.secondaryBtn}
                                                     onClick={() => {
@@ -771,14 +795,18 @@ export default function StartupDashboard({ user }) {
                                         <p>Chưa có yêu cầu tư vấn nào.</p>
                                     </div>
                                 ) : advisorRequests.map(request => (
-                                    <div key={request.id} className={styles.listItem}>
+                                    <div
+                                        key={request.id}
+                                        className={styles.listItem}
+                                        style={{ borderLeftColor: request.status === 'pending' ? '#d97706' : request.status === 'accepted' ? '#17bf63' : '#f4212e' }}
+                                    >
                                         <div className={styles.listContent}>
-                                            <div className={styles.flexBetween}>
+                                            <div className={styles.listItemHeader}>
                                                 <h4 className={styles.listItemTitle}>
                                                     {request.advisorName}
                                                 </h4>
                                                 <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`}>
-                                                    {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
+                                                    {request.status === 'pending' ? 'Đang chờ' : request.status === 'accepted' ? 'Đã chấp nhận' : 'Bị từ chối'}
                                                 </span>
                                             </div>
                                             <div className={styles.mb8}>
@@ -811,70 +839,6 @@ export default function StartupDashboard({ user }) {
                                     </div>
                                 ))}
                             </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Profile Settings Section */}
-                {activeSection === 'profile' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Cài đặt hồ sơ</h3>
-                            <form className={styles.form}>
-                                <div className={styles.formRow}>
-                                    <div className={styles.formGroup}>
-                                        <label>Tên công ty</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Tên startup của bạn"
-                                            defaultValue={user?.companyName || ''}
-                                        />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>Tên người sáng lập</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Tên của bạn"
-                                            defaultValue={user?.name || ''}
-                                        />
-                                    </div>
-                                </div>
-
-                                <div className={styles.formGroup}>
-                                    <label>Mô tả công ty</label>
-                                    <textarea
-                                        rows={4}
-                                        placeholder="Giới thiệu với nhà đầu tư về startup của bạn"
-                                        defaultValue={user?.description || ''}
-                                    />
-                                </div>
-
-                                <div className={styles.formRow}>
-                                    <div className={styles.formGroup}>
-                                        <label>Ngành</label>
-                                        <select>
-                                            <option>AI/ML</option>
-                                            <option>Fintech</option>
-                                            <option>HealthTech</option>
-                                            <option>Thương mại điện tử</option>
-                                        </select>
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>Giai đoạn</label>
-                                        <select>
-                                            <option>Ý tưởng</option>
-                                            <option>MVP</option>
-                                            <option>Tăng trưởng</option>
-                                            <option>Quy mô hóa</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', gap: '12px' }}>
-                                    <button type="submit" className={styles.primaryBtn}>Lưu thay đổi</button>
-                                    <button type="button" className={styles.secondaryBtn}>Hủy</button>
-                                </div>
-                            </form>
                         </div>
                     </div>
                 )}
@@ -969,12 +933,12 @@ export default function StartupDashboard({ user }) {
                                 <span
                                     className={styles.badge}
                                     style={{
-                                        backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}15`,
+                                        backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}25`,
                                         color: STATUS_COLORS[detailProject.status || 'Draft'],
-                                        border: `1px solid ${STATUS_COLORS[detailProject.status || 'Draft']}30`
+                                        border: `1px solid ${STATUS_COLORS[detailProject.status || 'Draft']}40`
                                     }}
                                 >
-                                    {STATUS_LABELS[detailProject.status || 'Draft'] || 'Nháp'}
+                                    {STATUS_LABELS[detailProject.status || 'Draft'] || 'Bản nháp'}
                                 </span>
                             </div>
                             <button onClick={() => setShowDetailModal(false)} className={styles.closeButton} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
@@ -1080,12 +1044,46 @@ export default function StartupDashboard({ user }) {
 
                                 {/* Upload Section */}
                                 <div
-                                    className={`${styles.dropzone} ${dragActive ? styles.dragActive : ''}`}
-                                    onDragEnter={(e) => { e.preventDefault(); setDragActive(true); }}
-                                    onDragLeave={(e) => { e.preventDefault(); setDragActive(false); }}
-                                    onDragOver={(e) => { e.preventDefault(); setDragActive(true); }}
-                                    onDrop={(e) => { e.preventDefault(); setDragActive(false); handleDrop(e); }}
+                                    className={`${styles.dropzone} ${dragActive ? styles.dragActive : ''} ${(detailProject.status !== 'Draft') ? styles.disabledDropzone : ''}`}
+                                    onDragEnter={(e) => {
+                                        if (detailProject.status !== 'Draft') return;
+                                        e.preventDefault();
+                                        setDragActive(true);
+                                    }}
+                                    onDragLeave={(e) => {
+                                        if (detailProject.status !== 'Draft') return;
+                                        e.preventDefault();
+                                        setDragActive(false);
+                                    }}
+                                    onDragOver={(e) => {
+                                        if (detailProject.status !== 'Draft') return;
+                                        e.preventDefault();
+                                        setDragActive(true);
+                                    }}
+                                    onDrop={(e) => {
+                                        if (detailProject.status !== 'Draft') return;
+                                        e.preventDefault();
+                                        setDragActive(false);
+                                        handleDrop(e);
+                                    }}
+                                    style={{
+                                        opacity: (detailProject.status !== 'Draft') ? 0.6 : 1,
+                                        cursor: (detailProject.status !== 'Draft') ? 'not-allowed' : 'pointer',
+                                        position: 'relative'
+                                    }}
+                                    title={detailProject.status !== 'Draft' ? 'Bạn chỉ có thể tải lên tài liệu khi dự án ở trạng thái Nháp' : ''}
                                 >
+                                    {detailProject.status !== 'Draft' && (
+                                        <div style={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            bottom: 0,
+                                            zIndex: 2,
+                                            backgroundColor: 'rgba(255,255,255,0.05)'
+                                        }} />
+                                    )}
                                     <div className={styles.uploadControls}>
                                         <div className={styles.uploadInfo}>
                                             <Upload size={24} className={styles.uploadIcon} />
@@ -1099,6 +1097,7 @@ export default function StartupDashboard({ user }) {
                                                 className={styles.selectSmall}
                                                 value={documentType}
                                                 onChange={(e) => setDocumentType(e.target.value)}
+                                                disabled={detailProject.status !== 'Draft'}
                                             >
                                                 <option value="PitchDeck">Pitch Deck</option>
                                                 <option value="BusinessPlan">Kế hoạch kinh doanh</option>
@@ -1110,7 +1109,7 @@ export default function StartupDashboard({ user }) {
                                             <button
                                                 className={styles.uploadBtn}
                                                 onClick={() => hiddenFileInput.current.click()}
-                                                disabled={isUploading}
+                                                disabled={isUploading || detailProject.status !== 'Draft'}
                                             >
                                                 {isUploading ? 'Đang tải...' : 'Chọn file'}
                                             </button>
@@ -1121,6 +1120,7 @@ export default function StartupDashboard({ user }) {
                                         ref={hiddenFileInput}
                                         onChange={handleFileChange}
                                         style={{ display: 'none' }}
+                                        disabled={detailProject.status !== 'Draft'}
                                     />
                                 </div>
 
@@ -1184,6 +1184,11 @@ export default function StartupDashboard({ user }) {
                                                                         className={styles.iconBtnDanger}
                                                                         title="Xóa"
                                                                         onClick={() => handleDeleteDocument(doc.id)}
+                                                                        disabled={detailProject.status !== 'Draft'}
+                                                                        style={{
+                                                                            opacity: (detailProject.status !== 'Draft') ? 0.5 : 1,
+                                                                            cursor: (detailProject.status !== 'Draft') ? 'not-allowed' : 'pointer'
+                                                                        }}
                                                                     >
                                                                         <Trash2 size={16} />
                                                                     </button>
@@ -1199,7 +1204,31 @@ export default function StartupDashboard({ user }) {
                             </div>
                         </div>
 
-                        <div className={styles.actions} style={{ padding: '20px 24px', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', display: 'flex' }}>
+                        <div className={styles.actions} style={{ padding: '20px 24px', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', display: 'flex', gap: '12px' }}>
+                            {detailProject.status === 'Draft' && (
+                                <button
+                                    className={styles.primaryBtn}
+                                    style={{ flex: '2', borderRadius: '9999px' }}
+                                    onClick={() => {
+                                        handleSubmitProject(detailProject.projectId || detailProject.id);
+                                    }}
+                                    disabled={isSubmittingProject}
+                                >
+                                    {isSubmittingProject ? 'Đang nộp...' : 'Nộp dự án'}
+                                </button>
+                            )}
+                            {(detailProject.status === 'Draft' || detailProject.status === 'Rejected') && (
+                                <button
+                                    className={styles.secondaryBtn}
+                                    style={{ flex: '1', borderRadius: '9999px', borderColor: 'var(--primary-blue)', color: 'var(--primary-blue)' }}
+                                    onClick={() => {
+                                        setShowDetailModal(false);
+                                        setShowProjectForm(true);
+                                    }}
+                                >
+                                    Chỉnh sửa
+                                </button>
+                            )}
                             <button
                                 className={styles.secondaryBtn}
                                 style={{ flex: '1', borderRadius: '9999px' }}
@@ -1220,6 +1249,25 @@ export default function StartupDashboard({ user }) {
                     primaryBtnText={successPrimaryBtn}
                     secondaryBtnText={successSecondaryBtn}
                     onSecondaryClick={onSuccessSecondaryClick}
+                />
+            )}
+
+            {showProjectForm && (
+                <ProjectSubmissionForm
+                    onClose={() => setShowProjectForm(false)}
+                    initialData={detailProject}
+                    onSuccess={async () => {
+                        setShowProjectForm(false);
+                        setSuccessMessage(detailProject ? 'Cập nhật dự án thành công. Dự án đã trở về trạng thái Bản nháp.' : 'Tạo dự án thành công.');
+                        setShowSuccessModal(true);
+
+                        // Reload projects
+                        const response = await projectSubmissionService.getMyProjects();
+                        if (response.success && response.data) {
+                            setMyProjects(Array.isArray(response.data) ? response.data : (response.data.items || []));
+                        }
+                    }}
+                    user={user}
                 />
             )}
 
