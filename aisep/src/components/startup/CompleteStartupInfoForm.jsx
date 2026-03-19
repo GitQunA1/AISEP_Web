@@ -46,6 +46,9 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
     teamSize: '',
     teamRoles: '',
     employmentType: '',
+    
+    // Documents
+    documents: [],
   });
 
   const [errors, setErrors] = useState({});
@@ -70,6 +73,7 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
   // Check for dirty state
   useEffect(() => {
     const isDirty = Object.values(formData).some(value => {
+      if (Array.isArray(value)) return value.length > 0;
       if (typeof value === 'string') return value.length > 0;
       return value !== null;
     });
@@ -77,7 +81,37 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
     if (onDirtyChange) {
       onDirtyChange(isDirty);
     }
-  }, [onDirtyChange]);
+  }, [formData, onDirtyChange]); // Added formData to dependency
+
+  // Reset fields when stage changes
+  useEffect(() => {
+    if (currentStep === 1) {
+      setFormData(prev => ({
+        ...prev,
+        // Reset steps 2-6
+        problemDescription: '',
+        problemAffects: '',
+        problemFrequency: '',
+        currentSolution: '',
+        proposedSolution: '',
+        differentiator: '',
+        minimumViable: '',
+        idealCustomerBuyer: '',
+        willPayFor: '',
+        customerCount: '',
+        currentRevenue: '',
+        growthRate: '',
+        revenueMethod: '',
+        revenueType: '',
+        pricingStrategy: '',
+        teamSize: '',
+        teamRoles: '',
+        employmentType: '',
+        documents: [],
+      }));
+      setErrors({});
+    }
+  }, [formData.stage]);
 
   // BR-02: Check email verification on component mount
   useEffect(() => {
@@ -120,23 +154,35 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
 
     if (currentStep === 4) {
       if (formData.stage === 'idea') {
-        if (!formData.idealCustomerBuyer.trim()) newErrors.idealCustomerBuyer = 'Vui lòng mô tả khách hàng lý tưởng';
-      } else if (['mvp', 'customers', 'growth'].includes(formData.stage)) {
+        // Step 4 is mostly optional or simplified for Idea in FormContentSteps
+        // But if displayed, we can add validation here
+      } else if (['mvp', 'growth'].includes(formData.stage)) {
         if (!formData.customerCount.trim()) newErrors.customerCount = 'Vui lòng nhập số lượng khách hàng';
         if (!formData.currentRevenue.trim()) newErrors.currentRevenue = 'Vui lòng nhập doanh thu hiện tại';
+        if (formData.stage === 'growth') {
+          if (parseInt(formData.currentRevenue) <= 0) newErrors.currentRevenue = 'Doanh thu phải lớn hơn 0 cho giai đoạn Tăng trưởng';
+        }
       }
     }
 
     if (currentStep === 5) {
-      if (!formData.revenueMethod.trim()) newErrors.revenueMethod = 'Vui lòng mô tả cách kiếm tiền';
-      if (!formData.revenueType) newErrors.revenueType = 'Vui lòng chọn loại doanh thu';
-      if (!formData.pricingStrategy.trim()) newErrors.pricingStrategy = 'Vui lòng mô tả chiến lược giá';
+      if (formData.stage !== 'idea') {
+        if (!formData.revenueMethod.trim()) newErrors.revenueMethod = 'Vui lòng mô tả cách kiếm tiền';
+        if (!formData.revenueType) newErrors.revenueType = 'Vui lòng chọn loại doanh thu';
+        if (!formData.pricingStrategy.trim()) newErrors.pricingStrategy = 'Vui lòng mô tả chiến lược giá';
+      }
     }
 
     if (currentStep === 6) {
       if (!formData.teamSize.trim()) newErrors.teamSize = 'Vui lòng nhập số lượng thành viên';
       if (!formData.teamRoles.trim()) newErrors.teamRoles = 'Vui lòng mô tả vai trò từng người';
-      if (!formData.employmentType) newErrors.employmentType = 'Vui lòng chọn loại hình làm việc';
+      
+      if (formData.stage !== 'idea') {
+        if (!formData.employmentType) newErrors.employmentType = 'Vui lòng chọn loại hình làm việc';
+        if (formData.documents.length === 0) {
+          newErrors.documents = 'Vui lòng đính kèm ít nhất một tài liệu (Pitch Deck hoặc Demo)';
+        }
+      }
     }
 
     setErrors(newErrors);
@@ -166,9 +212,20 @@ export default function CompleteStartupInfoForm({ onSubmit, onCancel, onDirtyCha
 
     setIsSubmitting(true);
     try {
-      const response = await projectSubmissionService.submitStartupInfo(formData);
+      const { documents, ...payload } = formData;
+      const response = await projectSubmissionService.submitStartupInfo(payload);
       
-      if (response && response.isSuccess) {
+      if (response && (response.isSuccess || response.success)) {
+        // If there are files to upload, handle them separately
+        if (documents && documents.length > 0) {
+          const pId = response.data?.projectId || response.data?.id;
+          if (pId) {
+            const uploadPromises = documents.map(file => 
+              projectSubmissionService.uploadDocument(pId, file)
+            );
+            await Promise.all(uploadPromises);
+          }
+        }
         setIsReviewMode(true);
       } else {
         setSubmitError(response?.message || 'Lỗi khi gửi dự án. Vui lòng thử lại.');

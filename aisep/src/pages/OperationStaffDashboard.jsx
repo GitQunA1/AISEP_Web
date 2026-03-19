@@ -7,7 +7,7 @@ import SuccessModal from '../components/common/SuccessModal';
 import ErrorModal from '../components/common/ErrorModal';
 import RejectionReasonModal from '../components/common/RejectionReasonModal';
 import projectSubmissionService from '../services/projectSubmissionService';
-import { STATUS_COLORS, STATUS_LABELS } from '../constants/ProjectStatus';
+import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/ProjectStatus';
 
 /**
  * OperationStaffDashboard - Dashboard for Operation Staff
@@ -18,6 +18,7 @@ export default function OperationStaffDashboard({ user }) {
 
     const [pendingProjects, setPendingProjects] = useState([]);
     const [approvedProjects, setApprovedProjects] = useState([]);
+    const [rejectedProjects, setRejectedProjects] = useState([]);
     const [isLoadingProjects, setIsLoadingProjects] = useState(false);
     const [projectSubmissions, setProjectSubmissions] = useState([]);
     const [pendingApprovals, setPendingApprovals] = useState([]);
@@ -76,10 +77,28 @@ export default function OperationStaffDashboard({ user }) {
             }
         };
 
+        const fetchRejectedProjects = async () => {
+            setIsLoadingProjects(true);
+            try {
+                const response = await projectSubmissionService.getRejectedProjects();
+                if (response.success && response.data) {
+                    const projects = response.data.items || [];
+                    setRejectedProjects(projects);
+                }
+            } catch (error) {
+                console.error('Error fetching rejected projects:', error);
+                setRejectedProjects([]);
+            } finally {
+                setIsLoadingProjects(false);
+            }
+        };
+
         if (activeSection === 'projects') {
             fetchPendingProjects();
         } else if (activeSection === 'approved_projects') {
             fetchApprovedProjects();
+        } else if (activeSection === 'rejected_projects') {
+            fetchRejectedProjects();
         }
     }, [activeSection]);
 
@@ -272,6 +291,12 @@ export default function OperationStaffDashboard({ user }) {
                     Dự án đã duyệt
                 </button>
                 <button
+                    className={`${styles.tab} ${activeSection === 'rejected_projects' ? styles.active : ''}`}
+                    onClick={() => setActiveSection('rejected_projects')}
+                >
+                    Dự án đã từ chối
+                </button>
+                <button
                     className={`${styles.tab} ${activeSection === 'requests' ? styles.active : ''}`}
                     onClick={() => setActiveSection('requests')}
                 >
@@ -430,6 +455,78 @@ export default function OperationStaffDashboard({ user }) {
                                             <div className={local.footer}>
                                                 <div className={local.metaInfo}>
                                                     📅 Phê duyệt ngày: {project.approvedAt ? new Date(project.approvedAt).toLocaleDateString('vi-VN') : 'N/A'}
+                                                </div>
+                                                <div className={local.buttonGroup}>
+                                                    <button
+                                                        onClick={() => openDetailModal(project)}
+                                                        className={styles.secondaryBtn}
+                                                    >
+                                                        Chi tiết
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Rejected Projects Section */}
+                {activeSection === 'rejected_projects' && (
+                    <div className={styles.section}>
+                        <div className={styles.card}>
+                            <h3 className={styles.cardTitle}>Dự án đã từ chối ({rejectedProjects.length})</h3>
+                            <div className={styles.list}>
+                                {isLoadingProjects ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                        ⏳ Đang tải danh sách dự án...
+                                    </div>
+                                ) : rejectedProjects.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                        Không có dự án nào bị từ chối
+                                    </div>
+                                ) : (
+                                    rejectedProjects.map(project => (
+                                        <div 
+                                            key={project.projectId} 
+                                            className={local.projectCard}
+                                            style={{ borderLeftColor: STATUS_COLORS[project.status || 'Rejected'] }}
+                                        >
+                                            <div className={local.projectHeader}>
+                                                <div className={local.titleRow}>
+                                                    <h4 className={local.projectTitle}>{project.projectName}</h4>
+                                                    <span 
+                                                        className={local.statusBadge}
+                                                        style={{ 
+                                                            backgroundColor: `${STATUS_COLORS[project.status || 'Rejected']}25`,
+                                                            color: STATUS_COLORS[project.status || 'Rejected'],
+                                                            border: `1px solid ${STATUS_COLORS[project.status || 'Rejected']}40`
+                                                        }}
+                                                    >
+                                                        {STATUS_LABELS[project.status || 'Rejected'] || 'Bị từ chối'}
+                                                    </span>
+                                                </div>
+                                                <p className={local.projectDesc}>{project.shortDescription}</p>
+                                            </div>
+
+                                            {/* Rejection Reason display */}
+                                            {project.rejectionReason && (
+                                                <div className={styles.rejectionBox}>
+                                                    <div className={styles.rejectionTitle}>
+                                                        <AlertCircle size={14} />
+                                                        <span>Lý do từ chối:</span>
+                                                    </div>
+                                                    <p className={styles.rejectionText}>{project.rejectionReason}</p>
+                                                </div>
+                                            )}
+
+                                            <div className={local.divider}></div>
+
+                                            <div className={local.footer}>
+                                                <div className={local.metaInfo}>
+                                                    📅 Từ chối ngày: {project.rejectedAt ? new Date(project.rejectedAt).toLocaleDateString('vi-VN') : 'N/A'}
                                                 </div>
                                                 <div className={local.buttonGroup}>
                                                     <button
@@ -737,6 +834,15 @@ export default function OperationStaffDashboard({ user }) {
 
                         {/* Modal Body */}
                         <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+                            {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
+                                <div className={styles.rejectionBox} style={{ marginBottom: '24px', marginTop: 0 }}>
+                                    <div className={styles.rejectionTitle}>
+                                        <AlertCircle size={16} />
+                                        <span style={{ fontSize: '15px' }}>Lý do từ chối dự án:</span>
+                                    </div>
+                                    <p className={styles.rejectionText} style={{ fontSize: '15px' }}>{detailProject.rejectionReason}</p>
+                                </div>
+                            )}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
 
                                 {/* Section 1: Basic info */}
@@ -749,7 +855,7 @@ export default function OperationStaffDashboard({ user }) {
                                     <div className={styles.formGroup}>
                                         <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Giai đoạn phát triển</label>
                                         <p style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
-                                            {detailProject.developmentStage === 0 ? 'Ý tưởng (Idea)' : detailProject.developmentStage === 1 ? 'MVP' : 'Vận hành (Growth)'}
+                                            {getStageLabel(detailProject.developmentStage)}
                                         </p>
                                     </div>
                                     <div className={styles.formGroup}>

@@ -15,6 +15,30 @@ const PROJECT_STATUS = {
   REJECTED: 'Rejected'
 };
 
+const DEVELOPMENT_STAGE = {
+  IDEA: 'Idea',
+  MVP: 'MVP',
+  GROWTH: 'Growth'
+};
+
+const DEVELOPMENT_STAGE_LABELS = {
+  [DEVELOPMENT_STAGE.IDEA]: 'Ý tưởng',
+  [DEVELOPMENT_STAGE.MVP]: 'MVP',
+  [DEVELOPMENT_STAGE.GROWTH]: 'Tăng trưởng'
+};
+
+const DEVELOPMENT_STAGE_MAPPING = {
+  0: DEVELOPMENT_STAGE.IDEA,
+  1: DEVELOPMENT_STAGE.MVP,
+  2: DEVELOPMENT_STAGE.GROWTH,
+  '0': DEVELOPMENT_STAGE.IDEA,
+  '1': DEVELOPMENT_STAGE.MVP,
+  '2': DEVELOPMENT_STAGE.GROWTH,
+  'Idea': DEVELOPMENT_STAGE.IDEA,
+  'MVP': DEVELOPMENT_STAGE.MVP,
+  'Growth': DEVELOPMENT_STAGE.GROWTH
+};
+
 // Status transition rules
 const VALID_TRANSITIONS = {
   [PROJECT_STATUS.DRAFT]: [
@@ -164,14 +188,50 @@ function canBePublished(status, hasAIEvaluation = true) {
   return status === PROJECT_STATUS.APPROVED && hasAIEvaluation;
 }
 
+/**
+ * Get display label for development stage
+ * @param {any} stage - Development stage value (numeric or string)
+ * @returns {string} - Display label
+ */
+function getStageLabel(stage) {
+  if (stage === null || stage === undefined) return 'Không xác định';
+  const normalizedStage = DEVELOPMENT_STAGE_MAPPING[stage];
+  if (normalizedStage) return DEVELOPMENT_STAGE_LABELS[normalizedStage];
+  
+  // Fallback for unexpected string values
+  if (typeof stage === 'string') {
+    if (stage.toLowerCase() === 'idea') return 'Ý tưởng';
+    if (stage.toLowerCase() === 'growth') return 'Tăng trưởng';
+  }
+  
+  return stage.toString();
+}
+
+/**
+ * Get internal stage value for API/Form
+ * @param {any} stage - Development stage value
+ * @returns {string} - "0", "1", or "2"
+ */
+function getStageNumericValue(stage) {
+  const normalizedStage = DEVELOPMENT_STAGE_MAPPING[stage];
+  if (normalizedStage === DEVELOPMENT_STAGE.IDEA) return '0';
+  if (normalizedStage === DEVELOPMENT_STAGE.MVP) return '1';
+  if (normalizedStage === DEVELOPMENT_STAGE.GROWTH) return '2';
+  return '0';
+}
+
 export {
   PROJECT_STATUS,
+  DEVELOPMENT_STAGE,
   STATUS_LABELS,
   STATUS_COLORS,
+  DEVELOPMENT_STAGE_LABELS,
   EDITABLE_STATUSES,
   USER_EDITABLE_STATUSES,
   PUBLISH_PREREQUISITES,
   VALID_TRANSITIONS,
+  getStageLabel,
+  getStageNumericValue,
   isValidTransition,
   isEditable,
   isUserEditable,

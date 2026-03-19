@@ -18,7 +18,7 @@ function RightPanel({ className }) {
       try {
         console.log('[RightPanel] Fetching startups...');
         const response = await startupProfileService.getAllStartups({
-          pageSize: 50
+          pageSize: 100
         });
         console.log('[RightPanel] Raw API response:', response);
 

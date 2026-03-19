@@ -70,57 +70,64 @@ class ProjectValidationService {
    */
   static validateRequiredFields(formData) {
     const errors = {};
+    const stage = (formData.stage || formData.developmentStage || '').toString().toLowerCase();
 
-    // BR-05: Project name is required
+    // 1. Basic Info (Always required)
     if (!formData.projectName || !formData.projectName.trim()) {
-      errors.projectName = 'Project name is required';
-    } else if (formData.projectName.trim().length < 3) {
-      errors.projectName = 'Project name must be at least 3 characters';
-    } else if (formData.projectName.trim().length > 100) {
-      errors.projectName = 'Project name must be less than 100 characters';
+      errors.projectName = 'Tên dự án là bắt buộc';
     }
 
-    // BR-05: Category is required
-    if (!formData.category || !formData.category.trim()) {
-      errors.category = 'Category is required';
-    }
-
-    // BR-05: Stage is required (Idea / MVP / Early / Growth)
-    const validStages = ['idea', 'mvp', 'early', 'growth'];
-    if (!formData.stage || !validStages.includes(formData.stage.toLowerCase())) {
-      errors.stage = 'Please select a valid stage: Idea, MVP, Early, or Growth';
-    }
-
-    // BR-05: Short description is required
     if (!formData.shortDescription || !formData.shortDescription.trim()) {
-      errors.shortDescription = 'Short description is required';
-    } else if (formData.shortDescription.trim().length < 20) {
-      errors.shortDescription = 'Short description must be at least 20 characters';
-    } else if (formData.shortDescription.trim().length > 255) {
-      errors.shortDescription = 'Short description must be less than 255 characters';
+      errors.shortDescription = 'Mô tả ngắn là bắt buộc';
     }
 
-    // Additional fields that are typically required
-    if (!formData.startupName || !formData.startupName.trim()) {
-      errors.startupName = 'Startup name is required';
+    if (!stage) {
+      errors.stage = 'Vui lòng chọn giai đoạn phát triển';
     }
 
-    if (!formData.founders || !formData.founders.trim()) {
-      errors.founders = 'Founders information is required';
+    // 2. Step 2 Fields (Conditional)
+    if (!formData.problemStatement && !formData.problemDescription) {
+      errors.problemStatement = 'Vấn đề cần giải quyết là bắt buộc';
     }
 
-    if (!formData.country || !formData.country.trim()) {
-      errors.country = 'Country is required';
+    if (!formData.solutionDescription && !formData.proposedSolution) {
+      errors.solutionDescription = 'Mô tả giải pháp là bắt buộc';
     }
 
-    if (!formData.contactEmail || !formData.contactEmail.trim()) {
-      errors.contactEmail = 'Contact email is required';
-    } else if (!this.isValidEmail(formData.contactEmail)) {
-      errors.contactEmail = 'Please enter a valid email address';
+    if (!formData.targetCustomers && !formData.idealCustomerBuyer) {
+      errors.targetCustomers = 'Khách hàng mục tiêu là bắt buộc';
     }
 
-    if (!formData.industry || !formData.industry.trim()) {
-      errors.industry = 'Industry is required';
+    // MVP & Growth Requirements
+    if (stage === '1' || stage === 'mvp' || stage === '2' || stage === 'growth') {
+      if (!formData.uniqueValueProposition && !formData.differentiator) {
+        errors.uniqueValueProposition = 'Giá trị độc đáo (UVP) là bắt buộc';
+      }
+      if (!formData.businessModel && !formData.revenueMethod) {
+        errors.businessModel = 'Mô hình kinh doanh là bắt buộc';
+      }
+      if (!formData.keySkills) {
+        errors.keySkills = 'Kỹ năng cốt lõi là bắt buộc';
+      }
+      if (!formData.competitors) {
+        errors.competitors = 'Đối thủ cạnh tranh là bắt buộc';
+      }
+      if (!formData.documents || formData.documents.length === 0) {
+        errors.documents = 'Tài liệu (Pitch Deck/Demo) là bắt buộc';
+      }
+    }
+
+    // Growth Specific Requirements
+    if (stage === '2' || stage === 'growth') {
+      if (!formData.revenue || parseInt(formData.revenue) <= 0) {
+        errors.revenue = 'Doanh thu phải lớn hơn 0 cho giai đoạn Tăng trưởng';
+      }
+      if (!formData.marketSize || parseInt(formData.marketSize) <= 0) {
+        errors.marketSize = 'Quy mô thị trường phải lớn hơn 0 cho giai đoạn Tăng trưởng';
+      }
+      if (!formData.teamExperience) {
+        errors.teamExperience = 'Kinh nghiệm đội ngũ là bắt buộc';
+      }
     }
 
     return {

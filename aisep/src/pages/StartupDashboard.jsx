@@ -4,6 +4,7 @@ import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
 import SuccessModal from '../components/common/SuccessModal';
+import ProjectSubmissionForm from '../components/startup/ProjectSubmissionForm';
 import BlockchainVerificationModal from '../components/common/BlockchainVerificationModal';
 import FeedHeader from '../components/feed/FeedHeader';
 import ProjectValidationService from '../services/ProjectValidation.js';
@@ -11,7 +12,7 @@ import BlockchainService from '../services/BlockchainService.js';
 import AIEvaluationService from '../services/AIEvaluationService.js';
 import projectSubmissionService from '../services/projectSubmissionService.js';
 import startupProfileService from '../services/startupProfileService.js';
-import { PROJECT_STATUS, isUserEditable, STATUS_LABELS, STATUS_COLORS } from '../constants/ProjectStatus.js';
+import { PROJECT_STATUS, isUserEditable, STATUS_LABELS, STATUS_COLORS, getStageLabel } from '../constants/ProjectStatus.js';
 
 import StartupProfileBanner from '../components/startup/StartupProfileBanner';
 
@@ -33,7 +34,7 @@ export default function StartupDashboard({ user }) {
     const [showSuccessModal, setShowSuccessModal] = React.useState(false);
     const [isLoadingDocuments, setIsLoadingDocuments] = React.useState(false);
     const [isUploading, setIsUploading] = React.useState(false);
-    const [isVerifying, setIsVerifying] = React.useState(false);
+    const [verifyingDocId, setVerifyingDocId] = React.useState(null);
     const [documentType, setDocumentType] = React.useState('PitchDeck');
     const [dragActive, setDragActive] = React.useState(false);
     const [verificationData, setVerificationData] = React.useState(null);
@@ -278,8 +279,8 @@ export default function StartupDashboard({ user }) {
                     return name;
                 };
 
-                const mappedDocs = docItems.map(doc => ({
-                    id: doc.documentId,
+                const mappedDocs = docItems.map((doc, index) => ({
+                    id: doc.id || doc.documentId || `doc-${index}`,
                     name: truncateName(doc.fileName || doc.documentType),
                     fullName: doc.fileName || doc.documentType, // Keep full name for title/tooltips
                     type: doc.documentType,
@@ -303,7 +304,7 @@ export default function StartupDashboard({ user }) {
 
     // Verify a document by ID
     const handleVerifyDocument = async (id, name, txHash) => {
-        setIsVerifying(true);
+        setVerifyingDocId(id);
         setVerificationDocumentName(name);
         try {
             const res = await projectSubmissionService.verifyDocument(id);
@@ -321,10 +322,24 @@ export default function StartupDashboard({ user }) {
             }
         } catch (error) {
             console.error('Error verifying document:', error);
-            setSuccessMessage('Lỗi xác thực: ' + translateError(error));
+            
+            // Handle specific case where document is not on blockchain because project is not yet approved
+            // Note: error is already normalized by apiClient interceptor and contains { message, errors, statusCode }
+            const errorList = error.errors || [];
+            const errorMessage = error.message || '';
+            
+            const isNotOnBlockchain = errorList.some(e => 
+                typeof e === 'string' && e.toLowerCase().includes("not registered on the blockchain")
+            ) || errorMessage.toLowerCase().includes("not registered on the blockchain");
+
+            if (isNotOnBlockchain && detailProject?.status !== PROJECT_STATUS.APPROVED) {
+                setSuccessMessage("Tài liệu đã được tải lên thành công, chúng tôi sẽ sử dụng Blockchain để xác thực tài liệu của bạn sau khi dự án này được chấp thuận.");
+            } else {
+                setSuccessMessage('Lỗi xác thực: ' + translateError(error));
+            }
             setShowSuccessModal(true);
         } finally {
-            setIsVerifying(false);
+            setVerifyingDocId(null);
         }
     };
 
@@ -474,7 +489,9 @@ export default function StartupDashboard({ user }) {
                 // Refresh data
                 const response = await projectSubmissionService.getMyProjects();
                 if (response.success && response.data) {
-                    const projects = Array.isArray(response.data) ? response.data : (response.data.items || []);
+                    let projects = Array.isArray(response.data) ? response.data : (response.data.items || []);
+                    // Ensure newest first locally as well
+                    projects = [...projects].sort((a, b) => (b.id || b.projectId) - (a.id || a.projectId));
                     setMyProjects(projects);
 
                     // Update detail project if open
@@ -744,9 +761,19 @@ export default function StartupDashboard({ user }) {
                                                 </div>
                                                 <p className={styles.subtitle}>{p.shortDescription || p.description}</p>
                                                 <div className={styles.listMeta}>
-                                                    <span>Giai đoạn: {p.developmentStage === 0 ? 'Ý tưởng' : p.developmentStage === 1 ? 'MVP' : 'Tăng trưởng'}</span>
+                                                    <span>Giai đoạn: {getStageLabel(p.developmentStage)}</span>
                                                     {p.submittedDate && <span> • Nộp ngày: {p.submittedDate}</span>}
                                                 </div>
+
+                                                {p.status === 'Rejected' && p.rejectionReason && (
+                                                    <div className={styles.rejectionBox}>
+                                                        <div className={styles.rejectionTitle}>
+                                                            <AlertCircle size={14} />
+                                                            <span>Lý do từ chối:</span>
+                                                        </div>
+                                                        <p className={styles.rejectionText}>{p.rejectionReason}</p>
+                                                    </div>
+                                                )}
                                             </div>
                                             <div className={styles.listActions}>
                                                 {p.status === 'Draft' && (
@@ -947,6 +974,15 @@ export default function StartupDashboard({ user }) {
                         </div>
 
                         <div style={{ padding: '24px', overflowY: 'auto' }}>
+                            {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
+                                <div className={styles.rejectionBox} style={{ marginBottom: '24px', marginTop: 0 }}>
+                                    <div className={styles.rejectionTitle}>
+                                        <AlertCircle size={16} />
+                                        <span style={{ fontSize: '15px' }}>Phản hồi từ đội ngũ vận hành:</span>
+                                    </div>
+                                    <p className={styles.rejectionText} style={{ fontSize: '15px' }}>{detailProject.rejectionReason}</p>
+                                </div>
+                            )}
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                                     <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>1. Thông tin cơ bản</h4>
@@ -961,7 +997,7 @@ export default function StartupDashboard({ user }) {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                             <TrendingUp size={16} color="var(--primary-blue)" />
                                             <p style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
-                                                {detailProject.developmentStage === 0 ? 'Ý tưởng (Idea)' : detailProject.developmentStage === 1 ? 'MVP' : 'Vận hành (Growth)'}
+                                                {getStageLabel(detailProject.developmentStage)}
                                             </p>
                                         </div>
                                     </div>
@@ -1177,8 +1213,13 @@ export default function StartupDashboard({ user }) {
                                                                         className={styles.iconBtn}
                                                                         title="Xác thực"
                                                                         onClick={() => handleVerifyDocument(doc.id, doc.fullName, doc.txHash)}
+                                                                        disabled={verifyingDocId !== null}
                                                                     >
-                                                                        <Shield size={16} />
+                                                                        {verifyingDocId === doc.id ? (
+                                                                            <Loader2 size={16} className={styles.spinner} />
+                                                                        ) : (
+                                                                            <Shield size={16} />
+                                                                        )}
                                                                     </button>
                                                                     <button
                                                                         className={styles.iconBtnDanger}
