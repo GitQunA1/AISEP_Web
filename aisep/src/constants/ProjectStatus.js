@@ -15,6 +15,30 @@ const PROJECT_STATUS = {
   REJECTED: 'Rejected'
 };
 
+const DEVELOPMENT_STAGE = {
+  IDEA: 'Idea',
+  MVP: 'MVP',
+  GROWTH: 'Growth'
+};
+
+const DEVELOPMENT_STAGE_LABELS = {
+  [DEVELOPMENT_STAGE.IDEA]: 'Ý tưởng',
+  [DEVELOPMENT_STAGE.MVP]: 'MVP',
+  [DEVELOPMENT_STAGE.GROWTH]: 'Tăng trưởng'
+};
+
+const DEVELOPMENT_STAGE_MAPPING = {
+  0: DEVELOPMENT_STAGE.IDEA,
+  1: DEVELOPMENT_STAGE.MVP,
+  2: DEVELOPMENT_STAGE.GROWTH,
+  '0': DEVELOPMENT_STAGE.IDEA,
+  '1': DEVELOPMENT_STAGE.MVP,
+  '2': DEVELOPMENT_STAGE.GROWTH,
+  'Idea': DEVELOPMENT_STAGE.IDEA,
+  'MVP': DEVELOPMENT_STAGE.MVP,
+  'Growth': DEVELOPMENT_STAGE.GROWTH
+};
+
 // Status transition rules
 const VALID_TRANSITIONS = {
   [PROJECT_STATUS.DRAFT]: [
@@ -40,26 +64,26 @@ const VALID_TRANSITIONS = {
   ]
 };
 
-// Status display labels - Simplified to 4 as requested
+// Status display labels - Updated for the new flow
 const STATUS_LABELS = {
-  [PROJECT_STATUS.DRAFT]: 'Đang chờ duyệt',
-  [PROJECT_STATUS.IP_PROTECTED]: 'Đang chờ duyệt',
+  [PROJECT_STATUS.DRAFT]: 'Bản nháp',
+  [PROJECT_STATUS.IP_PROTECTED]: 'Bản nháp',
   [PROJECT_STATUS.PENDING]: 'Đang chờ duyệt',
   [PROJECT_STATUS.SUBMITTED]: 'Đang chờ duyệt',
-  [PROJECT_STATUS.APPROVED]: 'Đã duyệt',
+  [PROJECT_STATUS.APPROVED]: 'Đã được duyệt',
   [PROJECT_STATUS.PUBLISHED]: 'Đã công khai',
   [PROJECT_STATUS.REJECTED]: 'Bị từ chối'
 };
 
 // Status colors for UI
 const STATUS_COLORS = {
-  [PROJECT_STATUS.DRAFT]: '#F59E0B',        // Amber (using Submitted's color)
-  [PROJECT_STATUS.IP_PROTECTED]: '#F59E0B', // Amber
-  [PROJECT_STATUS.PENDING]: '#F59E0B',      // Amber
+  [PROJECT_STATUS.DRAFT]: '#64748b',        // Slate/Gray for Draft
+  [PROJECT_STATUS.IP_PROTECTED]: '#64748b', // Slate
+  [PROJECT_STATUS.PENDING]: '#F59E0B',      // Amber for Pending
   [PROJECT_STATUS.SUBMITTED]: '#F59E0B',    // Amber
-  [PROJECT_STATUS.APPROVED]: '#10B981',     // Green
+  [PROJECT_STATUS.APPROVED]: '#10B981',     // Green for Approved
   [PROJECT_STATUS.PUBLISHED]: '#059669',    // Dark Green
-  [PROJECT_STATUS.REJECTED]: '#EF4444'      // Red
+  [PROJECT_STATUS.REJECTED]: '#EF4444'      // Red for Rejected
 };
 
 // Which statuses allow editing (BR-04)
@@ -164,14 +188,50 @@ function canBePublished(status, hasAIEvaluation = true) {
   return status === PROJECT_STATUS.APPROVED && hasAIEvaluation;
 }
 
+/**
+ * Get display label for development stage
+ * @param {any} stage - Development stage value (numeric or string)
+ * @returns {string} - Display label
+ */
+function getStageLabel(stage) {
+  if (stage === null || stage === undefined) return 'Không xác định';
+  const normalizedStage = DEVELOPMENT_STAGE_MAPPING[stage];
+  if (normalizedStage) return DEVELOPMENT_STAGE_LABELS[normalizedStage];
+  
+  // Fallback for unexpected string values
+  if (typeof stage === 'string') {
+    if (stage.toLowerCase() === 'idea') return 'Ý tưởng';
+    if (stage.toLowerCase() === 'growth') return 'Tăng trưởng';
+  }
+  
+  return stage.toString();
+}
+
+/**
+ * Get internal stage value for API/Form
+ * @param {any} stage - Development stage value
+ * @returns {string} - "0", "1", or "2"
+ */
+function getStageNumericValue(stage) {
+  const normalizedStage = DEVELOPMENT_STAGE_MAPPING[stage];
+  if (normalizedStage === DEVELOPMENT_STAGE.IDEA) return '0';
+  if (normalizedStage === DEVELOPMENT_STAGE.MVP) return '1';
+  if (normalizedStage === DEVELOPMENT_STAGE.GROWTH) return '2';
+  return '0';
+}
+
 export {
   PROJECT_STATUS,
+  DEVELOPMENT_STAGE,
   STATUS_LABELS,
   STATUS_COLORS,
+  DEVELOPMENT_STAGE_LABELS,
   EDITABLE_STATUSES,
   USER_EDITABLE_STATUSES,
   PUBLISH_PREREQUISITES,
   VALID_TRANSITIONS,
+  getStageLabel,
+  getStageNumericValue,
   isValidTransition,
   isEditable,
   isUserEditable,

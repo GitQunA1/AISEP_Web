@@ -1,17 +1,42 @@
-import React, { useState } from 'react';
-import { X, AlertCircle, Plus, Trash2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, AlertCircle, Plus, Trash2, Upload, FileText } from 'lucide-react';
 import styles from './ProjectSubmissionForm.module.css';
 import projectSubmissionService from '../../services/projectSubmissionService';
+import { getStageNumericValue } from '../../constants/ProjectStatus';
 
 /**
  * ProjectSubmissionForm - Form for submitting new startup projects
  * Improved with professional styling and theme support.
  */
-export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
+export default function ProjectSubmissionForm({ onClose, onSuccess, user, initialData = null }) {
+  const isEdit = !!initialData;
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState(initialData ? {
+    projectName: initialData.projectName || initialData.name || '',
+    shortDescription: initialData.shortDescription || '',
+    developmentStage: getStageNumericValue(initialData.developmentStage),
+    problemStatement: initialData.problemStatement || '',
+    solutionDescription: initialData.solutionDescription || '',
+    targetCustomers: initialData.targetCustomers || '',
+    uniqueValueProposition: initialData.uniqueValueProposition || '',
+    marketSize: initialData.marketSize || '',
+    businessModel: initialData.businessModel || '',
+    revenue: initialData.revenue || '',
+    competitors: initialData.competitors || '',
+    teamMembers: initialData.teamMembers 
+      ? initialData.teamMembers.split(',').map(m => {
+          const [name, role] = m.trim().split('(');
+          return { 
+            name: name.trim(), 
+            role: role ? role.replace(')', '').trim() : '' 
+          };
+        })
+      : [{ name: '', role: '' }],
+    keySkills: initialData.keySkills || '',
+    teamExperience: initialData.teamExperience || '',
+  } : {
     projectName: '',
     shortDescription: '',
     developmentStage: '',
@@ -31,6 +56,41 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+
+  const isFirstRender = React.useRef(true);
+  const prevStageRef = React.useRef(formData.developmentStage);
+  const isIdea = String(formData.developmentStage) === '0';
+  const isMVP = String(formData.developmentStage) === '1';
+  const isGrowth = String(formData.developmentStage) === '2';
+
+  // Reset fields in Step 2 and 3 when Stage changes in Step 1
+  useEffect(() => {
+    // Only reset if it's NOT the first render, we are on Step 1,
+    // and the development stage has actually changed from its previous value.
+    if (!isFirstRender.current && currentStep === 1 && prevStageRef.current !== formData.developmentStage) {
+      // Only auto-reset for new projects. For existing projects, let the user manually clear if needed.
+      if (!isEdit) {
+        setFormData(prev => ({
+          ...prev,
+          solutionDescription: '',
+          targetCustomers: '',
+          uniqueValueProposition: '',
+          marketSize: '',
+          businessModel: '',
+          revenue: '',
+          competitors: '',
+          teamMembers: [{ name: '', role: '' }],
+          keySkills: '',
+          teamExperience: '',
+        }));
+        setErrors({});
+      }
+    }
+    
+    // Update the ref to current value
+    prevStageRef.current = formData.developmentStage;
+    isFirstRender.current = false;
+  }, [formData.developmentStage, currentStep, isEdit]);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -58,6 +118,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
     setFormData(prev => ({ ...prev, teamMembers: newMembers }));
   };
 
+
   const validateStep = () => {
     const newErrors = {};
 
@@ -71,16 +132,35 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
     if (currentStep === 2) {
       if (!formData.solutionDescription.trim()) newErrors.solutionDescription = 'Mô tả giải pháp là bắt buộc';
       if (!formData.targetCustomers.trim()) newErrors.targetCustomers = 'Mô tả khách hàng mục tiêu là bắt buộc';
-      if (!formData.uniqueValueProposition.trim()) newErrors.uniqueValueProposition = 'Mô tả giá trị độc đáo là bắt buộc';
-      if (!formData.businessModel.trim()) newErrors.businessModel = 'Mô tả mô hình kinh doanh là bắt buộc';
+      
+      // MVP and Growth required fields
+      if (isMVP || isGrowth) {
+        if (!formData.uniqueValueProposition?.trim()) newErrors.uniqueValueProposition = 'Mô tả giá trị độc đáo là bắt buộc';
+        if (!formData.businessModel?.trim()) newErrors.businessModel = 'Mô tả mô hình kinh doanh là bắt buộc';
+      }
+
+      // Growth specific
+      if (isGrowth) {
+        if (!formData.revenue || parseInt(formData.revenue) <= 0) newErrors.revenue = 'Doanh thu phải lớn hơn 0 cho giai đoạn Tăng trưởng';
+        if (!formData.marketSize || parseInt(formData.marketSize) <= 0) newErrors.marketSize = 'Kích thước thị trường phải lớn hơn 0 cho giai đoạn Tăng trưởng';
+      }
     }
 
     if (currentStep === 3) {
-      if (!formData.competitors.trim()) newErrors.competitors = 'Mô tả đối thủ cạnh tranh là bắt buộc';
-      const hasEmptyMembers = formData.teamMembers.some(m => !m.name.trim() || !m.role.trim());
-      if (hasEmptyMembers) newErrors.teamMembers = 'Vui lòng nhập đầy đủ tên và vai trò thành viên';
-      if (!formData.keySkills.trim()) newErrors.keySkills = 'Kỹ năng chính là bắt buộc';
-      if (!formData.teamExperience.trim()) newErrors.teamExperience = 'Kinh nghiệm đội là bắt buộc';
+      // Team members - at least 1 required for all
+      const hasEmptyMembers = formData.teamMembers.some(m => !m.name.trim());
+      if (hasEmptyMembers) newErrors.teamMembers = 'Vui lòng nhập tên thành viên';
+
+      // MVP and Growth
+      if (isMVP || isGrowth) {
+        if (!formData.competitors?.trim()) newErrors.competitors = 'Mô tả đối thủ cạnh tranh là bắt buộc';
+        if (!formData.keySkills?.trim()) newErrors.keySkills = 'Kỹ năng chính là bắt buộc';
+      }
+
+      // Growth specific
+      if (isGrowth) {
+        if (!formData.teamExperience?.trim()) newErrors.teamExperience = 'Kinh nghiệm đội ngũ là bắt buộc';
+      }
     }
 
     setErrors(newErrors);
@@ -111,11 +191,19 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
         marketSize: parseInt(formData.marketSize) || 0,
         revenue: parseInt(formData.revenue) || 0,
         teamMembers: formData.teamMembers
-          .map(m => m.name.trim())
+          .filter(m => m.name.trim())
+          .map(m => m.role.trim() ? `${m.name.trim()} (${m.role.trim()})` : m.name.trim())
           .join(', '),
       };
 
-      const response = await projectSubmissionService.submitStartupInfo(payload);
+      // Handle documents separately if needed by projectSubmissionService
+      // Note: projectSubmissionService.submitStartupInfo/updateProject uses FormData internally
+      // and appends all keys from projectData. We need to handle the array of files.
+      
+      const response = isEdit 
+        ? await projectSubmissionService.updateProject(initialData.projectId || initialData.id, payload)
+        : await projectSubmissionService.submitStartupInfo(payload);
+        
 
       if (response && response.success) {
         onSuccess?.(formData);
@@ -140,7 +228,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
         {/* Header */}
         <div className={styles.modalHeader}>
           <div>
-            <h2 className={styles.headerTitle}>Đăng Dự Án</h2>
+            <h2 className={styles.headerTitle}>{isEdit ? 'Cập nhật dự án' : 'Đăng Dự Án'}</h2>
             <p className={styles.headerSubtitle}>Bước {currentStep} của {totalSteps}</p>
           </div>
           <button onClick={onClose} className={styles.closeButton}>
@@ -277,7 +365,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
 
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Giá Trị Độc Đáo (UVP) <span className={styles.required}>*</span>
+                  Giá Trị Độc Đáo (UVP) {isIdea ? <span className={styles.optional}>(Tùy chọn)</span> : <span className={styles.required}>*</span>}
                 </label>
                 <textarea
                   name="uniqueValueProposition"
@@ -290,34 +378,42 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
                 {errors.uniqueValueProposition && <span className={styles.errorText}>{errors.uniqueValueProposition}</span>}
               </div>
 
-              <div className={styles.row}>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Kích Thước Thị Trường (VND)</label>
-                  <input
-                    type="number"
-                    name="marketSize"
-                    value={formData.marketSize}
-                    onChange={handleInputChange}
-                    className={styles.input}
-                    placeholder="0"
-                  />
+              {!isIdea && (
+                <div className={styles.row}>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                      Quy mô thị trường (VND) {!isGrowth ? <span className={styles.optional}>(Tùy chọn)</span> : <span className={styles.required}>*</span>}
+                    </label>
+                    <input
+                      type="number"
+                      name="marketSize"
+                      value={formData.marketSize}
+                      onChange={handleInputChange}
+                      className={styles.input}
+                      placeholder="0"
+                    />
+                    {errors.marketSize && <span className={styles.errorText}>{errors.marketSize}</span>}
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label className={styles.label}>
+                      Doanh thu hiện thực (VND) {!isGrowth ? <span className={styles.optional}>(Tùy chọn)</span> : <span className={styles.required}>*</span>}
+                    </label>
+                    <input
+                      type="number"
+                      name="revenue"
+                      value={formData.revenue}
+                      onChange={handleInputChange}
+                      className={styles.input}
+                      placeholder="0"
+                    />
+                    {errors.revenue && <span className={styles.errorText}>{errors.revenue}</span>}
+                  </div>
                 </div>
-                <div className={styles.formGroup}>
-                  <label className={styles.label}>Doanh Thu (VND)</label>
-                  <input
-                    type="number"
-                    name="revenue"
-                    value={formData.revenue}
-                    onChange={handleInputChange}
-                    className={styles.input}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
+              )}
 
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Mô Hình Kinh Doanh <span className={styles.required}>*</span>
+                  Mô Hình Kinh Doanh {isIdea ? <span className={styles.optional}>(Tùy chọn)</span> : <span className={styles.required}>*</span>}
                 </label>
                 <textarea
                   name="businessModel"
@@ -337,14 +433,14 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
             <>
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Đối Thủ Cạnh Tranh <span className={styles.required}>*</span>
+                  Đối thủ cạnh tranh {isIdea ? <span className={styles.optional}>(Tùy chọn)</span> : <span className={styles.required}>*</span>}
                 </label>
                 <textarea
                   name="competitors"
                   value={formData.competitors}
                   onChange={handleInputChange}
                   className={styles.textarea}
-                  placeholder="Liệt kê các đối thủ chính của bạn"
+                  placeholder="Liệt kê các đối thủ chính và điểm khác biệt của bạn"
                   rows={2}
                 />
                 {errors.competitors && <span className={styles.errorText}>{errors.competitors}</span>}
@@ -397,7 +493,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
 
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Kỹ Năng Cốt Lõi Của Đội Ngũ <span className={styles.required}>*</span>
+                  Kỹ năng cốt lõi {isIdea ? <span className={styles.optional}>(Tùy chọn)</span> : <span className={styles.required}>*</span>}
                 </label>
                 <input
                   type="text"
@@ -413,14 +509,14 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user }) {
 
               <div className={styles.formGroup}>
                 <label className={styles.label}>
-                  Kinh Nghiệm Đội <span className={styles.required}>*</span>
+                  Kinh nghiệm đội ngũ {!isGrowth ? <span className={styles.optional}>(Tùy chọn)</span> : <span className={styles.required}>*</span>}
                 </label>
                 <textarea
                   name="teamExperience"
                   value={formData.teamExperience}
                   onChange={handleInputChange}
                   className={styles.textarea}
-                  placeholder="Các dự án hoặc kinh nghiệm thành công trước đây"
+                  placeholder="Các dự án hoặc thành tựu nổi bật của các thành viên"
                   rows={3}
                 />
                 {errors.teamExperience && <span className={styles.errorText}>{errors.teamExperience}</span>}

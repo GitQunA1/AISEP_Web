@@ -150,11 +150,11 @@
 .tab {
     flex: 1;
     min-width: max-content;
-    padding: 16px 20px;
+    padding: 12px 16px;
     background: none;
     border: none;
     color: var(--text-secondary);
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 600;
     cursor: pointer;
     position: relative;
@@ -264,6 +264,16 @@
 .listContent {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.subtitle {
+    font-size: 14px;
+    line-height: 1.4;
+    color: var(--text-secondary);
+    margin: 0;
 }
 
 .listTitle {
@@ -273,10 +283,25 @@
     margin: 0 0 2px 0;
 }
 
-.listSubtitle {
-    font-size: 13px;
-    color: var(--text-secondary);
+.listItemHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+    width: 100%;
+    margin-bottom: 4px;
+}
+
+.listItemTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
     margin: 0;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .listMeta {
@@ -366,10 +391,53 @@
 }
 
 /* Forms */
-.form {
+.metricItem {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 4px;
+    padding: 16px;
+    background-color: var(--bg-hover);
+    border-radius: 12px;
+}
+
+.metricItemInner {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 16px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: transform 0.2s, border-color 0.2s;
+}
+
+.metricItemInner:hover {
+    border-color: var(--primary-blue);
+    transform: translateY(-2px);
+}
+
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    gap: 12px;
+}
+
+.emptyStateIcon {
+    color: #4b5563;
+    /* text-gray-600-ish */
+    margin-bottom: 4px;
+}
+
+.emptyStateText {
+    font-size: 13px;
+    color: #9ca3af;
+    /* text-gray-400 */
+    max-width: 200px;
 }
 
 .formRow {
@@ -429,12 +497,16 @@
 /* Badges */
 .badge {
     padding: 4px 12px;
-    border-radius: 9999px;
+    border-radius: 6px;
     font-size: 12px;
     font-weight: 700;
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 4px;
+    flex-shrink: 0;
+    min-width: 80px;
+    white-space: nowrap;
 }
 
 .badgePending {
@@ -678,6 +750,7 @@
         opacity: 0;
         transform: translateY(20px);
     }
+
     to {
         opacity: 1;
         transform: translateY(0);
@@ -702,7 +775,8 @@
 
     .modalOverlay {
         padding: 0 !important;
-        z-index: 9999 !important; /* Higher than sticky headers/navs */
+        z-index: 9999 !important;
+        /* Higher than sticky headers/navs */
     }
 
     .modalContent {
@@ -726,12 +800,13 @@
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
-    gap: 16px;
-    padding: 16px;
+    gap: 8px;
+    padding: 12px 16px;
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
-    border-radius: 12px;
-    transition: background-color 0.2s;
+    border-left: 4px solid transparent;
+    border-radius: 8px;
+    transition: all 0.2s;
 }
 
 .listItem:hover {
@@ -770,58 +845,108 @@
     }
 }
 
+/* Desktop Card Refactor (>= 1024px) */
+@media (min-width: 1024px) {
+    .listItem {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 12px;
+        padding: 16px 20px;
+    }
+
+    .listContent {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+    }
+
+    .listActions {
+        margin-top: 4px;
+        padding-top: 12px;
+        border-top: 1px solid var(--border-color);
+        width: 100%;
+        flex-direction: row;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+    }
+
+    /* Reset button left margin since we now use gap-12 and justify-end */
+    .listActions button:last-child {
+        margin-left: 0;
+    }
+}
+
 /* --- UTILITIES & LAYOUT FIXES --- */
 
-.mt12 { margin-top: 12px; }
-.mt8 { margin-top: 8px; }
-.mb8 { margin-bottom: 8px; }
-.ml12 { margin-left: 12px; }
-.gap8 { gap: 8px; }
-.gap12 { gap: 12px; }
+.mt12 {
+    margin-top: 12px;
+}
+
+.mt8 {
+    margin-top: 8px;
+}
+
+.mb8 {
+    margin-bottom: 8px;
+}
+
+.ml12 {
+    margin-left: 12px;
+}
+
+.gap8 {
+    gap: 8px;
+}
+
+.gap12 {
+    gap: 12px;
+}
 
 .emptyState {
-  padding: 40px 20px;
-  text-align: center;
-  color: var(--text-secondary);
-  background: var(--bg-secondary);
-  border-radius: 12px;
-  border: 1px dashed var(--border-color);
+    padding: 40px 20px;
+    text-align: center;
+    color: var(--text-secondary);
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    border: 1px dashed var(--border-color);
 }
 
 .flexCenter {
-  display: flex;
-  align-items: center;
+    display: flex;
+    align-items: center;
 }
 
 .flexBetween {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
 .fullWidth {
-  grid-column: 1 / -1 !important;
+    grid-column: 1 / -1 !important;
 }
 
 :global([data-theme='dark']) .listItemTitle {
-  color: var(--text-primary);
+    color: var(--text-primary);
 }
 
 .inlineBadge {
-  display: inline-block;
-  vertical-align: middle;
+    display: inline-block;
+    vertical-align: middle;
 }
 
 .smallBtn {
-  font-size: 12px !important;
-  padding: 6px 12px !important;
+    font-size: 12px !important;
+    padding: 6px 12px !important;
 }
 
 
 @media (max-width: 768px) {
-  .fullWidth {
-    grid-column: auto !important;
-  }
+    .fullWidth {
+        grid-column: auto !important;
+    }
 }
 
 /* --- Document Management Styles --- */
@@ -919,7 +1044,8 @@
     width: 100%;
     border-collapse: collapse;
     font-size: 14px;
-    table-layout: fixed; /* Enforce fixed column widths */
+    table-layout: fixed;
+    /* Enforce fixed column widths */
 }
 
 .docsTable th {
@@ -932,11 +1058,31 @@
 }
 
 /* Balanced column widths to prioritize name space while giving buttons room */
-.docsTable th:nth-child(1) { width: 35%; } /* Tên tài liệu */
-.docsTable th:nth-child(2) { width: 12%; } /* Loai */
-.docsTable th:nth-child(3) { width: 15%; } /* Ngay tai */
-.docsTable th:nth-child(4) { width: 18%; } /* Xac thuc */
-.docsTable th:nth-child(5) { width: 130px; } /* Thao tac (fixed px width for 3 icons) */
+.docsTable th:nth-child(1) {
+    width: 35%;
+}
+
+/* Tên tài liệu */
+.docsTable th:nth-child(2) {
+    width: 12%;
+}
+
+/* Loai */
+.docsTable th:nth-child(3) {
+    width: 15%;
+}
+
+/* Ngay tai */
+.docsTable th:nth-child(4) {
+    width: 18%;
+}
+
+/* Xac thuc */
+.docsTable th:nth-child(5) {
+    width: 130px;
+}
+
+/* Thao tac (fixed px width for 3 icons) */
 
 .docsTable td {
     padding: 12px 16px;
@@ -978,7 +1124,8 @@
 .tableActions {
     display: flex;
     gap: 8px;
-    flex-wrap: nowrap; /* Prevent icons from stacking */
+    flex-wrap: nowrap;
+    /* Prevent icons from stacking */
 }
 
 /* Document Table Mobile View (Card Layout) */
@@ -998,7 +1145,8 @@
     }
 
     .docsTable thead {
-        display: none !important; /* Hide table headers */
+        display: none !important;
+        /* Hide table headers */
     }
 
     .docsTable tbody {
@@ -1043,18 +1191,20 @@
         justify-content: flex-start;
         gap: 8px;
     }
-    
+
     /* Add labels via pseudo-elements for context if needed, or rely on visual grouping */
     .docsTable td:nth-child(2)::before {
         content: "Loại: ";
         font-weight: 600;
         color: var(--text-secondary);
     }
+
     .docsTable td:nth-child(3)::before {
         content: "Ngày tải: ";
         font-weight: 600;
         color: var(--text-secondary);
     }
+
     .docsTable td:nth-child(4)::before {
         content: "Trạng thái: ";
         font-weight: 600;
@@ -1064,7 +1214,8 @@
     .docsTable td:last-child {
         padding-top: 16px;
         margin-top: 12px;
-        justify-content: flex-end; /* Move actions to right */
+        justify-content: flex-end;
+        /* Move actions to right */
     }
 
     .tableActions {
@@ -1073,11 +1224,13 @@
     }
 }
 
-.iconBtn, .iconBtnDanger {
+.iconBtn,
+.iconBtnDanger {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 36px; /* Slightly larger targets for mobile */
+    width: 36px;
+    /* Slightly larger targets for mobile */
     height: 36px;
     border-radius: 8px;
     border: 1px solid var(--border-color);
@@ -1120,8 +1273,13 @@
 }
 
 @keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .emptyDocs {
@@ -1138,7 +1296,7 @@
         flex-direction: row;
         justify-content: space-between;
     }
-    
+
     .uploadInfo {
         flex-direction: row;
         align-items: center;
@@ -1153,10 +1311,44 @@
         max-width: none;
         align-items: stretch;
     }
+
     .selectSmall {
         width: 100%;
     }
+
     .uploadBtn {
         width: 100%;
     }
-}
+}
+
+/* Rejection Reason Display */
+.rejectionBox {
+    background-color: rgba(244, 33, 46, 0.05);
+    border: 1px solid rgba(244, 33, 46, 0.15);
+    border-radius: 12px;
+    padding: 12px 16px;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+:global([data-theme='dark']) .rejectionBox {
+    background-color: rgba(244, 33, 46, 0.1);
+}
+
+.rejectionTitle {
+    font-size: 13px;
+    font-weight: 700;
+    color: #f4212e;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.rejectionText {
+    font-size: 14px;
+    color: var(--text-primary);
+    line-height: 1.5;
+    font-style: italic;
+}

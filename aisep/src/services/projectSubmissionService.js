@@ -89,7 +89,7 @@ export const projectSubmissionService = {
     const formData = new FormData();
     formData.append('file', file);
     formData.append('documentType', documentType);
-    
+
     // Explicitly set multipart/form-data for this call
     const response = await apiClient.post(`/api/projects/${projectId}/documents`, formData, {
       headers: {
@@ -125,8 +125,8 @@ export const projectSubmissionService = {
    */
   getMyProjects: async () => {
     try {
-      // Empty SieveModel query gets defaults
-      const response = await apiClient.get('/api/Projects/my');
+      // Request newest projects first and a larger page size to ensure all projects are visible in the dashboard
+      const response = await apiClient.get('/api/Projects/my?sorts=-ProjectId&pageSize=100');
       if (response && (response.success || response.isSuccess)) {
         return response;
       } else {
@@ -146,20 +146,57 @@ export const projectSubmissionService = {
    * @returns {Promise<any>}
    */
   getAllProjects: async () => {
-    const response = await apiClient.get('/api/Projects');
+    const response = await apiClient.get('/api/Projects?pageSize=100');
     return response;
   },
 
   /**
-   * Get Draft Projects for review (Operation Staff)
+   * Get Pending Projects for review (Operation Staff)
+   * Uses GET /api/Projects with Sieve filter Status==Pending
    * @returns {Promise<any>}
    */
-  getDraftProjects: async () => {
+  getPendingProjects: async () => {
     try {
-      const response = await apiClient.get('/api/Projects/drafts');
+      const response = await apiClient.get('/api/Projects', {
+        params: { filters: 'Status==Pending', pageSize: 100 }
+      });
       return response;
     } catch (error) {
-      console.error('Error fetching draft projects:', error);
+      console.error('Error fetching pending projects:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get Approved Projects (Operation Staff)
+   * Uses GET /api/Projects with Sieve filter Status==Approved
+   * @returns {Promise<any>}
+   */
+  getApprovedProjects: async () => {
+    try {
+      const response = await apiClient.get('/api/Projects', {
+        params: { filters: 'Status==Approved', pageSize: 100 }
+      });
+      return response;
+    } catch (error) {
+      console.error('Error fetching approved projects:', error);
+      throw error;
+    }
+  },
+  
+  /**
+   * Get Rejected Projects (Operation Staff)
+   * Uses GET /api/Projects with Sieve filter Status==Rejected
+   * @returns {Promise<any>}
+   */
+  getRejectedProjects: async () => {
+    try {
+      const response = await apiClient.get('/api/Projects', {
+        params: { filters: 'Status==Rejected', pageSize: 100 }
+      });
+      return response;
+    } catch (error) {
+      console.error('Error fetching rejected projects:', error);
       throw error;
     }
   },
@@ -177,13 +214,23 @@ export const projectSubmissionService = {
   /**
    * Reject a project
    * @param {number} projectId 
-   * @param {string} rejectionReason 
+   * @param {string} reason 
    * @returns {Promise<any>}
    */
-  rejectProject: async (projectId, rejectionReason) => {
+  rejectProject: async (projectId, reason) => {
     const response = await apiClient.patch(`/api/Projects/${projectId}/reject`, {
-      rejectionReason
+      reason
     });
+    return response;
+  },
+
+  /**
+   * Submit a project for review
+   * @param {number} projectId 
+   * @returns {Promise<any>}
+   */
+  submitProject: async (projectId) => {
+    const response = await apiClient.patch(`/api/Projects/${projectId}/submit`);
     return response;
   },
 

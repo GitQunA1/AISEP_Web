@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, ChevronLeft, AlertCircle, Sparkles } from 'lucide-react';
+import { ChevronRight, ChevronLeft, AlertCircle, Sparkles, Upload, FileText, X } from 'lucide-react';
 import styles from './FormContentSteps.module.css';
 
 /**
@@ -184,7 +184,9 @@ export default function FormContentSteps({
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Vấn đề này xảy ra thường xuyên không?</label>
+              <label className={styles.label}>
+                Vấn đề này xảy ra thường xuyên không? <span className={styles.optional}>(Tùy chọn)</span>
+              </label>
               <input
                 type="text"
                 name="problemFrequency"
@@ -284,7 +286,7 @@ export default function FormContentSteps({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Họ sẵn sàng trả tiền không?</label>
+                  <label className={styles.label}>Họ sẵn sàng trả tiền không? <span className={styles.optional}>(Tùy chọn)</span></label>
                   <textarea
                     name="willPayFor"
                     value={formData.willPayFor}
@@ -314,7 +316,9 @@ export default function FormContentSteps({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Doanh thu hiện tại <span className={styles.required}>*</span></label>
+                  <label className={styles.label}>
+                    Doanh thu hiện tại {formData.stage === 'growth' ? <span className={styles.required}>*</span> : <span className={styles.optional}>(Tùy chọn)</span>}
+                  </label>
                   <input
                     type="text"
                     name="currentRevenue"
@@ -327,7 +331,7 @@ export default function FormContentSteps({
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label className={styles.label}>Tốc độ tăng trưởng</label>
+                  <label className={styles.label}>Tốc độ tăng trưởng <span className={styles.optional}>(Tùy chọn)</span></label>
                   <textarea
                     name="growthRate"
                     value={formData.growthRate}
@@ -351,7 +355,9 @@ export default function FormContentSteps({
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Bạn kiếm tiền bằng cách nào? <span className={styles.required}>*</span></label>
+              <label className={styles.label}>
+                Bạn kiếm tiền bằng cách nào? {formData.stage === 'idea' ? <span className={styles.optional}>(Tùy chọn)</span> : <span className={styles.required}>*</span>}
+              </label>
               <textarea
                 name="revenueMethod"
                 value={formData.revenueMethod}
@@ -364,7 +370,9 @@ export default function FormContentSteps({
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Loại doanh thu <span className={styles.required}>*</span></label>
+              <label className={styles.label}>
+                Loại doanh thu {formData.stage === 'idea' ? <span className={styles.optional}>(Tùy chọn)</span> : <span className={styles.required}>*</span>}
+              </label>
               <select
                 name="revenueType"
                 value={formData.revenueType}
@@ -382,7 +390,9 @@ export default function FormContentSteps({
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Giá dự kiến <span className={styles.required}>*</span></label>
+              <label className={styles.label}>
+                Giá dự kiến {formData.stage === 'idea' ? <span className={styles.optional}>(Tùy chọn)</span> : <span className={styles.required}>*</span>}
+              </label>
               <textarea
                 name="pricingStrategy"
                 value={formData.pricingStrategy}
@@ -431,7 +441,9 @@ export default function FormContentSteps({
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Làm full-time hay part-time? <span className={styles.required}>*</span></label>
+              <label className={styles.label}>
+                Làm full-time hay part-time? {formData.stage === 'idea' ? <span className={styles.optional}>(Tùy chọn)</span> : <span className={styles.required}>*</span>}
+              </label>
               <select
                 name="employmentType"
                 value={formData.employmentType}
@@ -446,6 +458,50 @@ export default function FormContentSteps({
               </select>
               {errors.employmentType && <p className={styles.errorText}>{errors.employmentType}</p>}
             </div>
+
+            {formData.stage !== 'idea' && (
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Tài liệu dự án (Pitch Deck / Demo) <span className={styles.required}>*</span></label>
+                <div className={styles.fileUploadArea}>
+                  <label className={styles.fileInputLabel}>
+                    <input
+                      type="file"
+                      multiple
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files);
+                        handleInputChange({ target: { name: 'documents', value: [...formData.documents, ...files] } });
+                      }}
+                      className={styles.hiddenInput}
+                    />
+                    <div className={styles.uploadPlaceholder}>
+                      <Upload size={24} />
+                      <span>Chọn file để tải lên</span>
+                    </div>
+                  </label>
+                  {formData.documents && formData.documents.length > 0 && (
+                    <div className={styles.fileList}>
+                      {formData.documents.map((file, idx) => (
+                        <div key={idx} className={styles.fileItem}>
+                          <FileText size={18} />
+                          <span className={styles.fileName}>{file.name}</span>
+                          <button 
+                            type="button" 
+                            className={styles.removeFileBtn}
+                            onClick={() => {
+                              const newDocs = formData.documents.filter((_, i) => i !== idx);
+                              handleInputChange({ target: { name: 'documents', value: newDocs } });
+                            }}
+                          >
+                            <X size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {errors.documents && <p className={styles.errorText}>{errors.documents}</p>}
+              </div>
+            )}
 
             <div className={styles.hintBox}>
               <p className={styles.hintText}>

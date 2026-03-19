@@ -263,10 +263,10 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
       {showSuccessModal && (
         <SuccessModal
           onClose={() => setShowSuccessModal(false)}
-          title="Đăng Dự Án Thành Công!"
+          title="Tạo Dự Án Thành Công!"
           message={
             <span style={{ lineHeight: '1.6' }}>
-              Dự án của bạn đã được gửi thành công. Bạn có thể tải lên các tài liệu bổ sung (Pitch Deck, Business Plan) bất cứ lúc nào tại mục <strong>Quản lý dự án</strong> trong <strong>Startup Dashboard</strong>.
+              Dự án của bạn đã được tạo thành công. Bạn có thể tải lên các tài liệu bổ sung (Pitch Deck, Business Plan) và nộp dự án bất cứ lúc nào tại mục <strong>Quản lý dự án</strong> trong <strong>Startup Dashboard</strong>.
             </span>
           }
           primaryBtnText="Tuyệt vời"
