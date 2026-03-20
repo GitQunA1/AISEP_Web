@@ -83,6 +83,21 @@
     animation: scaleIn 0.4s ease-out 0.2s both;
 }
 
+.errorIcon {
+    color: #dc2626;
+    animation: scaleIn 0.4s ease-out 0.2s both;
+}
+
+.warningIcon {
+    color: #d97706;
+    animation: scaleIn 0.4s ease-out 0.2s both;
+}
+
+.infoIcon {
+    color: #667eea;
+    animation: scaleIn 0.4s ease-out 0.2s both;
+}
+
 @keyframes scaleIn {
     from {
         transform: scale(0);
@@ -136,6 +151,39 @@
 .primaryButton:hover {
     background-color: #1a8cd8;
     transform: translateY(-2px);
+}
+
+/* Button type variants */
+.primaryButton.success {
+    background-color: #10b981;
+}
+
+.primaryButton.success:hover {
+    background-color: #059669;
+}
+
+.primaryButton.error {
+    background-color: #dc2626;
+}
+
+.primaryButton.error:hover {
+    background-color: #b91c1c;
+}
+
+.primaryButton.warning {
+    background-color: #d97706;
+}
+
+.primaryButton.warning:hover {
+    background-color: #b45309;
+}
+
+.primaryButton.info {
+    background-color: #667eea;
+}
+
+.primaryButton.info:hover {
+    background-color: #5568d3;
 }
 
 /* Secondary Button */

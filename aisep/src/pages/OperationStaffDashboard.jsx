@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileCheck, CheckCircle, AlertCircle, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, FileText, Loader2, TrendingUp, ExternalLink, Shield } from 'lucide-react';
+import { FileCheck, CheckCircle, AlertCircle, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, FileText, Loader2, TrendingUp, ExternalLink, Shield, History } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import local from '../styles/OperationStaffDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
@@ -7,6 +7,8 @@ import SuccessModal from '../components/common/SuccessModal';
 import ErrorModal from '../components/common/ErrorModal';
 import RejectionReasonModal from '../components/common/RejectionReasonModal';
 import projectSubmissionService from '../services/projectSubmissionService';
+import AIEvaluationService from '../services/AIEvaluationService';
+import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/ProjectStatus';
 
 /**
@@ -33,6 +35,14 @@ export default function OperationStaffDashboard({ user }) {
     const [detailProject, setDetailProject] = useState(null);
     const [documents, setDocuments] = useState([]);
     const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+    const [processingProjectId, setProcessingProjectId] = useState(null);
+    const [processingAction, setProcessingAction] = useState(null); // 'approve' or 'reject'
+    
+    // AI History state
+    const [analysisHistory, setAnalysisHistory] = useState([]);
+    const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [showHistoryView, setShowHistoryView] = useState(false);
+    const [selectedHistoryResult, setSelectedHistoryResult] = useState(null);
 
     const dashboardData = {
         pendingApprovals: pendingApprovals.length,
@@ -131,9 +141,27 @@ export default function OperationStaffDashboard({ user }) {
         }
     };
 
+    const fetchAnalysisHistory = async (projectId) => {
+        setIsLoadingHistory(true);
+        try {
+            const response = await AIEvaluationService.getProjectAnalysisHistory(projectId);
+            if (response.success) {
+                setAnalysisHistory(response.data || []);
+            } else {
+                setAnalysisHistory([]);
+            }
+        } catch (error) {
+            console.error('Error fetching analysis history:', error);
+            setAnalysisHistory([]);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    };
+
     const openDetailModal = (project) => {
         setDetailProject(project);
         setShowDetailModal(true);
+        fetchAnalysisHistory(project.projectId);
     };
 
     const handleVerifyDocument = (id) => {
@@ -173,12 +201,15 @@ export default function OperationStaffDashboard({ user }) {
     };
 
     const handleApproveProject = async (projectId) => {
+        if (processingProjectId) return;
+        setProcessingProjectId(projectId);
+        setProcessingAction('approve');
         try {
             const response = await projectSubmissionService.approveProject(projectId);
             if (response?.success) {
                 setPendingProjects(pendingProjects.filter(p => p.projectId !== projectId));
                 setModalType('success');
-                setModalMessage('✓ Dự án đã được phê duyệt thành công!');
+                setModalMessage('✓ ' + (response?.message || 'Dự án đã được phê duyệt thành công!'));
                 setShowModal(true);
             } else {
                 setModalType('error');
@@ -188,8 +219,17 @@ export default function OperationStaffDashboard({ user }) {
         } catch (error) {
             console.error('Error approving project:', error);
             setModalType('error');
-            setModalMessage('❌ Lỗi phê duyệt dự án: ' + (error?.response?.data?.message || error?.message || 'Vui lòng thử lại'));
+            // If the backend provided a list of specific errors, show the first one.
+            // Otherwise, fall back to the general error message.
+            const errorMessage = (error?.errors && error.errors.length > 0)
+                ? error.errors[0]
+                : (error?.message || 'Vui lòng thử lại');
+            
+            setModalMessage('❌ Phê duyệt thất bại: ' + errorMessage);
             setShowModal(true);
+        } finally {
+            setProcessingProjectId(null);
+            setProcessingAction(null);
         }
     };
 
@@ -203,12 +243,15 @@ export default function OperationStaffDashboard({ user }) {
         }
 
         // If reason provided, submit rejection
+        if (processingProjectId) return;
+        setProcessingProjectId(projectId);
+        setProcessingAction('reject');
         try {
             const response = await projectSubmissionService.rejectProject(projectId, reason);
             if (response?.success) {
                 setPendingProjects(pendingProjects.filter(p => p.projectId !== projectId));
                 setModalType('success');
-                setModalMessage('✓ Dự án đã bị từ chối!');
+                setModalMessage('✓ ' + (response?.message || 'Dự án đã bị từ chối!'));
                 setShowModal(true);
             } else {
                 setModalType('error');
@@ -218,8 +261,15 @@ export default function OperationStaffDashboard({ user }) {
         } catch (error) {
             console.error('Error rejecting project:', error);
             setModalType('error');
-            setModalMessage('❌ Lỗi từ chối dự án: ' + (error?.response?.data?.message || error?.message || 'Vui lòng thử lại'));
+            const errorMessage = (error?.errors && error.errors.length > 0)
+                ? error.errors[0]
+                : (error?.message || 'Vui lòng thử lại');
+            
+            setModalMessage('❌ Từ chối thất bại: ' + errorMessage);
             setShowModal(true);
+        } finally {
+            setProcessingProjectId(null);
+            setProcessingAction(null);
         }
     };
 
@@ -381,14 +431,34 @@ export default function OperationStaffDashboard({ user }) {
                                                     <button
                                                         onClick={() => handleRejectProject(project.projectId)}
                                                         className={styles.dangerBtn}
+                                                        disabled={processingProjectId !== null}
+                                                        style={{ 
+                                                            opacity: processingProjectId !== null ? 0.6 : 1,
+                                                            cursor: processingProjectId !== null ? 'not-allowed' : 'pointer',
+                                                            minWidth: '100px' // Keep size stable
+                                                        }}
                                                     >
-                                                        Từ chối
+                                                        {processingProjectId === project.projectId && processingAction === 'reject' ? (
+                                                            <Loader2 size={18} className={styles.spinner} />
+                                                        ) : (
+                                                            'Từ chối'
+                                                        )}
                                                     </button>
                                                     <button
                                                         onClick={() => handleApproveProject(project.projectId)}
                                                         className={styles.primaryBtn}
+                                                        disabled={processingProjectId !== null}
+                                                        style={{ 
+                                                            opacity: processingProjectId !== null ? 0.6 : 1,
+                                                            cursor: processingProjectId !== null ? 'not-allowed' : 'pointer',
+                                                            minWidth: '100px' // Keep size stable
+                                                        }}
                                                     >
-                                                        Phê duyệt
+                                                        {processingProjectId === project.projectId && processingAction === 'approve' ? (
+                                                            <Loader2 size={18} className={styles.spinner} />
+                                                        ) : (
+                                                            'Phê duyệt'
+                                                        )}
                                                     </button>
                                                     <button
                                                         onClick={() => openDetailModal(project)}
@@ -834,6 +904,87 @@ export default function OperationStaffDashboard({ user }) {
 
                         {/* Modal Body */}
                         <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+                            {/* AI History Section */}
+                            <div style={{ 
+                                marginBottom: '24px', 
+                                padding: '16px', 
+                                backgroundColor: 'rgba(29, 155, 240, 0.05)', 
+                                borderRadius: '12px', 
+                                border: '1px solid var(--border-color)' 
+                            }}>
+                                <h4 style={{ 
+                                    fontSize: '14px', 
+                                    fontWeight: '800', 
+                                    marginBottom: '12px', 
+                                    color: 'var(--text-primary)', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '8px' 
+                                }}>
+                                    <History size={18} color="var(--primary-blue)" />
+                                    Lịch sử đánh giá AI
+                                </h4>
+                                {isLoadingHistory ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                        <Loader2 size={14} className={styles.spinner} />
+                                        Đang tải lịch sử...
+                                    </div>
+                                ) : analysisHistory.length > 0 ? (
+                                    <div style={{ 
+                                        display: 'flex', 
+                                        gap: '12px', 
+                                        overflowX: 'auto', 
+                                        paddingBottom: '8px',
+                                        msOverflowStyle: 'none',
+                                        scrollbarWidth: 'none'
+                                    }}>
+                                        {analysisHistory.map((item, index) => (
+                                            <button
+                                                key={item.evaluationId || index}
+                                                onClick={() => {
+                                                    setSelectedHistoryResult({ data: item });
+                                                    setShowHistoryView(true);
+                                                }}
+                                                style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    padding: '10px 16px',
+                                                    backgroundColor: 'var(--bg-primary)',
+                                                    border: '1px solid var(--border-color)',
+                                                    borderRadius: '12px',
+                                                    minWidth: '100px',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                                }}
+                                                onMouseOver={(e) => {
+                                                    e.currentTarget.style.borderColor = 'var(--primary-blue)';
+                                                    e.currentTarget.style.backgroundColor = 'rgba(29, 155, 240, 0.02)';
+                                                }}
+                                                onMouseOut={(e) => {
+                                                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                                                    e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                                                }}
+                                            >
+                                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '4px' }}>
+                                                    {new Date(item.createdAt || item.evaluatedAt || Date.now()).toLocaleDateString('vi-VN')}
+                                                </span>
+                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+                                                    <span style={{ fontSize: '18px', fontWeight: '900', color: 'var(--primary-blue)' }}>
+                                                        {item.potentialScore || 0}
+                                                    </span>
+                                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600' }}>/100</span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '13px', padding: '4px 0' }}>
+                                        Chưa có dữ liệu đánh giá
+                                    </div>
+                                )}
+                            </div>
                             {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
                                 <div className={styles.rejectionBox} style={{ marginBottom: '24px', marginTop: 0 }}>
                                     <div className={styles.rejectionTitle}>
@@ -1023,6 +1174,18 @@ export default function OperationStaffDashboard({ user }) {
                         </div>
                     </div>
                 </div>
+            )}
+            {showHistoryView && selectedHistoryResult && (
+                <AIEvaluationModal
+                    isOpen={showHistoryView}
+                    onCancel={() => {
+                        setShowHistoryView(false);
+                        setSelectedHistoryResult(null);
+                    }}
+                    analysisResult={selectedHistoryResult}
+                    isHistoryMode={true}
+                    projectName={detailProject?.projectName || 'Dự án'}
+                />
             )}
         </div>
     );

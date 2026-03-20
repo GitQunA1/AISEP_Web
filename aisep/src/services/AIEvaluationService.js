@@ -1,10 +1,9 @@
 /**
  * AIEvaluationService.js
  * AI-powered evaluation of startup projects
- * Implements: BR-10 (trigger after IP protection), BR-11 (analysis scope),
- *             BR-12 (output: score, strengths, weaknesses, risks), BR-13 (reference only),
- *             BR-14 (read-only results)
+ * Implements: BR-10, BR-11, BR-12, BR-13, BR-14
  */
+import apiClient from './apiClient';
 
 class AIEvaluationService {
   /**
@@ -354,6 +353,70 @@ class AIEvaluationService {
   }
 
   /**
+   * Call API to analyze project and get AI score
+   * POST /api/StartupAIAnalysis/{projectId}/analyze
+   * @param {number} projectId - Project ID
+   * @returns {Promise<object>} - { success, data: { score, strengths, weaknesses, risks, ... }, message }
+   */
+  static async analyzeProjectAPI(projectId) {
+    try {
+      if (!projectId && projectId !== 0) {
+        return { success: false, message: 'Invalid projectId' };
+      }
+
+      console.log('[AI ANALYSIS] API Call via apiClient:', projectId);
+      const result = await apiClient.post(`/api/StartupAIAnalysis/${projectId}/analyze`);
+      
+      console.log('[AI ANALYSIS] Success - data received with score:', result.data?.potentialScore);
+      
+      return {
+        success: true,
+        data: result.data || result,
+        message: result.message || 'Analysis complete'
+      };
+    } catch (error) {
+      console.error('[AI ANALYSIS] Error:', error);
+      return {
+        success: false,
+        data: null,
+        message: error.message || 'Network error while analyzing project'
+      };
+    }
+  }
+
+  /**
+   * Call API to evaluate project eligibility
+   * POST /api/StartupAIAnalysis/{projectId}/eligibility-evaluate
+   * @param {number} projectId - Project ID
+   * @returns {Promise<object>} - { success, data: { isEligible, failureReasons, ... }, message }
+   */
+  static async evaluateEligibilityAPI(projectId) {
+    try {
+      if (!projectId && projectId !== 0) {
+        return { success: false, message: 'Invalid projectId' };
+      }
+
+      console.log('[ELIGIBILITY] API Call via apiClient:', projectId);
+      const result = await apiClient.post(`/api/StartupAIAnalysis/${projectId}/eligibility-evaluate`);
+      
+      console.log('[ELIGIBILITY] Success - eligibility result received:', result.data?.isEligibleStartup);
+      
+      return {
+        success: true,
+        data: result.data || result,
+        message: result.message || 'Evaluation complete'
+      };
+    } catch (error) {
+      console.error('[ELIGIBILITY] Error:', error);
+      return {
+        success: false,
+        data: null,
+        message: error.message || 'Network error while evaluating eligibility'
+      };
+    }
+  }
+
+  /**
    * Helper: Convert score to category
    * @param {number} score
    * @returns {string}
@@ -375,6 +438,40 @@ class AIEvaluationService {
     if (score >= 60) return 'Project has good foundation with some areas for improvement';
     if (score >= 40) return 'Project needs development in key areas';
     return 'Project requires significant refinement before investment consideration';
+  }
+
+  /**
+   * Get previous AI analysis results for a project
+   * GET /api/StartupAIAnalysis/{projectId}
+   * @param {number} projectId - Project ID
+   * @returns {Promise<object>} - { success, data: Array of results, message }
+   */
+  static async getProjectAnalysisHistory(projectId) {
+    try {
+      if (!projectId && projectId !== 0) {
+        return { success: false, message: 'Invalid projectId' };
+      }
+
+      console.log('[AI HISTORY] Fetching for project:', projectId);
+      const result = await apiClient.get(`/api/StartupAIAnalysis/${projectId}`);
+      
+      // Normalize data to always be an array
+      const rawData = result.data || result;
+      const normalizedData = Array.isArray(rawData) ? rawData : (rawData ? [rawData] : []);
+
+      return {
+        success: true,
+        data: normalizedData,
+        message: result.message || 'History fetched successfully'
+      };
+    } catch (error) {
+      console.error('[AI HISTORY] Error:', error);
+      return {
+        success: false,
+        data: [],
+        message: error.message || 'Error fetching history'
+      };
+    }
   }
 }
 
