@@ -81,17 +81,17 @@ const recommendationPatterns = [
  */
 const translateText = (text) => {
   if (!text || typeof text !== 'string') return text;
-  
+
   let result = text;
-  
+
   // Translate exact phrases first (longest first to avoid partial matches)
   const sortedPhrases = Object.entries(commonPhrases).sort((a, b) => b[0].length - a[0].length);
-  
+
   for (const [en, vi] of sortedPhrases) {
     const regex = new RegExp(en, 'gi');
     result = result.replace(regex, vi);
   }
-  
+
   return result;
 };
 
@@ -102,7 +102,14 @@ const translateText = (text) => {
  */
 export const translateComponent = (componentName) => {
   if (!componentName) return '';
-  return componentNameMap[componentName] || componentName;
+  // Try case-insensitive match
+  const match = Object.entries(componentNameMap).find(
+    ([en]) => en.toLowerCase() === componentName.toLowerCase()
+  );
+  if (match) return match[1];
+
+  // Default fallback with capitalization
+  return componentName.charAt(0).toUpperCase() + componentName.slice(1);
 };
 
 /**
@@ -112,7 +119,7 @@ export const translateComponent = (componentName) => {
  */
 const translateStrength = (strength) => {
   if (!strength || typeof strength !== 'string') return strength;
-  
+
   return translateText(strength);
 };
 
@@ -123,7 +130,7 @@ const translateStrength = (strength) => {
  */
 const translateWeakness = (weakness) => {
   if (!weakness || typeof weakness !== 'string') return weakness;
-  
+
   return translateText(weakness);
 };
 
@@ -134,7 +141,7 @@ const translateWeakness = (weakness) => {
  */
 const translateRecommendation = (recommendation) => {
   if (!recommendation || typeof recommendation !== 'string') return recommendation;
-  
+
   return translateText(recommendation);
 };
 
@@ -145,7 +152,7 @@ const translateRecommendation = (recommendation) => {
  */
 const translateAnalysisReason = (reason) => {
   if (!reason || typeof reason !== 'string') return reason;
-  
+
   return translateText(reason);
 };
 
@@ -157,25 +164,25 @@ const translateAnalysisReason = (reason) => {
  */
 export const translateAIResults = (analysisResult, eligibilityResult) => {
   if (!analysisResult?.data) return { analysisResult, eligibilityResult };
-  
+
   const translatedAnalysis = { ...analysisResult };
   const data = { ...analysisResult.data };
-  
+
   // Translate strengths
   if (Array.isArray(data.strengths)) {
     data.strengths = data.strengths.map(translateStrength);
   }
-  
+
   // Translate weaknesses
   if (Array.isArray(data.weaknesses)) {
     data.weaknesses = data.weaknesses.map(translateWeakness);
   }
-  
+
   // Translate recommendations
   if (Array.isArray(data.recommendations)) {
     data.recommendations = data.recommendations.map(translateRecommendation);
   }
-  
+
   // Translate score breakdown component names
   if (Array.isArray(data.scoreBreakdown)) {
     data.scoreBreakdown = data.scoreBreakdown.map(item => ({
@@ -183,32 +190,32 @@ export const translateAIResults = (analysisResult, eligibilityResult) => {
       component: translateComponent(item.component)
     }));
   }
-  
+
   // Translate analysis details
   if (typeof data.analysis === 'object' && data.analysis !== null) {
-    const translatedAnalysis = {};
-    
+    const translatedSections = {};
+
     Object.entries(data.analysis).forEach(([key, section]) => {
       const translatedSection = { ...section };
-      
+
       if (translatedSection.reason) {
         translatedSection.reason = translateAnalysisReason(translatedSection.reason);
       }
-      
+
       if (Array.isArray(translatedSection.evidence)) {
-        translatedSection.evidence = translatedSection.evidence.map(e => 
+        translatedSection.evidence = translatedSection.evidence.map(e =>
           typeof e === 'string' ? translateAnalysisReason(e) : e
         );
       }
-      
-      translatedAnalysis[translateComponent(key)] = translatedSection;
+
+      translatedSections[translateComponent(key)] = translatedSection;
     });
-    
-    data.analysis = translatedAnalysis;
+
+    data.analysis = translatedSections;
   }
-  
+
   translatedAnalysis.data = data;
-  
+
   return { analysisResult: translatedAnalysis, eligibilityResult };
 };
 

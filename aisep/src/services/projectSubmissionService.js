@@ -207,7 +207,7 @@ export const projectSubmissionService = {
    * @returns {Promise<any>}
    */
   approveProject: async (projectId) => {
-    const response = await apiClient.patch(`/api/Projects/${projectId}/approve`);
+    const response = await apiClient.put(`/api/projects/${projectId}/approve`);
     return response;
   },
 
@@ -248,6 +248,16 @@ export const projectSubmissionService = {
       console.error('Error verifying document:', error);
       throw error;
     }
+  },
+
+  /**
+   * Delete a document by ID
+   * @param {number} documentId 
+   * @returns {Promise<any>}
+   */
+  deleteDocument: async (documentId) => {
+    const response = await apiClient.delete(`/api/documents/${documentId}`);
+    return response;
   }
 };
 

@@ -1,10 +1,9 @@
 /**
  * AIEvaluationService.js
  * AI-powered evaluation of startup projects
- * Implements: BR-10 (trigger after IP protection), BR-11 (analysis scope),
- *             BR-12 (output: score, strengths, weaknesses, risks), BR-13 (reference only),
- *             BR-14 (read-only results)
+ * Implements: BR-10, BR-11, BR-12, BR-13, BR-14
  */
+import apiClient from './apiClient';
 
 class AIEvaluationService {
   /**
@@ -361,84 +360,22 @@ class AIEvaluationService {
    */
   static async analyzeProjectAPI(projectId) {
     try {
-      // Validate projectId
       if (!projectId && projectId !== 0) {
-        console.error('[AI ANALYSIS] Invalid projectId:', projectId);
-        return {
-          success: false,
-          data: null,
-          message: 'Invalid projectId: ' + projectId
-        };
+        return { success: false, message: 'Invalid projectId' };
       }
 
-      const token = localStorage.getItem('aisep_token');
-      const url = `/api/StartupAIAnalysis/${projectId}/analyze`;
+      console.log('[AI ANALYSIS] API Call via apiClient:', projectId);
+      const result = await apiClient.post(`/api/StartupAIAnalysis/${projectId}/analyze`);
       
-      console.log('[AI ANALYSIS] API Call:', {
-        method: 'POST',
-        url: url,
-        projectId: projectId,
-        projectIdType: typeof projectId,
-        hasToken: !!token,
-        tokenPreview: token ? `${token.substring(0, 20)}...` : 'NO TOKEN'
-      });
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token || ''}`,
-        }
-      });
-      
-      console.log('[AI ANALYSIS] Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url
-      });
-      
-      // Check if response has content
-      const contentType = response.headers.get('content-type');
-      const isJSON = contentType && contentType.includes('application/json');
-      
-      if (!response.ok) {
-        let errorMessage = 'Failed to analyze project';
-        
-        if (isJSON) {
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-            console.log('[AI ANALYSIS] Error response:', errorData);
-          } catch (e) {
-            console.warn('Could not parse error response:', e);
-          }
-        }
-        
-        return {
-          success: false,
-          data: null,
-          message: `${response.status} ${response.statusText}: ${errorMessage}`
-        };
-      }
-      
-      if (!isJSON) {
-        return {
-          success: false,
-          data: null,
-          message: 'API returned non-JSON response'
-        };
-      }
-      
-      const result = await response.json();
       console.log('[AI ANALYSIS] Success - data received with score:', result.data?.potentialScore);
       
       return {
-        success: result.success !== false && response.ok,
+        success: true,
         data: result.data || result,
         message: result.message || 'Analysis complete'
       };
     } catch (error) {
-      console.error('[AI ANALYSIS] Network/Catch Error:', error);
+      console.error('[AI ANALYSIS] Error:', error);
       return {
         success: false,
         data: null,
@@ -455,84 +392,22 @@ class AIEvaluationService {
    */
   static async evaluateEligibilityAPI(projectId) {
     try {
-      // Validate projectId
       if (!projectId && projectId !== 0) {
-        console.error('[ELIGIBILITY] Invalid projectId:', projectId);
-        return {
-          success: false,
-          data: null,
-          message: 'Invalid projectId: ' + projectId
-        };
+        return { success: false, message: 'Invalid projectId' };
       }
 
-      const token = localStorage.getItem('aisep_token');
-      const url = `/api/StartupAIAnalysis/${projectId}/eligibility-evaluate`;
+      console.log('[ELIGIBILITY] API Call via apiClient:', projectId);
+      const result = await apiClient.post(`/api/StartupAIAnalysis/${projectId}/eligibility-evaluate`);
       
-      console.log('[ELIGIBILITY] API Call:', {
-        method: 'POST',
-        url: url,
-        projectId: projectId,
-        projectIdType: typeof projectId,
-        hasToken: !!token,
-        tokenPreview: token ? `${token.substring(0, 20)}...` : 'NO TOKEN'
-      });
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token || ''}`,
-        }
-      });
-      
-      console.log('[ELIGIBILITY] Response:', {
-        status: response.status,
-        statusText: response.statusText,
-        url: response.url
-      });
-      
-      // Check if response has content
-      const contentType = response.headers.get('content-type');
-      const isJSON = contentType && contentType.includes('application/json');
-      
-      if (!response.ok) {
-        let errorMessage = 'Failed to evaluate eligibility';
-        
-        if (isJSON) {
-          try {
-            const errorData = await response.json();
-            errorMessage = errorData.message || errorMessage;
-            console.log('[ELIGIBILITY] Error response:', errorData);
-          } catch (e) {
-            console.warn('Could not parse error response:', e);
-          }
-        }
-        
-        return {
-          success: false,
-          data: null,
-          message: `${response.status} ${response.statusText}: ${errorMessage}`
-        };
-      }
-      
-      if (!isJSON) {
-        return {
-          success: false,
-          data: null,
-          message: 'API returned non-JSON response'
-        };
-      }
-      
-      const result = await response.json();
       console.log('[ELIGIBILITY] Success - eligibility result received:', result.data?.isEligibleStartup);
       
       return {
-        success: result.success !== false && response.ok,
+        success: true,
         data: result.data || result,
         message: result.message || 'Evaluation complete'
       };
     } catch (error) {
-      console.error('[ELIGIBILITY] Network/Catch Error:', error);
+      console.error('[ELIGIBILITY] Error:', error);
       return {
         success: false,
         data: null,
@@ -563,6 +438,40 @@ class AIEvaluationService {
     if (score >= 60) return 'Project has good foundation with some areas for improvement';
     if (score >= 40) return 'Project needs development in key areas';
     return 'Project requires significant refinement before investment consideration';
+  }
+
+  /**
+   * Get previous AI analysis results for a project
+   * GET /api/StartupAIAnalysis/{projectId}
+   * @param {number} projectId - Project ID
+   * @returns {Promise<object>} - { success, data: Array of results, message }
+   */
+  static async getProjectAnalysisHistory(projectId) {
+    try {
+      if (!projectId && projectId !== 0) {
+        return { success: false, message: 'Invalid projectId' };
+      }
+
+      console.log('[AI HISTORY] Fetching for project:', projectId);
+      const result = await apiClient.get(`/api/StartupAIAnalysis/${projectId}`);
+      
+      // Normalize data to always be an array
+      const rawData = result.data || result;
+      const normalizedData = Array.isArray(rawData) ? rawData : (rawData ? [rawData] : []);
+
+      return {
+        success: true,
+        data: normalizedData,
+        message: result.message || 'History fetched successfully'
+      };
+    } catch (error) {
+      console.error('[AI HISTORY] Error:', error);
+      return {
+        success: false,
+        data: [],
+        message: error.message || 'Error fetching history'
+      };
+    }
   }
 }
 

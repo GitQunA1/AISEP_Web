@@ -60,6 +60,9 @@ export default function RejectionReasonModal({ onSubmit, onCancel, projectName }
                             placeholder="Nhập lý do từ chối dự án (tối thiểu 10 ký tự)..."
                             className={`${styles.textarea} ${error ? styles.textareaError : ''}`}
                         />
+                        <div style={{ color: '#f4212e', fontSize: '12px', marginTop: '4px', fontWeight: '500' }}>
+                            * Lưu ý: Không sử dụng dấu chấm (.) và dấu phẩy (,) do hạn chế của hệ thống.
+                        </div>
                         {error && (
                             <div className={styles.errorText}>
                                 <AlertCircle size={16} />

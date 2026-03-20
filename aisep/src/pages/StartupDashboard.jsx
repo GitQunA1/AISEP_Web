@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2 } from 'lucide-react';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
@@ -35,6 +35,7 @@ export default function StartupDashboard({ user }) {
     const [isProtectingDocuments, setIsProtectingDocuments] = React.useState(false);
     const [isEvaluatingAI, setIsEvaluatingAI] = React.useState(false);
     const [aiEvaluationResult, setAIEvaluationResult] = React.useState(null);
+    const [aiEvaluationError, setAiEvaluationError] = React.useState(null);
     const [showAIEvaluationModal, setShowAIEvaluationModal] = React.useState(false);
     const [showSubmitConfirmation, setShowSubmitConfirmation] = React.useState(false);
     const [pendingSubmitProjectId, setPendingSubmitProjectId] = React.useState(null);
@@ -58,6 +59,17 @@ export default function StartupDashboard({ user }) {
     const [myProjects, setMyProjects] = React.useState([]);
     const [startupProfile, setStartupProfile] = React.useState(null);
     const [showProjectForm, setShowProjectForm] = React.useState(false);
+    const [projectFilter, setProjectFilter] = React.useState('all');
+    const [analysisHistory, setAnalysisHistory] = React.useState([]);
+    const [isLoadingHistory, setIsLoadingHistory] = React.useState(false);
+    const [showHistoryView, setShowHistoryView] = React.useState(false);
+    const [selectedHistoryResult, setSelectedHistoryResult] = React.useState(null);
+
+    // Document Deletion States
+    const [isDeletingDocument, setIsDeletingDocument] = React.useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
+    const [documentToDelete, setDocumentToDelete] = React.useState(null);
+    const [blockedFiles, setBlockedFiles] = React.useState([]); // Session-based blacklist for verified docs
     const hiddenFileInput = React.useRef(null);
 
     // Initialize section from localStorage if set (e.g., redirect from project creation)
@@ -88,6 +100,23 @@ export default function StartupDashboard({ user }) {
         keyFeatures: '',
     });
 
+    const fetchAnalysisHistory = async (projectId) => {
+        setIsLoadingHistory(true);
+        try {
+            const response = await AIEvaluationService.getProjectAnalysisHistory(projectId);
+            if (response.success) {
+                setAnalysisHistory(response.data || []);
+            } else {
+                setAnalysisHistory([]);
+            }
+        } catch (error) {
+            console.error('Error fetching analysis history:', error);
+            setAnalysisHistory([]);
+        } finally {
+            setIsLoadingHistory(false);
+        }
+    };
+
     React.useEffect(() => {
         const fetchDashboardData = async () => {
             try {
@@ -114,11 +143,11 @@ export default function StartupDashboard({ user }) {
                     // Fetch documents for all projects to get total count
                     if (projects.length > 0) {
                         try {
-                            const allDocsPromises = projects.map(p => 
+                            const allDocsPromises = projects.map(p =>
                                 projectSubmissionService.getDocuments(p.projectId || p.id)
                             );
                             const docsResponses = await Promise.all(allDocsPromises);
-                            
+
                             const allDocuments = docsResponses.reduce((acc, res) => {
                                 if (res.success && res.data) {
                                     const docs = Array.isArray(res.data) ? res.data : (res.data.items || []);
@@ -126,7 +155,7 @@ export default function StartupDashboard({ user }) {
                                 }
                                 return acc;
                             }, []);
-                            
+
                             setDocuments(allDocuments);
                         } catch (docErr) {
                             console.error("Error fetching documents for total count:", docErr);
@@ -330,13 +359,13 @@ export default function StartupDashboard({ user }) {
             }
         } catch (error) {
             console.error('Error verifying document:', error);
-            
+
             // Handle specific case where document is not on blockchain because project is not yet approved
             // Note: error is already normalized by apiClient interceptor and contains { message, errors, statusCode }
             const errorList = error.errors || [];
             const errorMessage = error.message || '';
-            
-            const isNotOnBlockchain = errorList.some(e => 
+
+            const isNotOnBlockchain = errorList.some(e =>
                 typeof e === 'string' && e.toLowerCase().includes("not registered on the blockchain")
             ) || errorMessage.toLowerCase().includes("not registered on the blockchain");
 
@@ -369,6 +398,13 @@ export default function StartupDashboard({ user }) {
     const uploadFile = async (file) => {
         if (!detailProject) return;
 
+        if (blockedFiles.includes(file.name)) {
+            setSuccessModalType('error');
+            setSuccessMessage(`Tài liệu "${file.name}" đã từng được xác thực trên Blockchain. Theo quy định, bạn không thể tải lại tài liệu này.`);
+            setShowSuccessModal(true);
+            return;
+        }
+
         const projectId = detailProject.projectId || detailProject.id;
         setIsUploading(true);
         try {
@@ -393,10 +429,49 @@ export default function StartupDashboard({ user }) {
         }
     };
 
-    const handleDeleteDocument = async (documentId) => {
-        if (!window.confirm('Bạn có chắc chắn muốn xóa tài liệu này?')) return;
-        alert('Tính năng xóa tài liệu đang được cập nhật.');
-        // Logic for deleting document...
+    const handleDeleteDocument = (doc) => {
+        if (detailProject.status !== 'Draft') {
+            setSuccessMessage('Bạn chỉ có thể xóa tài liệu khi dự án ở trạng thái Nháp.');
+            setShowSuccessModal(true);
+            return;
+        }
+        setDocumentToDelete(doc);
+        setShowDeleteConfirm(true);
+    };
+
+    const confirmDeleteDocument = async () => {
+        if (!documentToDelete) return;
+
+        setIsDeletingDocument(true);
+        try {
+            const response = await projectSubmissionService.deleteDocument(documentToDelete.id);
+            if (response.success || response.isSuccess) {
+                // BR-08 Safety: If the deleted document was blockchain verified, block its name/hash from re-upload
+                if (documentToDelete.txHash) {
+                    setBlockedFiles(prev => [...prev, documentToDelete.name]);
+                }
+
+                // Refresh documents list using the comprehensive fetch helper
+                // This handles array mapping and non-array responses correctly
+                await fetchProjectDocuments(detailProject.projectId || detailProject.id);
+
+                setSuccessModalType('success');
+                setSuccessMessage('Xóa tài liệu thành công.');
+                setShowSuccessModal(true);
+
+                setShowDeleteConfirm(false);
+                setDocumentToDelete(null);
+            } else {
+                setSuccessMessage('Lỗi khi xóa tài liệu: ' + (response.message || 'Không rõ lỗi.'));
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('Error deleting document:', error);
+            setSuccessMessage('Đã xảy ra lỗi khi xóa tài liệu.');
+            setShowSuccessModal(true);
+        } finally {
+            setIsDeletingDocument(false);
+        }
     };
 
     // BR-08: Protect Documents on Blockchain
@@ -502,7 +577,7 @@ export default function StartupDashboard({ user }) {
             projectIdParsed: validId,
             type: typeof projectId
         });
-        
+
         // Show confirmation modal instead of window.confirm
         setPendingSubmitProjectId(validId);
         setShowSubmitConfirmation(true);
@@ -517,7 +592,7 @@ export default function StartupDashboard({ user }) {
             setShowSuccessModal(true);
             return;
         }
-        
+
         // Ensure projectId is valid
         const projectId = parseInt(pendingSubmitProjectId) || pendingSubmitProjectId;
         console.log('[SUBMIT] Starting AI evaluation with projectId:', {
@@ -527,44 +602,41 @@ export default function StartupDashboard({ user }) {
         });
         setShowSubmitConfirmation(false);
         setIsEvaluatingAI(true);
+        setAiEvaluationError(null); // Reset error
         setShowAIEvaluationModal(true); // Show modal immediately for loading state
-        
-        try {
-            // Call both APIs in parallel with same projectId
-            console.log('[SUBMIT] Calling AI APIs with projectId:', projectId);
-            console.log('[SUBMIT] API #1: POST /api/StartupAIAnalysis/' + projectId + '/analyze');
-            console.log('[SUBMIT] API #2: POST /api/StartupAIAnalysis/' + projectId + '/eligibility-evaluate');
-            
-            const [analysisRes, eligibilityRes] = await Promise.all([
-                AIEvaluationService.analyzeProjectAPI(projectId),
-                AIEvaluationService.evaluateEligibilityAPI(projectId)
-            ]);
 
-            console.log('[SUBMIT] API responses received:', {
-                analysisSuccess: analysisRes?.success,
-                analysisStatus: analysisRes?.message,
-                eligibilitySuccess: eligibilityRes?.success,
-                eligibilityStatus: eligibilityRes?.message
+        try {
+            // Start AI Analysis API
+            console.log('[SUBMIT] Starting AI Analysis API with projectId:', projectId);
+            
+            const analysisRes = await AIEvaluationService.analyzeProjectAPI(projectId);
+
+            console.log('[SUBMIT] AI Analysis response received:', {
+                success: analysisRes?.success,
+                status: analysisRes?.message
             });
 
-            // Translate results to Vietnamese
-            const { analysisResult: translatedAnalysis, eligibilityResult: translatedEligibility } = translateAIResults(analysisRes, eligibilityRes);
+            // If analysis failed, show error in modal
+            if (!analysisRes.success) {
+                console.error('[SUBMIT] AI Analysis API failed:', analysisRes.message);
+                setAiEvaluationError(analysisRes.message || 'Không thể lấy kết quả đánh giá AI.');
+                setIsEvaluatingAI(false);
+                return;
+            }
 
-            // Store results
+            // Translate analysis result
+            const { analysisResult: translatedAnalysis } = translateAIResults(analysisRes, null);
+            
+            // Show analysis result
             setAIEvaluationResult({
                 projectId: projectId,
-                analysis: translatedAnalysis,
-                eligibility: translatedEligibility
+                analysis: translatedAnalysis
             });
-
-            console.log('[SUBMIT] AI Evaluation Modal showing with projectId:', projectId);
-            // Show modal
-            setShowAIEvaluationModal(true);
+            
+            setIsEvaluatingAI(false); // Stop loading indicator
         } catch (error) {
             console.error('[SUBMIT] Error evaluating project with AI:', error);
-            setSuccessModalType('error');
-            setSuccessMessage('Lỗi khi đánh giá dự án: ' + translateError(error));
-            setShowSuccessModal(true);
+            setAiEvaluationError(error.message || 'Hệ thống đang bận, vui lòng thử lại sau.');
         } finally {
             setIsEvaluatingAI(false);
             setPendingSubmitProjectId(null);
@@ -574,10 +646,10 @@ export default function StartupDashboard({ user }) {
     // Handle confirm from AI Evaluation Modal
     const handleConfirmProjectSubmission = async () => {
         if (!aiEvaluationResult) return;
-        
+
         setShowAIEvaluationModal(false);
         setIsSubmittingProject(true);
-        
+
         try {
             const res = await projectSubmissionService.submitProject(aiEvaluationResult.projectId);
             if (res && (res.success || res.isSuccess)) {
@@ -829,73 +901,124 @@ export default function StartupDashboard({ user }) {
                 {activeSection === 'my-projects' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Danh sách dự án của tôi</h3>
+                            <div className={styles.cardHeader}>
+                                <h3 className={styles.cardTitle} style={{ marginBottom: 0 }}>Danh sách dự án của tôi</h3>
+                                <div className={styles.filterTabs} style={{ display: 'flex', gap: '8px' }}>
+                                    {[
+                                        { id: 'all', label: 'Tất cả' },
+                                        { id: 'draft', label: 'Bản nháp' },
+                                        { id: 'pending', label: 'Chờ duyệt' },
+                                        { id: 'approved', label: 'Đã duyệt' },
+                                        { id: 'rejected', label: 'Bị từ chối' }
+                                    ].map(filter => (
+                                        <button
+                                            key={filter.id}
+                                            onClick={() => setProjectFilter(filter.id)}
+                                            className={projectFilter === filter.id ? styles.primaryBtn : styles.secondaryBtn}
+                                            style={{
+                                                padding: '4px 12px',
+                                                fontSize: '12px',
+                                                height: '32px',
+                                                minWidth: 'auto'
+                                            }}
+                                        >
+                                            {filter.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
                             <div className={styles.list}>
-                                {myProjects.length === 0 ? (
+                                {isLoadingInitialData ? (
+                                    <div className={styles.loadingState}>
+                                        <Loader2 className={styles.spinner} size={24} />
+                                        <span>Đang tải danh sách dự án...</span>
+                                    </div>
+                                ) : myProjects.length === 0 ? (
                                     <div className={styles.emptyState}>
                                         <p>Bạn chưa đăng dự án nào.</p>
                                     </div>
                                 ) : (
-                                    myProjects.map(p => (
-                                        <div
-                                            key={p.id || p.projectId}
-                                            className={styles.listItem}
-                                            style={{ borderLeftColor: STATUS_COLORS[p.status || 'Draft'] }}
-                                        >
-                                            <div className={styles.listContent}>
-                                                <div className={styles.listItemHeader}>
-                                                    <h4 className={styles.listItemTitle}>
-                                                        {p.name || p.projectName}
-                                                    </h4>
-                                                    <span
-                                                        className={styles.badge}
-                                                        style={{
-                                                            backgroundColor: `${STATUS_COLORS[p.status || 'Draft']}25`,
-                                                            color: STATUS_COLORS[p.status || 'Draft'],
-                                                            border: `1px solid ${STATUS_COLORS[p.status || 'Draft']}40`
+                                    (() => {
+                                        const filteredProjects = myProjects.filter(p => {
+                                            if (projectFilter === 'all') return true;
+                                            const status = p.status || 'Draft';
+                                            if (projectFilter === 'draft') return status === 'Draft' || status === 'IpProtected';
+                                            if (projectFilter === 'pending') return status === 'Pending' || status === 'Submitted';
+                                            if (projectFilter === 'approved') return status === 'Approved' || status === 'Published';
+                                            if (projectFilter === 'rejected') return status === 'Rejected';
+                                            return true;
+                                        });
+
+                                        if (filteredProjects.length === 0) {
+                                            return (
+                                                <div className={styles.emptyState}>
+                                                    <p>Không có dự án nào trong mục này.</p>
+                                                </div>
+                                            );
+                                        }
+
+                                        return filteredProjects.map(p => (
+                                            <div
+                                                key={p.id || p.projectId}
+                                                className={styles.listItem}
+                                                style={{ borderLeftColor: STATUS_COLORS[p.status || 'Draft'] }}
+                                            >
+                                                <div className={styles.listContent}>
+                                                    <div className={styles.listItemHeader}>
+                                                        <h4 className={styles.listItemTitle}>
+                                                            {p.name || p.projectName}
+                                                        </h4>
+                                                        <span
+                                                            className={styles.badge}
+                                                            style={{
+                                                                backgroundColor: `${STATUS_COLORS[p.status || 'Draft']}25`,
+                                                                color: STATUS_COLORS[p.status || 'Draft'],
+                                                                border: `1px solid ${STATUS_COLORS[p.status || 'Draft']}40`
+                                                            }}
+                                                        >
+                                                            {STATUS_LABELS[p.status || 'Draft'] || 'Bản nháp'}
+                                                        </span>
+                                                    </div>
+                                                    <p className={styles.subtitle}>{p.shortDescription || p.description}</p>
+                                                    <div className={styles.listMeta}>
+                                                        <span>Giai đoạn: {getStageLabel(p.developmentStage)}</span>
+                                                        {p.submittedDate && <span> • Nộp ngày: {p.submittedDate}</span>}
+                                                    </div>
+
+                                                    {p.status === 'Rejected' && p.rejectionReason && (
+                                                        <div className={styles.rejectionBox}>
+                                                            <div className={styles.rejectionTitle}>
+                                                                <AlertCircle size={14} />
+                                                                <span>Lý do từ chối:</span>
+                                                            </div>
+                                                            <p className={styles.rejectionText}>{p.rejectionReason}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div className={styles.listActions}>
+                                                    {p.status === 'Draft' && (
+                                                        <button
+                                                            className={styles.primaryBtn}
+                                                            onClick={() => handleSubmitProject(p.id || p.projectId)}
+                                                            disabled={isSubmittingProject}
+                                                        >
+                                                            {isSubmittingProject ? '...' : 'Nộp dự án'}
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        className={styles.secondaryBtn}
+                                                        onClick={() => {
+                                                            setDetailProject(p);
+                                                            setShowDetailModal(true);
+                                                            fetchAnalysisHistory(p.id || p.projectId);
                                                         }}
                                                     >
-                                                        {STATUS_LABELS[p.status || 'Draft'] || 'Bản nháp'}
-                                                    </span>
-                                                </div>
-                                                <p className={styles.subtitle}>{p.shortDescription || p.description}</p>
-                                                <div className={styles.listMeta}>
-                                                    <span>Giai đoạn: {getStageLabel(p.developmentStage)}</span>
-                                                    {p.submittedDate && <span> • Nộp ngày: {p.submittedDate}</span>}
-                                                </div>
-
-                                                {p.status === 'Rejected' && p.rejectionReason && (
-                                                    <div className={styles.rejectionBox}>
-                                                        <div className={styles.rejectionTitle}>
-                                                            <AlertCircle size={14} />
-                                                            <span>Lý do từ chối:</span>
-                                                        </div>
-                                                        <p className={styles.rejectionText}>{p.rejectionReason}</p>
-                                                    </div>
-                                                )}
-                                            </div>
-                                            <div className={styles.listActions}>
-                                                {p.status === 'Draft' && (
-                                                    <button
-                                                        className={styles.primaryBtn}
-                                                        onClick={() => handleSubmitProject(p.id || p.projectId)}
-                                                        disabled={isSubmittingProject}
-                                                    >
-                                                        {isSubmittingProject ? '...' : 'Nộp dự án'}
+                                                        Chi tiết
                                                     </button>
-                                                )}
-                                                <button
-                                                    className={styles.secondaryBtn}
-                                                    onClick={() => {
-                                                        setDetailProject(p);
-                                                        setShowDetailModal(true);
-                                                    }}
-                                                >
-                                                    Chi tiết
-                                                </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))
+                                        ));
+                                    })()
                                 )}
                             </div>
                         </div>
@@ -916,54 +1039,60 @@ export default function StartupDashboard({ user }) {
                             </h3>
 
                             <div className={styles.list}>
-                                {advisorRequests.length === 0 ? (
+                                {isLoadingInitialData ? (
+                                    <div className={styles.loadingState}>
+                                        <Loader2 className={styles.spinner} size={24} />
+                                        <span>Đang tải danh sách yêu cầu...</span>
+                                    </div>
+                                ) : advisorRequests.length === 0 ? (
                                     <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
                                         <p>Chưa có yêu cầu tư vấn nào.</p>
                                     </div>
-                                ) : advisorRequests.map(request => (
-                                    <div
-                                        key={request.id}
-                                        className={styles.listItem}
-                                        style={{ borderLeftColor: request.status === 'pending' ? '#d97706' : request.status === 'accepted' ? '#17bf63' : '#f4212e' }}
-                                    >
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listItemHeader}>
-                                                <h4 className={styles.listItemTitle}>
-                                                    {request.advisorName}
-                                                </h4>
-                                                <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`}>
-                                                    {request.status === 'pending' ? 'Đang chờ' : request.status === 'accepted' ? 'Đã chấp nhận' : 'Bị từ chối'}
-                                                </span>
+                                ) : (
+                                    advisorRequests.map(request => (
+                                        <div
+                                            key={request.id}
+                                            className={styles.listItem}
+                                            style={{ borderLeftColor: request.status === 'pending' ? '#d97706' : request.status === 'accepted' ? '#17bf63' : '#f4212e' }}
+                                        >
+                                            <div className={styles.listContent}>
+                                                <div className={styles.listItemHeader}>
+                                                    <h4 className={styles.listItemTitle}>
+                                                        {request.advisorName}
+                                                    </h4>
+                                                    <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`}>
+                                                        {request.status === 'pending' ? 'Đang chờ' : request.status === 'accepted' ? 'Đã chấp nhận' : 'Bị từ chối'}
+                                                    </span>
+                                                </div>
+                                                <div className={styles.mb8}>
+                                                    <span className={`${styles.badge} ${styles.badgeInfo}`}>
+                                                        {request.expertise}
+                                                    </span>
+                                                </div>
+                                                <p className={styles.subtitle}>{request.message}</p>
+                                                <div className={styles.listMeta}>
+                                                    Ngày yêu cầu: {request.requestDate}
+                                                    {request.appointmentDate && ` • Cuộc hẹn: ${request.appointmentDate}`}
+                                                </div>
                                             </div>
-                                            <div className={styles.mb8}>
-                                                <span className={`${styles.badge} ${styles.badgeInfo}`}>
-                                                    {request.expertise}
-                                                </span>
-                                            </div>
-                                            <p className={styles.subtitle}>{request.message}</p>
-                                            <div className={styles.listMeta}>
-                                                Ngày yêu cầu: {request.requestDate}
-                                                {request.appointmentDate && ` • Cuộc hẹn: ${request.appointmentDate}`}
-                                            </div>
+                                            {request.status === 'pending' && (
+                                                <div className={styles.listActions}>
+                                                    <button
+                                                        className={`${styles.primaryBtn} ${styles.smallBtn}`}
+                                                        onClick={() => handleAcceptRequest(request.id)}
+                                                    >
+                                                        Chấp nhận
+                                                    </button>
+                                                    <button
+                                                        className={`${styles.dangerBtn} ${styles.smallBtn}`}
+                                                        onClick={() => handleRejectRequest(request.id)}
+                                                    >
+                                                        Từ chối
+                                                    </button>
+                                                </div>
+                                            )}
                                         </div>
-                                        {request.status === 'pending' && (
-                                            <div className={styles.listActions}>
-                                                <button
-                                                    className={`${styles.primaryBtn} ${styles.smallBtn}`}
-                                                    onClick={() => handleAcceptRequest(request.id)}
-                                                >
-                                                    Chấp nhận
-                                                </button>
-                                                <button
-                                                    className={`${styles.dangerBtn} ${styles.smallBtn}`}
-                                                    onClick={() => handleRejectRequest(request.id)}
-                                                >
-                                                    Từ chối
-                                                </button>
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
+                                    )))}
                             </div>
                         </div>
                     </div>
@@ -1072,7 +1201,90 @@ export default function StartupDashboard({ user }) {
                             </button>
                         </div>
 
-                        <div style={{ padding: '24px', overflowY: 'auto' }}>
+                        {/* Modal Body */}
+                        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, maxHeight: '80vh' }}>
+                            {/* AI History Section */}
+                            <div style={{ 
+                                marginBottom: '24px', 
+                                padding: '16px', 
+                                backgroundColor: 'rgba(29, 155, 240, 0.05)', 
+                                borderRadius: '12px', 
+                                border: '1px solid var(--border-color)' 
+                            }}>
+                                <h4 style={{ 
+                                    fontSize: '14px', 
+                                    fontWeight: '800', 
+                                    marginBottom: '12px', 
+                                    color: 'var(--text-primary)', 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    gap: '8px' 
+                                }}>
+                                    <History size={18} color="var(--primary-blue)" />
+                                    Lịch sử đánh giá AI
+                                </h4>
+                                {isLoadingHistory ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                        <Loader2 size={14} className={styles.spinner} />
+                                        Đang tải lịch sử...
+                                    </div>
+                                ) : analysisHistory.length > 0 ? (
+                                    <div style={{ 
+                                        display: 'flex', 
+                                        gap: '12px', 
+                                        overflowX: 'auto', 
+                                        paddingBottom: '8px',
+                                        msOverflowStyle: 'none',
+                                        scrollbarWidth: 'none'
+                                    }}>
+                                        {analysisHistory.map((item, index) => (
+                                            <button
+                                                key={item.evaluationId || index}
+                                                onClick={() => {
+                                                    setSelectedHistoryResult({ data: item });
+                                                    setShowHistoryView(true);
+                                                }}
+                                                style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    alignItems: 'center',
+                                                    padding: '10px 16px',
+                                                    backgroundColor: 'var(--bg-primary)',
+                                                    border: '1px solid var(--border-color)',
+                                                    borderRadius: '12px',
+                                                    minWidth: '100px',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
+                                                }}
+                                                onMouseOver={(e) => {
+                                                    e.currentTarget.style.borderColor = 'var(--primary-blue)';
+                                                    e.currentTarget.style.backgroundColor = 'rgba(29, 155, 240, 0.02)';
+                                                }}
+                                                onMouseOut={(e) => {
+                                                    e.currentTarget.style.borderColor = 'var(--border-color)';
+                                                    e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                                                }}
+                                            >
+                                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '4px' }}>
+                                                    {new Date(item.createdAt || item.evaluatedAt || Date.now()).toLocaleDateString('vi-VN')}
+                                                </span>
+                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+                                                    <span style={{ fontSize: '18px', fontWeight: '900', color: 'var(--primary-blue)' }}>
+                                                        {item.potentialScore || 0}
+                                                    </span>
+                                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600' }}>/100</span>
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </div>
+                                ) : (
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '13px', padding: '4px 0' }}>
+                                        Chưa có dữ liệu đánh giá
+                                    </div>
+                                )}
+                            </div>
+
                             {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
                                 <div className={styles.rejectionBox} style={{ marginBottom: '24px', marginTop: 0 }}>
                                     <div className={styles.rejectionTitle}>
@@ -1320,14 +1532,18 @@ export default function StartupDashboard({ user }) {
                                                                     <button
                                                                         className={styles.iconBtnDanger}
                                                                         title="Xóa"
-                                                                        onClick={() => handleDeleteDocument(doc.id)}
-                                                                        disabled={detailProject.status !== 'Draft'}
+                                                                        onClick={() => handleDeleteDocument(doc)}
+                                                                        disabled={detailProject.status !== 'Draft' || isDeletingDocument}
                                                                         style={{
-                                                                            opacity: (detailProject.status !== 'Draft') ? 0.5 : 1,
-                                                                            cursor: (detailProject.status !== 'Draft') ? 'not-allowed' : 'pointer'
+                                                                            opacity: (detailProject.status !== 'Draft' || isDeletingDocument) ? 0.5 : 1,
+                                                                            cursor: (detailProject.status !== 'Draft' || isDeletingDocument) ? 'not-allowed' : 'pointer'
                                                                         }}
                                                                     >
-                                                                        <Trash2 size={16} />
+                                                                        {isDeletingDocument && documentToDelete?.id === doc.id ? (
+                                                                            <Loader2 size={16} className={styles.spinner} />
+                                                                        ) : (
+                                                                            <Trash2 size={16} />
+                                                                        )}
                                                                     </button>
                                                                 </div>
                                                             </td>
@@ -1415,11 +1631,13 @@ export default function StartupDashboard({ user }) {
                     analysisResult={aiEvaluationResult?.analysis}
                     eligibilityResult={aiEvaluationResult?.eligibility}
                     isLoading={isEvaluatingAI}
-                    projectName={myProjects.find(p => (p.id || p.projectId) === aiEvaluationResult?.projectId)?.projectName || 'Dự án'}
+                    error={aiEvaluationError}
+                    projectName={myProjects.find(p => (p.id || p.projectId) === (aiEvaluationResult?.projectId || pendingSubmitProjectId))?.projectName || 'Dự án'}
                     onSubmit={handleConfirmProjectSubmission}
                     onCancel={() => {
                         setShowAIEvaluationModal(false);
                         setAIEvaluationResult(null);
+                        setAiEvaluationError(null);
                     }}
                 />
             )}
@@ -1447,6 +1665,35 @@ export default function StartupDashboard({ user }) {
                     setPendingSubmitProjectId(null);
                 }}
             />
+
+            <ConfirmationModal
+                isOpen={showDeleteConfirm}
+                title="Xác nhận xóa tài liệu"
+                message={`Bạn có chắc chắn muốn xóa tài liệu "${documentToDelete?.name}"? Hành động này không thể hoàn tác. Bạn sẽ không thể tải lại tệp này lên hệ thống nếu tệp đã được xác thực với Blockchain.`}
+                type="warning"
+                primaryBtnText={isDeletingDocument ? "Đang xóa..." : "Xóa tài liệu"}
+                secondaryBtnText="Hủy"
+                onPrimaryClick={confirmDeleteDocument}
+                onSecondaryClick={() => {
+                    setShowDeleteConfirm(false);
+                    setDocumentToDelete(null);
+                }}
+                isLoading={isDeletingDocument}
+            />
+
+            {showHistoryView && selectedHistoryResult && (
+                <AIEvaluationModal
+                    isOpen={showHistoryView}
+                    analysisResult={selectedHistoryResult}
+                    isLoading={false}
+                    isHistoryMode={true}
+                    projectName={detailProject?.projectName || 'Dự án'}
+                    onCancel={() => {
+                        setShowHistoryView(false);
+                        setSelectedHistoryResult(null);
+                    }}
+                />
+            )}
         </div>
     );
 }

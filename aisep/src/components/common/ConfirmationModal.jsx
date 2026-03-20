@@ -33,25 +33,28 @@ export default function ConfirmationModal({
     if (!isOpen) return null;
 
     const getIcon = () => {
+        const iconSize = 48; // Larger icon for the 80px container
         switch(type) {
             case 'success':
-                return <CheckCircle size={32} style={{ color: '#17bf63' }} />;
+                return <CheckCircle size={iconSize} style={{ color: '#17bf63' }} />;
             case 'error':
-                return <XCircle size={32} style={{ color: '#dc2626' }} />;
+                return <XCircle size={iconSize} style={{ color: '#dc2626' }} />;
             case 'warning':
-                return <AlertCircle size={32} style={{ color: '#d97706' }} />;
+                return <AlertCircle size={iconSize} style={{ color: '#d97706' }} />;
             case 'info':
             default:
-                return <AlertCircle size={32} style={{ color: '#667eea' }} />;
+                return <AlertCircle size={iconSize} style={{ color: '#1d9bf0' }} />;
         }
     };
 
-    const handlePrimary = () => {
+    const handlePrimary = (e) => {
+        e.stopPropagation();
         if (onPrimaryClick) onPrimaryClick();
         if (onClose) onClose();
     };
 
-    const handleSecondary = () => {
+    const handleSecondary = (e) => {
+        e.stopPropagation();
         if (onSecondaryClick) onSecondaryClick();
         if (onClose) onClose();
     };
@@ -73,19 +76,19 @@ export default function ConfirmationModal({
                 {/* Footer Buttons */}
                 <div className={styles.footer}>
                     <button 
-                        className={styles.secondaryBtn} 
-                        onClick={handleSecondary}
-                        disabled={isLoading}
-                    >
-                        {secondaryBtnText}
-                    </button>
-                    <button 
                         className={`${styles.primaryBtn} ${styles[type]}`}
                         onClick={handlePrimary}
                         disabled={isLoading}
                     >
                         {isLoading && <span className={styles.spinner}></span>}
                         {primaryBtnText}
+                    </button>
+                    <button 
+                        className={styles.secondaryBtn} 
+                        onClick={handleSecondary}
+                        disabled={isLoading}
+                    >
+                        {secondaryBtnText}
                     </button>
                 </div>
             </div>

@@ -57,8 +57,16 @@ const MESSAGE_MAP = {
   'Project updated successfully.': 'Cập nhật dự án thành công!',
   'Project approved successfully.': 'Dự án đã được duyệt thành công!',
   'Project rejected successfully.': 'Dự án đã bị từ chối.',
+  'Project approved and document stored on blockchain successfully.':
+    'Dự án đã được phê duyệt và tài liệu đã được lưu trữ trên blockchain thành công.',
+  'Chỉ duyệt dự án đang chờ duyệt (Pending).': 'Chỉ có thể duyệt các dự án đang ở trạng thái chờ duyệt.',
+  'Không tìm thấy tài liệu gắn với dự án này. Vui lòng upload tài liệu trước khi duyệt.':
+    'Không tìm thấy tài liệu đính kèm với dự án này. Vui lòng tải lên tài liệu trước khi duyệt.',
+  'Tài liệu chưa có thông tin hash. Vui lòng upload lại tài liệu.':
+    'Tài liệu chưa có thông tin mã hash. Vui lòng tải lên lại tài liệu.',
   'Project not found.': 'Không tìm thấy thông tin dự án.',
   'Failed to submit project': 'Không thể gửi dự án. Vui lòng thử lại sau.',
+  'Operation not allowed': 'Thao tác không được phép.',
 };
 
 /**
