@@ -354,6 +354,194 @@ class AIEvaluationService {
   }
 
   /**
+   * Call API to analyze project and get AI score
+   * POST /api/StartupAIAnalysis/{projectId}/analyze
+   * @param {number} projectId - Project ID
+   * @returns {Promise<object>} - { success, data: { score, strengths, weaknesses, risks, ... }, message }
+   */
+  static async analyzeProjectAPI(projectId) {
+    try {
+      // Validate projectId
+      if (!projectId && projectId !== 0) {
+        console.error('[AI ANALYSIS] Invalid projectId:', projectId);
+        return {
+          success: false,
+          data: null,
+          message: 'Invalid projectId: ' + projectId
+        };
+      }
+
+      const token = localStorage.getItem('aisep_token');
+      const url = `/api/StartupAIAnalysis/${projectId}/analyze`;
+      
+      console.log('[AI ANALYSIS] API Call:', {
+        method: 'POST',
+        url: url,
+        projectId: projectId,
+        projectIdType: typeof projectId,
+        hasToken: !!token,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : 'NO TOKEN'
+      });
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || ''}`,
+        }
+      });
+      
+      console.log('[AI ANALYSIS] Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url
+      });
+      
+      // Check if response has content
+      const contentType = response.headers.get('content-type');
+      const isJSON = contentType && contentType.includes('application/json');
+      
+      if (!response.ok) {
+        let errorMessage = 'Failed to analyze project';
+        
+        if (isJSON) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+            console.log('[AI ANALYSIS] Error response:', errorData);
+          } catch (e) {
+            console.warn('Could not parse error response:', e);
+          }
+        }
+        
+        return {
+          success: false,
+          data: null,
+          message: `${response.status} ${response.statusText}: ${errorMessage}`
+        };
+      }
+      
+      if (!isJSON) {
+        return {
+          success: false,
+          data: null,
+          message: 'API returned non-JSON response'
+        };
+      }
+      
+      const result = await response.json();
+      console.log('[AI ANALYSIS] Success - data received with score:', result.data?.potentialScore);
+      
+      return {
+        success: result.success !== false && response.ok,
+        data: result.data || result,
+        message: result.message || 'Analysis complete'
+      };
+    } catch (error) {
+      console.error('[AI ANALYSIS] Network/Catch Error:', error);
+      return {
+        success: false,
+        data: null,
+        message: error.message || 'Network error while analyzing project'
+      };
+    }
+  }
+
+  /**
+   * Call API to evaluate project eligibility
+   * POST /api/StartupAIAnalysis/{projectId}/eligibility-evaluate
+   * @param {number} projectId - Project ID
+   * @returns {Promise<object>} - { success, data: { isEligible, failureReasons, ... }, message }
+   */
+  static async evaluateEligibilityAPI(projectId) {
+    try {
+      // Validate projectId
+      if (!projectId && projectId !== 0) {
+        console.error('[ELIGIBILITY] Invalid projectId:', projectId);
+        return {
+          success: false,
+          data: null,
+          message: 'Invalid projectId: ' + projectId
+        };
+      }
+
+      const token = localStorage.getItem('aisep_token');
+      const url = `/api/StartupAIAnalysis/${projectId}/eligibility-evaluate`;
+      
+      console.log('[ELIGIBILITY] API Call:', {
+        method: 'POST',
+        url: url,
+        projectId: projectId,
+        projectIdType: typeof projectId,
+        hasToken: !!token,
+        tokenPreview: token ? `${token.substring(0, 20)}...` : 'NO TOKEN'
+      });
+
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token || ''}`,
+        }
+      });
+      
+      console.log('[ELIGIBILITY] Response:', {
+        status: response.status,
+        statusText: response.statusText,
+        url: response.url
+      });
+      
+      // Check if response has content
+      const contentType = response.headers.get('content-type');
+      const isJSON = contentType && contentType.includes('application/json');
+      
+      if (!response.ok) {
+        let errorMessage = 'Failed to evaluate eligibility';
+        
+        if (isJSON) {
+          try {
+            const errorData = await response.json();
+            errorMessage = errorData.message || errorMessage;
+            console.log('[ELIGIBILITY] Error response:', errorData);
+          } catch (e) {
+            console.warn('Could not parse error response:', e);
+          }
+        }
+        
+        return {
+          success: false,
+          data: null,
+          message: `${response.status} ${response.statusText}: ${errorMessage}`
+        };
+      }
+      
+      if (!isJSON) {
+        return {
+          success: false,
+          data: null,
+          message: 'API returned non-JSON response'
+        };
+      }
+      
+      const result = await response.json();
+      console.log('[ELIGIBILITY] Success - eligibility result received:', result.data?.isEligibleStartup);
+      
+      return {
+        success: result.success !== false && response.ok,
+        data: result.data || result,
+        message: result.message || 'Evaluation complete'
+      };
+    } catch (error) {
+      console.error('[ELIGIBILITY] Network/Catch Error:', error);
+      return {
+        success: false,
+        data: null,
+        message: error.message || 'Network error while evaluating eligibility'
+      };
+    }
+  }
+
+  /**
    * Helper: Convert score to category
    * @param {number} score
    * @returns {string}
