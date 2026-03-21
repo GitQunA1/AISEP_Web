@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, CheckCircle, TrendingUp, MapPin, Building2, Target, Filter } from 'lucide-react';
+import { Search, CheckCircle, TrendingUp, MapPin, Building2, Target, Filter, Flame } from 'lucide-react';
 import FeedHeader from '../feed/FeedHeader';
 import FilterModal from './FilterModal';
 import InvestorDetail from './InvestorDetail';
@@ -112,12 +112,10 @@ export default function InvestorDiscovery({ user }) {
 
     return (
         <div className={styles.container}>
-            {/* Search Header */}
-            <FeedHeader
-                title="Tìm nhà đầu tư"
-                subtitle="Khám phá quỹ đầu tư và các nhà đầu tư cá nhân phù hợp với tiêu chí của bạn"
-                showFilter={false}
-            />
+            <div className={styles.header}>
+                <h1 className={styles.headerTitle}>Tìm nhà đầu tư</h1>
+                <p className={styles.headerSubtitle}>Khám phá quỹ đầu tư và nhà đầu tư phù hợp với tiêu chí của bạn</p>
+            </div>
 
             <div className={styles.searchSection}>
                 <div className={styles.searchContainer}>
@@ -164,22 +162,27 @@ export default function InvestorDiscovery({ user }) {
                         <div key={investor.id} className={styles.investorCard}>
                             {/* Header */}
                             <div className={styles.cardHeader}>
-                                <img
-                                    src={investor.avatar}
-                                    alt={investor.name}
-                                    className={styles.avatar}
-                                />
+                                <div className={styles.avatarContainer}>
+                                    <img
+                                        src={investor.avatar}
+                                        alt={investor.name}
+                                        className={styles.avatar}
+                                    />
+                                </div>
                                 <div className={styles.investorInfo}>
                                     <div className={styles.nameRow}>
-                                        <h3 className={styles.investorName}>{investor.name}</h3>
-                                        {investor.verified && (
-                                            <CheckCircle size={18} className={styles.verifiedBadge} />
-                                        )}
-                                        <span className={`${styles.matchScore} ${styles.matchMedium}`}>
-                                            % Phù hợp: cập nhật sau
-                                        </span>
+                                        <div className={styles.nameWrapper}>
+                                            <h3 className={styles.investorName}>{investor.name}</h3>
+                                            {investor.verified && (
+                                                <CheckCircle size={16} className={styles.verifiedBadge} />
+                                            )}
+                                            <span className={styles.investorType}>· {investor.type}</span>
+                                        </div>
+                                        <div className={styles.matchBadge}>
+                                            <Flame size={14} className={styles.flameIcon} />
+                                            <span>Phù hợp: cập nhật sau</span>
+                                        </div>
                                     </div>
-                                    <p className={styles.investorType}>{investor.type}</p>
                                 </div>
                             </div>
 

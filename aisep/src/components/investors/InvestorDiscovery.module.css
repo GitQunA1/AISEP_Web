@@ -4,7 +4,6 @@
     margin: 0 auto;
     background-color: transparent;
     min-height: 100vh;
-    padding-bottom: 60px;
 }
 
 @media (max-width: 1439px) and (min-width: 1024px) {
@@ -14,14 +13,34 @@
     }
 }
 
-.searchSection {
-    padding: var(--spacing-md);
+.header {
+    padding: 24px 20px 12px 20px;
     background-color: var(--bg-primary);
-    border-bottom: 1px solid var(--border-color);
+}
+
+.headerTitle {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+    letter-spacing: -0.5px;
+}
+
+.headerSubtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.searchSection {
+    padding: 12px 20px;
+    background-color: var(--bg-primary);
     display: flex;
     gap: 12px;
     align-items: center;
-    position: relative;
+    position: sticky;
+    top: 0;
+    z-index: 10;
 }
 
 .filterButton {
@@ -61,12 +80,7 @@
    ========================== */
 /* Header styles removed, replaced by FeedHeader */
 
-.headerTitle {
-    font-size: var(--font-size-xl);
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
-}
+/* Header styles removed, replaced by custom header above */
 
 .searchContainer {
     position: relative;
@@ -217,6 +231,33 @@
 .investorInfo {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.nameWrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+.matchBadge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background-color: rgba(255, 122, 0, 0.1);
+    color: #ff7a00;
+    padding: 4px 12px;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 700;
+    width: fit-content;
+}
+
+.flameIcon {
+    fill: currentColor;
 }
 
 .nameRow {
@@ -228,8 +269,8 @@
 }
 
 .investorName {
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 800;
     color: var(--text-primary);
     margin: 0;
 }
@@ -270,6 +311,7 @@
     font-size: 14px;
     color: var(--text-secondary);
     margin: 0;
+    font-weight: 400;
 }
 
 /* Thesis/Bio */

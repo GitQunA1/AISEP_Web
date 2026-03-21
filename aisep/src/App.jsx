@@ -181,9 +181,8 @@ function App() {
           onShowRegister={handleShowRegister}
           onBack={handleBackToMain}
         />
-      ) : currentView === 'dashboard' ? (
-        // Show role-specific dashboard wrapped in DashboardLayout
-        <DashboardLayout
+      ) : ['main', 'advisors', 'investors', 'ai', 'dashboard'].includes(currentView) ? (
+        <MainLayout
           onShowRegister={handleShowRegister}
           onShowLogin={handleShowLogin}
           onShowHome={handleShowHome}
@@ -193,94 +192,44 @@ function App() {
           onShowAI={handleShowAI}
           user={user}
           onLogout={handleLogout}
+          showAdvisors={currentView === 'advisors'}
+          showInvestors={currentView === 'investors'}
+          showAI={currentView === 'ai'}
           activeView={currentView}
         >
-          {user?.role?.toString().toLowerCase() === 'startup' || user?.role === 0 ? (
-            <StartupDashboard user={user} />
-          ) : user?.role?.toString().toLowerCase() === 'investor' || user?.role === 1 ? (
-            <InvestorDashboard user={user} />
-          ) : user?.role?.toString().toLowerCase() === 'advisor' || user?.role === 2 ? (
-            <AdvisorDashboard user={user} />
-          ) : user?.role?.toString().toLowerCase() === 'operation_staff' || user?.role?.toString().toLowerCase() === 'staff' || user?.role === 3 ? (
-            <OperationStaffDashboard user={user} />
-          ) : (
-            <div style={{ padding: '20px', textAlign: 'center' }}>
-              <p>Dashboard not available for your role</p>
-            </div>
+          {currentView === 'dashboard' && (
+            user?.role?.toString().toLowerCase() === 'startup' || user?.role === 0 ? (
+              <StartupDashboard user={user} />
+            ) : user?.role?.toString().toLowerCase() === 'investor' || user?.role === 1 ? (
+              <InvestorDashboard user={user} />
+            ) : user?.role?.toString().toLowerCase() === 'advisor' || user?.role === 2 ? (
+              <AdvisorDashboard user={user} />
+            ) : user?.role?.toString().toLowerCase() === 'operation_staff' || user?.role?.toString().toLowerCase() === 'staff' || user?.role === 3 ? (
+              <OperationStaffDashboard user={user} />
+            ) : (
+              <div style={{ padding: '20px', textAlign: 'center' }}>
+                <p>Dashboard not available for your role</p>
+              </div>
+            )
           )}
-        </DashboardLayout>
-      ) : currentView === 'main' ? (
-        <MainLayout
-          onShowRegister={handleShowRegister}
-          onShowLogin={handleShowLogin}
-          onShowHome={handleShowHome}
-          onShowAdvisors={handleShowAdvisors}
-          onShowInvestors={handleShowInvestors}
-          onShowDashboard={handleShowDashboard}
-          onShowAI={handleShowAI}
-          user={user}
-          onLogout={handleLogout}
-          activeView={currentView}
-        />
-      ) : currentView === 'roleSelection' ? (
-        <RegisterSelection
-          onBack={handleBackToMain}
-          onRoleSelect={handleRoleSelect}
-        />
-      ) : currentView === 'advisors' ? (
-        <MainLayout
-          onShowRegister={handleShowRegister}
-          onShowLogin={handleShowLogin}
-          onShowHome={handleShowHome}
-          onShowAdvisors={handleShowAdvisors}
-          onShowInvestors={handleShowInvestors}
-          onShowDashboard={handleShowDashboard}
-          onShowAI={handleShowAI}
-          user={user}
-          onLogout={handleLogout}
-          showAdvisors={true}
-          activeView={currentView}
-        />
-      ) : currentView === 'investors' ? (
-        <MainLayout
-          onShowRegister={handleShowRegister}
-          onShowLogin={handleShowLogin}
-          onShowHome={handleShowHome}
-          onShowAdvisors={handleShowAdvisors}
-          onShowInvestors={handleShowInvestors}
-          onShowDashboard={handleShowDashboard}
-          onShowAI={handleShowAI}
-          user={user}
-          onLogout={handleLogout}
-          showInvestors={true}
-          activeView={currentView}
-        />
-      ) : currentView === 'ai' ? (
-        <MainLayout
-          onShowRegister={handleShowRegister}
-          onShowLogin={handleShowLogin}
-          onShowHome={handleShowHome}
-          onShowAdvisors={handleShowAdvisors}
-          onShowInvestors={handleShowInvestors}
-          onShowDashboard={handleShowDashboard}
-          onShowAI={handleShowAI}
-          user={user}
-          onLogout={handleLogout}
-          showAI={true}
-          activeView={currentView}
-        />
+        </MainLayout>
       ) : currentView === 'verifyEmail' ? (
         <VerifyEmailPage onVerified={() => {
           window.history.replaceState({}, document.title, window.location.pathname);
           setCurrentView('login');
         }} />
-      ) : (
+      ) : currentView === 'roleSelection' ? (
+        <RegisterSelection
+          onRoleSelect={handleRoleSelect}
+          onBack={handleBackToMain}
+        />
+      ) : currentView === 'register' ? (
         <RegisterPage
           selectedRole={selectedRole}
           onBack={handleBackToRoleSelection}
           onComplete={handleRegistrationComplete}
         />
-      )}
+      ) : null}
     </>
   );
 }

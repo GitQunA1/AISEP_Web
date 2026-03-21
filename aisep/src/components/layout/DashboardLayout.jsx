@@ -51,7 +51,10 @@ function DashboardLayout({
       </div>
 
       {/* 2. Main Content (Scrollable) */}
-      <main className={`${styles.mainContent} mainContent`}>
+      <main 
+        key={activeView}
+        className={`${styles.mainContent} mainContent view-enter`}
+      >
         {/* Mobile Top Bar */}
         <TopBar onMenuClick={openSidebar} />
 
@@ -63,7 +66,7 @@ function DashboardLayout({
 
       {/* 3. Right Panel (Fixed) */}
       <div className={`${styles.rightPanel} rightPanel`}>
-        <RightPanel />
+        <RightPanel showSearch={false} />
       </div>
 
       {/* Mobile Bottom Navigation - Kept outside strict grid flow if fixed, or handled by media queries */}

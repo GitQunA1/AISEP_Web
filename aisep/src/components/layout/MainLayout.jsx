@@ -9,6 +9,7 @@ import FeedHeader from '../feed/FeedHeader';
 import StartupCard from '../feed/StartupCard';
 import StartupDetail from '../feed/StartupDetail';
 import ProjectSubmissionForm from '../startup/ProjectSubmissionForm';
+import investorService from '../../services/investorService';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import AdvisorsPage from '../../pages/AdvisorsPage';
 import AdvisorDetailView from '../profile/AdvisorDetailView';
@@ -24,7 +25,22 @@ import SuccessModal from '../common/SuccessModal';
  * Handles strictly defined 3-column grid layout (desktop) vs single column (mobile)
  * Locks viewport width/height to prevent scrolling
  */
-function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, onShowInvestors, onShowDashboard, onShowAI, user, onLogout, showAdvisors = false, showInvestors = false, showAI = false, activeView = 'main' }) {
+function MainLayout({ 
+  children,
+  onShowRegister, 
+  onShowLogin, 
+  onShowHome, 
+  onShowAdvisors, 
+  onShowInvestors, 
+  onShowDashboard, 
+  onShowAI, 
+  user, 
+  onLogout, 
+  showAdvisors = false, 
+  showInvestors = false, 
+  showAI = false, 
+  activeView = 'main' 
+}) {
   const [isPremium] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedStartupId, setSelectedStartupId] = useState(null);
@@ -37,8 +53,10 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
   // Fetch all projects (we use getAllProjects to get public feed)
   const [allStartups, setAllStartups] = useState([]);
   const [filteredStartups, setFilteredStartups] = useState([]);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [feedError, setFeedError] = useState(null);
+  const [investorCount, setInvestorCount] = useState(0);
   const [activeFilters, setActiveFilters] = useState({
     industry: '',
     stage: '',
@@ -116,7 +134,17 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
         setIsLoading(false);
       }
     };
+    const fetchStats = async () => {
+      try {
+        const invRes = await investorService.getAllInvestors({ pageSize: 1 });
+        setInvestorCount(invRes.totalCount || 0);
+      } catch (err) {
+        console.error("Failed to fetch investor count", err);
+      }
+    };
+
     fetchFeed();
+    fetchStats();
   }, [showAdvisors, showInvestors]);
 
   // 2. Define Handlers
@@ -125,18 +153,33 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
 
   const handleFilterChange = (filters) => {
     setActiveFilters(filters);
+  };
 
-    // Apply filters to startups
+  // Combined Filtering Logic
+  React.useEffect(() => {
+    const query = searchQuery.toLowerCase().trim();
+    
     const filtered = allStartups.filter(startup => {
-      if (filters.industry && startup.industry !== filters.industry) return false;
-      if (filters.stage && startup.stage !== filters.stage) return false;
-      if (filters.minScore && (startup.aiEvaluation?.startupScore || 0) < filters.minScore) return false;
-      if (filters.fundingStage && startup.fundingStage !== filters.fundingStage) return false;
+      // 1. Core Filters (Industry, Stage, Score)
+      if (activeFilters.industry && startup.industry !== activeFilters.industry) return false;
+      if (activeFilters.stage && startup.stage !== activeFilters.stage) return false;
+      if (activeFilters.minScore && (startup.aiScore || 0) < activeFilters.minScore) return false;
+      if (activeFilters.fundingStage && startup.fundingStage !== activeFilters.fundingStage) return false;
+
+      // 2. Search Query (Name, Description, Tags)
+      if (query) {
+        const matchesName = (startup.name || '').toLowerCase().includes(query);
+        const matchesDesc = (startup.description || '').toLowerCase().includes(query);
+        const matchesTags = (startup.tags || []).some(tag => tag.toLowerCase().includes(query));
+        
+        if (!matchesName && !matchesDesc && !matchesTags) return false;
+      }
+
       return true;
     });
 
     setFilteredStartups(filtered);
-  };
+  }, [allStartups, activeFilters, searchQuery]);
 
   return (
     <div className={`${styles.mainContainer} ${showAI ? styles.aiMode : ''}`}>
@@ -162,13 +205,18 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
       </div>
 
       {/* 2. Main Feed (Scrollable) */}
-      <main className={`${styles.mainContent} ${showAI ? styles.noScroll : ''}`}>
+      <main 
+        key={activeView}
+        className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} view-enter`}
+      >
         {/* MOBILE HEADER (Fixed Top) */}
         {/* TopBar visibility is controlled by CSS (display: none on desktop) */}
         <TopBar onMenuClick={toggleMobileMenu} />
 
         {/* Feed Content or Profile Page */}
-        {showAdvisors ? (
+        {children ? (
+          children
+        ) : showAdvisors ? (
           selectedAdvisor ? (
             <AdvisorDetailView
               user={user}
@@ -194,6 +242,7 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
               <FeedHeader
                 user={user}
                 onFilterChange={handleFilterChange}
+                showStats={true}
                 onShowProjectForm={() => {
                   const userRole = (user?.role !== undefined && user?.role !== null) ? user.role.toString().toLowerCase() : '';
                   if ((userRole === 'startup' || userRole === '0') && !hasStartupProfile) {
@@ -202,6 +251,19 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
                     setShowProjectForm(true);
                   }
                 }}
+                stats={{
+                  approvedCount: allStartups.length,
+                  investorCount: investorCount,
+                  industryCount: new Set(allStartups.flatMap(s => s.tags)).size
+                }}
+                industryCounts={
+                  allStartups.reduce((acc, s) => {
+                    s.tags.forEach(tag => {
+                      acc[tag] = (acc[tag] || 0) + 1;
+                    });
+                    return acc;
+                  }, {})
+                }
               />
 
               {showProfileModal && (
@@ -221,15 +283,17 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
                   <p>{feedError}</p>
                 </div>
               ) : filteredStartups.length > 0 ? (
-                filteredStartups.map((startup) => (
-                  <StartupCard
-                    key={startup.id}
-                    startup={startup}
-                    isPremium={isPremium}
-                    user={user}
-                    onViewProfile={(id) => setSelectedStartupId(id)}
-                  />
-                ))
+                <div className={styles.feedGrid}>
+                  {filteredStartups.map((startup) => (
+                    <StartupCard
+                      key={startup.id}
+                      startup={startup}
+                      isPremium={isPremium}
+                      user={user}
+                      onViewProfile={(id) => setSelectedStartupId(id)}
+                    />
+                  ))}
+                </div>
               ) : (
                 <div className={styles.emptyState}>
                   <Rocket size={48} className={styles.emptyIcon} />
@@ -244,7 +308,11 @@ function MainLayout({ onShowRegister, onShowLogin, onShowHome, onShowAdvisors, o
 
       {/* 3. Right Panel (Fixed) */}
       <div className={styles.rightPanel}>
-        <RightPanel />
+        <RightPanel 
+          searchQuery={searchQuery} 
+          onSearchChange={(e) => setSearchQuery(e.target.value)} 
+          showSearch={activeView === 'main'}
+        />
       </div>
 
       {/* Project Submission Form Modal */}

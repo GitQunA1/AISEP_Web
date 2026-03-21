@@ -1,31 +1,114 @@
 .filterContainer {
-    position: relative;
-    background-color: var(--bg-primary);
-    padding: 4px 20px 20px 20px;
-    border-bottom: 1px solid var(--border-color);
+  padding: 0;
+  margin-top: 0;
+  position: relative;
+}
+
+.tabsWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.tabsInner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--spacing-md);
+  padding: 0 20px;
+}
+
+.tabsList {
+  display: flex;
+  gap: 20px;
+  gap: 24px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 4px 0;
+  align-items: center;
+  padding-bottom: 2px;
+}
+
+.tabsList::-webkit-scrollbar {
+  display: none;
+}
+
+.tabItem {
+  background: none;
+  border: none;
+  padding: 8px 4px 12px 4px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  position: relative;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.tabItem:hover {
+  color: var(--primary-blue);
+}
+
+.activeTab {
+  color: var(--primary-blue);
+}
+
+.activeTab::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background-color: var(--primary-blue);
+  border-radius: 99px;
+}
+
+.tabIcon {
     display: flex;
     align-items: center;
-    gap: 12px;
+    justify-content: center;
+    opacity: 0.8;
+}
+
+.activeTab .tabIcon {
+    opacity: 1;
+}
+
+.tabCount {
+    font-size: 12px;
+    font-weight: 500;
+    opacity: 0.6;
+    margin-left: 2px;
+}
+
+.activeTab .tabCount {
+    opacity: 0.9;
 }
 
 .filterToggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    padding: 10px 18px;
-    border-radius: 9999px;
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
 }
 
 .filterToggle:hover {
-    background-color: var(--bg-hover);
-    border-color: var(--text-secondary);
+  background-color: var(--bg-hover);
+  color: var(--primary-blue);
 }
 
 .badge {
@@ -40,16 +123,33 @@
 
 .filterPanel {
     position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
+    top: calc(100% + 8px);
+    left: auto;
+    right: 20px;
+    width: 300px;
     background-color: var(--bg-primary);
     border: 1px solid var(--border-color);
-    border-top: none;
-    border-radius: 0 0 16px 16px;
-    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.25), 0 4px 12px rgba(0, 0, 0, 0.15);
     z-index: 100;
-    animation: slideDown 0.2s ease-out;
+    animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    overflow: hidden;
+}
+
+/* Backdrop — hidden on desktop, visible on mobile/tablet */
+.filterBackdrop {
+    display: none;
+}
+
+@keyframes popupIn {
+    from {
+        opacity: 0;
+        transform: translate(-50%, -50%) scale(0.94);
+    }
+    to {
+        opacity: 1;
+        transform: translate(-50%, -50%) scale(1);
+    }
 }
 
 @keyframes slideDown {
@@ -68,15 +168,17 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 20px 24px 16px 24px;
+    padding: 16px 20px;
     border-bottom: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
 }
 
 .filterHeader h3 {
-    font-size: 18px;
-    font-weight: 800;
+    font-size: 15px;
+    font-weight: 700;
     color: var(--text-primary);
     margin: 0;
+    letter-spacing: 0.01em;
 }
 
 .closeFilterBtn {
@@ -98,23 +200,26 @@
 }
 
 .filterContent {
-    padding: 24px;
+    padding: 16px 20px;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-    max-width: 800px;
+    grid-template-columns: 1fr;
+    gap: 16px;
 }
 
 .filterGroup {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 6px;
+    justify-content: flex-start;
+    align-items: stretch;
 }
 
 .filterGroup label {
-    font-size: 14px;
+    font-size: 12px;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
 }
 
 .filterGroup select,
@@ -204,18 +309,19 @@
 
 .filterActions {
     display: flex;
-    gap: 12px;
-    padding: 16px 24px 24px 24px;
+    gap: 10px;
+    padding: 12px 20px 16px 20px;
     border-top: 1px solid var(--border-color);
+    background-color: var(--bg-secondary);
 }
 
 .clearBtn,
 .applyBtn {
     flex: 1;
-    padding: 12px 24px;
+    padding: 10px 20px;
     border: none;
     border-radius: 9999px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: 700;
     cursor: pointer;
     transition: all 0.2s ease;
@@ -240,18 +346,35 @@
     background-color: #1a8cd8;
 }
 
-/* Mobile Responsive */
-@media (max-width: 640px) {
+/* Mobile & Tablet Responsive — centered popup with dimmed backdrop */
+@media (max-width: 768px) {
+    .filterBackdrop {
+        display: block;
+        position: fixed;
+        inset: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 99;
+        animation: fadeIn 0.2s ease;
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to   { opacity: 1; }
+    }
+
     .filterPanel {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        border: none;
-        border-radius: 0;
-        max-height: 100vh;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: calc(100vw - 40px);
+        max-width: 480px;
+        max-height: 80vh;
         overflow-y: auto;
+        border-radius: 20px;
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.5);
+        z-index: 100;
+        animation: popupIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
     }
 
     .filterContent {
@@ -261,7 +384,8 @@
     .filterActions {
         position: sticky;
         bottom: 0;
-        background-color: var(--bg-primary);
-        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+        background-color: var(--bg-secondary);
+        border-radius: 0 0 20px 20px;
     }
 }
+
