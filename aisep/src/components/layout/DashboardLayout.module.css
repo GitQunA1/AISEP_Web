@@ -37,11 +37,9 @@
 /* COLUMN 1: LEFT SIDEBAR */
 .leftSidebar {
     height: 100%;
-    /* border-right removed */
+    border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
-    /* PREVENT SCROLL HERE: The internal Sidebar component handles its own overflow if needed, 
-     or acts as a static container. */
     overflow: hidden;
 }
 
@@ -65,8 +63,8 @@
 /* COLUMN 3: RIGHT PANEL */
 .rightPanel {
     height: 100%;
-    overflow-y: auto;
-    /* Independent scrolling */
+    overflow: hidden;
+    border-left: 1px solid var(--border-color);
     display: block;
 }
 

@@ -1,27 +1,25 @@
 import React from 'react';
-import { Zap } from 'lucide-react';
+import { Sparkles } from 'lucide-react';
 import styles from './Badge.module.css';
 
 /**
  * Badge Component - Reusable badge for industries, stages, and AI scores
  * @param {string} label - Text to display
- * @param {string} variant - 'industry', 'stage', 'score-good', 'score-medium', 'score-poor'
+ * @param {string} variant - 'industry', 'stage', 'score-good', 'score-medium', 'score-poor', 'updating', 'success'
  * @param {string} className - Optional additional classes
  * @param {boolean} showIcon - Show icon for score badges (default: false)
+ * @param {string} size - 'xs', 'sm', 'md' (default: 'md')
  */
-function Badge({ label, variant = 'industry', className = '', showIcon = false }) {
-  const isScoreBadge = variant.startsWith('score-');
-
+function Badge({ label, variant = 'default', size = 'md' }) {
+  const isScore = variant.startsWith('score-') || variant === 'updating';
+  
   return (
-    <span className={`${styles.badge} ${styles[`badge--${variant}`]} ${className}`}>
-      {isScoreBadge && showIcon && (
-        <Zap size={14} className={styles.badgeIcon} />
+    <div className={`${styles.badge} ${styles[`badge--${variant}`]} ${styles[`badge--${size}`]}`}>
+      {isScore && (
+        <Sparkles size={size === 'sm' ? 12 : 14} className={styles.badgeIcon} />
       )}
-      {variant === 'updating' && showIcon && (
-        <Zap size={14} className={styles.badgeIcon} />
-      )}
-      {isScoreBadge ? `AI ${label}` : label}
-    </span>
+      <span>{label}</span>
+    </div>
   );
 }
 

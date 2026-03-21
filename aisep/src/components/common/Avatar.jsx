@@ -9,7 +9,7 @@ import styles from './Avatar.module.css';
  * @param {string} name - Full name (for fallback first letter)
  * @param {string} size - 'sm', 'md', 'lg'
  */
-function Avatar({ src, alt = 'Avatar', name = 'User', size = 'md' }) {
+function Avatar({ src, alt = 'Avatar', name = 'User', size = 'md', className = '' }) {
   const [imageError, setImageError] = useState(false);
 
   // Get first letter of name for fallback
@@ -40,7 +40,7 @@ function Avatar({ src, alt = 'Avatar', name = 'User', size = 'md' }) {
   if (imageError || !src || src.includes('placeholder')) {
     return (
       <div
-        className={`${styles.avatarFallback} ${styles[`avatarFallback--${size}`]}`}
+        className={`${styles.avatarFallback} ${styles[`avatarFallback--${size}`]} ${className}`}
         style={{ backgroundColor }}
         title={name}
       >
@@ -53,7 +53,7 @@ function Avatar({ src, alt = 'Avatar', name = 'User', size = 'md' }) {
     <img
       src={src}
       alt={alt}
-      className={`${styles.avatar} ${styles[`avatar--${size}`]}`}
+      className={`${styles.avatar} ${styles[`avatar--${size}`]} ${className}`}
       onError={() => setImageError(true)}
     />
   );

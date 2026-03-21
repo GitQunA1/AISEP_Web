@@ -53,10 +53,11 @@
 /* COLUMN 1: LEFT SIDEBAR */
 .leftSidebar {
   height: 100%;
-  /* border-right: 1px solid var(--border-color); <-- REMOVED */
+  border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background-color: var(--bg-primary); /* Ensure it covers anything behind if needed */
 }
 
 /* COLUMN 2: CENTER FEED (The ONLY thing that scrolls) */
@@ -64,6 +65,7 @@
   height: 100%;
   overflow-y: auto;
   scroll-behavior: smooth;
+  border-right: 1px solid var(--border-color);
 }
 
 .noScroll {
@@ -73,30 +75,40 @@
 /* COLUMN 3: RIGHT PANEL */
 .rightPanel {
   height: 100%;
-  overflow-y: auto;
+  overflow: hidden;
   display: block;
 }
 
 /* Center the Feed Stream (Facebook Style Separated Cards) */
 /* Center the Feed Stream (Facebook Style Separated Cards) */
 .feedStreamWrapper {
-  max-width: 680px;
-  /* Wider for card look */
-  margin: 0 auto;
-  padding-top: 0;
-  padding-bottom: 60px;
-  /* Space at bottom for desktop */
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
   min-height: 100%;
-
-  /* Flex Layout for Gaps */
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  /* Space between cards */
-
-  /* No Borders on the wrapper itself */
   border: none;
   background-color: transparent;
+}
+
+.feedGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  padding: 0;
+  align-items: stretch;
+}
+
+.feedGrid > article:nth-child(odd) {
+  border-right: 1px solid var(--border-color);
+}
+
+@media (max-width: 900px) {
+  .feedGrid {
+    grid-template-columns: 1fr;
+  }
+  .feedGrid > article:nth-child(odd) {
+    border-right: none;
+  }
 }
 
 /* RESPONSIVE: Tablet AI Mode Adjustment */
@@ -142,11 +154,11 @@
     padding-bottom: 80px;
   }
 
-  /* Add horizontal padding for mobile */
+  /* Add horizontal padding for mobile — SIGNIFICANTLY REDUCED to fix gaps */
   .feedStreamWrapper {
-    padding-left: 16px;
-    padding-right: 16px;
-    padding-top: 10px;
+    padding-left: 0;
+    padding-right: 0;
+    padding-top: 0;
   }
 
   /* Specific fix for AI Chat Assistant on Mobile */

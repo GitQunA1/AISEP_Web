@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Star, Users, DollarSign, CheckCircle } from 'lucide-react';
-import FeedHeader from '../components/feed/FeedHeader';
+import { Search, MapPin, Star, Users, DollarSign, CheckCircle, Filter } from 'lucide-react';
+import AdvisorFilterModal from '../components/profile/AdvisorFilterModal';
 import advisorService from '../services/advisorService';
 import { authService } from '../services/authService';
 import bookingService from '../services/bookingService';
@@ -11,6 +11,13 @@ export default function AdvisorsPage({ user, onSelectAdvisor }) {
     const [advisors, setAdvisors] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [isFilterOpen, setIsFilterOpen] = useState(false);
+    const [filters, setFilters] = useState({
+        expertise: 'Tất cả chuyên môn',
+        location: 'Tất cả khu vực',
+        minRating: 0,
+        maxRate: 5000000 // 5M VNĐ
+    });
     const [searchQuery, setSearchQuery] = useState('');
     const [connectingTo, setConnectingTo] = useState(null);
     const [myBookings, setMyBookings] = useState([]);
@@ -64,10 +71,39 @@ export default function AdvisorsPage({ user, onSelectAdvisor }) {
         fetchMyBookings();
     }, [user]);
 
-    const filteredAdvisors = advisors.filter(advisor =>
-        (advisor.userName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-        (advisor.expertise?.toLowerCase() || '').includes(searchQuery.toLowerCase())
-    );
+    const handleApplyFilters = (newFilters) => {
+        setFilters(newFilters);
+    };
+
+    const getActiveFiltersCount = () => {
+        let count = 0;
+        if (filters.expertise !== 'Tất cả chuyên môn') count++;
+        if (filters.location !== 'Tất cả khu vực') count++;
+        if (filters.minRating > 0) count++;
+        if (filters.maxRate < 5000000) count++;
+        return count;
+    };
+
+    const activeFilterCount = getActiveFiltersCount();
+
+    const filteredAdvisors = advisors.filter(advisor => {
+        const matchesSearch =
+            (advisor.userName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+            (advisor.expertise?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+
+        const matchesExpertise =
+            filters.expertise === 'Tất cả chuyên môn' ||
+            (advisor.expertise || '').includes(filters.expertise);
+
+        const matchesLocation =
+            filters.location === 'Tất cả khu vực' ||
+            (advisor.location || '').includes(filters.location);
+
+        const matchesRating = (advisor.rating || 0) >= filters.minRating;
+        const matchesRate = (advisor.hourlyRate || 0) <= filters.maxRate;
+
+        return matchesSearch && matchesExpertise && matchesLocation && matchesRating && matchesRate;
+    });
 
     const handleConnect = (advisor) => {
         if (!canConnect) return;
@@ -92,15 +128,14 @@ export default function AdvisorsPage({ user, onSelectAdvisor }) {
 
     return (
         <div className={styles.container}>
-            <FeedHeader
-                title="Tìm cố vấn"
-                subtitle="Kết nối với các chuyên gia đã được xác minh để đẩy nhanh tăng trưởng"
-                showFilter={false}
-            />
+            <div className={styles.header}>
+                <h1 className={styles.headerTitle}>Tìm cố vấn</h1>
+                <p className={styles.headerSubtitle}>Kết nối với các chuyên gia đã được xác minh để đẩy nhanh tăng trưởng</p>
+            </div>
 
             <div className={styles.searchSection}>
                 <div className={styles.searchContainer}>
-                    <Search className={styles.searchIcon} />
+                    <Search className={styles.searchIcon} size={20} />
                     <input
                         type="text"
                         placeholder="Tìm kiếm theo tên hoặc chuyên môn"
@@ -109,6 +144,21 @@ export default function AdvisorsPage({ user, onSelectAdvisor }) {
                         onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
+
+                {/* Filter Button */}
+                <button className={styles.filterButton} onClick={() => setIsFilterOpen(!isFilterOpen)}>
+                    <Filter size={20} />
+                    <span>Bộ lọc</span>
+                    {activeFilterCount > 0 && <span className={styles.badge}>{activeFilterCount}</span>}
+                </button>
+
+                {/* Filter Modal Panel */}
+                <AdvisorFilterModal
+                    isOpen={isFilterOpen}
+                    filters={filters}
+                    onApply={handleApplyFilters}
+                    onClose={() => setIsFilterOpen(false)}
+                />
             </div>
 
             <div className={styles.list}>
@@ -136,18 +186,21 @@ export default function AdvisorsPage({ user, onSelectAdvisor }) {
                         <div key={advisor.advisorId} className={styles.advisorCard}>
                             {/* Card Header (Avatar + Name) */}
                             <div className={styles.cardHeader}>
-                                <img 
-                                    src={advisor.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(advisor.userName)}&background=random`} 
-                                    alt={advisor.userName} 
-                                    className={styles.avatar} 
-                                />
+                                <div className={styles.avatarContainer}>
+                                    <img 
+                                        src={advisor.profileImage || `https://ui-avatars.com/api/?name=${encodeURIComponent(advisor.userName)}&background=random`} 
+                                        alt={advisor.userName} 
+                                        className={styles.avatar} 
+                                    />
+                                </div>
                                 <div className={styles.advisorInfo}>
                                     <div className={styles.nameRow}>
-                                        <span className={styles.name}>{advisor.userName}</span>
-                                        {advisor.approvalStatus === 'Approved' && (
-                                            <CheckCircle size={16} className={styles.verifiedBadge} />
-                                        )}
-                                        <span className={styles.handle}>@{advisor.userName?.toLowerCase().replace(/\s/g, '')}</span>
+                                        <div className={styles.nameWrapper}>
+                                            <span className={styles.name}>{advisor.userName}</span>
+                                            {advisor.approvalStatus === 'Approved' && (
+                                                <CheckCircle size={16} className={styles.verifiedBadge} />
+                                            )}
+                                        </div>
                                     </div>
                                     <div className={styles.expertiseTags}>
                                         {expertises.map((exp, idx) => (

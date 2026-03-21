@@ -1,88 +1,245 @@
+/* ── SEARCH BAR ── */
+.searchContainer {
+    margin-bottom: 4px;
+}
+
+.searchWrapper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
+    padding: 0 16px;
+    height: 48px;
+    transition: all 0.2s ease;
+}
+
+.searchWrapper:focus-within {
+    border-color: var(--primary-blue);
+    background-color: var(--bg-primary);
+    box-shadow: 0 0 0 1px var(--primary-blue);
+}
+
+.searchIcon {
+    color: var(--text-secondary);
+    flex-shrink: 0;
+}
+
+.searchInput {
+    background: none;
+    border: none;
+    color: var(--text-primary);
+    font-size: 14.5px;
+    width: 100%;
+    outline: none;
+    font-family: inherit;
+}
+
+.searchInput::placeholder {
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+/* ── PANEL WRAPPER ── */
 .rightPanel {
-  width: 350px;
-  max-width: 350px;
-  flex: 0 0 350px;
+  width: 100%;
   height: 100vh;
   background-color: var(--bg-primary);
-  padding: var(--spacing-lg);
+  padding: 16px 14px;
   position: sticky;
   top: 0;
   overflow-y: auto;
   overflow-x: hidden;
   display: flex;
   flex-direction: column;
-  gap: var(--spacing-lg);
+  gap: 14px;
   box-sizing: border-box;
+  transition: background-color var(--transition-base);
+  /* Hide scrollbar for Chrome, Safari and Opera */
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  /* Hide scrollbar for IE, Edge and Firefox */
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ── WIDGET CARD ── */
+.widget {
+  background-color: var(--bg-secondary);
+  border-radius: 18px;
+  padding: 18px 16px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
   transition: background-color var(--transition-base);
 }
 
-.widget {
-  background-color: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: 16px;
-  padding: var(--spacing-lg);
-  display: flex;
-  flex-direction: column;
-  gap: var(--spacing-md);
-  transition: background-color var(--transition-base), border-color var(--transition-base);
-}
-
+/* ── WIDGET HEADER ── */
 .widgetHeader {
   display: flex;
   align-items: center;
-  gap: var(--spacing-md);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.headerIcon {
+  color: #ff7a00; /* Match the orange/flame color */
+  flex-shrink: 0;
 }
 
 .widgetTitle {
-  font-size: var(--font-size-base);
-  font-weight: 700;
+  font-size: 16px;
+  font-weight: 800;
   color: var(--text-primary);
   margin: 0;
-  transition: color var(--transition-base);
 }
 
+/* ── WIDGET CONTENT ── */
 .widgetContent {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 2px;
 }
 
-.startupItem,
-.sectorItem {
+/* ── STARTUP ROW ── */
+.startupRow {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  padding: var(--spacing-sm) var(--spacing-md);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
-  background: none;
-  border: none;
-  text-decoration: none;
-  font-size: var(--font-size-sm);
-  transition: all var(--transition-fast);
-  width: 100%;
+  gap: 10px;
+  padding: 8px 4px;
+  border-radius: 12px;
   cursor: pointer;
-  font-family: var(--font-main);
-  text-align: left;
+  transition: background-color 0.15s ease;
+  text-decoration: none;
 }
 
-.startupItem:hover,
-.sectorItem:hover {
+.startupRow:hover {
   background-color: var(--bg-hover);
-  color: var(--primary-blue);
+}
+
+.avatarCircle {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 800;
+}
+
+.startupInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
 }
 
 .startupName {
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.sectorItem {
-  justify-content: flex-start;
+.startupIndustries {
+  font-size: 12px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── SECTOR ROW ── */
+.sectorRow {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
+  padding: 8px 4px;
+  border-radius: 12px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  text-align: left;
+  transition: background-color 0.15s ease;
+  font-family: var(--font-main);
+}
+
+.sectorRow:hover {
+  background-color: var(--bg-hover);
+}
+
+.sectorLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 400;
+}
+
+.sectorHash {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-top: 2px;
+}
+
+.sectorCount {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* ── FOOTER LINK ── */
+.widgetFooterLink {
+  margin-top: 10px;
+  background: none;
+  border: none;
   color: var(--primary-blue);
+  font-size: 13.5px;
   font-weight: 600;
+  cursor: pointer;
+  padding: 4px 4px;
+  text-align: left;
+  font-family: var(--font-main);
+  transition: opacity 0.15s ease;
 }
 
-/* Mobile/Tablet adjustment (< 1280px) */
+.widgetFooterLink:hover {
+  opacity: 0.75;
+}
+
+/* ── STATES ── */
+.loadingContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px;
+}
+
+.spinIcon {
+  animation: spin 1s linear infinite;
+  color: var(--text-secondary);
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+.emptyText {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 8px 4px;
+  margin: 0;
+}
+
+/* ── RESPONSIVE ── */
 @media (max-width: 1279px) {
   .rightPanel {
     display: none;

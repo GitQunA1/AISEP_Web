@@ -2,13 +2,13 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
-  border-radius: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
   font-size: 12px;
   font-weight: 700;
   white-space: nowrap;
   transition: all var(--transition-fast);
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
 }
 
 .badgeIcon {
@@ -28,36 +28,39 @@
 }
 
 .badge--score-good {
-  background: linear-gradient(135deg, #00ba7c 0%, #00d68f 100%);
-  color: white;
-  box-shadow: 0 1px 3px rgba(0, 186, 124, 0.3);
+  background-color: rgba(0, 186, 124, 0.12);
+  color: #00c98a;
+  border: 1px solid rgba(0, 186, 124, 0.3);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .badge--score-good:hover {
-  box-shadow: 0 2px 6px rgba(0, 186, 124, 0.4);
-  transform: translateY(-1px);
+  background-color: rgba(0, 186, 124, 0.2);
 }
 
 .badge--score-medium {
-  background: linear-gradient(135deg, #ffb800 0%, #ffd000 100%);
-  color: #1a1a1a;
-  box-shadow: 0 1px 3px rgba(255, 184, 0, 0.3);
+  background-color: rgba(255, 159, 67, 0.12);
+  color: #ff9f43;
+  border: 1px solid rgba(255, 159, 67, 0.3);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .badge--score-medium:hover {
-  box-shadow: 0 2px 6px rgba(255, 184, 0, 0.4);
-  transform: translateY(-1px);
+  background-color: rgba(255, 159, 67, 0.2);
 }
 
 .badge--score-poor {
-  background: linear-gradient(135deg, #e74c3c 0%, #f4212e 100%);
-  color: white;
-  box-shadow: 0 1px 3px rgba(244, 33, 46, 0.3);
+  background-color: rgba(231, 76, 60, 0.12);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
 }
 
 .badge--score-poor:hover {
-  box-shadow: 0 2px 6px rgba(244, 33, 46, 0.4);
-  transform: translateY(-1px);
+  background-color: rgba(231, 76, 60, 0.2);
 }
 
 .badge--secondary {
@@ -69,7 +72,24 @@
 }
 
 .badge--updating {
-  background: linear-gradient(135deg, #1d4ed8 0%, #3b82f6 100%);
+  background-color: rgba(120, 120, 140, 0.12);
+  color: var(--text-secondary);
+  border: 1px solid rgba(120, 120, 140, 0.25);
+  font-weight: 700;
+  letter-spacing: 0.05em;
+}
+
+.badge--success {
+  background-color: #00ba7c;
   color: white;
-  box-shadow: 0 1px 3px rgba(59, 130, 246, 0.3);
+}
+
+.badge--xs {
+  padding: 1px 6px;
+  font-size: 10px;
+}
+
+.badge--sm {
+  padding: 2px 6px;
+  font-size: 11px;
 }

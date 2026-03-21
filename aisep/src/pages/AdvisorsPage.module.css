@@ -6,7 +6,6 @@
     width: 100%;
     max-width: 680px;
     margin: 0 auto;
-    padding-bottom: 60px;
 }
 
 @media (max-width: 1439px) and (min-width: 1024px) {
@@ -16,11 +15,35 @@
     }
 }
 
-.searchSection {
-    padding: var(--spacing-md);
+.header {
+    padding: 24px 20px 12px 20px;
     background-color: var(--bg-primary);
-    border-bottom: 1px solid var(--border-color);
-    margin-bottom: 16px;
+}
+
+.headerTitle {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+    letter-spacing: -0.5px;
+}
+
+.headerSubtitle {
+    font-size: 15px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.searchSection {
+    padding: 12px 20px;
+    background-color: var(--bg-primary);
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    margin-bottom: 8px;
 }
 
 .searchContainer {
@@ -57,11 +80,44 @@
     box-shadow: 0 0 0 1px var(--primary-blue);
 }
 
+.filterButton {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.filterButton:hover {
+    background-color: var(--bg-hover);
+    border-color: var(--text-secondary);
+}
+
+.badge {
+    background-color: var(--primary-blue);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    margin-left: 4px;
+}
+
 /* Advisors List */
 .list {
     display: flex;
     flex-direction: column;
     gap: 16px;
+    padding-top: 12px;
 }
 
 /* Refined Advisor Card */
@@ -85,17 +141,25 @@
     margin-bottom: 12px;
 }
 
-.avatar {
+.avatarContainer {
     width: 48px;
     height: 48px;
+    flex-shrink: 0;
+}
+
+.avatar {
+    width: 100%;
+    height: 100%;
     border-radius: 50%;
     object-fit: cover;
-    flex-shrink: 0;
 }
 
 .advisorInfo {
     flex: 1;
     min-width: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
 }
 
 .nameRow {
@@ -103,23 +167,24 @@
     align-items: center;
     gap: 6px;
     flex-wrap: wrap;
-    margin-bottom: 4px;
+    margin-bottom: 8px;
+}
+
+.nameWrapper {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
 .name {
-    font-size: 15px;
-    font-weight: 700;
+    font-size: 16px;
+    font-weight: 800;
     color: var(--text-primary);
 }
 
 .verifiedBadge {
     color: var(--primary-blue);
     flex-shrink: 0;
-}
-
-.handle {
-    font-size: 14px;
-    color: var(--text-secondary);
 }
 
 /* Expertise Tags */
@@ -181,6 +246,10 @@
     font-size: 14px;
     cursor: pointer;
     transition: opacity 0.2s;
+    min-width: 120px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .connectBtn:hover {
@@ -197,6 +266,10 @@
     font-size: 14px;
     cursor: pointer;
     transition: all 0.2s;
+    min-width: 120px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .viewProfileBtn:hover {
