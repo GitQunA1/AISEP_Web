@@ -54,7 +54,8 @@
     border: 1px solid var(--border-color);
     border-radius: 12px;
     background-color: var(--bg-secondary);
-    border-left: 4px solid #F59E0B; /* Default Pending color */
+    border-left: 4px solid #F59E0B;
+    /* Default Pending color */
     display: flex;
     flex-direction: column;
     gap: 12px;
@@ -186,38 +187,32 @@
     border-color: #ef4444;
 }
 
-/* KPI Cards — Statistics Section */
+/* KPI Cards — Statistics Section (Twitter/X Style) */
 .kpiCard {
-    position: relative;
-    padding: 20px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
-    backdrop-filter: blur(10px);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-    transition: all 0.3s ease;
+    padding: 16px 20px;
+    border-radius: 16px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    transition: background-color 0.2s ease;
 }
 
 .kpiCard:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+    background-color: var(--bg-hover);
 }
 
 .kpiHeader {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    margin-bottom: 8px;
+    gap: 4px;
 }
 
 .kpiBreakdown {
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 8px;
-    padding-top: 8px;
-    border-top: 1px solid rgba(0, 0, 0, 0.05);
+    gap: 8px;
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px solid var(--border-color);
 }
 
 .kpiBreakdown div {
@@ -226,33 +221,30 @@
     align-items: center;
 }
 
-/* Statistics Grid Items */
+/* Statistics Grid Items (Clean Twitter Style) */
 .statItem {
-    padding: 12px;
+    padding: 16px;
     background-color: var(--bg-secondary);
-    border-radius: 8px;
+    border-radius: 12px;
     border: 1px solid var(--border-color);
     transition: all 0.2s;
 }
 
 .statItem:hover {
     background-color: var(--bg-hover);
-    border-color: #7c3aed;
 }
 
 .statLabel {
-    font-size: 12px;
+    font-size: 13px;
     color: var(--text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    font-weight: 600;
-    margin-bottom: 6px;
+    font-weight: 500;
+    margin-bottom: 8px;
 }
 
 .statValue {
-    font-size: 24px;
-    font-weight: 700;
-    color: var(--primary-blue);
+    font-size: 26px;
+    font-weight: 800;
+    color: var(--text-primary);
 }
 
 .statProgress {
@@ -263,11 +255,16 @@
 /* This section contains unique styling that differentiates operation staff interface from other roles */
 
 :root {
-    --staff-primary: #7c3aed; /* Purple */
-    --staff-success: #10b981; /* Green */
-    --staff-warning: #f59e0b; /* Amber */
-    --staff-danger: #ef4444; /* Red */
-    --staff-info: #06b6d4; /* Cyan */
+    --staff-primary: #7c3aed;
+    /* Purple */
+    --staff-success: #10b981;
+    /* Green */
+    --staff-warning: #f59e0b;
+    /* Amber */
+    --staff-danger: #ef4444;
+    /* Red */
+    --staff-info: #06b6d4;
+    /* Cyan */
 }
 
 /* Enhanced header styling for operation staff */
@@ -300,6 +297,71 @@
 .statisticsSection {
     position: relative;
     z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.statsGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    padding: 0;
+    margin-bottom: 8px;
+}
+
+@media (max-width: 1024px) {
+    .statsGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 16px;
+    }
+}
+
+@media (max-width: 600px) {
+    .statsGrid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+
+    .kpiCard {
+        padding: 12px 14px;
+    }
+
+    .kpiBreakdown {
+        margin-top: 8px;
+        padding-top: 8px;
+        gap: 4px;
+        font-size: 11px;
+    }
+
+    .statValue {
+        font-size: 20px;
+    }
+
+    .statLabel {
+        font-size: 12px;
+    }
+}
+
+.detailedStatsRow {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    width: 100%;
+}
+
+@media (max-width: 1024px) {
+    .detailedStatsRow {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+    }
+}
+
+@media (max-width: 600px) {
+    .detailedStatsRow {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+    }
 }
 
 /* Quick action buttons with unique styling */
@@ -349,4 +411,347 @@
     background-color: var(--bg-secondary);
     border-radius: 8px;
     border: 1px solid var(--border-color);
+}
+
+/* Analytics section styling */
+.analyticsSection {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.analyticsGrid {
+    display: grid;
+    grid-template-columns: 350px 1fr;
+    gap: 24px;
+}
+
+.legendList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.legendItem {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    transition: background-color 0.2s;
+}
+
+.legendItem:hover {
+    background-color: var(--bg-hover);
+}
+
+.legendLabel {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.legendValue {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.indicatorCircle {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+}
+
+.progressWrapper {
+    margin-top: 12px;
+}
+
+.progressLabelRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 8px;
+}
+
+.progressTrack {
+    width: 100%;
+    height: 6px;
+    background-color: var(--bg-tertiary);
+    border-radius: 9999px;
+    overflow: hidden;
+}
+
+.progressFill {
+    height: 100%;
+    background-color: var(--primary-blue);
+    border-radius: 9999px;
+    transition: width 0.3s ease;
+}
+
+.summaryGrid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 20px;
+}
+
+.summaryCard {
+    padding: 20px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: background-color 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.summaryCard:hover {
+    background-color: var(--bg-hover);
+}
+
+.summaryIndicator {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+}
+
+.summaryTitle {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.summaryValue {
+    font-size: 32px;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.summaryText {
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+/* Booking Management Refinements */
+.bookingCard {
+    padding: 16px;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    background-color: var(--bg-secondary);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 20px;
+    transition: transform 0.2s, background-color 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.bookingCard:hover {
+    background-color: var(--bg-hover);
+}
+
+.bookingMainInfo {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.bookingHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+}
+
+.bookingTitle {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-muted);
+    margin: 0;
+}
+
+.bookingBadge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 4px; /* Twitter style pills are less rounded sometimes, or very rounded. Let's go with 4px for a modern look */
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.bookingBadgePending {
+    background-color: rgba(245, 158, 11, 0.1);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+.bookingBadgeConfirmed {
+    background-color: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.bookingBadgeCompleted {
+    background-color: rgba(124, 58, 237, 0.1);
+    color: #7c3aed;
+    border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.priceRow {
+    display: flex;
+    align-items: center;
+}
+
+.priceTag {
+    color: var(--staff-warning);
+    font-weight: 900;
+    font-size: 18px;
+    letter-spacing: -0.5px;
+}
+
+.priceTag span {
+    font-size: 11px;
+    font-weight: 700;
+    opacity: 0.7;
+    margin-left: 2px;
+}
+
+.participantsRow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin: 12px 0;
+}
+
+.advisorText, .customerText {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.advisorText {
+    color: var(--staff-blue);
+}
+
+.customerText {
+    color: var(--staff-success);
+}
+
+.linkLine {
+    flex: 0 0 40px;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.line {
+    width: 100%;
+    height: 1px;
+    background-color: var(--border-color);
+}
+
+.linkArrow {
+    position: absolute;
+    right: -2px;
+    color: var(--text-muted);
+}
+
+.metaRow {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.metaItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.bookingFooter {
+    display: block;
+}
+
+.bookingIdList {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-family: monospace;
+    letter-spacing: 0.5px;
+}
+
+.bookingActions {
+    display: flex;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.btnAction {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+}
+
+.btnApprove {
+    background-color: #10b981 !important;
+    color: white !important;
+}
+
+.btnApprove:hover {
+    background-color: #059669 !important;
+}
+
+.btnReject {
+    background-color: transparent !important;
+    border: 1px solid #ef4444 !important;
+    color: #ef4444 !important;
+}
+
+.btnReject:hover {
+    background-color: rgba(239, 68, 68, 0.1) !important;
+}
+
+.btnDetails {
+    background-color: transparent !important;
+    border: 1px solid var(--primary-blue) !important;
+    color: var(--primary-blue) !important;
+}
+
+.btnDetails:hover {
+    background-color: rgba(29, 155, 240, 0.1) !important;
+}
+
+@media (max-width: 1024px) {
+    .analyticsGrid {
+        grid-template-columns: 1fr;
+    }
+
+    .summaryGrid {
+        grid-template-columns: 1fr;
+    }
 }

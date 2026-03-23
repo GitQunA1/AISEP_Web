@@ -120,10 +120,14 @@
 
 /* RESPONSIVE: Mobile & Tablet Drawer (< 1024px) */
 @media (max-width: 1023px) {
+  :global(body) {
+    overflow: visible !important;
+  }
+
   .mainContainer {
     display: block;
     height: auto;
-    overflow-y: auto;
+    overflow: visible;
   }
   
   .mainContainer.aiMode {

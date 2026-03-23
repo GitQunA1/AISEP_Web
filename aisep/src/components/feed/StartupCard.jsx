@@ -60,13 +60,14 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile }) {
 
           <div className={styles.headerActions}>
             <Badge
-              label={startup.aiScore != null && startup.aiScore !== '' ? String(startup.aiScore) : '__'}
+              label={startup.score === undefined ? '' : (startup.score === null ? '__' : String(startup.score))}
+              isLoading={startup.score === undefined}
               variant={
-                startup.aiScore == null || startup.aiScore === ''
+                startup.score === undefined || startup.score === null
                   ? 'updating'
-                  : startup.aiScore >= 80
+                  : startup.score >= 80
                   ? 'score-good'
-                  : startup.aiScore >= 50
+                  : startup.score >= 50
                   ? 'score-medium'
                   : 'score-poor'
               }

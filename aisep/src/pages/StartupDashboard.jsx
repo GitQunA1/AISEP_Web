@@ -64,6 +64,7 @@ export default function StartupDashboard({ user }) {
     const [isLoadingHistory, setIsLoadingHistory] = React.useState(false);
     const [showHistoryView, setShowHistoryView] = React.useState(false);
     const [selectedHistoryResult, setSelectedHistoryResult] = React.useState(null);
+    const [evaluatingProjectId, setEvaluatingProjectId] = React.useState(null);
 
     // Document Deletion States
     const [isDeletingDocument, setIsDeletingDocument] = React.useState(false);
@@ -527,6 +528,7 @@ export default function StartupDashboard({ user }) {
         setIsEvaluatingAI(true);
         try {
             // The AI Evaluation flow
+            setEvaluatingProjectId(projectData.id);
             const response = await projectSubmissionService.triggerAIAnalysis(projectData.id);
 
             if (response.success) {
@@ -558,6 +560,7 @@ export default function StartupDashboard({ user }) {
             setShowSuccessModal(true);
         } finally {
             setIsEvaluatingAI(false);
+            setEvaluatingProjectId(null);
         }
     };
 
@@ -648,6 +651,7 @@ export default function StartupDashboard({ user }) {
         console.log('[AI] Running AI Evaluation for projectId:', validId);
         
         setIsEvaluatingAI(true);
+        setEvaluatingProjectId(validId);
         setAiEvaluationError(null);
         setShowAIEvaluationModal(true);
 
@@ -1030,7 +1034,7 @@ export default function StartupDashboard({ user }) {
                                                                 disabled={isEvaluatingAI}
                                                                 title="Chạy đánh giá AI cho dự án này"
                                                             >
-                                                                {isEvaluatingAI ? '⏳ Đang chấm...' : '📊 Phân Tích AI'}
+                                                                {isEvaluatingAI && evaluatingProjectId === (p.id || p.projectId) ? 'Đang chấm...' : 'Phân Tích AI'}
                                                             </button>
                                                             <button
                                                                 className={styles.primaryBtn}
