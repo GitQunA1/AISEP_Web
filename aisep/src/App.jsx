@@ -64,7 +64,14 @@ function App() {
       }
 
       setUser(parsedUser);
-      setCurrentView('main');
+      
+      // For operation staff, default to dashboard view; others default to main
+      const userRole = (parsedUser.role !== undefined && parsedUser.role !== null) ? parsedUser.role.toString().toLowerCase() : '';
+      if (userRole === 'operationstaff' || userRole === '3') {
+        setCurrentView('dashboard');
+      } else {
+        setCurrentView('main');
+      }
     }
   }, []);
 
@@ -76,8 +83,16 @@ function App() {
     setUser(userData);
     setIsSessionExpired(false); // Reset session expired flag
 
-    // After login, if role is startup, check if they have a profile
+    // Determine role-based redirect
     const userRole = (userData.role !== undefined && userData.role !== null) ? userData.role.toString().toLowerCase() : '';
+    
+    // Operation Staff redirects to dashboard directly
+    if (userRole === 'operationstaff' || userRole === '3') {
+      setCurrentView('dashboard');
+      return;
+    }
+    
+    // Startup users check profile
     if (userRole === 'startup' || userRole === '0') {
       try {
         const response = await startupProfileService.getStartupProfileByUserId(userData.userId);
@@ -93,6 +108,7 @@ function App() {
         setCurrentView('main');
       }
     } else {
+      // Other roles (investor, advisor) go to main
       setCurrentView('main');
     }
   };
@@ -198,19 +214,22 @@ function App() {
           activeView={currentView}
         >
           {currentView === 'dashboard' && (
-            user?.role?.toString().toLowerCase() === 'startup' || user?.role === 0 ? (
-              <StartupDashboard user={user} />
-            ) : user?.role?.toString().toLowerCase() === 'investor' || user?.role === 1 ? (
-              <InvestorDashboard user={user} />
-            ) : user?.role?.toString().toLowerCase() === 'advisor' || user?.role === 2 ? (
-              <AdvisorDashboard user={user} />
-            ) : user?.role?.toString().toLowerCase() === 'operation_staff' || user?.role?.toString().toLowerCase() === 'staff' || user?.role === 3 ? (
-              <OperationStaffDashboard user={user} />
-            ) : (
-              <div style={{ padding: '20px', textAlign: 'center' }}>
-                <p>Dashboard not available for your role</p>
-              </div>
-            )
+            (() => {
+              const roleStr = user?.role?.toString().toLowerCase() || '';
+              const roleNum = Number(user?.role);
+              
+              if (roleStr === 'startup' || roleNum === 0) {
+                return <StartupDashboard user={user} />;
+              } else if (roleStr === 'investor' || roleNum === 1) {
+                return <InvestorDashboard user={user} />;
+              } else if (roleStr === 'advisor' || roleNum === 2) {
+                return <AdvisorDashboard user={user} />;
+              } else if (roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3) {
+                return <OperationStaffDashboard user={user} />;
+              } else {
+                return <div style={{ padding: '20px', textAlign: 'center' }}><p>Dashboard not available for your role</p></div>;
+              }
+            })()
           )}
         </MainLayout>
       ) : currentView === 'verifyEmail' ? (

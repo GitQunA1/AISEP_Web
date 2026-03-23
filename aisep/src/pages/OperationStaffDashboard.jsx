@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileCheck, CheckCircle, AlertCircle, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, FileText, Loader2, TrendingUp, ExternalLink, Shield, History } from 'lucide-react';
+import { FileCheck, CheckCircle, AlertCircle, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, FileText, Loader2, TrendingUp, ExternalLink, Shield, History, Calendar } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import local from '../styles/OperationStaffDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
@@ -8,6 +8,7 @@ import ErrorModal from '../components/common/ErrorModal';
 import RejectionReasonModal from '../components/common/RejectionReasonModal';
 import projectSubmissionService from '../services/projectSubmissionService';
 import AIEvaluationService from '../services/AIEvaluationService';
+import bookingService from '../services/bookingService';
 import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/ProjectStatus';
 
@@ -16,7 +17,7 @@ import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/Projec
  * Features: Document verification, User approvals, Activity monitoring, Request management
  */
 export default function OperationStaffDashboard({ user }) {
-    const [activeSection, setActiveSection] = useState('overview');
+    const [activeSection, setActiveSection] = useState('statistics');
 
     const [pendingProjects, setPendingProjects] = useState([]);
     const [approvedProjects, setApprovedProjects] = useState([]);
@@ -24,7 +25,6 @@ export default function OperationStaffDashboard({ user }) {
     const [isLoadingProjects, setIsLoadingProjects] = useState(false);
     const [projectSubmissions, setProjectSubmissions] = useState([]);
     const [pendingApprovals, setPendingApprovals] = useState([]);
-    const [pendingRequests, setPendingRequests] = useState([]);
     const [showModal, setShowModal] = useState(false);
     const [modalType, setModalType] = useState('success'); // 'success' or 'error'
     const [modalMessage, setModalMessage] = useState('');
@@ -44,13 +44,86 @@ export default function OperationStaffDashboard({ user }) {
     const [showHistoryView, setShowHistoryView] = useState(false);
     const [selectedHistoryResult, setSelectedHistoryResult] = useState(null);
 
+    // Additional Statistics state for enhanced dashboard
+    const [totalProjects, setTotalProjects] = useState(0);
+    const [approvalRate, setApprovalRate] = useState(0);
+    const [avgApprovalTime, setAvgApprovalTime] = useState(0);
+    const [totalUsers, setTotalUsers] = useState(0);
+    const [systemHealth, setSystemHealth] = useState(100);
+    const [recentActivity, setRecentActivity] = useState([]);
+
+    // Booking Management state
+    const [bookings, setBookings] = useState([]);
+    const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+    const [bookingFilters, setBookingFilters] = useState('');
+    const [bookingPage, setBookingPage] = useState(1);
+    const [bookingPageSize, setBookingPageSize] = useState(10);
+    const [totalBookings, setTotalBookings] = useState(0);
+    
+    // Booking Detail Modal state
+    const [showBookingModal, setShowBookingModal] = useState(false);
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [isLoadingBookingDetail, setIsLoadingBookingDetail] = useState(false);
+
     const dashboardData = {
         pendingApprovals: pendingApprovals.length,
         pendingProjects: pendingProjects.length,
-        pendingRequests: pendingRequests.length,
         approvedUsers: 0,
         totalActivity: 0,
-        averageApprovalTime: '-'
+        averageApprovalTime: '-',
+        totalProjects: totalProjects,
+        approvalRate: approvalRate,
+        avgApprovalTime: avgApprovalTime,
+        totalUsers: totalUsers,
+        systemHealth: systemHealth,
+        approvedProjects: approvedProjects.length,
+        rejectedProjects: rejectedProjects.length
+    };
+
+    // Fetch bookings
+    const fetchBookings = async () => {
+        setIsLoadingBookings(true);
+        try {
+            const response = await bookingService.getAllBookings(bookingFilters, '', bookingPage, bookingPageSize);
+            console.log('Booking response:', response);
+            if (response && response.items) {
+                setBookings(response.items || []);
+                setTotalBookings(response.totalCount || 0);
+            } else if (response) {
+                console.warn('Unexpected booking response structure:', response);
+            }
+        } catch (error) {
+            console.error('Error fetching bookings:', error);
+            setBookings([]);
+        } finally {
+            setIsLoadingBookings(false);
+        }
+    };
+
+    const handleViewBookingDetails = async (bookingId) => {
+        setShowBookingModal(true);
+        setIsLoadingBookingDetail(true);
+        try {
+            const response = await bookingService.getBookingById(bookingId);
+            console.log('Booking detail response:', response);
+            // Handle response structure: { success, data: {...}, statusCode }
+            if (response && response.data) {
+                setSelectedBooking(response.data);
+                // Optionally fetch related project info using customerId
+                if (response.data.customerId) {
+                    console.log('Customer ID:', response.data.customerId);
+                }
+            } else if (response) {
+                setSelectedBooking(response);
+            }
+        } catch (error) {
+            console.error('Error fetching booking details:', error);
+            setModalType('error');
+            setModalMessage('Không thể tải chi tiết booking');
+            setShowModal(true);
+        } finally {
+            setIsLoadingBookingDetail(false);
+        }
     };
 
     // Fetch projects on tab change
@@ -109,8 +182,10 @@ export default function OperationStaffDashboard({ user }) {
             fetchApprovedProjects();
         } else if (activeSection === 'rejected_projects') {
             fetchRejectedProjects();
+        } else if (activeSection === 'bookings') {
+            fetchBookings();
         }
-    }, [activeSection]);
+    }, [activeSection, bookingPage, bookingPageSize]);
 
     // Fetch project documents when detail modal opens
     useEffect(() => {
@@ -185,18 +260,6 @@ export default function OperationStaffDashboard({ user }) {
     const handleRejectUser = (id) => {
         setPendingApprovals(pendingApprovals.map(user =>
             user.id === id ? { ...user, status: 'rejected' } : user
-        ));
-    };
-
-    const handleApproveRequest = (id) => {
-        setPendingRequests(pendingRequests.map(req =>
-            req.id === id ? { ...req, status: 'approved' } : req
-        ));
-    };
-
-    const handleRejectRequest = (id) => {
-        setPendingRequests(pendingRequests.map(req =>
-            req.id === id ? { ...req, status: 'rejected' } : req
         ));
     };
 
@@ -308,25 +371,21 @@ export default function OperationStaffDashboard({ user }) {
                     </div>
                 </div>
 
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconRed}`}>
-                        <AlertCircle size={20} />
-                    </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.pendingRequests}</div>
-                        <div className={styles.statLabel}>Yêu cầu chờ xử lý</div>
-                    </div>
-                </div>
-
             </div>
 
             {/* Navigation Tabs */}
             <div className={styles.tabs}>
                 <button
-                    className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('overview')}
+                    className={`${styles.tab} ${activeSection === 'statistics' ? styles.active : ''}`}
+                    onClick={() => setActiveSection('statistics')}
                 >
-                    Tổng quan
+                    📊 Thống kê
+                </button>
+                <button
+                    className={`${styles.tab} ${activeSection === 'analytics' ? styles.active : ''}`}
+                    onClick={() => setActiveSection('analytics')}
+                >
+                    📈 Phân tích
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'projects' ? styles.active : ''}`}
@@ -335,28 +394,28 @@ export default function OperationStaffDashboard({ user }) {
                     Duyệt dự án
                 </button>
                 <button
+                    className={`${styles.tab} ${activeSection === 'approvals' ? styles.active : ''}`}
+                    onClick={() => setActiveSection('approvals')}
+                >
+                    Phê duyệt người dùng
+                </button>
+                <button
+                    className={`${styles.tab} ${activeSection === 'bookings' ? styles.active : ''}`}
+                    onClick={() => setActiveSection('bookings')}
+                >
+                    📅 Quản lý Booking
+                </button>
+                <button
                     className={`${styles.tab} ${activeSection === 'approved_projects' ? styles.active : ''}`}
                     onClick={() => setActiveSection('approved_projects')}
                 >
-                    Dự án đã duyệt
+                    ✓ Dự án đã duyệt
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'rejected_projects' ? styles.active : ''}`}
                     onClick={() => setActiveSection('rejected_projects')}
                 >
-                    Dự án đã từ chối
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'requests' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('requests')}
-                >
-                    Yêu cầu tư vấn
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'approvals' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('approvals')}
-                >
-                    Phê duyệt người dùng
+                    ✕ Dự án từ chối
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'activity' ? styles.active : ''}`}
@@ -368,6 +427,352 @@ export default function OperationStaffDashboard({ user }) {
 
             {/* Content Sections */}
             <div className={styles.content}>
+                {/* STATISTICS SECTION - First Priority */}
+                {activeSection === 'statistics' && (
+                    <div className={styles.section}>
+                        <div className={styles.sectionGrid}>
+                            {/* Main KPI Cards Grid */}
+                            <div style={{ gridColumn: '1 / -1', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                                {/* Total Projects Card */}
+                                <div className={`${styles.card} ${local.kpiCard}`} style={{ borderTop: '4px solid #7c3aed' }}>
+                                    <div className={local.kpiHeader}>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Tổng dự án</span>
+                                        <span style={{ fontSize: '28px', fontWeight: '700', color: '#7c3aed' }}>{dashboardData.pendingProjects + dashboardData.approvedProjects + dashboardData.rejectedProjects}</span>
+                                    </div>
+                                    <div className={local.kpiBreakdown}>
+                                        <div><span>✓ Phê duyệt: </span><strong style={{ color: '#10b981' }}>{dashboardData.approvedProjects}</strong></div>
+                                        <div><span>⏳ Chờ: </span><strong style={{ color: '#f59e0b' }}>{dashboardData.pendingProjects}</strong></div>
+                                        <div><span>✕ Từ chối: </span><strong style={{ color: '#ef4444' }}>{dashboardData.rejectedProjects}</strong></div>
+                                    </div>
+                                </div>
+
+                                {/* Approval Rate Card */}
+                                <div className={`${styles.card} ${local.kpiCard}`} style={{ borderTop: '4px solid #10b981' }}>
+                                    <div className={local.kpiHeader}>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Tỉ lệ chấp thuận</span>
+                                        <span style={{ fontSize: '28px', fontWeight: '700', color: '#10b981' }}>
+                                            {dashboardData.pendingProjects + dashboardData.approvedProjects + dashboardData.rejectedProjects > 0 
+                                                ? Math.round((dashboardData.approvedProjects / (dashboardData.pendingProjects + dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
+                                                : 0}%
+                                        </span>
+                                    </div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                                        Tỉ lệ dự án được phê duyệt so với tổng số
+                                    </div>
+                                </div>
+
+                                {/* Pending Items Card */}
+                                <div className={`${styles.card} ${local.kpiCard}`} style={{ borderTop: '4px solid #f59e0b' }}>
+                                    <div className={local.kpiHeader}>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Chờ xử lý</span>
+                                        <span style={{ fontSize: '28px', fontWeight: '700', color: '#f59e0b' }}>
+                                            {dashboardData.pendingProjects + dashboardData.pendingApprovals}
+                                        </span>
+                                    </div>
+                                    <div className={local.kpiBreakdown}>
+                                        <div><span>📋 Dự án: </span><strong>{dashboardData.pendingProjects}</strong></div>
+                                        <div><span>👥 Người dùng: </span><strong>{dashboardData.pendingApprovals}</strong></div>
+                                    </div>
+                                </div>
+
+                                {/* System Health Card */}
+                                <div className={`${styles.card} ${local.kpiCard}`} style={{ borderTop: '4px solid #06b6d4' }}>
+                                    <div className={local.kpiHeader}>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase' }}>Tính khỏe hệ thống</span>
+                                        <span style={{ fontSize: '28px', fontWeight: '700', color: '#06b6d4' }}>{systemHealth}%</span>
+                                    </div>
+                                    <div style={{ 
+                                        fontSize: '12px', 
+                                        marginTop: '8px',
+                                        padding: '4px 8px',
+                                        backgroundColor: systemHealth > 80 ? '#d1fae5' : '#fef3c7',
+                                        color: systemHealth > 80 ? '#065f46' : '#92400e',
+                                        borderRadius: '4px'
+                                    }}>
+                                        {systemHealth > 80 ? '✓ Bình thường' : '⚠ Cần chú ý'}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Comprehensive Statistics Table */}
+                            <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
+                                <h3 className={styles.cardTitle} style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>
+                                    📊 Chỉ số hiệu suất chi tiết
+                                </h3>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                    gap: '12px'
+                                }}>
+                                    <div className={local.statItem}>
+                                        <div className={local.statLabel}>Dự án chờ xử lý</div>
+                                        <div className={local.statValue}>{dashboardData.pendingProjects}</div>
+                                        <div className={local.statProgress} style={{ width: '100%', height: '4px', backgroundColor: '#f3f4f6', borderRadius: '2px', marginTop: '8px' }}>
+                                            <div style={{ height: '100%', width: dashboardData.pendingProjects > 10 ? '100%' : (dashboardData.pendingProjects * 10) + '%', backgroundColor: '#f59e0b', borderRadius: '2px' }}></div>
+                                        </div>
+                                    </div>
+                                    <div className={local.statItem}>
+                                        <div className={local.statLabel}>Người dùng chờ phê duyệt</div>
+                                        <div className={local.statValue}>{dashboardData.pendingApprovals}</div>
+                                        <div className={local.statProgress} style={{ width: '100%', height: '4px', backgroundColor: '#f3f4f6', borderRadius: '2px', marginTop: '8px' }}>
+                                            <div style={{ height: '100%', width: dashboardData.pendingApprovals > 10 ? '100%' : (dashboardData.pendingApprovals * 10) + '%', backgroundColor: '#3b82f6', borderRadius: '2px' }}></div>
+                                        </div>
+                                    </div>
+                                    <div className={local.statItem}>
+                                        <div className={local.statLabel}>Dự án phê duyệt</div>
+                                        <div className={local.statValue}>{dashboardData.approvedProjects}</div>
+                                    </div>
+                                    <div className={local.statItem}>
+                                        <div className={local.statLabel}>Dự án từ chối</div>
+                                        <div className={local.statValue} style={{ color: '#ef4444' }}>{dashboardData.rejectedProjects}</div>
+                                    </div>
+                                    <div className={local.statItem}>
+                                        <div className={local.statLabel}>Thời gian TB (giờ)</div>
+                                        <div className={local.statValue}>{dashboardData.avgApprovalTime || '-'}</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Quick Actions Card */}
+                            <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
+                                <h3 className={styles.cardTitle} style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>
+                                    ⚡ Hành động nhanh
+                                </h3>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
+                                    gap: '12px'
+                                }}>
+                                    <button 
+                                        onClick={() => setActiveSection('projects')}
+                                        style={{
+                                            padding: '12px 16px',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            backgroundColor: '#f59e0b',
+                                            color: 'white',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            fontSize: '14px',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseOver={(e) => e.target.style.opacity = '0.9'}
+                                        onMouseOut={(e) => e.target.style.opacity = '1'}
+                                    >
+                                        📋 Duyệt dự án ({dashboardData.pendingProjects})
+                                    </button>
+                                    <button 
+                                        onClick={() => setActiveSection('approvals')}
+                                        style={{
+                                            padding: '12px 16px',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            backgroundColor: '#3b82f6',
+                                            color: 'white',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            fontSize: '14px',
+                                            transition: 'all 0.2s'
+                                        }}
+                                        onMouseOver={(e) => e.target.style.opacity = '0.9'}
+                                        onMouseOut={(e) => e.target.style.opacity = '1'}
+                                    >
+                                        👥 Phê duyệt người dùng ({dashboardData.pendingApprovals})
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* ANALYTICS SECTION */}
+                {activeSection === 'analytics' && (
+                    <div className={styles.section}>
+                        <div className={styles.sectionGrid}>
+                            {/* Approval Distribution Chart */}
+                            <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
+                                <h3 className={styles.cardTitle} style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>
+                                    📊 Phân bổ trạng thái dự án
+                                </h3>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+                                    gap: '24px',
+                                    alignItems: 'center'
+                                }}>
+                                    <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                        <div style={{
+                                            width: '150px',
+                                            height: '150px',
+                                            borderRadius: '50%',
+                                            background: `conic-gradient(#10b981 0deg ${(dashboardData.approvedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects) * 360) || 0}deg, #f59e0b ${(dashboardData.approvedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects) * 360) || 0}deg ${((dashboardData.approvedProjects + dashboardData.pendingProjects) / (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects) * 360) || 0}deg, #ef4444 ${((dashboardData.approvedProjects + dashboardData.pendingProjects) / (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects) * 360) || 0}deg)`,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            position: 'relative'
+                                        }}>
+                                            <div style={{
+                                                width: '120px',
+                                                height: '120px',
+                                                borderRadius: '50%',
+                                                backgroundColor: 'var(--bg-secondary)',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexDirection: 'column'
+                                            }}>
+                                                <div style={{ fontSize: '24px', fontWeight: '700' }}>
+                                                    {dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects}
+                                                </div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Tổng</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div style={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '12px'
+                                    }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: '#d1fae5', borderRadius: '6px' }}>
+                                            <span style={{ fontSize: '14px', fontWeight: '600', color: '#065f46' }}>✓ Phê duyệt</span>
+                                            <span style={{ fontSize: '18px', fontWeight: '700', color: '#10b981' }}>{dashboardData.approvedProjects}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: '#fef3c7', borderRadius: '6px' }}>
+                                            <span style={{ fontSize: '14px', fontWeight: '600', color: '#92400e' }}>⏳ Chờ xử lý</span>
+                                            <span style={{ fontSize: '18px', fontWeight: '700', color: '#f59e0b' }}>{dashboardData.pendingProjects}</span>
+                                        </div>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', backgroundColor: '#fee2e2', borderRadius: '6px' }}>
+                                            <span style={{ fontSize: '14px', fontWeight: '600', color: '#7f1d1d' }}>✕ Từ chối</span>
+                                            <span style={{ fontSize: '18px', fontWeight: '700', color: '#ef4444' }}>{dashboardData.rejectedProjects}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Performance Metrics */}
+                            <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
+                                <h3 className={styles.cardTitle} style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>
+                                    ⚡ Chỉ số hiệu suất
+                                </h3>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+                                    gap: '16px'
+                                }}>
+                                    <div className={local.performanceMetric}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Tỉ lệ phê duyệt</span>
+                                            <span style={{ fontSize: '16px', fontWeight: '700', color: '#10b981' }}>
+                                                {dashboardData.approvedProjects + dashboardData.rejectedProjects > 0 
+                                                    ? Math.round((dashboardData.approvedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
+                                                    : 0}%
+                                            </span>
+                                        </div>
+                                        <div style={{ width: '100%', height: '8px', backgroundColor: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
+                                            <div style={{
+                                                height: '100%',
+                                                width: dashboardData.approvedProjects + dashboardData.rejectedProjects > 0 
+                                                    ? ((dashboardData.approvedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100) + '%'
+                                                    : '0%',
+                                                backgroundColor: '#10b981',
+                                                transition: 'width 0.3s ease'
+                                            }}></div>
+                                        </div>
+                                    </div>
+
+                                    <div className={local.performanceMetric}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Tỉ lệ hoàn thành</span>
+                                            <span style={{ fontSize: '16px', fontWeight: '700', color: '#06b6d4' }}>
+                                                {dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects > 0 
+                                                    ? Math.round(((dashboardData.approvedProjects + dashboardData.rejectedProjects) / (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects)) * 100)
+                                                    : 0}%
+                                            </span>
+                                        </div>
+                                        <div style={{ width: '100%', height: '8px', backgroundColor: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
+                                            <div style={{
+                                                height: '100%',
+                                                width: dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects > 0 
+                                                    ? (((dashboardData.approvedProjects + dashboardData.rejectedProjects) / (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects)) * 100) + '%'
+                                                    : '0%',
+                                                backgroundColor: '#06b6d4',
+                                                transition: 'width 0.3s ease'
+                                            }}></div>
+                                        </div>
+                                    </div>
+
+                                    <div className={local.performanceMetric}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                            <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Tỉ lệ từ chối</span>
+                                            <span style={{ fontSize: '16px', fontWeight: '700', color: '#ef4444' }}>
+                                                {dashboardData.approvedProjects + dashboardData.rejectedProjects > 0 
+                                                    ? Math.round((dashboardData.rejectedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
+                                                    : 0}%
+                                            </span>
+                                        </div>
+                                        <div style={{ width: '100%', height: '8px', backgroundColor: '#f3f4f6', borderRadius: '4px', overflow: 'hidden' }}>
+                                            <div style={{
+                                                height: '100%',
+                                                width: dashboardData.approvedProjects + dashboardData.rejectedProjects > 0 
+                                                    ? ((dashboardData.rejectedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100) + '%'
+                                                    : '0%',
+                                                backgroundColor: '#ef4444',
+                                                transition: 'width 0.3s ease'
+                                            }}></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Action Summary */}
+                            <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
+                                <h3 className={styles.cardTitle} style={{ fontSize: '14px', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>
+                                    📋 Tóm tắt hành động chờ xử lý
+                                </h3>
+                                <div style={{
+                                    display: 'grid',
+                                    gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                                    gap: '16px'
+                                }}>
+                                    <div style={{
+                                        padding: '16px',
+                                        backgroundColor: '#fef3c7',
+                                        borderRadius: '8px',
+                                        borderLeft: '4px solid #f59e0b'
+                                    }}>
+                                        <div style={{ fontSize: '12px', color: '#92400e', fontWeight: '600', marginBottom: '4px' }}>DUYỆT DỰ ÁN</div>
+                                        <div style={{ fontSize: '28px', fontWeight: '700', color: '#f59e0b', marginBottom: '8px' }}>
+                                            {dashboardData.pendingProjects}
+                                        </div>
+                                        <div style={{ fontSize: '12px', color: '#92400e' }}>
+                                            {dashboardData.pendingProjects > 0 
+                                                ? `${dashboardData.pendingProjects} dự án đang chờ phê duyệt của bạn` 
+                                                : 'Không có dự án nào chờ xử lý'}
+                                        </div>
+                                    </div>
+
+                                    <div style={{
+                                        padding: '16px',
+                                        backgroundColor: '#dbeafe',
+                                        borderRadius: '8px',
+                                        borderLeft: '4px solid #3b82f6'
+                                    }}>
+                                        <div style={{ fontSize: '12px', color: '#1e40af', fontWeight: '600', marginBottom: '4px' }}>PHÂN BỔ NGƯỜI DÙNG</div>
+                                        <div style={{ fontSize: '28px', fontWeight: '700', color: '#3b82f6', marginBottom: '8px' }}>
+                                            {dashboardData.pendingApprovals}
+                                        </div>
+                                        <div style={{ fontSize: '12px', color: '#1e40af' }}>
+                                            {dashboardData.pendingApprovals > 0 
+                                                ? `${dashboardData.pendingApprovals} yêu cầu chờ xác nhận` 
+                                                : 'Tất cả người dùng đã được phê duyệt'}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Project Reviews Section */}
                 {activeSection === 'projects' && (
                     <div className={styles.section}>
@@ -476,7 +881,7 @@ export default function OperationStaffDashboard({ user }) {
                     </div>
                 )}
 
-                {/* Approved Projects Section */}
+                {/* Approved Projects Section - Condensed */}
                 {activeSection === 'approved_projects' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
@@ -484,66 +889,42 @@ export default function OperationStaffDashboard({ user }) {
                             <div className={styles.list}>
                                 {isLoadingProjects ? (
                                     <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                        ⏳ Đang tải danh sách dự án...
+                                        ⏳ Đang tải...
                                     </div>
                                 ) : approvedProjects.length === 0 ? (
                                     <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                        Chưa có dự án nào được phê duyệt
+                                        Không có dự án nào
                                     </div>
                                 ) : (
-                                    approvedProjects.map(project => (
-                                        <div 
-                                            key={project.projectId} 
-                                            className={local.projectCard}
-                                            style={{ borderLeftColor: STATUS_COLORS[project.status || 'Approved'] }}
-                                        >
-                                            <div className={local.projectHeader}>
-                                                <div className={local.titleRow}>
-                                                    <h4 className={local.projectTitle}>{project.projectName}</h4>
-                                                    <span 
-                                                        className={local.statusBadge}
-                                                        style={{ 
-                                                            backgroundColor: `${STATUS_COLORS[project.status || 'Approved']}25`,
-                                                            color: STATUS_COLORS[project.status || 'Approved'],
-                                                            border: `1px solid ${STATUS_COLORS[project.status || 'Approved']}40`
-                                                        }}
-                                                    >
-                                                        {STATUS_LABELS[project.status || 'Approved'] || 'Đã được duyệt'}
-                                                    </span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {approvedProjects.map(project => (
+                                            <div 
+                                                key={project.projectId}
+                                                style={{
+                                                    padding: '12px',
+                                                    border: '1px solid var(--border-color)',
+                                                    borderRadius: '8px',
+                                                    backgroundColor: 'var(--bg-secondary)',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <div>
+                                                    <div style={{ fontWeight: '600', fontSize: '14px' }}>{project.projectName}</div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>✓ Duyệt: {project.approvedAt ? new Date(project.approvedAt).toLocaleDateString('vi-VN') : 'N/A'}</div>
                                                 </div>
-                                                <p className={local.projectDesc}>{project.shortDescription}</p>
+                                                <button onClick={() => openDetailModal(project)} className={styles.secondaryBtn} style={{ fontSize: '12px', padding: '6px 12px' }}>Chi tiết</button>
                                             </div>
-
-                                            <div className={local.tagContainer}>
-                                                <span className={local.metaTag}>
-                                                    {project.developmentStage === 0 ? 'Ý tưởng' : project.developmentStage === 1 ? 'MVP' : project.developmentStage === 'MVP' ? 'MVP' : 'Tăng trưởng'}
-                                                </span>
-                                            </div>
-
-                                            <div className={local.divider}></div>
-
-                                            <div className={local.footer}>
-                                                <div className={local.metaInfo}>
-                                                    📅 Phê duyệt ngày: {project.approvedAt ? new Date(project.approvedAt).toLocaleDateString('vi-VN') : 'N/A'}
-                                                </div>
-                                                <div className={local.buttonGroup}>
-                                                    <button
-                                                        onClick={() => openDetailModal(project)}
-                                                        className={styles.secondaryBtn}
-                                                    >
-                                                        Chi tiết
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Rejected Projects Section */}
+                {/* Rejected Projects Section - Condensed */}
                 {activeSection === 'rejected_projects' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
@@ -551,146 +932,257 @@ export default function OperationStaffDashboard({ user }) {
                             <div className={styles.list}>
                                 {isLoadingProjects ? (
                                     <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                        ⏳ Đang tải danh sách dự án...
+                                        ⏳ Đang tải...
                                     </div>
                                 ) : rejectedProjects.length === 0 ? (
                                     <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                        Không có dự án nào bị từ chối
+                                        Không có dự án nào
                                     </div>
                                 ) : (
-                                    rejectedProjects.map(project => (
-                                        <div 
-                                            key={project.projectId} 
-                                            className={local.projectCard}
-                                            style={{ borderLeftColor: STATUS_COLORS[project.status || 'Rejected'] }}
-                                        >
-                                            <div className={local.projectHeader}>
-                                                <div className={local.titleRow}>
-                                                    <h4 className={local.projectTitle}>{project.projectName}</h4>
-                                                    <span 
-                                                        className={local.statusBadge}
-                                                        style={{ 
-                                                            backgroundColor: `${STATUS_COLORS[project.status || 'Rejected']}25`,
-                                                            color: STATUS_COLORS[project.status || 'Rejected'],
-                                                            border: `1px solid ${STATUS_COLORS[project.status || 'Rejected']}40`
-                                                        }}
-                                                    >
-                                                        {STATUS_LABELS[project.status || 'Rejected'] || 'Bị từ chối'}
-                                                    </span>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {rejectedProjects.map(project => (
+                                            <div 
+                                                key={project.projectId}
+                                                style={{
+                                                    padding: '12px',
+                                                    border: '1px solid var(--border-color)',
+                                                    borderRadius: '8px',
+                                                    backgroundColor: 'var(--bg-secondary)',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <div>
+                                                    <div style={{ fontWeight: '600', fontSize: '14px' }}>{project.projectName}</div>
+                                                    <div style={{ fontSize: '12px', color: '#ef4444' }}>✕ Từ chối: {project.rejectedAt ? new Date(project.rejectedAt).toLocaleDateString('vi-VN') : 'N/A'}</div>
                                                 </div>
-                                                <p className={local.projectDesc}>{project.shortDescription}</p>
+                                                <button onClick={() => openDetailModal(project)} className={styles.secondaryBtn} style={{ fontSize: '12px', padding: '6px 12px' }}>Chi tiết</button>
                                             </div>
-
-                                            {/* Rejection Reason display */}
-                                            {project.rejectionReason && (
-                                                <div className={styles.rejectionBox}>
-                                                    <div className={styles.rejectionTitle}>
-                                                        <AlertCircle size={14} />
-                                                        <span>Lý do từ chối:</span>
-                                                    </div>
-                                                    <p className={styles.rejectionText}>{project.rejectionReason}</p>
-                                                </div>
-                                            )}
-
-                                            <div className={local.divider}></div>
-
-                                            <div className={local.footer}>
-                                                <div className={local.metaInfo}>
-                                                    📅 Từ chối ngày: {project.rejectedAt ? new Date(project.rejectedAt).toLocaleDateString('vi-VN') : 'N/A'}
-                                                </div>
-                                                <div className={local.buttonGroup}>
-                                                    <button
-                                                        onClick={() => openDetailModal(project)}
-                                                        className={styles.secondaryBtn}
-                                                    >
-                                                        Chi tiết
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))
+                                        ))}
+                                    </div>
                                 )}
                             </div>
                         </div>
                     </div>
                 )}
 
-                {/* Overview Section */}
-                {activeSection === 'overview' && (
+                {/* Booking Management Section */}
+                {activeSection === 'bookings' && (
                     <div className={styles.section}>
-                        <div className={styles.sectionGrid}>
-                            {/* Statistics */}
-                            <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
-                                <h3 className={styles.cardTitle} style={{ fontSize: '14px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '16px' }}>
-                                    Chỉ số hiệu suất hệ thống
-                                </h3>
-                                <div className={styles.metricsGrid}>
-                                    <div className={styles.metricItemInner}>
-                                        <div className={styles.metricLabel}>Thời gian phê duyệt TB</div>
-                                        <div className={styles.metricValue}>{dashboardData.averageApprovalTime}</div>
-                                    </div>
-                                    <div className={styles.metricItemInner}>
-                                        <div className={styles.metricLabel}>Tổng hoạt động</div>
-                                        <div className={styles.metricValue}>{dashboardData.totalActivity}</div>
-                                    </div>
-                                    <div className={styles.metricItemInner}>
-                                        <div className={styles.metricLabel}>Người dùng được phê duyệt</div>
-                                        <div className={styles.metricValue}>{dashboardData.approvedUsers}</div>
-                                    </div>
-                                </div>
-                            </div>
+                        <div className={styles.card}>
+                            <h3 className={styles.cardTitle}>
+                                Quản lý Booking ({bookings.length})
+                                <span style={{ marginLeft: '12px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                    Tổng: {totalBookings}
+                                </span>
+                            </h3>
 
-                            {/* Pending Items Summary */}
-                            <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Các mục chờ xử lý</h3>
-                                <div className={local.pendingList}>
-                                    <div className={local.pendingItem}>
-                                        <div className={local.pendingItemLeft}>
-                                            <span className={local.pendingItemTitle}>Dự án chờ phê duyệt</span>
-                                            <span className={local.pendingItemSubtitle}>Dự án startup nộp mới</span>
-                                        </div>
-                                        <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ backgroundColor: 'rgba(124, 58, 237, 0.1)', color: '#7c3aed' }}>
-                                            {dashboardData.pendingProjects}
-                                        </span>
-                                    </div>
-                                    <div className={local.pendingItem}>
-                                        <div className={local.pendingItemLeft}>
-                                            <span className={local.pendingItemTitle}>Người dùng cần phê duyệt</span>
-                                            <span className={local.pendingItemSubtitle}>Yêu cầu đăng ký mới</span>
-                                        </div>
-                                        <span className={`${styles.badge} ${styles.badgeInfo}`}>
-                                            {dashboardData.pendingApprovals}
-                                        </span>
-                                    </div>
-                                    <div className={local.pendingItem}>
-                                        <div className={local.pendingItemLeft}>
-                                            <span className={local.pendingItemTitle}>Yêu cầu cần xem xét</span>
-                                            <span className={local.pendingItemSubtitle}>Các kết nối & tư vấn</span>
-                                        </div>
-                                        <span className={`${styles.badge} ${styles.badgeError}`}>
-                                            {dashboardData.pendingRequests}
-                                        </span>
-                                    </div>
-                                </div>
-                                <div style={{ marginTop: '8px', textAlign: 'right' }}>
-                                    <button className={styles.linkBtn} onClick={() => setActiveSection('requests')} style={{ fontSize: '12px' }}>
-                                        Xem tất cả <ArrowRight size={12} style={{ verticalAlign: 'middle', marginLeft: '2px' }} />
+                            {/* Filter Bar */}
+                            <div style={{
+                                display: 'flex',
+                                gap: '12px',
+                                marginBottom: '16px',
+                                flexWrap: 'wrap'
+                            }}>
+                                <button
+                                    onClick={() => { setBookingFilters(''); setBookingPage(1); }}
+                                    style={{
+                                        padding: '8px 16px',
+                                        backgroundColor: bookingFilters === '' ? '#7c3aed' : 'var(--bg-secondary)',
+                                        color: bookingFilters === '' ? 'white' : 'var(--text-primary)',
+                                        border: '1px solid var(--border-color)',
+                                        borderRadius: '6px',
+                                        cursor: 'pointer',
+                                        fontSize: '12px',
+                                        fontWeight: '600'
+                                    }}
+                                >
+                                    Tất cả
+                                </button>
+                                {['Pending', 'Confirmed', 'Completed'].map(status => (
+                                    <button
+                                        key={status}
+                                        onClick={() => { setBookingFilters(`status:${status}`); setBookingPage(1); }}
+                                        style={{
+                                            padding: '8px 16px',
+                                            backgroundColor: bookingFilters === `status:${status}` ? '#7c3aed' : 'var(--bg-secondary)',
+                                            color: bookingFilters === `status:${status}` ? 'white' : 'var(--text-primary)',
+                                            border: '1px solid var(--border-color)',
+                                            borderRadius: '6px',
+                                            cursor: 'pointer',
+                                            fontSize: '12px',
+                                            fontWeight: '600'
+                                        }}
+                                    >
+                                        {status === 'Pending' ? '⏳ ' : status === 'Confirmed' ? '✓ ' : '✓ '}{status}
                                     </button>
-                                </div>
+                                ))}
                             </div>
 
-                            {/* Recent Activity */}
-                            <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Hoạt động gần đây</h3>
-                                <div className={styles.emptyState}>
-                                    <Activity size={32} className={styles.emptyStateIcon} />
-                                    <p className={styles.emptyStateText}>Chưa có hoạt động nào trong hệ thống.</p>
-                                </div>
+                            {/* Booking List */}
+                            <div className={styles.list}>
+                                {isLoadingBookings ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                        ⏳ Đang tải booking...
+                                    </div>
+                                ) : bookings.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                        Không có booking nào
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                        {bookings.map((booking, index) => (
+                                            <div 
+                                                key={`${booking.id}-${index}`}
+                                                style={{
+                                                    padding: '14px',
+                                                    border: '1px solid var(--border-color)',
+                                                    borderRadius: '8px',
+                                                    backgroundColor: 'var(--bg-secondary)',
+                                                    display: 'grid',
+                                                    gridTemplateColumns: '1fr auto',
+                                                    gap: '16px',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <div>
+                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap' }}>
+                                                        <span style={{ fontWeight: '700', fontSize: '14px' }}>
+                                                            #{booking.id} - {booking.advisorName} ↔ {booking.customerName}
+                                                        </span>
+                                                        <span 
+                                                            style={{
+                                                                fontSize: '11px',
+                                                                padding: '3px 10px',
+                                                                borderRadius: '4px',
+                                                                backgroundColor: booking.status === 'Pending' ? '#fef3c7' : booking.status === 'Confirmed' ? '#d1fae5' : '#e0e7ff',
+                                                                color: booking.status === 'Pending' ? '#92400e' : booking.status === 'Confirmed' ? '#065f46' : '#312e81',
+                                                                fontWeight: '600',
+                                                                whiteSpace: 'nowrap'
+                                                            }}
+                                                        >
+                                                            {booking.status === 'Pending' ? '⏳ Chờ xác nhận' : booking.status === 'Confirmed' ? '✓ Đã xác nhận' : '✓ Hoàn thành'}
+                                                        </span>
+                                                    </div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                                                        📅 {new Date(booking.startTime).toLocaleString('vi-VN')} → {new Date(booking.endTime).toLocaleString('vi-VN')}
+                                                    </div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                                                        💰 {Number(booking.price).toLocaleString('vi-VN')} VND
+                                                    </div>
+                                                    <div style={{ fontSize: '11px', color: '#999' }}>
+                                                        CV: {booking.customerId} | CTV: {booking.advisorId}
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', gap: '6px', flexWrap: 'nowrap' }}>
+                                                    {booking.status === 'Pending' && (
+                                                        <>
+                                                            <button
+                                                                style={{
+                                                                    padding: '6px 12px',
+                                                                    backgroundColor: '#10b981',
+                                                                    color: 'white',
+                                                                    border: 'none',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: '600',
+                                                                    cursor: 'pointer',
+                                                                    whiteSpace: 'nowrap'
+                                                                }}
+                                                            >
+                                                                Duyệt
+                                                            </button>
+                                                            <button
+                                                                style={{
+                                                                    padding: '6px 12px',
+                                                                    backgroundColor: '#ef4444',
+                                                                    color: 'white',
+                                                                    border: 'none',
+                                                                    borderRadius: '6px',
+                                                                    fontSize: '12px',
+                                                                    fontWeight: '600',
+                                                                    cursor: 'pointer',
+                                                                    whiteSpace: 'nowrap'
+                                                                }}
+                                                            >
+                                                                Từ chối
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                    <button
+                                                        onClick={() => handleViewBookingDetails(booking.id)}
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#3b82f6',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            whiteSpace: 'nowrap'
+                                                        }}
+                                                    >
+                                                        Chi tiết
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
+
+                            {/* Pagination */}
+                            {totalBookings > 0 && (
+                                <div style={{
+                                    marginTop: '16px',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    fontSize: '12px',
+                                    color: 'var(--text-secondary)'
+                                }}>
+                                    <span>Trang {bookingPage} / {Math.ceil(totalBookings / bookingPageSize)}</span>
+                                    <div style={{ display: 'flex', gap: '8px' }}>
+                                        <button
+                                            onClick={() => setBookingPage(Math.max(1, bookingPage - 1))}
+                                            disabled={bookingPage === 1}
+                                            style={{
+                                                padding: '6px 12px',
+                                                backgroundColor: bookingPage === 1 ? '#f3f4f6' : '#7c3aed',
+                                                color: bookingPage === 1 ? '#9ca3af' : 'white',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                cursor: bookingPage === 1 ? 'not-allowed' : 'pointer',
+                                                fontSize: '12px',
+                                                fontWeight: '600'
+                                            }}
+                                        >
+                                            Trước
+                                        </button>
+                                        <button
+                                            onClick={() => setBookingPage(Math.min(Math.ceil(totalBookings / bookingPageSize), bookingPage + 1))}
+                                            disabled={bookingPage >= Math.ceil(totalBookings / bookingPageSize)}
+                                            style={{
+                                                padding: '6px 12px',
+                                                backgroundColor: bookingPage >= Math.ceil(totalBookings / bookingPageSize) ? '#f3f4f6' : '#7c3aed',
+                                                color: bookingPage >= Math.ceil(totalBookings / bookingPageSize) ? '#9ca3af' : 'white',
+                                                border: 'none',
+                                                borderRadius: '6px',
+                                                cursor: bookingPage >= Math.ceil(totalBookings / bookingPageSize) ? 'not-allowed' : 'pointer',
+                                                fontSize: '12px',
+                                                fontWeight: '600'
+                                            }}
+                                        >
+                                            Sau
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
-
 
                 {/* User Approvals Section */}
                 {activeSection === 'approvals' && (
@@ -737,62 +1229,6 @@ export default function OperationStaffDashboard({ user }) {
                                                     <button
                                                         className={styles.dangerBtn}
                                                         onClick={() => handleRejectUser(approval.id)}
-                                                    >
-                                                        Từ chối
-                                                    </button>
-                                                </>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Request Management Section */}
-                {activeSection === 'requests' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>
-                                Quản lý yêu cầu tư vấn
-                                {dashboardData.pendingRequests > 0 && (
-                                    <span className={`${styles.badge} ${styles.badgeError}`} style={{ marginLeft: '12px' }}>
-                                        {dashboardData.pendingRequests} Chờ xử lý
-                                    </span>
-                                )}
-                            </h3>
-
-                            <div className={styles.list}>
-                                {pendingRequests.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                        <p>Chưa có yêu cầu nào đang chờ xử lý.</p>
-                                    </div>
-                                ) : pendingRequests.map(request => (
-                                    <div key={request.id} className={styles.listItem}>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listSubtitle} style={{ color: 'var(--primary-blue)', fontWeight: '700', marginBottom: '4px' }}>
-                                                {request.requestType === 'consulting' ? '📚 Tư vấn' : '🤝 Kết nối'} Yêu cầu
-                                            </div>
-                                            <h4 className={styles.listTitle}>
-                                                {request.startupName}
-                                                {request.advisorName && ` + ${request.advisorName}`}
-                                                {request.investorName && ` + ${request.investorName}`}
-                                            </h4>
-                                            <span className={styles.listMeta}>Submitted: {request.submittedDate}</span>
-                                        </div>
-                                        <div className={styles.listActions}>
-                                            {request.status === 'pending' && (
-                                                <>
-                                                    <button
-                                                        className={styles.primaryBtn}
-                                                        onClick={() => handleApproveRequest(request.id)}
-                                                    >
-                                                        Phê duyệt
-                                                    </button>
-                                                    <button
-                                                        className={styles.dangerBtn}
-                                                        onClick={() => handleRejectRequest(request.id)}
                                                     >
                                                         Từ chối
                                                     </button>
@@ -1175,6 +1611,129 @@ export default function OperationStaffDashboard({ user }) {
                     </div>
                 </div>
             )}
+
+            {/* Booking Detail Modal */}
+            {showBookingModal && selectedBooking && (
+                <div
+                    className={styles.modalOverlay}
+                    onClick={(e) => e.target === e.currentTarget && setShowBookingModal(false)}
+                >
+                    <div className={styles.modalContent} style={{ maxWidth: '650px', width: '92%' }}>
+                        {/* Modal Header */}
+                        <div className={styles.modalHeader}>
+                            <div>
+                                <h2 className={styles.headerTitle} style={{ margin: '0 0 8px 0' }}>
+                                    Booking #{selectedBooking.id}
+                                </h2>
+                                <span
+                                    className={styles.badge}
+                                    style={{
+                                        backgroundColor: selectedBooking.status === 'Pending' ? '#fef3c7' : selectedBooking.status === 'Confirmed' ? '#d1fae5' : '#e0e7ff',
+                                        color: selectedBooking.status === 'Pending' ? '#92400e' : selectedBooking.status === 'Confirmed' ? '#065f46' : '#312e81',
+                                        border: '1px solid currentColor',
+                                        opacity: 0.3
+                                    }}
+                                >
+                                    {selectedBooking.status === 'Pending' ? '⏳ Chờ xác nhận' : selectedBooking.status === 'Confirmed' ? '✓ Đã xác nhận' : '✓ Hoàn thành'}
+                                </span>
+                            </div>
+                            <button
+                                onClick={() => setShowBookingModal(false)}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        {/* Modal Body */}
+                        <div style={{ padding: '24px', overflowY: 'auto', maxHeight: 'calc(90vh - 120px)' }}>
+                            {isLoadingBookingDetail ? (
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-secondary)', padding: '32px' }}>
+                                    <Loader2 size={18} className={styles.spinner} />
+                                    Đang tải chi tiết...
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Advisor and Customer Info */}
+                                    <div style={{ marginBottom: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                        <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '600' }}>👨‍💼 Cố vấn</div>
+                                            <div style={{ fontSize: '15px', fontWeight: '700', marginBottom: '6px', color: 'var(--text-primary)' }}>
+                                                {selectedBooking.advisorName}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '4px 8px', backgroundColor: 'var(--bg-primary)', borderRadius: '4px', display: 'inline-block' }}>
+                                                ID: {selectedBooking.advisorId}
+                                            </div>
+                                        </div>
+                                        <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '600' }}>👤 Khách hàng</div>
+                                            <div style={{ fontSize: '15px', fontWeight: '700', marginBottom: '6px', color: 'var(--text-primary)' }}>
+                                                {selectedBooking.customerName}
+                                            </div>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '4px 8px', backgroundColor: 'var(--bg-primary)', borderRadius: '4px', display: 'inline-block' }}>
+                                                ID: {selectedBooking.customerId}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Time and Price Info */}
+                                    <div style={{ marginBottom: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                        <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '10px', textTransform: 'uppercase', fontWeight: '600' }}>📅 Thời gian bắt đầu</div>
+                                            <div style={{ fontSize: '13px', lineHeight: '1.6', color: 'var(--text-primary)', fontWeight: '500' }}>
+                                                {new Date(selectedBooking.startTime).toLocaleString('vi-VN')}
+                                            </div>
+                                        </div>
+                                        <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '10px', textTransform: 'uppercase', fontWeight: '600' }}>📅 Thời gian kết thúc</div>
+                                            <div style={{ fontSize: '13px', lineHeight: '1.6', color: 'var(--text-primary)', fontWeight: '500' }}>
+                                                {new Date(selectedBooking.endTime).toLocaleString('vi-VN')}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Price Info */}
+                                    <div style={{ marginBottom: '24px', padding: '16px', backgroundColor: '#f0f7ff', borderRadius: '8px', border: '2px solid #7c3aed', borderLeft: '4px solid #7c3aed' }}>
+                                        <div style={{ fontSize: '11px', color: '#6366f1', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '600' }}>💰 Giá cả</div>
+                                        <div style={{ fontSize: '28px', fontWeight: '700', color: '#7c3aed' }}>
+                                            {Number(selectedBooking.price).toLocaleString('vi-VN')}
+                                        </div>
+                                        <div style={{ fontSize: '11px', color: '#6366f1', marginTop: '4px' }}>VND</div>
+                                    </div>
+
+                                    {/* Booking ID and Details */}
+                                    <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', border: '1px solid var(--border-color)' }}>
+                                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '600' }}>📋 Chi tiết Booking</div>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px' }}>
+                                            <div>
+                                                <span style={{ color: 'var(--text-secondary)' }}>Booking ID:</span>
+                                                <div style={{ fontWeight: '600', color: 'var(--text-primary)', fontSize: '14px' }}>#{selectedBooking.id}</div>
+                                            </div>
+                                            <div>
+                                                <span style={{ color: 'var(--text-secondary)' }}>Trạng thái:</span>
+                                                <div style={{ fontWeight: '600', color: selectedBooking.status === 'Pending' ? '#f59e0b' : selectedBooking.status === 'Confirmed' ? '#10b981' : '#6366f1' }}>
+                                                    {selectedBooking.status === 'Pending' ? '⏳ Chờ xác nhận' : selectedBooking.status === 'Confirmed' ? '✓ Đã xác nhận' : '✓ Hoàn thành'}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        {/* Modal Footer */}
+                        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: 'var(--bg-secondary)', borderRadius: '0 0 16px 16px' }}>
+                            <button
+                                onClick={() => setShowBookingModal(false)}
+                                className={styles.secondaryBtn}
+                            >
+                                Đóng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {showHistoryView && selectedHistoryResult && (
                 <AIEvaluationModal
                     isOpen={showHistoryView}

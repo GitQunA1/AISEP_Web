@@ -355,6 +355,32 @@
     background-color: var(--bg-hover);
 }
 
+.aiBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #fbbf24;
+    color: #78350f;
+    border: 1px solid #f59e0b;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.aiBtn:hover:not(:disabled) {
+    background-color: #f59e0b;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
+}
+
+.aiBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
 .dangerBtn {
     display: inline-flex;
     align-items: center;
