@@ -117,6 +117,35 @@ const startupProfileService = {
       console.error('Error updating startup profile:', error);
       throw error;
     }
+  },
+
+  /**
+   * Approve a pending startup profile
+   * @param {number} id - The ID of the startup to approve
+   * @returns {Promise<Object>} Response from the server
+   */
+  approveStartup: async (id) => {
+    try {
+      return await apiClient.patch(`/api/Startups/${id}/approve`);
+    } catch (error) {
+      console.error(`Error approving startup ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reject a pending startup profile
+   * @param {number} id - The ID of the startup to reject
+   * @param {string} reason - The reason for rejection
+   * @returns {Promise<Object>} Response from the server
+   */
+  rejectStartup: async (id, reason) => {
+    try {
+      return await apiClient.patch(`/api/Startups/${id}/reject`, { reason });
+    } catch (error) {
+      console.error(`Error rejecting startup ${id}:`, error);
+      throw error;
+    }
   }
 };
 

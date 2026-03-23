@@ -1,6 +1,7 @@
 .badge {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   padding: 3px 9px;
   border-radius: 999px;
@@ -9,6 +10,8 @@
   white-space: nowrap;
   transition: all var(--transition-fast);
   letter-spacing: 0.2px;
+  min-width: 32px;
+  min-height: 22px;
 }
 
 .badgeIcon {
@@ -92,4 +95,13 @@
 .badge--sm {
   padding: 2px 6px;
   font-size: 11px;
+}
+
+.spinIcon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }

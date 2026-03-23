@@ -64,6 +64,7 @@ export default function StartupDashboard({ user }) {
     const [isLoadingHistory, setIsLoadingHistory] = React.useState(false);
     const [showHistoryView, setShowHistoryView] = React.useState(false);
     const [selectedHistoryResult, setSelectedHistoryResult] = React.useState(null);
+    const [evaluatingProjectId, setEvaluatingProjectId] = React.useState(null);
 
     // Document Deletion States
     const [isDeletingDocument, setIsDeletingDocument] = React.useState(false);
@@ -527,6 +528,7 @@ export default function StartupDashboard({ user }) {
         setIsEvaluatingAI(true);
         try {
             // The AI Evaluation flow
+            setEvaluatingProjectId(projectData.id);
             const response = await projectSubmissionService.triggerAIAnalysis(projectData.id);
 
             if (response.success) {
@@ -558,10 +560,11 @@ export default function StartupDashboard({ user }) {
             setShowSuccessModal(true);
         } finally {
             setIsEvaluatingAI(false);
+            setEvaluatingProjectId(null);
         }
     };
 
-    // BR-15: Submit Project for Staff Review (with AI Evaluation)
+// BR-15: Submit Project for Staff Review (WITHOUT AI - Direct submission)
     const handleSubmitProject = async (projectId) => {
         if (!projectId) {
             console.error('[SUBMIT] Invalid projectId:', projectId);
@@ -575,7 +578,7 @@ export default function StartupDashboard({ user }) {
         console.log('[SUBMIT] handleSubmitProject called with:', {
             projectIdInput: projectId,
             projectIdParsed: validId,
-            type: typeof projectId
+            type: typeof validId
         });
 
         // Show confirmation modal instead of window.confirm
@@ -583,7 +586,7 @@ export default function StartupDashboard({ user }) {
         setShowSubmitConfirmation(true);
     };
 
-    // Handle confirm from confirmation modal
+    // Handle confirm from confirmation modal - DIRECT SUBMISSION (No AI)
     const handleConfirmSubmit = async () => {
         if (!pendingSubmitProjectId) {
             console.error('[SUBMIT] No project ID provided');
@@ -593,95 +596,122 @@ export default function StartupDashboard({ user }) {
             return;
         }
 
-        // Ensure projectId is valid
         const projectId = parseInt(pendingSubmitProjectId) || pendingSubmitProjectId;
-        console.log('[SUBMIT] Starting AI evaluation with projectId:', {
-            pendingId: pendingSubmitProjectId,
-            finalId: projectId,
-            type: typeof projectId
-        });
+        console.log('[SUBMIT] Submitting project directly:', projectId);
+        
         setShowSubmitConfirmation(false);
-        setIsEvaluatingAI(true);
-        setAiEvaluationError(null); // Reset error
-        setShowAIEvaluationModal(true); // Show modal immediately for loading state
-
-        try {
-            // Start AI Analysis API
-            console.log('[SUBMIT] Starting AI Analysis API with projectId:', projectId);
-            
-            const analysisRes = await AIEvaluationService.analyzeProjectAPI(projectId);
-
-            console.log('[SUBMIT] AI Analysis response received:', {
-                success: analysisRes?.success,
-                status: analysisRes?.message
-            });
-
-            // If analysis failed, show error in modal
-            if (!analysisRes.success) {
-                console.error('[SUBMIT] AI Analysis API failed:', analysisRes.message);
-                setAiEvaluationError(analysisRes.message || 'Không thể lấy kết quả đánh giá AI.');
-                setIsEvaluatingAI(false);
-                return;
-            }
-
-            // Translate analysis result
-            const { analysisResult: translatedAnalysis } = translateAIResults(analysisRes, null);
-            
-            // Show analysis result
-            setAIEvaluationResult({
-                projectId: projectId,
-                analysis: translatedAnalysis
-            });
-            
-            setIsEvaluatingAI(false); // Stop loading indicator
-        } catch (error) {
-            console.error('[SUBMIT] Error evaluating project with AI:', error);
-            setAiEvaluationError(error.message || 'Hệ thống đang bận, vui lòng thử lại sau.');
-        } finally {
-            setIsEvaluatingAI(false);
-            setPendingSubmitProjectId(null);
-        }
-    };
-
-    // Handle confirm from AI Evaluation Modal
-    const handleConfirmProjectSubmission = async () => {
-        if (!aiEvaluationResult) return;
-
-        setShowAIEvaluationModal(false);
         setIsSubmittingProject(true);
 
         try {
-            const res = await projectSubmissionService.submitProject(aiEvaluationResult.projectId);
+            const res = await projectSubmissionService.submitProject(projectId);
             if (res && (res.success || res.isSuccess)) {
                 setSuccessMessage('Dự án đã được nộp thành công! Đội ngũ của chúng tôi sẽ xem xét trong vòng 2-3 ngày làm việc.');
+                setSuccessModalType('success');
                 setShowSuccessModal(true);
 
                 // Refresh data
                 const response = await projectSubmissionService.getMyProjects();
                 if (response.success && response.data) {
                     let projects = Array.isArray(response.data) ? response.data : (response.data.items || []);
-                    // Ensure newest first locally as well
                     projects = [...projects].sort((a, b) => (b.id || b.projectId) - (a.id || a.projectId));
                     setMyProjects(projects);
 
-                    // Update detail project if open
-                    if (detailProject && (detailProject.id === aiEvaluationResult.projectId || detailProject.projectId === aiEvaluationResult.projectId)) {
-                        const updated = projects.find(p => (p.id || p.projectId) === aiEvaluationResult.projectId);
+                    if (detailProject && (detailProject.id === projectId || detailProject.projectId === projectId)) {
+                        const updated = projects.find(p => (p.id || p.projectId) === projectId);
                         if (updated) setDetailProject(updated);
                     }
                 }
             } else {
+                setSuccessModalType('error');
                 setSuccessMessage('Lỗi: ' + translateError(res?.message || 'Không thể nộp dự án.'));
                 setShowSuccessModal(true);
             }
         } catch (error) {
             console.error('Error submitting project:', error);
+            setSuccessModalType('error');
             setSuccessMessage('Lỗi khi nộp dự án: ' + translateError(error));
             setShowSuccessModal(true);
         } finally {
             setIsSubmittingProject(false);
-            setAIEvaluationResult(null);
+            setPendingSubmitProjectId(null);
         }
+    };
+
+    // PREMIUM FEATURE: Run AI Evaluation separately
+    const handleRunAIEvaluation = async (projectId) => {
+        if (!projectId) {
+            console.error('[AI] Invalid projectId:', projectId);
+            setSuccessMessage('Lỗi: Không tìm thấy ID dự án');
+            setSuccessModalType('error');
+            setShowSuccessModal(true);
+            return;
+        }
+
+        const validId = parseInt(projectId) || projectId;
+        console.log('[AI] Running AI Evaluation for projectId:', validId);
+        
+        setIsEvaluatingAI(true);
+        setEvaluatingProjectId(validId);
+        setAiEvaluationError(null);
+        setShowAIEvaluationModal(true);
+
+        try {
+            // Call both AI APIs in parallel
+            const [analysisRes, eligibilityRes] = await Promise.all([
+                AIEvaluationService.analyzeProjectAPI(validId),
+                AIEvaluationService.evaluateEligibilityAPI(validId)
+            ]);
+
+            console.log('[AI] API responses received:', {
+                analysisSuccess: analysisRes?.success,
+                eligibilitySuccess: eligibilityRes?.success
+            });
+
+            // Translate results to Vietnamese
+            const { analysisResult: translatedAnalysis, eligibilityResult: translatedEligibility } = translateAIResults(analysisRes, eligibilityRes);
+
+            // Store results
+            setAIEvaluationResult({
+                projectId: validId,
+                analysis: translatedAnalysis,
+                eligibility: translatedEligibility
+            });
+
+            setIsEvaluatingAI(false);
+        } catch (error) {
+            console.error('[AI] Error evaluating project:', error);
+            setAiEvaluationError(error.message || 'Không thể đánh giá dự án. Vui lòng thử lại.');
+            setIsEvaluatingAI(false);
+        }
+    };
+
+    // Save AI Evaluation results to database
+    const handleSaveAIResults = async () => {
+        if (!aiEvaluationResult) return;
+
+        try {
+            // TODO: API call to save results
+            // const response = await AIEvaluationService.saveAIResults(aiEvaluationResult);
+            
+            setSuccessModalType('success');
+            setSuccessMessage('Kết quả chấm điểm AI đã được lưu thành công!');
+            setShowSuccessModal(true);
+            
+            setShowAIEvaluationModal(false);
+            setAIEvaluationResult(null);
+        } catch (error) {
+            console.error('Error saving AI results:', error);
+            setSuccessModalType('error');
+            setSuccessMessage('Lỗi khi lưu kết quả: ' + translateError(error));
+            setShowSuccessModal(true);
+        }
+    };
+
+    // Handle cancel AI Evaluation - just close modal
+    const handleCancelAIEvaluation = () => {
+        setShowAIEvaluationModal(false);
+        setAIEvaluationResult(null);
+        setAiEvaluationError(null);
     };
 
     // BR-19: Publish Project
@@ -997,13 +1027,23 @@ export default function StartupDashboard({ user }) {
                                                 </div>
                                                 <div className={styles.listActions}>
                                                     {p.status === 'Draft' && (
-                                                        <button
-                                                            className={styles.primaryBtn}
-                                                            onClick={() => handleSubmitProject(p.id || p.projectId)}
-                                                            disabled={isSubmittingProject}
-                                                        >
-                                                            {isSubmittingProject ? '...' : 'Nộp dự án'}
-                                                        </button>
+                                                        <>
+                                                            <button
+                                                                className={styles.aiBtn}
+                                                                onClick={() => handleRunAIEvaluation(p.id || p.projectId)}
+                                                                disabled={isEvaluatingAI}
+                                                                title="Chạy đánh giá AI cho dự án này"
+                                                            >
+                                                                {isEvaluatingAI && evaluatingProjectId === (p.id || p.projectId) ? 'Đang chấm...' : 'Phân Tích AI'}
+                                                            </button>
+                                                            <button
+                                                                className={styles.primaryBtn}
+                                                                onClick={() => handleSubmitProject(p.id || p.projectId)}
+                                                                disabled={isSubmittingProject}
+                                                            >
+                                                                {isSubmittingProject ? '...' : 'Nộp dự án'}
+                                                            </button>
+                                                        </>
                                                     )}
                                                     <button
                                                         className={styles.secondaryBtn}
@@ -1632,13 +1672,10 @@ export default function StartupDashboard({ user }) {
                     eligibilityResult={aiEvaluationResult?.eligibility}
                     isLoading={isEvaluatingAI}
                     error={aiEvaluationError}
-                    projectName={myProjects.find(p => (p.id || p.projectId) === (aiEvaluationResult?.projectId || pendingSubmitProjectId))?.projectName || 'Dự án'}
-                    onSubmit={handleConfirmProjectSubmission}
-                    onCancel={() => {
-                        setShowAIEvaluationModal(false);
-                        setAIEvaluationResult(null);
-                        setAiEvaluationError(null);
-                    }}
+                    projectName={myProjects.find(p => (p.id || p.projectId) === aiEvaluationResult?.projectId)?.projectName || 'Dự án'}
+                    isEvaluationOnly={true}
+                    onSubmit={handleSaveAIResults}
+                    onCancel={handleCancelAIEvaluation}
                 />
             )}
 
@@ -1653,12 +1690,12 @@ export default function StartupDashboard({ user }) {
 
             <ConfirmationModal
                 isOpen={showSubmitConfirmation}
-                type="warning"
+                type="info"
                 title="Nộp dự án"
-                message="Chúng tôi sẽ sử dụng AI để chấm điểm dự án của bạn trước khi nộp. Bạn có đồng ý tiếp tục?"
-                primaryBtnText="Tiếp tục"
+                message="Bạn có chắc chắn muốn nộp dự án này để được xem xét?"
+                primaryBtnText="Nộp"
                 secondaryBtnText="Hủy"
-                isLoading={isEvaluatingAI}
+                isLoading={isSubmittingProject}
                 onPrimaryClick={handleConfirmSubmit}
                 onSecondaryClick={() => {
                     setShowSubmitConfirmation(false);

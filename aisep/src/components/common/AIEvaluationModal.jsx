@@ -4,6 +4,9 @@ import styles from './AIEvaluationModal.module.css';
 
 /**
  * AIEvaluationModal - Display AI analysis and eligibility evaluation results
+ * Props:
+ *  - isEvaluationOnly: true = show Save button (Premium feature), false = show Submit button
+ *  - isHistoryMode: true = read-only history view
  */
 export default function AIEvaluationModal({
     isOpen,
@@ -13,6 +16,7 @@ export default function AIEvaluationModal({
     error,
     projectName,
     isHistoryMode = false,
+    isEvaluationOnly = false,
     onSubmit,
     onCancel
 }) {
@@ -368,6 +372,20 @@ export default function AIEvaluationModal({
                             >
                                 Đóng
                             </button>
+                        ) : isEvaluationOnly ? (
+                            <>
+                                <button className={styles.secondaryBtn} onClick={onCancel}>
+                                    Đóng
+                                </button>
+                                <button
+                                    className={styles.primaryBtn}
+                                    onClick={onSubmit}
+                                    disabled={!canSubmit}
+                                    title={!canSubmit ? 'Dự án phải có điểm > 0' : ''}
+                                >
+                                    {canSubmit ? '💾 Lưu Kết Quả' : 'Không thể lưu (Điểm = 0)'}
+                                </button>
+                            </>
                         ) : (
                             <>
                                 <button className={styles.secondaryBtn} onClick={onCancel}>

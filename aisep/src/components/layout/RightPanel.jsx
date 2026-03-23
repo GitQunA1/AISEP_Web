@@ -3,6 +3,7 @@ import { Zap, Pin, Loader, Search, Flame, Star } from 'lucide-react';
 import styles from './RightPanel.module.css';
 import Badge from '../common/Badge';
 import projectSubmissionService from '../../services/projectSubmissionService';
+import AIEvaluationService from '../../services/AIEvaluationService';
 
 const AVATAR_COLORS = [
   { bg: '#1d4ed8', text: '#ffffff' },
@@ -39,61 +40,23 @@ function AvatarInitial({ name, index }) {
   );
 }
 
-function RightPanel({ className, searchQuery = '', onSearchChange, showSearch = true }) {
-  const [topRatedStartups, setTopRatedStartups] = useState([]);
-  const [trendingSectors, setTrendingSectors]   = useState([]);
-  const [isLoading, setIsLoading]               = useState(true);
-
-  useEffect(() => {
-    const fetchPanelData = async () => {
-      setIsLoading(true);
-      try {
-        const res = await projectSubmissionService.getAllProjects();
-        const items = res?.data?.items ?? res?.items ?? [];
-
-        if (items && items.length > 0) {
-          // 1. Filter Approved only
-          const approved = items.filter(p => p.status === 'Approved');
-
-          // 2. Sort by score descending (Top Startups)
-          const sortedByScore = [...approved].sort((a, b) => (b.score || 0) - (a.score || 0));
-
-          setTopRatedStartups(sortedByScore.slice(0, 3).map((p, idx) => ({
-            id: p.projectId ?? idx,
-            name: p.projectName || 'Chưa đặt tên',
-            industries: p.keySkills
-              ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean).slice(0, 2)
-              : [],
-            score: p.score ?? null,
-          })));
-
-          // 3. Sector counts from Approved projects only
-          const sectorCountMap = {};
-          approved.forEach(p => {
-            if (p.keySkills) {
-              p.keySkills.split(',').forEach(field => {
-                const trimmed = field.trim();
-                if (trimmed) sectorCountMap[trimmed] = (sectorCountMap[trimmed] || 0) + 1;
-              });
-            }
-          });
-
-          const sortedSectors = Object.entries(sectorCountMap)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 4)
-            .map(([name, count], idx) => ({ name, count, label: SECTOR_LABELS[idx] }));
-
-          setTrendingSectors(sortedSectors);
-        }
-      } catch (error) {
-        console.error('[RightPanel] Failed to fetch:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchPanelData();
-  }, []);
+function RightPanel({
+  className,
+  searchQuery = '',
+  onSearchChange,
+  showSearch = true,
+  onFilterChange,
+  onShowHome,
+  topRatedStartups = [],
+  trendingSectors = [],
+  isLoading = false
+}) {
+  const handleSectorClick = (sectorName) => {
+    if (onFilterChange) {
+      onFilterChange({ industry: sectorName });
+      if (onShowHome) onShowHome();
+    }
+  };
 
   return (
     <aside className={`${styles.rightPanel} ${className || ''}`}>
@@ -103,9 +66,9 @@ function RightPanel({ className, searchQuery = '', onSearchChange, showSearch = 
         <div className={styles.searchContainer}>
           <div className={styles.searchWrapper}>
             <Search size={18} className={styles.searchIcon} />
-            <input 
-              type="text" 
-              placeholder="Tìm kiếm dự án..." 
+            <input
+              type="text"
+              placeholder="Tìm kiếm dự án..."
               className={styles.searchInput}
               value={searchQuery}
               onChange={onSearchChange}
@@ -138,12 +101,13 @@ function RightPanel({ className, searchQuery = '', onSearchChange, showSearch = 
                   )}
                 </div>
                 <Badge
-                  label={startup.score != null && startup.score !== 0 ? String(startup.score) : '__'}
+                  label={startup.score === undefined ? '' : (startup.score === null ? '__' : String(startup.score))}
+                  isLoading={startup.score === undefined}
                   variant={
-                    startup.score == null || startup.score === 0 ? 'updating'
-                    : startup.score >= 80 ? 'score-good'
-                    : startup.score >= 50 ? 'score-medium'
-                    : 'score-poor'
+                    startup.score === undefined || startup.score === null ? 'updating'
+                      : startup.score >= 80 ? 'score-good'
+                        : startup.score >= 50 ? 'score-medium'
+                          : 'score-poor'
                   }
                   size="sm"
                 />
@@ -152,7 +116,6 @@ function RightPanel({ className, searchQuery = '', onSearchChange, showSearch = 
           ) : (
             <p className={styles.emptyText}>Chưa có dự án được duyệt</p>
           )}
-          <button className={styles.widgetFooterLink}>Xem tất cả →</button>
         </div>
       </div>
 
@@ -169,7 +132,11 @@ function RightPanel({ className, searchQuery = '', onSearchChange, showSearch = 
             </div>
           ) : trendingSectors.length > 0 ? (
             trendingSectors.map(sector => (
-              <button key={sector.name} className={styles.sectorRow}>
+              <button
+                key={sector.name}
+                className={styles.sectorRow}
+                onClick={() => handleSectorClick(sector.name)}
+              >
                 <span className={styles.sectorLabel}>{sector.label}</span>
                 <span className={styles.sectorHash}>#{sector.name}</span>
                 <span className={styles.sectorCount}>{sector.count} dự án</span>
@@ -178,7 +145,6 @@ function RightPanel({ className, searchQuery = '', onSearchChange, showSearch = 
           ) : (
             <p className={styles.emptyText}>#ĐangCậpNhật</p>
           )}
-          <button className={styles.widgetFooterLink}>Xem thêm →</button>
         </div>
       </div>
     </aside>

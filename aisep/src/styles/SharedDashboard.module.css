@@ -9,13 +9,6 @@
     padding-bottom: 60px;
 }
 
-@media (max-width: 1023px) {
-    .container {
-        padding-top: 60px;
-        /* Account for fixed TopBar */
-    }
-}
-
 /* Page Header (Twitter/X style) */
 .pageHeader {
     padding: var(--spacing-md) var(--spacing-lg);
@@ -54,6 +47,33 @@
     gap: 12px;
     padding: 20px 24px;
     border-bottom: 1px solid var(--border-color);
+    overflow: visible;
+}
+
+@media (max-width: 1023px) and (min-width: 601px) {
+    .statsGrid {
+        grid-template-columns: repeat(4, 1fr) !important;
+        padding: 16px 20px;
+        gap: 10px;
+    }
+
+    .statCard {
+        padding: 12px 10px !important;
+        gap: 8px !important;
+    }
+
+    .statIcon {
+        width: 32px !important;
+        height: 32px !important;
+    }
+
+    .statValue {
+        font-size: 16px !important;
+    }
+
+    .statLabel {
+        font-size: 11px !important;
+    }
 }
 
 .statCard {
@@ -141,6 +161,16 @@
     overflow-x: auto;
     scrollbar-width: none;
     background-color: var(--bg-primary);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+}
+
+@media (max-width: 1023px) {
+    .tabs {
+        top: 60px;
+        /* Below the fixed TopBar */
+    }
 }
 
 .tabs::-webkit-scrollbar {
@@ -353,6 +383,31 @@
 
 .secondaryBtn:hover {
     background-color: var(--bg-hover);
+}
+
+.aiBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background-color: #fbbf24;
+    color: #78350f;
+    border: 1px solid #f59e0b;
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.aiBtn:hover:not(:disabled) {
+    background-color: #f59e0b;
+}
+
+.aiBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
 }
 
 .dangerBtn {
@@ -573,9 +628,27 @@
 /* Mobile Responsive */
 @media (max-width: 600px) {
     .statsGrid {
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr !important;
         padding: 12px 16px;
         gap: 8px;
+    }
+
+    .statCard {
+        padding: 10px !important;
+        gap: 8px !important;
+    }
+
+    .statIcon {
+        width: 32px !important;
+        height: 32px !important;
+    }
+
+    .statValue {
+        font-size: 16px !important;
+    }
+
+    .statLabel {
+        font-size: 11px !important;
     }
 
     .content {
