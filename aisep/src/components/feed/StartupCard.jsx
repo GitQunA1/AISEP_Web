@@ -1,64 +1,59 @@
-import React, { useState } from 'react';
-import {
-  Bookmark,
-  Share2,
-  Heart,
-  MessageCircle,
-  Repeat,
-  MoreHorizontal
-} from 'lucide-react';
-import styles from './StartupCard.module.css';
-import Avatar from '../common/Avatar';
+import React from 'react';
+import { MoreHorizontal } from 'lucide-react';
 import Badge from '../common/Badge';
-import Button from '../common/Button';
+import styles from './StartupCard.module.css';
 
 /**
- * StartupCard Component - "Smart Density" Redesign
- * Layout: Avatar (Left Side) | Content (Right Side)
+ * StartupCard Component - "Visual Priority (Concept C)"
+ * Clean, full-width data density
  */
 function StartupCard({ startup, isPremium = false, user, onViewProfile }) {
-  const [isBookmarked, setIsBookmarked] = useState(false);
-  const [isLiked, setIsLiked] = useState(false);
-
-  const handleBookmark = (e) => {
-    e.stopPropagation();
-    setIsBookmarked(!isBookmarked);
+  // Utility for avatar gradient based on tag/industry
+  const getAvatarGradient = (mainTag) => {
+    const t = (mainTag || '').toLowerCase();
+    if (t.includes('fintech')) return 'linear-gradient(135deg, #2D7EFF, #5BA8FF)'; // blue
+    if (t.includes('agritech') || t.includes('nông nghiệp')) return 'linear-gradient(135deg, #00BA7C, #43E5A0)'; // green
+    if (t.includes('ai') || t.includes('saas')) return 'linear-gradient(135deg, #8B5CF6, #B794F4)'; // purple
+    if (t.includes('hardware') || t.includes('phần cứng')) return 'linear-gradient(135deg, #FFAD1F, #FFC85C)'; // amber
+    return 'linear-gradient(135deg, #F4212E, #FF7A85)'; // red fallback
   };
 
-  const handleLike = (e) => {
-    e.stopPropagation();
-    setIsLiked(!isLiked);
+  const getStageColor = (stage) => {
+    const s = (stage || '').toLowerCase();
+    if (s.includes('mvp')) return { bg: 'rgba(45, 126, 255, 0.15)', color: '#2D7EFF' }; // Blue dim
+    if (s.includes('growth') || s.includes('vận hành') || s.includes('tăng trưởng')) return { bg: 'rgba(0, 186, 124, 0.15)', color: '#00ba7c' }; // Green dim
+    if (s.includes('idea') || s.includes('ý tưởng')) return { bg: 'rgba(255, 173, 31, 0.15)', color: '#ffad1f' }; // Amber dim
+    return { bg: 'var(--surface2, rgba(255,255,255,0.05))', color: 'var(--text-muted)' };
   };
+
+  const mainTag = (startup.tags && startup.tags.length > 0) ? startup.tags[0] : (startup.industry || '');
+  const stageStyles = getStageColor(startup.stage);
+  const startupNameDisp = startup.startupName || startup.organizationName || startup.companyName || 'Startup';
 
   return (
     <article className={styles.card}>
-      {/* LEFT COLUMN: AVATAR — clickable */}
-      <div className={styles.avatarColumn}>
-        <button
-          className={styles.avatarBtn}
+      {/* 1. Header Row */}
+      <div className={styles.cardHeader}>
+        <div 
+          className={`${styles.avatarCircle} ${onViewProfile ? styles.clickable : ''}`}
+          style={{ background: getAvatarGradient(mainTag) }}
           onClick={() => onViewProfile && onViewProfile(startup.startupId ?? startup.id)}
-          title={`Xem hồ sơ ${startup.name}`}
         >
-          <Avatar src={startup.logo} alt={startup.name} name={startup.name} size="md" className={styles.avatar} />
-        </button>
-      </div>
-
-      {/* RIGHT COLUMN: CONTENT */}
-      <div className={styles.contentColumn}>
-
-        {/* ROW 1: Name · Date · Approved · Score · Menu */}
-        <div className={styles.headerRow}>
-          <div className={styles.nameGroup}>
-            <h3
-              className={`${styles.name} ${onViewProfile ? styles.nameClickable : ''}`}
+          {startupNameDisp.charAt(0).toUpperCase()}
+        </div>
+        
+        <div className={styles.headerInfo}>
+          <div className={styles.nameRow}>
+            <span 
+              className={`${styles.name} ${onViewProfile ? styles.clickableName : ''}`}
               onClick={() => onViewProfile && onViewProfile(startup.startupId ?? startup.id)}
             >
-              {startup.name}
-            </h3>
-            <span className={styles.time}>{startup.timestamp}</span>
+              {startupNameDisp}
+            </span>
+            <span className={styles.date}>{startup.timestamp}</span>
           </div>
-
-          <div className={styles.headerActions}>
+          <div className={styles.badgeRow}>
+            {/* AI Badge */}
             <Badge
               label={startup.score === undefined ? '' : (startup.score === null ? '__' : String(startup.score))}
               isLoading={startup.score === undefined}
@@ -73,109 +68,106 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile }) {
               }
               size="sm"
             />
-            <button className={styles.menuBtn}>
-              <MoreHorizontal size={18} />
-            </button>
+            
+            {/* Stage Pill */}
+            {startup.stage && (
+              <span 
+                className={styles.stagePill} 
+                style={{ background: stageStyles.bg, color: stageStyles.color }}
+              >
+                {startup.stage}
+              </span>
+            )}
+
+            {/* Tags */}
+            {(startup.tags && startup.tags.length > 0 ? startup.tags : (startup.industry ? [startup.industry] : [])).slice(0, 3).map(tag => (
+              <span key={tag} className={styles.tag}>#{tag}</span>
+            ))}
           </div>
         </div>
-
-        {/* ROW 2: #hashtags only */}
-        <div className={styles.tagRow}>
-          {(startup.tags && startup.tags.length > 0
-            ? startup.tags
-            : startup.industry
-              ? [startup.industry]
-              : []
-          ).map(tag => (
-            <span key={tag} className={styles.hashtag}>#{tag}</span>
-          ))}
-        </div>
-
-        {/* ROW 3: Description */}
-        <p className={styles.description}>{startup.description}</p>
-
-        {/* ROW 3.5: Business Info Section */}
-        <div className={styles.businessInfo}>
-          {startup.stage && (
-            <div className={styles.infoRow}>
-              <span className={styles.infoLabel}>Giai đoạn:</span>
-              <span className={styles.infoValue}>{startup.stage}</span>
-            </div>
-          )}
-          {startup.revenue && startup.revenue !== 0 && (
-            <div className={styles.infoRow}>
-              <span className={styles.infoLabel}>Doanh thu:</span>
-              <span className={styles.infoValue}>{startup.revenue.toLocaleString('vi-VN')} VND</span>
-            </div>
-          )}
-          {startup.marketSize && (
-            <div className={styles.infoRow}>
-              <span className={styles.infoLabel}>Thị trường:</span>
-              <span className={styles.infoValue}>${(startup.marketSize / 1000000000).toFixed(1)}B</span>
-            </div>
-          )}
-          {startup.businessModel && (
-            <div className={styles.infoRow}>
-              <span className={styles.infoLabel}>Mô hình:</span>
-              <span className={styles.infoValue}>{startup.businessModel}</span>
-            </div>
-          )}
-          {startup.competitors && (
-            <div className={styles.infoRow}>
-              <span className={styles.infoLabel}>Đối thủ:</span>
-              <span className={styles.infoValue}>{startup.competitors}</span>
-            </div>
-          )}
-          {startup.targetCustomers && (
-            <div className={styles.infoRow}>
-              <span className={styles.infoLabel}>Khách hàng:</span>
-              <span className={styles.infoValue}>{startup.targetCustomers}</span>
-            </div>
-          )}
-          {startup.uniqueValueProposition && (
-            <div className={styles.infoRow}>
-              <span className={styles.infoLabel}>Đề xuất giá trị:</span>
-              <span className={styles.infoValue}>{startup.uniqueValueProposition}</span>
-            </div>
-          )}
-        </div>
-
-        {/* ROW 3.7: Team Info */}
-        {startup.teamMembers && (
-          <div className={styles.teamInfo}>
-            <span className={styles.teamLabel}>Thành viên team:</span>
-            <span className={styles.teamMembers}>{startup.teamMembers}</span>
-          </div>
-        )}
-        <div className={styles.actionRow}>
-          <button className={`${styles.actionBtn} ${styles.replyBtn}`}>
-            <MessageCircle size={17} />
-            <span className={styles.actionCount}>24</span>
-          </button>
-
-          <button
-            className={`${styles.actionBtn} ${styles.repostBtn}`}
-          >
-            <Repeat size={17} />
-            <span className={styles.actionCount}>124</span>
-          </button>
-
-          <button
-            className={`${styles.actionBtn} ${styles.likeBtn} ${isLiked ? styles.liked : ''}`}
-            onClick={handleLike}
-          >
-            <Heart size={17} />
-            <span className={styles.actionCount}>24</span>
-          </button>
-
-          <button
-            className={`${styles.actionBtn} ${styles.bookmarkBtn} ${isBookmarked ? styles.bookmarked : ''}`}
-            onClick={handleBookmark}
-          >
-            <Bookmark size={17} />
-          </button>
+        
+        <div className={styles.menuIconWrapper}>
+          <MoreHorizontal size={18} />
         </div>
       </div>
+
+      <h3 className={styles.projectName}>{startup.name}</h3>
+
+      {/* 2. Description (2-line clamp) */}
+      <div className={styles.description}>
+        {startup.description}
+      </div>
+
+      {/* 3. Three-column Highlight Grid */}
+      <div className={styles.gridRow}>
+        {/* Revenue */}
+        <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(45, 126, 255, 0.08)', borderColor: 'rgba(45, 126, 255, 0.2)' }}>
+          <div className={styles.boxIcon}>💵</div>
+          <div className={`${styles.boxValue} ${styles.blueText}`} style={{ fontSize: '15px' }}>
+            {startup.revenue ? `${startup.revenue.toLocaleString('vi-VN')} VND` : '0 VND'}
+          </div>
+          <div className={styles.boxLabel}>Doanh thu</div>
+        </div>
+
+        {/* Market Size */}
+        <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(0, 186, 124, 0.08)', borderColor: 'rgba(0, 186, 124, 0.2)' }}>
+          <div className={styles.boxIcon}>📊</div>
+          <div className={`${styles.boxValue} ${styles.greenText}`} style={{ fontSize: '15px' }}>
+            {startup.marketSize ? `${startup.marketSize.toLocaleString('vi-VN')} VND` : '0 VND'}
+          </div>
+          <div className={styles.boxLabel}>Thị trường</div>
+        </div>
+
+        {/* Dynamic Box 3 */}
+        {startup.growthRate ? (
+           <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(255, 173, 31, 0.08)', borderColor: 'rgba(255, 173, 31, 0.2)' }}>
+             <div className={styles.boxIcon}>📈</div>
+             <div className={`${styles.boxValue} ${styles.amberText}`}>+{startup.growthRate}%</div>
+             <div className={styles.boxLabel}>Tăng trưởng</div>
+           </div>
+        ) : startup.competitors ? (
+           <div className={styles.highlightBox}>
+             <div className={styles.boxIcon}>⚔️</div>
+             <div className={`${styles.boxValue} ${styles.grayText}`} style={{ fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{startup.competitors}</div>
+             <div className={styles.boxLabel}>Đối thủ chính</div>
+           </div>
+        ) : (
+           <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(45, 126, 255, 0.08)', borderColor: 'rgba(45, 126, 255, 0.2)' }}>
+             <div className={styles.boxIcon}>💡</div>
+             <div className={`${styles.boxValue} ${styles.blueText}`}>Khác biệt</div>
+             <div className={styles.boxLabel}>Giá trị cốt lõi</div>
+           </div>
+        )}
+      </div>
+
+      {/* 4. Detail Rows */}
+      <div className={styles.detailRows}>
+        {startup.businessModel && (
+          <div className={styles.detailRow}>
+            <span className={styles.detailLabel}>Mô hình KD</span>
+            <span className={styles.detailValue}>{startup.businessModel}</span>
+          </div>
+        )}
+        {startup.targetCustomers && (
+          <div className={styles.detailRow}>
+            <span className={styles.detailLabel}>Khách hàng</span>
+            <span className={styles.detailValue}>{startup.targetCustomers}</span>
+          </div>
+        )}
+        {startup.uniqueValueProposition && (
+          <div className={styles.detailRow}>
+            <span className={styles.detailLabel}>Giá trị</span>
+            <span className={`${styles.detailValue} ${styles.blueText}`}>{startup.uniqueValueProposition}</span>
+          </div>
+        )}
+      </div>
+
+      {/* 5. Team Line */}
+      {startup.teamMembers && (
+        <div className={styles.teamLine}>
+          <strong style={{ color: 'var(--text-primary)' }}>Team:</strong> {startup.teamMembers}
+        </div>
+      )}
     </article>
   );
 }

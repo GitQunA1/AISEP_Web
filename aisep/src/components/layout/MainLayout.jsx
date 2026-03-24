@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Rocket } from 'lucide-react';
+import { Rocket, Loader } from 'lucide-react';
 import styles from './MainLayout.module.css';
 import Sidebar from './Sidebar';
 import RightPanel from './RightPanel';
@@ -12,6 +12,7 @@ import ProjectSubmissionForm from '../startup/ProjectSubmissionForm';
 import investorService from '../../services/investorService';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import AdvisorsPage from '../../pages/AdvisorsPage';
+import advisorService from '../../services/advisorService';
 import AdvisorDetailView from '../profile/AdvisorDetailView';
 import InvestorDiscovery from '../investors/InvestorDiscovery';
 import AIChatAssistant from '../../pages/AIChatAssistant';
@@ -58,6 +59,7 @@ function MainLayout({
   const [trendingSectors, setTrendingSectors]   = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isScoresLoading, setIsScoresLoading] = useState(false);
   const [feedError, setFeedError] = useState(null);
   const [investorCount, setInvestorCount] = useState(0);
 
@@ -110,14 +112,27 @@ function MainLayout({
       setIsLoading(true);
       setFeedError(null);
       try {
-        const res = await projectSubmissionService.getAllProjects();
-        if (res.statusCode === 200 && res.data && res.data.items) {
+        // Fetch both projects and startup profiles to join them
+        const [projectsRes, startupsRes] = await Promise.all([
+          projectSubmissionService.getAllProjects(),
+          startupProfileService.getAllStartups()
+        ]);
+
+        const startupMap = {};
+        if (startupsRes?.data?.items) {
+          startupsRes.data.items.forEach(s => {
+            startupMap[s.startupId || s.id] = s.organizationName || s.companyName;
+          });
+        }
+
+        if (projectsRes.statusCode === 200 && projectsRes.data && projectsRes.data.items) {
           // Filter for published projects and map to UI model
-          const publishedProjects = res.data.items
+          let publishedProjects = projectsRes.data.items
             .map(p => ({
               ...p,
               id: p.projectId,
               startupId: p.startupId,
+              startupName: startupMap[p.startupId] || null, // Join with startupMap
               name: p.projectName,
               description: p.shortDescription,
               stage: p.developmentStage,
@@ -127,7 +142,8 @@ function MainLayout({
               tags: p.keySkills
                 ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)
                 : [],
-              aiScore: p.score || 0,
+              aiScore: undefined,
+              score: undefined,
               timestamp: new Date(p.approvedAt || p.createdAt).toLocaleDateString('vi-VN'),
               logo: null,
               // Full project details
@@ -148,8 +164,60 @@ function MainLayout({
           setAllStartups(publishedProjects);
           setFilteredStartups(publishedProjects);
 
+          // Extract trending sectors based on industry tags frequency
+          const industryCounts = publishedProjects.reduce((acc, p) => {
+            if (p.tags && p.tags.length > 0) {
+              p.tags.forEach(t => {
+                acc[t] = (acc[t] || 0) + 1;
+              });
+            } else if (p.industry) {
+              acc[p.industry] = (acc[p.industry] || 0) + 1;
+            }
+            return acc;
+          }, {});
+          
+          const trending = Object.entries(industryCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([name, count]) => ({
+              label: name,
+              name: name,
+              count: count
+            }));
+            
+          setTrendingSectors(trending);
+
+          // Fetch AI Evaluation History asynchronously to not block the UI
+          const fetchScoresAsync = async () => {
+            setIsScoresLoading(true);
+            const updatedProjects = await Promise.all(publishedProjects.map(async (p) => {
+              try {
+                const historyRes = await AIEvaluationService.getProjectAnalysisHistory(p.id);
+                if (historyRes.success && historyRes.data && historyRes.data.length > 0) {
+                  const finalScore = historyRes.data[0]?.potentialScore || historyRes.data[0]?.startupScore || p.score || null;
+                  return { ...p, aiScore: finalScore, score: finalScore };
+                }
+              } catch (err) {
+                console.error(`Failed to fetch AI history for project ${p.id}`, err);
+              }
+              // If no history exists or fetch failed, set scores to null
+              return { ...p, aiScore: null, score: null };
+            }));
+
+            // Update main lists with new scores
+            setAllStartups(updatedProjects);
+            setFilteredStartups(updatedProjects);
+
+            // Update Top Rated Startups based on aiScore
+            const sortedByScore = [...updatedProjects].filter(p => p.aiScore > 0).sort((a, b) => b.aiScore - a.aiScore);
+            setTopRatedStartups(sortedByScore.slice(0, 3));
+            setIsScoresLoading(false);
+          };
+
+          fetchScoresAsync();
+
         } else {
-          setFeedError(res.message || "Không thể tải danh sách dự án.");
+          setFeedError(projectsRes.message || "Không thể tải danh sách dự án.");
         }
       } catch (err) {
         console.error("Failed to load feed", err);
@@ -169,7 +237,7 @@ function MainLayout({
 
     fetchFeed();
     fetchStats();
-  }, [showAdvisors, showInvestors]);
+  }, [showAdvisors, showInvestors, user]);
 
   // 2. Define Handlers
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -201,6 +269,27 @@ function MainLayout({
 
       return true;
     });
+
+    // 3. Sort Logic
+    if (activeFilters.sort) {
+      switch (activeFilters.sort) {
+        case 'newest':
+          filtered.sort((a, b) => (b.id || 0) - (a.id || 0));
+          break;
+        case 'trending':
+          filtered.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
+          break;
+        case 'rated':
+          filtered.sort((a, b) => (b.aiScore || 0) - (a.aiScore || 0));
+          break;
+        case 'funded':
+          // Keep only projects explicitly indicating they are actively raising or having a funding stage
+          filtered = filtered.filter(p => p.fundingStage && p.fundingStage !== 'Không gọi vốn' && p.fundingStage.trim() !== '');
+          break;
+        default:
+          break;
+      }
+    }
 
     setFilteredStartups(filtered);
   }, [allStartups, activeFilters, searchQuery]);
@@ -296,9 +385,16 @@ function MainLayout({
                   onDismiss={() => setShowProfileModal(false)}
                 />
               )}
-              {isLoading ? (
+              {isLoading || (isScoresLoading && activeFilters.sort === 'rated') ? (
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
-                  <p>Đang tải dự án...</p>
+                  {isScoresLoading && activeFilters.sort === 'rated' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                      <Loader size={24} className={styles.spinIcon} />
+                      <p style={{ margin: 0 }}>Đang phân tích điểm AI...</p>
+                    </div>
+                  ) : (
+                    <p>Đang tải dự án...</p>
+                  )}
                 </div>
               ) : feedError ? (
                 <div className={styles.emptyState}>
@@ -340,7 +436,7 @@ function MainLayout({
           onShowHome={onShowHome}
           topRatedStartups={topRatedStartups}
           trendingSectors={trendingSectors}
-          isLoading={isLoading}
+          isLoading={isLoading || isScoresLoading}
         />
       </div>
 

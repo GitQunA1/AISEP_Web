@@ -1,173 +1,223 @@
-/* AdvisorsPage.module.css - Refined Card Design */
+/* AdvisorsPage.module.css — Social Feed Pattern (matches Investor tab) */
 
 .container {
-    background-color: transparent;
-    min-height: 100vh;
+    /* Local Design Tokens */
+    --local-bg: var(--bg-primary);
+    --local-surface-hover: var(--bg-hover);
+    --local-blue: var(--primary-blue);
+    --local-text-main: var(--text-primary);
+    --local-text-muted: var(--text-secondary);
+    --local-border: var(--border-color);
+
     width: 100%;
-    max-width: 680px;
-    margin: 0 auto;
+    margin: 0;
+    background-color: var(--local-bg);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    padding-bottom: 80px;
 }
 
-@media (max-width: 1439px) and (min-width: 1024px) {
-    .container {
-        max-width: 100%;
-        margin: 0;
-    }
-}
-
+/* ─── Unified Sticky Header ─── */
 .header {
-    padding: 24px 20px 12px 20px;
-    background-color: var(--bg-primary);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 24px 16px 16px 16px;
+    background: rgba(var(--bg-primary-rgb), 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--local-border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .headerTitle {
-    font-size: 24px;
+    font-size: 23px;
     font-weight: 800;
-    color: var(--text-primary);
-    margin: 0 0 4px 0;
+    color: var(--local-text-main);
+    margin: 0;
     letter-spacing: -0.5px;
 }
 
 .headerSubtitle {
-    font-size: 15px;
-    color: var(--text-secondary);
-    margin: 0;
+    display: block;
+    font-size: 14.5px;
+    color: var(--local-text-muted);
+    margin: -4px 0 8px 0;
 }
 
-.searchSection {
-    padding: 12px 20px;
-    background-color: var(--bg-primary);
+/* ─── Search Row ─── */
+.searchRow {
     display: flex;
-    gap: 12px;
     align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    margin-bottom: 8px;
+    gap: 12px;
 }
 
 .searchContainer {
+    flex: 1;
     position: relative;
-    width: 100%;
+    display: flex;
+    align-items: center;
 }
 
 .searchIcon {
     position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-secondary);
-    width: 20px;
-    height: 20px;
+    left: 14px;
+    color: var(--local-text-muted);
 }
 
 .searchInput {
     width: 100%;
-    height: 44px;
-    padding: 10px 10px 10px 50px !important;
-    border-radius: 9999px;
-    background-color: var(--bg-secondary);
+    background-color: var(--bg-secondary); /* ← Fixed: use CSS var, not hardcoded dark */
     border: 1px solid transparent;
-    color: var(--text-primary);
+    border-radius: 9999px;
+    padding: 10px 16px 10px 44px;
+    color: var(--local-text-main);
     font-size: 15px;
     transition: all 0.2s;
 }
 
 .searchInput:focus {
     outline: none;
-    background-color: var(--bg-primary);
-    border-color: var(--primary-blue);
-    box-shadow: 0 0 0 1px var(--primary-blue);
+    background-color: var(--local-bg);
+    border-color: var(--local-blue);
+    box-shadow: 0 0 0 1px var(--local-blue);
+}
+
+/* ─── Filter Wrapper (Anchor for Dropdown) ─── */
+.filterWrapper {
+    position: relative;
 }
 
 .filterButton {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 10px 18px;
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
+    padding: 8px 16px;
     border-radius: 9999px;
-    color: var(--text-primary);
+    background: transparent;
+    border: 1px solid var(--local-border);
+    color: var(--local-text-main);
     font-size: 14px;
-    font-weight: 700;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: background 0.2s;
     white-space: nowrap;
-    flex-shrink: 0;
 }
 
 .filterButton:hover {
-    background-color: var(--bg-hover);
-    border-color: var(--text-secondary);
+    background-color: var(--local-surface-hover);
 }
 
 .badge {
-    background-color: var(--primary-blue);
-    color: white;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 8px;
+    background-color: var(--local-blue);
+    color: #fff;
+    padding: 1px 6px;
     border-radius: 9999px;
-    margin-left: 4px;
+    font-size: 11px;
 }
 
-/* Advisors List */
-.list {
+/* Desktop: inline dropdown below filter button */
+.desktopOnly {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 500;
+    animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Mobile: fixed centered portal */
+.mobileOnly {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.filterBackdrop {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.65);
+}
+
+/* Responsive toggles */
+@media (min-width: 1024px) {
+    .mobileOnly { display: none !important; }
+}
+
+@media (max-width: 1023px) {
+    .desktopOnly { display: none !important; }
+}
+
+/* ─── Advisor Feed (Social Feed Items) ─── */
+.feed {
     display: flex;
     flex-direction: column;
-    gap: 16px;
-    padding-top: 12px;
 }
 
-/* Refined Advisor Card */
 .advisorCard {
     padding: 16px;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    background-color: var(--bg-secondary);
-    transition: background-color 0.2s;
+    border-bottom: 1px solid var(--local-border);
     display: flex;
-    flex-direction: column;
+    gap: 12px;
+    cursor: pointer;
+    transition: background 0.15s ease;
+    animation: fadeUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeUp {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .advisorCard:hover {
-    background-color: var(--bg-hover);
-}
-
-.cardHeader {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 12px;
+    background-color: var(--local-surface-hover);
 }
 
 .avatarContainer {
-    width: 48px;
-    height: 48px;
     flex-shrink: 0;
 }
 
 .avatar {
-    width: 100%;
-    height: 100%;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
-    object-fit: cover;
+    background: linear-gradient(135deg, #2D7EFF, #00ba7c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 18px;
 }
 
 .advisorInfo {
     flex: 1;
     min-width: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
 }
 
 .nameRow {
     display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-bottom: 8px;
+    flex-direction: column;
+    gap: 4px;
+    margin-bottom: 4px;
 }
 
 .nameWrapper {
@@ -177,17 +227,21 @@
 }
 
 .name {
-    font-size: 16px;
-    font-weight: 800;
-    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--local-text-main);
+    margin: 0;
 }
 
 .verifiedBadge {
-    color: var(--primary-blue);
-    flex-shrink: 0;
+    color: var(--local-blue);
 }
 
-/* Expertise Tags */
+.advisorType {
+    font-size: 14px;
+    color: var(--local-text-muted);
+}
+
 .expertiseTags {
     display: flex;
     flex-wrap: wrap;
@@ -195,10 +249,10 @@
 }
 
 .expertiseTag {
-    padding: 2px 10px;
+    padding: 2px 8px;
     border-radius: 4px;
     background-color: rgba(29, 155, 240, 0.1);
-    color: var(--primary-blue);
+    color: var(--local-blue);
     font-size: 12px;
     font-weight: 600;
     border: 1px solid rgba(29, 155, 240, 0.2);
@@ -206,120 +260,112 @@
 
 .bio {
     font-size: 15px;
-    color: var(--text-primary);
-    line-height: 1.5;
+    color: var(--local-text-main);
+    line-height: 1.45;
     margin: 0 0 12px 0;
 }
 
-/* Metadata */
 .metadata {
     display: flex;
+    align-items: center;
     gap: 16px;
+    margin-bottom: 16px;
+    font-size: 12.5px;
+    color: var(--local-text-muted);
     flex-wrap: wrap;
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border-color);
 }
 
 .metaItem {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--text-secondary);
+    gap: 4px;
 }
 
-/* Actions */
 .actions {
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .connectBtn {
-    background-color: var(--text-primary);
-    color: var(--bg-primary);
-    border: none;
+    background-color: var(--local-blue);
+    color: #fff;
+    padding: 8px 18px;
     border-radius: 9999px;
-    padding: 8px 20px;
-    font-weight: 700;
     font-size: 14px;
+    font-weight: 700;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
     cursor: pointer;
     transition: opacity 0.2s;
-    min-width: 120px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
 }
 
 .connectBtn:hover {
     opacity: 0.9;
 }
 
-.viewProfileBtn {
-    background-color: transparent;
-    color: var(--text-primary);
-    border: 1.5px solid var(--text-secondary);
+.pendingBtn {
+    background-color: var(--local-text-muted);
+    color: #fff;
+    padding: 8px 18px;
     border-radius: 9999px;
-    padding: 8px 20px;
-    font-weight: 700;
     font-size: 14px;
+    font-weight: 700;
+    border: none;
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.confirmedBtn {
+    background-color: #10b981;
+    color: #fff;
+    padding: 8px 18px;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 700;
+    border: none;
+    opacity: 0.9;
+    cursor: default;
+}
+
+.viewProfileBtn {
+    background: transparent;
+    border: 1px solid var(--local-border);
+    color: var(--local-text-main);
+    padding: 8px 18px;
+    border-radius: 9999px;
+    font-size: 14px;
+    font-weight: 600;
     cursor: pointer;
-    transition: all 0.2s;
-    min-width: 120px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    transition: background 0.2s;
 }
 
 .viewProfileBtn:hover {
-    background-color: var(--bg-secondary);
-    border-color: var(--text-primary);
+    background-color: var(--local-surface-hover);
 }
 
-/* EMPTY STATE */
+/* Empty States */
 .emptyState {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
     padding: 80px 24px;
     text-align: center;
+    color: var(--local-text-muted);
 }
 
 .emptyIcon {
-    color: var(--text-secondary);
     margin-bottom: 16px;
-    opacity: 0.5;
+    opacity: 0.2;
 }
 
 .emptyState h3 {
     font-size: 20px;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--local-text-main);
     margin: 0 0 8px 0;
 }
 
 .emptyState p {
     font-size: 15px;
-    color: var(--text-secondary);
+    color: var(--local-text-muted);
     margin: 0;
-    max-width: 400px;
-    line-height: 1.5;
-}
-
-@media (max-width: 600px) {
-    .list {
-        padding: 0 12px;
-    }
-    
-    .actions {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .actions button {
-        width: 100%;
-        justify-content: center;
-    }
 }

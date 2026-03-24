@@ -1,38 +1,47 @@
+/* InvestorDetail.module.css - Investor Profile Page */
+
 .container {
-    width: 100%;
-    max-width: 680px;
-    margin: 0 auto;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background-color: var(--bg-primary);
     min-height: 100vh;
-    padding-bottom: 60px;
-    border-left: 1px solid var(--border-color);
-    border-right: 1px solid var(--border-color);
+    padding-bottom: 80px !important;
+    display: block !important;
+    position: relative !important;
 }
 
-@media (max-width: 1439px) and (min-width: 1024px) {
-    .container {
-        max-width: 100%;
-        margin: 0;
-        border-left: none;
-        border-right: none;
-    }
-}
-
+/* ─── Top Nav (Glassmorphism + Overlap) ─── */
 .topNav {
     position: sticky;
     top: 0;
-    z-index: 20;
-    background-color: var(--bg-primary);
+    left: 0;
+    right: 0;
+    height: 53px;
     display: flex;
     align-items: center;
-    gap: 20px;
     padding: 0 16px;
-    height: 53px;
-    border-bottom: 1px solid var(--border-color);
+    gap: 16px; /* Added gap */
+    background-color: rgba(15, 20, 25, 0.7); /* Dark mode default */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 100;
+    margin-bottom: -53px !important;
+    transition: top 0.3s ease;
 }
 
-:global([data-theme='dark']) .topNav {
-    background-color: var(--bg-primary);
+@media (max-width: 1023px) {
+    .topNav {
+        top: 60px !important; /* Stick below the mobile TopBar */
+    }
+}
+
+/* Light mode specific: Glassmorphism header */
+:global(html:not([data-theme='dark'])) .topNav {
+    background-color: rgba(255, 255, 255, 0.7) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
 }
 
 .backBtn {
@@ -47,22 +56,19 @@
     color: var(--text-primary);
     cursor: pointer;
     transition: background-color 0.2s;
+    flex-shrink: 0;
 }
 
-.backBtn:hover {
-    background-color: var(--bg-hover);
-}
-
-.backBtn span {
-    display: none; /* Hide text, just show icon like X/Twitter */
-}
+.backBtn:hover { background-color: var(--bg-hover); }
 
 .navTitle h2 {
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 19px !important;
+    font-weight: 800;
     color: var(--text-primary);
-    margin: 0;
-    line-height: 1.2;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.2px;
 }
 
 .navTitle span {
@@ -70,316 +76,291 @@
     color: var(--text-secondary);
 }
 
-/* Cover Banner */
-.coverBanner {
-    width: 100%;
-    height: 120px;
-    background: linear-gradient(135deg, #4f46e5 0%, #10b981 100%); /* Slightly different gradient to distinguish from Startup */
+/* ─── 2. Cover Banner (Mesh Gradient) ─── */
+.coverWrapper {
+    height: 160px;
+    position: relative;
+    background: linear-gradient(135deg, #0d2040 0%, #0a3020 50%, #1a0d38 100%);
+    overflow: hidden;
 }
 
-@media (max-width: 768px) {
-    .coverBanner {
-        height: 100px;
-    }
+.coverOverlay {
+    position: absolute;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse at 30% 50%, rgba(45, 126, 255, 0.18) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 50%, rgba(0, 186, 124, 0.12) 0%, transparent 60%);
 }
 
-/* Profile Header */
-.profileHeader {
-    padding: 0 var(--spacing-lg);
-    border-bottom: 1px solid var(--border-color);
+/* Light mode specific: Cover Banner */
+:global(html:not([data-theme='dark'])) .coverWrapper {
+    background: linear-gradient(135deg, #e0f2fe 0%, #ecfdf5 50%, #f5f3ff 100%) !important;
 }
 
-.headerTop {
+/* ─── 3. Floating Profile Card (Compact) ─── */
+.profileCard {
+    margin: 0 20px !important;
+    position: relative !important;
+    top: -48px !important;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    z-index: 10;
+}
+
+/* Light mode specific: Card separation */
+:global(html:not([data-theme='dark'])) .profileCard {
+    background-color: #ffffff !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.cardHeaderRow {
     display: flex;
+    align-items: flex-end;
     justify-content: space-between;
-    align-items: flex-start;
-}
-
-.avatarSection {
-    margin-top: -60px;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: 12px;
 }
 
 .avatar {
-    width: 120px;
-    height: 120px;
+    width: 68px;
+    height: 68px;
     border-radius: 50%;
-    background-color: #10b981; /* Default avatar color for investor */
-    border: 4px solid var(--bg-primary);
+    background: linear-gradient(135deg, #ffb31d, #ff4b2b); /* Warm tones for investors */
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 44px;
-    font-weight: 700;
-    color: white;
+    font-weight: 800;
+    font-size: 24px;
+    color: #fff;
+    border: 3px solid var(--bg-secondary);
+    overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
 
-@media (max-width: 768px) {
-    .avatarSection {
-        margin-top: -50px;
-    }
-
-    .avatar {
-        width: 100px;
-        height: 100px;
-        font-size: 36px;
-    }
+:global(html:not([data-theme='dark'])) .avatar {
+    border-color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
 }
 
-.headerActions {
-    margin-top: var(--spacing-md);
-}
-
-.primaryBtn {
-    background: var(--text-primary);
-    color: var(--bg-primary);
-    border: 1px solid var(--text-primary);
-    padding: 8px 16px;
-    border-radius: 9999px; /* Pill shape */
-    font-weight: 700;
-    font-size: 15px;
-    cursor: pointer;
+.initialText {
     display: flex;
     align-items: center;
-    gap: 8px;
-    transition: background 0.2s;
+    justify-content: center;
+    line-height: 1;
+    margin-top: -1px;
 }
 
-.primaryBtn:hover {
-    background: var(--text-secondary);
+.connectBtn {
+    padding: 8px 22px;
+    border-radius: 9999px;
+    background-color: var(--primary-blue);
+    color: #fff;
+    border: none;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.2s, opacity 0.2s;
 }
 
-.profileInfo {
-    padding-bottom: var(--spacing-lg);
-}
+.connectBtn:hover { transform: translateY(-1px); opacity: 0.9; }
 
-.nameSection {
-    margin-bottom: var(--spacing-sm);
+.nameRow {
+    display: flex;
+    align-items: center;
+    gap: 16px; /* Increased from 10px for better clarity */
+    flex-wrap: wrap;
+    margin-bottom: 4px;
 }
 
 .name {
-    font-size: 20px;
-    font-weight: 800;
+    font-size: 18px !important;
+    font-weight: 700;
+    letter-spacing: -0.3px;
     color: var(--text-primary);
     margin: 0;
-    display: flex;
-    align-items: center;
 }
 
-.verifiedBadge {
+.verifiedChip {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    font-size: 13px;
-    font-weight: 500;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    background: rgba(16, 185, 129, 0.1);
     color: #10b981;
-    margin-left: 8px;
-    vertical-align: middle;
+    border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .handle {
-    font-size: 15px;
+    font-size: 13px;
     color: var(--text-secondary);
-    margin-top: 2px;
+    margin-bottom: 12px;
 }
 
 .bio {
-    font-size: 15px;
-    color: var(--text-primary);
-    line-height: 1.5;
-    margin: var(--spacing-md) 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    margin-bottom: 16px;
+    max-width: 800px;
 }
 
-.metadata {
+.metaRow {
     display: flex;
-    gap: var(--spacing-lg);
-    margin: var(--spacing-sm) 0;
+    gap: 20px;
     flex-wrap: wrap;
 }
 
 .metaItem {
     display: flex;
     align-items: center;
-    gap: 4px;
-    color: var(--text-secondary);
-    font-size: 15px;
-}
-
-.metaItem svg {
+    gap: 6px;
+    font-size: 14px;
     color: var(--text-secondary);
 }
 
-.stats {
-    display: flex;
-    gap: var(--spacing-lg);
-    margin-top: var(--spacing-md);
+/* ─── Stats Strip ─── */
+.statsStrip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid var(--border-color);
+    margin-top: 16px;
+    padding-top: 16px;
 }
 
-.stat {
-    display: flex;
-    gap: 4px;
-    cursor: pointer;
-    transition: text-decoration 0.2s;
+.statItem {
+    text-align: center;
+    padding: 0 10px;
 }
 
-.stat:hover .statValue {
-    text-decoration: underline;
+.statItem + .statItem {
+    border-left: 1px solid var(--border-color);
+}
+
+.statEmoji {
+    font-size: 20px;
+    margin-bottom: 4px;
 }
 
 .statValue {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 17px;
     font-weight: 700;
-    color: var(--text-primary);
+    color: var(--primary-blue);
 }
 
 .statLabel {
+    font-size: 11px;
     color: var(--text-secondary);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* Tabs */
+/* ─── 4. Tabs Navigation ─── */
 .tabs {
     display: flex;
     border-bottom: 1px solid var(--border-color);
+    margin-top: -38px;
+    position: relative;
+    z-index: 5;
+    background-color: var(--bg-primary);
+}
+
+:global(html:not([data-theme='dark'])) .tabs {
+    background-color: #ffffff !important;
+    margin-top: -42px;
 }
 
 .tab {
     flex: 1;
-    min-width: max-content;
-    padding: 16px 0;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 15px;
-    font-weight: 600;
+    padding: 14px 12px;
+    text-align: center;
+    font-size: 14px;
     cursor: pointer;
     position: relative;
-    transition: color 0.2s;
+    background: none;
+    border: none;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.2s;
 }
 
-.tab:hover {
-    background-color: var(--bg-hover);
-    color: var(--text-primary);
-}
+.tab:hover { color: var(--text-primary); }
+.tab.active { color: var(--text-primary); font-weight: 700; }
 
-.tab.active {
-    color: var(--text-primary);
-}
-
-.tab.active::after {
-    content: '';
+.indicator {
     position: absolute;
     bottom: 0;
-    left: 10%;
-    right: 10%;
-    height: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
     background-color: var(--primary-blue);
-    border-radius: 4px 4px 0 0;
+    border-radius: 3px 3px 0 0;
 }
 
-/* Tab Content */
-.tabContent {
-    padding: var(--spacing-lg);
+/* ─── 5. Feed Content Rows ─── */
+.feedContent {
+    display: flex;
+    flex-direction: column;
 }
+
+.feedRow {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    gap: 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    color: inherit;
+}
+
+.feedRow:hover { background-color: rgba(255, 255, 255, 0.02); }
+
+:global(html:not([data-theme='dark'])) .feedRow:hover { 
+    background-color: rgba(0, 0, 0, 0.02) !important; 
+}
+
+.iconBox {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+}
+
+.blueBox { background: rgba(45, 126, 255, 0.15); border: 1px solid rgba(45, 126, 255, 0.2); }
+.purpleBox { background: rgba(121, 75, 196, 0.15); border: 1px solid rgba(121, 75, 196, 0.2); }
+.greenBox { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.2); }
+
+:global(html:not([data-theme='dark'])) .blueBox { background: rgba(45, 126, 255, 0.08) !important; }
+:global(html:not([data-theme='dark'])) .purpleBox { background: rgba(121, 75, 196, 0.08) !important; }
+:global(html:not([data-theme='dark'])) .greenBox { background: rgba(16, 185, 129, 0.08) !important; }
+
+.rowContent { flex: 1; min-width: 0; }
+.rowTitle { font-size: 15px; font-weight: 600; color: var(--text-primary); margin-bottom: 3px; }
+.rowText { font-size: 14px; color: var(--text-secondary); line-height: 1.55; }
+
+.chipRow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.chip { padding: 2px 10px; border-radius: 9999px; font-size: 12.5px; background-color: var(--bg-hover); border: 1px solid var(--border-color); color: var(--text-secondary); }
 
 @media (max-width: 600px) {
-    .tabContent {
-        padding: 16px 12px;
-    }
-}
-
-/* Overview Tab */
-.overview, .portfolio {
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-xl);
-}
-
-.card {
-    background-color: var(--bg-secondary);
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-lg);
-    border: 1px solid var(--border-color);
-}
-
-.cardTitle {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-top: 0;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border-color);
-}
-
-.description {
-    color: var(--text-secondary);
-    line-height: 1.6;
-    white-space: pre-line;
-    font-size: 15px;
-}
-
-/* Stats Grid for specific investor details */
-.statsGrid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-md);
-}
-
-@media (min-width: 769px) {
-    .statsGrid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-
-.statCard {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-lg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-}
-
-.statIconLg {
-    color: var(--primary-blue);
-    margin-bottom: 12px;
-}
-
-.cardLabel {
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-}
-
-.cardValueSmall {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-/* Empty / Error States */
-.emptyState {
-    text-align: center;
-    padding: 64px 20px;
-}
-
-.emptyIcon {
-    margin-bottom: 16px;
-}
-
-.emptyState h3 {
-    color: var(--text-primary);
-    margin-bottom: 8px;
-}
-
-.emptyState p {
-    color: var(--text-secondary);
-}
-
-.loadingState {
-    text-align: center;
-    padding: 100px;
-    color: var(--text-secondary);
-    font-weight: 500;
+    .profileCard { margin: 0 12px; margin-top: -48px; padding: 16px; }
+    .avatar { width: 64px; height: 64px; font-size: 22px; }
+    .name { font-size: 20px; }
+    .statsStrip { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .statItem + .statItem { border-left: none; }
+    .tab { font-size: 13px; }
+    .feedRow { padding: 16px; }
 }

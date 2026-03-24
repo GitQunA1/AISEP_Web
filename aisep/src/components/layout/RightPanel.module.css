@@ -70,6 +70,7 @@
 /* ── WIDGET CARD ── */
 .widget {
   background-color: var(--bg-secondary);
+  border: 1px solid var(--border-color);
   border-radius: 18px;
   padding: 18px 16px 12px;
   display: flex;
@@ -151,6 +152,7 @@
   text-overflow: ellipsis;
 }
 
+.projectName,
 .startupIndustries {
   font-size: 12px;
   color: var(--text-secondary);

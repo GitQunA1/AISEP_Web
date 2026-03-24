@@ -91,14 +91,10 @@ function RightPanel({
           ) : topRatedStartups.length > 0 ? (
             topRatedStartups.map((startup, idx) => (
               <div key={startup.id} className={styles.startupRow}>
-                <AvatarInitial name={startup.name} index={idx} />
+                <AvatarInitial name={startup.startupName || 'Startup'} index={idx} />
                 <div className={styles.startupInfo}>
-                  <span className={styles.startupName}>{startup.name}</span>
-                  {startup.industries.length > 0 && (
-                    <span className={styles.startupIndustries}>
-                      {startup.industries.join(' · ')}
-                    </span>
-                  )}
+                  <span className={styles.startupName}>{startup.startupName || 'Startup'}</span>
+                  <span className={styles.projectName}>{startup.name}</span>
                 </div>
                 <Badge
                   label={startup.score === undefined ? '' : (startup.score === null ? '__' : String(startup.score))}

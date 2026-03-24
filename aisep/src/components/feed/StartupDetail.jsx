@@ -5,6 +5,8 @@ import {
 } from 'lucide-react';
 import styles from './StartupDetail.module.css';
 import startupProfileService from '../../services/startupProfileService';
+import ProfileLoading from '../common/ProfileLoading';
+import ProfileErrorScreen from '../common/ProfileErrorScreen';
 
 const DISPLAY = (val, fallback = 'Đang cập nhật') =>
   val && String(val).trim() ? val : fallback;
@@ -37,31 +39,24 @@ export default function StartupDetail({ startupId, onBack }) {
   }, [startupId]);
 
   if (isLoading) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.loadingState}>
-          <Loader size={32} className={styles.spinIcon} />
-          <p>Đang tải thông tin startup...</p>
-        </div>
-      </div>
-    );
+    return <ProfileLoading message="Đang tải thông tin startup..." />;
   }
 
   if (error || !startup) {
     return (
-      <div className={styles.container}>
-        <div className={styles.topNav}>
-          <button className={styles.backBtn} onClick={onBack}>
-            <ArrowLeft size={20} />
-          </button>
-        </div>
-        <div className={styles.emptyState}>
-          <AlertCircle size={48} className={styles.emptyIcon} style={{ color: '#ef4444' }} />
-          <h3>Không thể tải thông tin</h3>
-          <p>{error || 'Thông tin startup chưa được cập nhật đầy đủ.'}</p>
-          <button className={styles.backLinkBtn} onClick={onBack}>← Quay lại</button>
-        </div>
-      </div>
+      <ProfileErrorScreen
+        title="startup"
+        message={error}
+        onBack={onBack}
+        onRetry={() => {
+          setError(null);
+          setIsLoading(true);
+          startupProfileService.getStartupById(startupId)
+            .then(data => data ? setStartup(data) : setError('Không tìm thấy thông tin startup.'))
+            .catch(err => setError(err?.message || 'Lỗi khi tải thông tin startup.'))
+            .finally(() => setIsLoading(false));
+        }}
+      />
     );
   }
 
@@ -78,9 +73,9 @@ export default function StartupDetail({ startupId, onBack }) {
 
   return (
     <div className={styles.container}>
-      {/* Sticky Top Nav */}
+      {/* ─── 1. Glassmorphism Top Nav (Overlap) ─── */}
       <div className={styles.topNav}>
-        <button className={styles.backBtn} onClick={onBack}>
+        <button className={styles.backBtn} onClick={onBack} aria-label="Back">
           <ArrowLeft size={20} />
         </button>
         <div className={styles.navTitle}>
@@ -89,56 +84,59 @@ export default function StartupDetail({ startupId, onBack }) {
         </div>
       </div>
 
-      {/* Cover Banner */}
-      <div className={styles.coverBanner} />
+      {/* ─── 2. Cover Banner (Mesh Gradient) ─── */}
+      <div className={styles.coverWrapper}>
+        <div className={styles.coverOverlay} />
+      </div>
 
-      {/* Profile Header */}
-      <div className={styles.profileHeader}>
-        <div className={styles.headerTop}>
-          <div className={styles.avatarSection}>
-            <div className={styles.avatar}>
-              {startup.logoUrl
-                ? <img src={startup.logoUrl} alt={startup.companyName} className={styles.logoImg} />
-                : <span>{initial}</span>
-              }
-            </div>
+      {/* ─── 3. Floating Profile Card (Compact) ─── */}
+      <div className={styles.profileCard}>
+        <div className={styles.cardHeaderRow}>
+          <div className={styles.avatar}>
+            {startup.logoUrl ? (
+              <img src={startup.logoUrl} alt={startup.companyName} className={styles.avatarImg} />
+            ) : (
+              <div className={styles.initialText}>{initial}</div>
+            )}
           </div>
           <div className={styles.headerActions}>
+            <button className={styles.connectBtn}>
+              Kết nối
+            </button>
+          </div>
+        </div>
+
+        <div className={styles.profileInfo}>
+          <div className={styles.nameRow}>
+            <h1 className={styles.name}>{DISPLAY(startup.companyName)}</h1>
             {isApproved && (
-              <span className={styles.approvedChip}>
+              <span className={styles.verifiedChip}>
                 <CheckCircle size={14} />
                 Đã xác minh
               </span>
             )}
           </div>
-        </div>
-
-        <div className={styles.profileInfo}>
-          {/* Name */}
-          <div className={styles.nameSection}>
-            <h1 className={styles.name}>{DISPLAY(startup.companyName)}</h1>
+          
+          <div className={styles.handle}>
+            {startup.industry ? `#${startup.industry.toLowerCase().replace(/\s+/g, '')}` : 'Startup'}
           </div>
 
-          {/* Bio placeholder */}
-          {startup.founder && (
-            <div className={styles.bio}>
-              <User size={15} style={{ display: 'inline', marginRight: 6, verticalAlign: 'middle' }} />
-              Sáng lập bởi <strong>{startup.founder}</strong>
-            </div>
-          )}
+          <p className={styles.bio}>
+            {startup.founder 
+              ? `Được sáng lập bởi ${startup.founder}. Một startup tiềm năng đang hoạt động trong lĩnh vực ${startup.industry?.toLowerCase() || 'công nghệ'}.`
+              : "Thông tin giới thiệu về startup đang được cập nhật."
+            }
+          </p>
 
-          {/* Metadata row */}
-          <div className={styles.metadata}>
-            {startup.countryCity && (
-              <div className={styles.metaItem}>
-                <MapPin size={15} />
-                <span>{startup.countryCity}</span>
-              </div>
-            )}
+          <div className={styles.metaRow}>
+            <div className={styles.metaItem}>
+              <MapPin size={15} />
+              <span>{DISPLAY(startup.countryCity)}</span>
+            </div>
             {startup.website && (
               <div className={styles.metaItem}>
                 <Globe size={15} />
-                <a href={startup.website} target="_blank" rel="noopener noreferrer" className={styles.metaLink}>
+                <a href={startup.website} target="_blank" rel="noopener noreferrer">
                   {startup.website.replace(/^https?:\/\//, '')}
                 </a>
               </div>
@@ -148,113 +146,121 @@ export default function StartupDetail({ startupId, onBack }) {
               <span>Tham gia {formatDate(startup.createdAt)}</span>
             </div>
           </div>
+        </div>
 
-          {/* Stats */}
-          <div className={styles.stats}>
-            <div className={styles.stat}>
-              <span className={styles.statValue}>{startup.followerCount ?? 0}</span>
-              <span className={styles.statLabel}>Người theo dõi</span>
-            </div>
+        {/* Info Stats Strip */}
+        <div className={styles.statsStrip}>
+          <div className={styles.statItem}>
+            <div className={styles.statEmoji}>🚀</div>
+            <div className={styles.statValue}>Startup</div>
+            <div className={styles.statLabel}>Loại hình</div>
+          </div>
+          <div className={styles.statItem}>
+            <div className={styles.statEmoji}>👥</div>
+            <div className={styles.statValue}>{startup.followerCount ?? 0}</div>
+            <div className={styles.statLabel}>Theo dõi</div>
+          </div>
+          <div className={styles.statItem}>
+            <div className={styles.statEmoji}>🏢</div>
+            <div className={styles.statValue}>Active</div>
+            <div className={styles.statLabel}>Trạng thái</div>
+          </div>
+          <div className={styles.statItem}>
+            <div className={styles.statEmoji}>📍</div>
+            <div className={styles.statValue}>{startup.countryCity ? startup.countryCity.split(',')[0] : 'VN'}</div>
+            <div className={styles.statLabel}>Khu vực</div>
           </div>
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* ─── 4. Tabs & Content Row ─── */}
       <div className={styles.tabs}>
         <button
           className={`${styles.tab} ${activeTab === 'overview' ? styles.active : ''}`}
           onClick={() => setActiveTab('overview')}
         >
           Tổng quan
+          {activeTab === 'overview' && <div className={styles.indicator} />}
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'contact' ? styles.active : ''}`}
           onClick={() => setActiveTab('contact')}
         >
           Liên hệ
+          {activeTab === 'contact' && <div className={styles.indicator} />}
         </button>
       </div>
 
-      {/* Tab Content */}
-      <div className={styles.tabContent}>
+      <div className={styles.feedContent}>
         {activeTab === 'overview' && (
-          <div className={styles.overview}>
-            {/* Info cards grid */}
-            <div className={styles.statsGrid}>
-              <div className={styles.statCard}>
-                <Briefcase size={24} className={styles.statIconLg} />
-                <div className={styles.cardLabel}>Ngành nghề</div>
-                <div className={styles.cardValueSmall}>{DISPLAY(startup.industry)}</div>
+          <>
+            {/* Feed Row: Industry */}
+            <div className={styles.feedRow}>
+              <div className={`${styles.iconBox} ${styles.purpleBox}`}>🏢</div>
+              <div className={styles.rowContent}>
+                <div className={styles.rowTitle}>Lĩnh vực hoạt động</div>
+                <div className={styles.rowText}>{DISPLAY(startup.industry)}</div>
               </div>
-              <div className={styles.statCard}>
-                <MapPin size={24} className={styles.statIconLg} />
-                <div className={styles.cardLabel}>Khu vực</div>
-                <div className={styles.cardValueSmall}>{DISPLAY(startup.countryCity)}</div>
-              </div>
-              <div className={styles.statCard}>
-                <Users size={24} className={styles.statIconLg} />
-                <div className={styles.cardLabel}>Người theo dõi</div>
-                <div className={styles.cardValueSmall}>{startup.followerCount ?? 0}</div>
-              </div>
-              <div className={styles.statCard}>
-                <CheckCircle size={24} className={styles.statIconLg} />
-                <div className={styles.cardLabel}>Trạng thái</div>
-                <div className={styles.cardValueSmall} style={{ color: isApproved ? '#10b981' : 'var(--text-secondary)' }}>
-                  {startup.approvalStatus === 'Approved' ? 'Đã xác minh'
-                    : startup.approvalStatus === 'Rejected' ? 'Bị từ chối'
-                    : 'Chờ xét duyệt'}
+            </div>
+
+            {/* Feed Row: Strategy */}
+            <div className={styles.feedRow}>
+              <div className={`${styles.iconBox} ${styles.blueBox}`}>🎯</div>
+              <div className={styles.rowContent}>
+                <div className={styles.rowTitle}>Chiến lược phát triển</div>
+                <div className={styles.rowText}>
+                  Startup tập trung vào việc mở rộng thị trường và tối ưu hóa giải pháp {startup.industry?.toLowerCase() || 'công nghệ'} cho khách hàng.
                 </div>
               </div>
             </div>
 
-            {/* Founder Card */}
-            <div className={styles.card}>
-              <h3 className={styles.cardTitle}>Thông tin người sáng lập</h3>
-              <p className={styles.description}>
-                <strong>Nhà sáng lập:</strong> {DISPLAY(startup.founder)}
-              </p>
+            {/* Feed Row: Verification */}
+            <div className={styles.feedRow}>
+              <div className={`${styles.iconBox} ${styles.greenBox}`}>🛡️</div>
+              <div className={styles.rowContent}>
+                <div className={styles.rowTitle}>Trạng thái hồ sơ</div>
+                <div className={styles.rowText}>
+                    {startup.approvalStatus === 'Approved' ? 'Hồ sơ đã được đội ngũ AISEP xác minh độ tin cậy.' 
+                    : 'Hồ sơ đang trong quá trình xét duyệt bởi đội ngũ AISEP.'}
+                </div>
+                <div className={styles.chipRow}>
+                   <span className={styles.statusChip}>{isApproved ? 'Đã xác minh' : 'Đang xử lý'}</span>
+                </div>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {activeTab === 'contact' && (
-          <div className={styles.overview}>
-            <div className={styles.card}>
-              <h3 className={styles.cardTitle}>Thông tin liên hệ</h3>
-              {startup.contactInfo ? (
-                <div className={styles.contactList}>
-                  {startup.contactInfo.split('|').map((info, i) => {
-                    const trimmed = info.trim();
-                    const isEmail = trimmed.includes('@');
-                    const isPhone = /^\d[\d\s\-+]+$/.test(trimmed);
-                    return (
-                      <div key={i} className={styles.contactItem}>
-                        {isEmail ? <Mail size={16} /> : isPhone ? <Phone size={16} /> : <Building2 size={16} />}
-                        <span>{trimmed}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <p className={styles.description}>Đang cập nhật</p>
-              )}
-            </div>
-
+          <>
+            {/* Feed Row: Website */}
             {startup.website && (
-              <div className={styles.card}>
-                <h3 className={styles.cardTitle}>Website</h3>
-                <a
-                  href={startup.website}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={styles.websiteLink}
-                >
-                  <Globe size={16} />
-                  {startup.website}
-                </a>
-              </div>
+              <a href={startup.website} target="_blank" rel="noopener noreferrer" className={styles.feedRow}>
+                <div className={`${styles.iconBox} ${styles.blueBox}`}>🌐</div>
+                <div className={styles.rowContent}>
+                  <div className={styles.rowTitle}>Website chính thức</div>
+                  <div className={styles.rowText}>{startup.website}</div>
+                </div>
+              </a>
             )}
-          </div>
+
+            {/* Feed Row: Contact Details */}
+            <div className={styles.feedRow}>
+              <div className={`${styles.iconBox} ${styles.purpleBox}`}>✉️</div>
+              <div className={styles.rowContent}>
+                <div className={styles.rowTitle}>Thông tin liên hệ</div>
+                {startup.contactInfo ? (
+                  <div className={styles.chipRow}>
+                    {startup.contactInfo.split('|').map((info, i) => (
+                      <span key={i} className={styles.chip}>{info.trim()}</span>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.rowText}>Đang cập nhật</div>
+                )}
+              </div>
+            </div>
+          </>
         )}
       </div>
     </div>

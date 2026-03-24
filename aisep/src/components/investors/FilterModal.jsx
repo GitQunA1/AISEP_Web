@@ -34,7 +34,7 @@ export default function FilterModal({ filters, onApply, onClose, isOpen }) {
 
     if (!isOpen) return null;
 
-    const hasActiveFilters = 
+    const hasActiveFilters =
         localFilters.industry !== 'Tất cả ngành nghề' ||
         localFilters.stage !== 'Tất cả giai đoạn' ||
         localFilters.fundingStatus !== 'Tất cả trạng thái' ||
@@ -44,22 +44,15 @@ export default function FilterModal({ filters, onApply, onClose, isOpen }) {
         <div className={styles.filterPanel}>
             <div className={styles.filterHeader}>
                 <h3>Lọc nhà đầu tư</h3>
-                <button
-                    className={styles.closeFilterBtn}
-                    onClick={onClose}
-                >
+                <button className={styles.closeFilterBtn} onClick={onClose}>
                     <X size={20} />
                 </button>
             </div>
 
             <div className={styles.filterContent}>
-                {/* Industry Filter */}
                 <div className={styles.filterGroup}>
                     <label>Ngành nghề</label>
-                    <select
-                        value={localFilters.industry}
-                        onChange={(e) => handleChange('industry', e.target.value)}
-                    >
+                    <select value={localFilters.industry} onChange={(e) => handleChange('industry', e.target.value)}>
                         <option>Tất cả ngành nghề</option>
                         <option>AI/ML</option>
                         <option>Blockchain</option>
@@ -71,13 +64,9 @@ export default function FilterModal({ filters, onApply, onClose, isOpen }) {
                     </select>
                 </div>
 
-                {/* Stage Filter */}
                 <div className={styles.filterGroup}>
                     <label>Giai đoạn</label>
-                    <select
-                        value={localFilters.stage}
-                        onChange={(e) => handleChange('stage', e.target.value)}
-                    >
+                    <select value={localFilters.stage} onChange={(e) => handleChange('stage', e.target.value)}>
                         <option>Tất cả giai đoạn</option>
                         <option>Pre-Seed</option>
                         <option>Seed</option>
@@ -87,13 +76,9 @@ export default function FilterModal({ filters, onApply, onClose, isOpen }) {
                     </select>
                 </div>
 
-                {/* Funding Status Filter */}
                 <div className={styles.filterGroup}>
                     <label>Trạng thái gọi vốn</label>
-                    <select
-                        value={localFilters.fundingStatus}
-                        onChange={(e) => handleChange('fundingStatus', e.target.value)}
-                    >
+                    <select value={localFilters.fundingStatus} onChange={(e) => handleChange('fundingStatus', e.target.value)}>
                         <option>Tất cả trạng thái</option>
                         <option>Đã được rót vốn</option>
                         <option>Đang tìm kiếm đầu tư</option>
@@ -101,11 +86,8 @@ export default function FilterModal({ filters, onApply, onClose, isOpen }) {
                     </select>
                 </div>
 
-                {/* AI Score Filter */}
                 <div className={styles.filterGroup}>
-                    <label>
-                        Điểm Match tối thiểu: {localFilters.minAiScore}%
-                    </label>
+                    <label>Điểm Match tối thiểu: {localFilters.minAiScore}%</label>
                     <input
                         type="range"
                         min="0"
@@ -124,17 +106,11 @@ export default function FilterModal({ filters, onApply, onClose, isOpen }) {
 
             <div className={styles.filterActions}>
                 {hasActiveFilters && (
-                    <button
-                        className={styles.clearBtn}
-                        onClick={handleReset}
-                    >
+                    <button className={styles.clearBtn} onClick={handleReset}>
                         Xóa bộ lọc
                     </button>
                 )}
-                <button
-                    className={styles.applyBtn}
-                    onClick={handleApply}
-                >
+                <button className={styles.applyBtn} onClick={handleApply}>
                     Áp dụng
                 </button>
             </div>
