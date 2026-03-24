@@ -54,29 +54,8 @@ function FeedHeader({
           />
         )}
 
-        {/* Stats Strip — Row 3: New Flat Layout */}
-        {showStats && (
-          <div className={styles.statsStrip}>
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{stats.approvedCount}</span>
-              <span className={styles.statLabel}>Đã được duyệt</span>
-            </div>
-            
-            <div className={styles.statDivider} />
-            
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{stats.investorCount.toLocaleString()}</span>
-              <span className={styles.statLabel}>Nhà đầu tư tham gia</span>
-            </div>
-            
-            <div className={styles.statDivider} />
-            
-            <div className={styles.statItem}>
-              <span className={styles.statValue}>{stats.industryCount}</span>
-              <span className={styles.statLabel}>Lĩnh vực nổi bật</span>
-            </div>
-          </div>
-        )}
+        {/* Stats Strip is hidden */}
+        {/* Removed: showStats mode hidden per user request */}
       </header>
     </div>
   );

@@ -5,7 +5,9 @@
 
   /* Background Colors */
   --bg-primary: #ffffff;
+  --bg-primary-rgb: 255, 255, 255;
   --bg-secondary: #f7f9fa;
+  --bg-secondary-rgb: 247, 249, 250;
   --bg-hover: #eff3f4;
 
   /* Text Colors */
@@ -78,7 +80,9 @@
 [data-theme='dark'] {
   /* Background Colors */
   --bg-primary: #000000;
+  --bg-primary-rgb: 0, 0, 0;
   --bg-secondary: #16181c;
+  --bg-secondary-rgb: 22, 24, 28;
   --bg-hover: #181818;
 
   /* Text Colors */

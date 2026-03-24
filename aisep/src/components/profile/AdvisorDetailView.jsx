@@ -6,6 +6,9 @@ import {
 import bookingService from '../../services/bookingService';
 import AdvisorBookingModal from './AdvisorBookingModal';
 import styles from './AdvisorDetailView.module.css';
+import advisorService from '../../services/advisorService';
+import ProfileLoading from '../common/ProfileLoading';
+import ProfileErrorScreen from '../common/ProfileErrorScreen';
 
 /**
  * AdvisorDetailView - Enhanced profile view for an Advisor
@@ -54,21 +57,41 @@ const AdvisorDetailView = ({ user, advisor, onBack }) => {
       setBookingStatus(0); // Optimistically update to Pending
   };
 
-  if (!advisor) return null;
+  if (!advisor) {
+    return (
+      <ProfileErrorScreen
+        title="cố vấn"
+        message="Không thể tải thông tin cố vấn. Vui lòng quay lại và thử lại."
+        onBack={onBack}
+      />
+    );
+  }
 
-  const handle = `@${advisor.userName?.toLowerCase().replace(/\s/g, '')}`;
-  const initial = (advisor.userName || 'A').charAt(0).toUpperCase();
+  const handle = `@${advisor.userName?.toLowerCase().replace(/\s/g, '') || 'advisor'}`;
+  const displayName = advisor.userName || advisor.name || 'A';
+  const initial = String(displayName).charAt(0).toUpperCase() || 'A';
   const isApproved = advisor.approvalStatus === 'Approved';
 
   // Formatting currency/numbers
   const formatSalary = (val) => {
     if (!val) return 'Thỏa thuận';
-    return `${val.toLocaleString('vi-VN')} VNĐ/giờ`;
+    return val.toLocaleString('vi-VN');
   };
+
+  // Derivative styles
+  const getAvatarGradient = () => {
+    const spec = (advisor.expertise || '').toLowerCase();
+    if (spec.includes('fintech') || spec.includes('saas')) return 'linear-gradient(135deg,#2D7EFF,#00ba7c)';
+    if (spec.includes('agritech')) return 'linear-gradient(135deg,#00ba7c,#009960)';
+    if (spec.includes('ai') || spec.includes('ml')) return 'linear-gradient(135deg,#794bc4,#2D7EFF)';
+    return 'linear-gradient(135deg,#2D7EFF,#00ba7c)';
+  };
+
+  const expertiseTags = advisor.expertise ? advisor.expertise.split(',').map(s => s.trim()).filter(Boolean) : [];
 
   return (
     <div className={styles.container}>
-      {/* 1. Sticky Top Nav */}
+      {/* 1. Sticky Top Nav (Preserved) */}
       <div className={styles.topNav}>
         <button className={styles.backBtn} onClick={onBack} aria-label="Quay lại">
           <ArrowLeft size={20} />
@@ -79,21 +102,25 @@ const AdvisorDetailView = ({ user, advisor, onBack }) => {
         </div>
       </div>
 
-      {/* 2. Cover Banner */}
-      <div className={styles.coverBanner}></div>
+      {/* 2. Cover Banner (Refactored) */}
+      <div className={styles.coverWrapper}>
+        <div className={styles.coverOverlay}></div>
+      </div>
 
-      {/* 3. Profile Header */}
-      <div className={styles.profileHeader}>
-        <div className={styles.headerTop}>
-          <div className={styles.avatarSection}>
-            <div className={styles.avatar}>
-              {advisor.profileImage 
-                ? <img src={advisor.profileImage} alt={advisor.userName} className={styles.avatarImg} />
-                : <span>{initial}</span>
-              }
-            </div>
+      {/* 3. Floating Profile Card (Refactored) */}
+      <div className={styles.profileCard}>
+        {/* Top row: avatar left, action buttons right */}
+        <div className={styles.cardHeaderRow}>
+          <div className={styles.avatar} style={{ background: getAvatarGradient() }}>
+            {(advisor.profileImage && 
+              typeof advisor.profileImage === 'string' && 
+              advisor.profileImage.startsWith('http') && 
+              !advisor.profileImage.includes('ui-avatars.com'))
+              ? <img src={advisor.profileImage} alt={advisor.userName} className={styles.avatarImg} />
+              : <span className={styles.initialText}>{initial}</span>
+            }
           </div>
-          <div className={styles.headerActions}>
+          <div className={styles.actionButtons}>
             {canConnect && (() => {
                 if (bookingStatus === 0 || bookingStatus === 'Pending') {
                     return (
@@ -104,155 +131,178 @@ const AdvisorDetailView = ({ user, advisor, onBack }) => {
                 }
                 if (bookingStatus === 1 || bookingStatus === 'Confirmed' || bookingStatus === 'Accepted') {
                     return (
-                        <button className={styles.connectBtn} disabled style={{ backgroundColor: '#10b981', borderColor: '#10b981', color: 'white', opacity: 0.9 }}>
+                        <button className={styles.connectBtn} disabled style={{ backgroundColor: '#10b981', color: 'white' }}>
                             Đã kết nối
                         </button>
                     );
                 }
                 
                 return (
-                    <button 
-                        className={styles.connectBtn} 
-                        onClick={handleConnect}
-                    >
-                        Kết nối ngay
+                    <button className={styles.connectBtn} onClick={handleConnect}>
+                      ↗ Kết nối
                     </button>
                 );
             })()}
           </div>
         </div>
 
-        <div className={styles.profileInfo}>
-          <div className={styles.nameSection}>
-            <h1 className={styles.name}>
-              {advisor.userName}
-              {isApproved && (
-                <span className={styles.verifiedChip}>
-                  <CheckCircle size={14} />
-                  Đã xác minh
-                </span>
-              )}
-            </h1>
-            <div className={styles.handle}>{handle}</div>
-          </div>
+        {/* Name, handle, verified badge */}
+        <div className={styles.nameRow}>
+          <h1 className={styles.name}>{advisor.userName}</h1>
+          {isApproved && (
+            <span className={styles.verifiedChip}>
+              ✓ Đã xác minh
+            </span>
+          )}
+        </div>
+        <div className={styles.handle}>{handle}</div>
 
-          <div className={styles.bio}>
-            <p>{advisor.bio || 'Chưa có thông tin giới thiệu.'}</p>
-            <span className={styles.expertiseBadge}>{advisor.expertise}</span>
-          </div>
+        {/* Bio */}
+        <div className={styles.bio}>
+          {advisor.bio || 'Chưa có thông tin giới thiệu.'}
+        </div>
 
-          <div className={styles.metadata}>
-            <div className={styles.metaItem}>
-              <MapPin size={16} />
-              <span>{advisor.location || 'Nghề nghiệp tự do'}</span>
-            </div>
-            <div className={styles.metaItem}>
-              <Calendar size={16} />
-              <span>Tham gia Tháng 3 2024</span>
-            </div>
+        {/* Specialty tags */}
+        <div className={styles.specialtyTags}>
+          {expertiseTags.map((tag, i) => (
+            <span key={i} className={styles.tag}>#{tag}</span>
+          ))}
+        </div>
+
+        {/* Meta row: location + join date */}
+        <div className={styles.metaRow}>
+          <span className={styles.metaItem}>📍 {advisor.location || 'Nghề nghiệp tự do'}</span>
+          <span className={styles.metaItem}>📅 Tham gia Tháng 3 2024</span>
+        </div>
+
+        {/* Stats strip */}
+        <div className={styles.statsStrip}>
+          <div className={styles.statItem}>
+            <div className={styles.statEmoji}>💵</div>
+            <div className={styles.statValue}>{formatSalary(advisor.hourlyRate)}</div>
+            <div className={styles.statLabel}>VNĐ/giờ</div>
+          </div>
+          <div className={styles.statItem}>
+            <div className={styles.statEmoji}>⭐</div>
+            <div className={styles.statValue}>{advisor.rating || '4.8'}</div>
+            <div className={styles.statLabel}>Đánh giá</div>
+          </div>
+          <div className={styles.statItem}>
+            <div className={styles.statEmoji}>🌐</div>
+            <div className={styles.statValue}>{advisor.languagesSpoken || 'VI · EN'}</div>
+            <div className={styles.statLabel}>Ngôn ngữ</div>
+          </div>
+          <div className={styles.statItem}>
+            <div className={styles.statEmoji}>⏱</div>
+            <div className={styles.statValue}>24h</div>
+            <div className={styles.statLabel}>Phản hồi</div>
           </div>
         </div>
       </div>
 
-      {/* 4. Tabs Navigation */}
+      {/* 4. Tabs Navigation (Restyled) */}
       <div className={styles.tabs}>
         <button 
           className={`${styles.tab} ${activeTab === 'overview' ? styles.active : ''}`}
           onClick={() => setActiveTab('overview')}
         >
           Tổng quan
+          {activeTab === 'overview' && <div className={styles.indicator} />}
         </button>
         <button 
           className={`${styles.tab} ${activeTab === 'experience' ? styles.active : ''}`}
           onClick={() => setActiveTab('experience')}
         >
           Kinh nghiệm
+          {activeTab === 'experience' && <div className={styles.indicator} />}
         </button>
         <button 
           className={`${styles.tab} ${activeTab === 'contact' ? styles.active : ''}`}
           onClick={() => setActiveTab('contact')}
         >
           Liên hệ
+          {activeTab === 'contact' && <div className={styles.indicator} />}
         </button>
       </div>
 
-      {/* 5. Tab Content */}
-      <div className={styles.tabContent}>
+      {/* 5. Tab Content (Feed-Style Rows) */}
+      <div className={styles.feedContent}>
         {activeTab === 'overview' && (
-          <div className={styles.tabPane}>
-            {/* Stat Cards Grid */}
-            <div className={styles.statsGrid}>
-              <div className={styles.statCard}>
-                <DollarSign size={24} className={styles.statIconLg} />
-                <div className={styles.cardLabel}>Mức phí</div>
-                <div className={styles.cardValueSmall}>{formatSalary(advisor.hourlyRate)}</div>
-              </div>
-              <div className={styles.statCard}>
-                <Star size={24} className={styles.statIconLg} fill="currentColor" />
-                <div className={styles.cardLabel}>Đánh giá</div>
-                <div className={styles.cardValueSmall}>{advisor.rating || 'Chưa có'}</div>
-              </div>
-              <div className={styles.statCard}>
-                <Globe size={24} className={styles.statIconLg} />
-                <div className={styles.cardLabel}>Ngôn ngữ</div>
-                <div className={styles.cardValueSmall}>{advisor.languagesSpoken || 'Tiếng Việt'}</div>
-              </div>
-              <div className={styles.statCard}>
-                <Clock size={24} className={styles.statIconLg} />
-                <div className={styles.cardLabel}>Phản hồi</div>
-                <div className={styles.cardValueSmall}>Trong 24h</div>
+          <>
+            <div className={styles.feedRow}>
+              <div className={`${styles.iconBox} ${styles.blueBox}`}>📋</div>
+              <div className={styles.rowContent}>
+                <div className={styles.rowTitle}>Giới thiệu chuyên môn</div>
+                <div className={styles.rowText}>
+                  {advisor.bio || 'Đang cập nhật'}
+                </div>
+                <div className={styles.chipRow}>
+                  {expertiseTags.map((tag, i) => (
+                    <span key={i} className={styles.chip}>{tag}</span>
+                  ))}
+                </div>
               </div>
             </div>
-
-            <div className={styles.card}>
-              <h3 className={styles.cardTitle}>Giới thiệu chuyên môn</h3>
-              <p className={styles.description}>
-                {advisor.bio || 'Chưa có thông tin giới thiệu chi tiết cho cố vấn này.'}
-              </p>
+            
+            <div className={styles.feedRow}>
+              <div className={`${styles.iconBox} ${styles.greenBox}`}>📅</div>
+              <div className={styles.rowContent}>
+                <div className={styles.rowTitle}>Lịch đặt tư vấn</div>
+                <div className={styles.rowText}>
+                  {advisor.schedule || 'Đang cập nhật'}
+                </div>
+              </div>
             </div>
-          </div>
+          </>
         )}
 
         {activeTab === 'experience' && (
-          <div className={styles.tabPane}>
-            <div className={styles.card}>
-              <h3 className={styles.cardTitle}>Lịch sử làm việc & Kinh nghiệm</h3>
-              <p className={styles.description}>
-                {advisor.previousExperience || 'Thông tin kinh nghiệm thực tế đang được cập nhật.'}
-              </p>
-            </div>
-            <div className={styles.card}>
-              <h3 className={styles.cardTitle}>Chứng chỉ & Bằng cấp</h3>
-              <div className={styles.description}>
-                {advisor.certifications ? (
-                   <ul style={{ paddingLeft: '20px', margin: '0' }}>
-                     {advisor.certifications.split('|').map((cert, i) => (
-                       <li key={i}>{cert.trim()}</li>
-                     ))}
-                   </ul>
-                ) : 'Đang cập nhật chứng chỉ chuyên môn.'}
+          <>
+            <div className={styles.feedRow}>
+              <div className={`${styles.iconBox} ${styles.purpleBox}`}>🏆</div>
+              <div className={styles.rowContent}>
+                <div className={styles.rowTitle}>Lịch sử làm việc & Kinh nghiệm</div>
+                <div className={styles.rowText}>
+                  {advisor.previousExperience || 'Đang cập nhật'}
+                </div>
+                <div className={styles.metaText}>Hiện tại · {advisor.location || 'Đang cập nhật'}</div>
               </div>
             </div>
-          </div>
+            
+            <div className={styles.feedRow}>
+              <div className={`${styles.iconBox} ${styles.purpleBox}`}>💼</div>
+              <div className={styles.rowContent}>
+                <div className={styles.rowTitle}>Chứng chỉ & Bằng cấp</div>
+                <div className={styles.certGrid}>
+                  {advisor.certifications ? (
+                    advisor.certifications.split('|').map((cert, i) => (
+                      <div key={i} className={styles.certCard}>
+                        <Award size={16} className={styles.certIcon} />
+                        <span className={styles.certName}>{cert.trim()}</span>
+                      </div>
+                    ))
+                  ) : (
+                    <div className={styles.rowText}>Đang cập nhật</div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </>
         )}
 
         {activeTab === 'contact' && (
-          <div className={styles.tabPane}>
-            <div className={styles.card}>
-              <h3 className={styles.cardTitle}>Thông tin liên hệ</h3>
-              <div className={styles.contactList}>
-                <div className={styles.contactItem}>
-                  <Mail size={18} />
-                  <span>{advisor.email || 'Email chưa công khai'}</span>
-                </div>
-                <div className={styles.contactItem}>
-                  <Phone size={18} />
-                  <span>09x xxx xxxx</span>
-                </div>
-                <div className={styles.contactItem}>
-                  <MapPin size={18} />
-                  <span>{advisor.location || 'Nghề nghiệp tự do'}</span>
-                </div>
+          <div className={styles.feedRow}>
+            <div className={`${styles.iconBox} ${styles.blueBox}`}>📧</div>
+            <div className={styles.rowContent}>
+              <div className={styles.rowTitle}>Thông tin liên hệ</div>
+              <div className={styles.rowText}>
+                Email: {advisor.email || 'Đang cập nhật'}
+              </div>
+              <div className={styles.rowText}>
+                Số điện thoại: {advisor.phoneNumber || advisor.phone || 'Đang cập nhật'}
+              </div>
+              <div className={styles.rowText}>
+                Vị trí: {advisor.location || 'Đang cập nhật'}
               </div>
             </div>
           </div>

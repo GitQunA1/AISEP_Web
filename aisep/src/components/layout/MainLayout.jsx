@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Rocket } from 'lucide-react';
+import { Rocket, Loader } from 'lucide-react';
 import styles from './MainLayout.module.css';
 import Sidebar from './Sidebar';
 import RightPanel from './RightPanel';
@@ -12,6 +12,7 @@ import ProjectSubmissionForm from '../startup/ProjectSubmissionForm';
 import investorService from '../../services/investorService';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import AdvisorsPage from '../../pages/AdvisorsPage';
+import advisorService from '../../services/advisorService';
 import AdvisorDetailView from '../profile/AdvisorDetailView';
 import InvestorDiscovery from '../investors/InvestorDiscovery';
 import AIChatAssistant from '../../pages/AIChatAssistant';
@@ -58,6 +59,7 @@ function MainLayout({
   const [trendingSectors, setTrendingSectors]   = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [isScoresLoading, setIsScoresLoading] = useState(false);
   const [feedError, setFeedError] = useState(null);
   const [investorCount, setInvestorCount] = useState(0);
 
@@ -110,108 +112,112 @@ function MainLayout({
       setIsLoading(true);
       setFeedError(null);
       try {
-        const res = await projectSubmissionService.getAllProjects();
-        if (res.statusCode === 200 && res.data && res.data.items) {
-          const approved = res.data.items.filter(p => p.status === 'Approved');
+        // Fetch both projects and startup profiles to join them
+        const [projectsRes, startupsRes] = await Promise.all([
+          projectSubmissionService.getAllProjects(),
+          startupProfileService.getAllStartups()
+        ]);
 
-          // 1. Initial mapping
-          const publishedProjects = approved.map(p => ({
-            ...p,
-            id: p.projectId,
-            name: p.projectName,
-            description: p.shortDescription,
-            stage: p.developmentStage,
-            industry: p.keySkills
-              ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)[0] || null
-              : null,
-            tags: p.keySkills
-              ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)
-              : [],
-            industries: p.keySkills
-              ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)
-              : [],
-            score: undefined, // undefined means currently fetching
-            timestamp: new Date(p.approvedAt || p.createdAt).toLocaleDateString('vi-VN'),
-            logo: null
-          }));
+        const startupMap = {};
+        if (startupsRes?.data?.items) {
+          startupsRes.data.items.forEach(s => {
+            startupMap[s.startupId || s.id] = s.organizationName || s.companyName;
+          });
+        }
+
+        if (projectsRes.statusCode === 200 && projectsRes.data && projectsRes.data.items) {
+          // Filter for published projects and map to UI model
+          let publishedProjects = projectsRes.data.items
+            .map(p => ({
+              ...p,
+              id: p.projectId,
+              startupId: p.startupId,
+              startupName: startupMap[p.startupId] || null, // Join with startupMap
+              name: p.projectName,
+              description: p.shortDescription,
+              stage: p.developmentStage,
+              industry: p.keySkills
+                ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)[0] || null
+                : null,
+              tags: p.keySkills
+                ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)
+                : [],
+              aiScore: undefined,
+              score: undefined,
+              timestamp: new Date(p.approvedAt || p.createdAt).toLocaleDateString('vi-VN'),
+              logo: null,
+              // Full project details
+              problemStatement: p.problemStatement,
+              solutionDescription: p.solutionDescription,
+              targetCustomers: p.targetCustomers,
+              uniqueValueProposition: p.uniqueValueProposition,
+              marketSize: p.marketSize,
+              businessModel: p.businessModel,
+              revenue: p.revenue,
+              competitors: p.competitors,
+              teamMembers: p.teamMembers,
+              teamExperience: p.teamExperience,
+              status: p.status,
+              viewCount: p.viewCount
+            }));
 
           setAllStartups(publishedProjects);
           setFilteredStartups(publishedProjects);
 
-          // 2. Fetch AI Histories for each project to get the real score
-          Promise.all(publishedProjects.map(async (startup) => {
-            try {
-              const historyRes = await AIEvaluationService.getProjectAnalysisHistory(startup.id);
-              if (historyRes.success && historyRes.data && historyRes.data.length > 0) {
-                const latest = historyRes.data[0];
-                const score = latest.potentialScore ?? latest.startupScore ?? latest.score;
-                return { id: startup.id, score: score };
-              }
-              return { id: startup.id, score: null }; // null means no history -> __
-            } catch (err) {
-              return { id: startup.id, score: null };
-            }
-          })).then(results => {
-            const updated = publishedProjects.map(s => {
-              const res = results.find(r => r.id === s.id);
-              return res ? { ...s, score: res.score } : s;
-            });
-
-            setAllStartups(updated);
-            setFilteredStartups(updated);
-
-            // 3. Update RightPanel states (Top Rated & Trending)
-            // Re-sort and pick top 3
-            const reSorted = [...updated].sort((a, b) => (b.score || 0) - (a.score || 0));
-            setTopRatedStartups(reSorted.slice(0, 3));
-
-            // Trending Sectors alignment
-            const topSectors = [];
-            const seenSectors = new Set();
-            const sectorCountMap = {};
-
-            // Count everything first
-            updated.forEach(p => {
-              p.industries.forEach(tag => {
-                sectorCountMap[tag] = (sectorCountMap[tag] || 0) + 1;
+          // Extract trending sectors based on industry tags frequency
+          const industryCounts = publishedProjects.reduce((acc, p) => {
+            if (p.tags && p.tags.length > 0) {
+              p.tags.forEach(t => {
+                acc[t] = (acc[t] || 0) + 1;
               });
-            });
-
-            reSorted.forEach(p => {
-              if (p.industries && p.industries.length > 0) {
-                p.industries.forEach(tag => {
-                  if (!seenSectors.has(tag) && topSectors.length < 4) {
-                    seenSectors.add(tag);
-                    topSectors.push({
-                      name: tag,
-                      count: sectorCountMap[tag] || 1,
-                      label: SECTOR_LABELS[topSectors.length]
-                    });
-                  }
-                });
-              }
-            });
-
-            // Fill with overall top if needed
-            if (topSectors.length < 4) {
-              const remainingOverall = Object.entries(sectorCountMap)
-                .sort((a, b) => b[1] - a[1])
-                .filter(([name]) => !seenSectors.has(name));
-
-              for (const [name, count] of remainingOverall) {
-                if (topSectors.length >= 4) break;
-                topSectors.push({
-                  name,
-                  count,
-                  label: SECTOR_LABELS[topSectors.length]
-                });
-              }
+            } else if (p.industry) {
+              acc[p.industry] = (acc[p.industry] || 0) + 1;
             }
-            setTrendingSectors(topSectors);
-          });
+            return acc;
+          }, {});
+          
+          const trending = Object.entries(industryCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([name, count]) => ({
+              label: name,
+              name: name,
+              count: count
+            }));
+            
+          setTrendingSectors(trending);
+
+          // Fetch AI Evaluation History asynchronously to not block the UI
+          const fetchScoresAsync = async () => {
+            setIsScoresLoading(true);
+            const updatedProjects = await Promise.all(publishedProjects.map(async (p) => {
+              try {
+                const historyRes = await AIEvaluationService.getProjectAnalysisHistory(p.id);
+                if (historyRes.success && historyRes.data && historyRes.data.length > 0) {
+                  const finalScore = historyRes.data[0]?.potentialScore || historyRes.data[0]?.startupScore || p.score || null;
+                  return { ...p, aiScore: finalScore, score: finalScore };
+                }
+              } catch (err) {
+                console.error(`Failed to fetch AI history for project ${p.id}`, err);
+              }
+              // If no history exists or fetch failed, set scores to null
+              return { ...p, aiScore: null, score: null };
+            }));
+
+            // Update main lists with new scores
+            setAllStartups(updatedProjects);
+            setFilteredStartups(updatedProjects);
+
+            // Update Top Rated Startups based on aiScore
+            const sortedByScore = [...updatedProjects].filter(p => p.aiScore > 0).sort((a, b) => b.aiScore - a.aiScore);
+            setTopRatedStartups(sortedByScore.slice(0, 3));
+            setIsScoresLoading(false);
+          };
+
+          fetchScoresAsync();
 
         } else {
-          setFeedError(res.message || "Không thể tải danh sách dự án.");
+          setFeedError(projectsRes.message || "Không thể tải danh sách dự án.");
         }
       } catch (err) {
         console.error("Failed to load feed", err);
@@ -231,7 +237,7 @@ function MainLayout({
 
     fetchFeed();
     fetchStats();
-  }, [showAdvisors, showInvestors]);
+  }, [showAdvisors, showInvestors, user]);
 
   // 2. Define Handlers
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -263,6 +269,27 @@ function MainLayout({
 
       return true;
     });
+
+    // 3. Sort Logic
+    if (activeFilters.sort) {
+      switch (activeFilters.sort) {
+        case 'newest':
+          filtered.sort((a, b) => (b.id || 0) - (a.id || 0));
+          break;
+        case 'trending':
+          filtered.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
+          break;
+        case 'rated':
+          filtered.sort((a, b) => (b.aiScore || 0) - (a.aiScore || 0));
+          break;
+        case 'funded':
+          // Keep only projects explicitly indicating they are actively raising or having a funding stage
+          filtered = filtered.filter(p => p.fundingStage && p.fundingStage !== 'Không gọi vốn' && p.fundingStage.trim() !== '');
+          break;
+        default:
+          break;
+      }
+    }
 
     setFilteredStartups(filtered);
   }, [allStartups, activeFilters, searchQuery]);
@@ -358,9 +385,16 @@ function MainLayout({
                   onDismiss={() => setShowProfileModal(false)}
                 />
               )}
-              {isLoading ? (
+              {isLoading || (isScoresLoading && activeFilters.sort === 'rated') ? (
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
-                  <p>Đang tải dự án...</p>
+                  {isScoresLoading && activeFilters.sort === 'rated' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
+                      <Loader size={24} className={styles.spinIcon} />
+                      <p style={{ margin: 0 }}>Đang phân tích điểm AI...</p>
+                    </div>
+                  ) : (
+                    <p>Đang tải dự án...</p>
+                  )}
                 </div>
               ) : feedError ? (
                 <div className={styles.emptyState}>
@@ -402,7 +436,7 @@ function MainLayout({
           onShowHome={onShowHome}
           topRatedStartups={topRatedStartups}
           trendingSectors={trendingSectors}
-          isLoading={isLoading}
+          isLoading={isLoading || isScoresLoading}
         />
       </div>
 

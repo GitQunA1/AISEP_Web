@@ -1,14 +1,15 @@
-/* AdvisorDetailView.module.css - Advisor Profile Page (mirrors Startup/Investor design) */
+/* AdvisorDetailView.module.css - Advisor Profile Page */
 
 .container {
-    width: 100%;
-    max-width: 680px;
-    margin: 0 auto;
+    width: 100% !important;
+    max-width: none !important;
+    margin: 0 !important;
+    padding: 0 !important;
     background-color: var(--bg-primary);
     min-height: 100vh;
-    padding-bottom: 60px;
-    border-left: 1px solid var(--border-color);
-    border-right: 1px solid var(--border-color);
+    padding-bottom: 80px !important;
+    display: block !important;
+    position: relative !important;
 }
 
 @media (max-width: 1439px) and (min-width: 1024px) {
@@ -20,18 +21,36 @@
     }
 }
 
-/* ─── Top Nav ─── */
+/* ─── Top Nav (Glassmorphism + Overlap) ─── */
 .topNav {
     position: sticky;
     top: 0;
-    z-index: 20;
-    background-color: var(--bg-primary);
+    left: 0;
+    right: 0;
+    height: 53px;
     display: flex;
     align-items: center;
-    gap: 20px;
     padding: 0 16px;
-    height: 53px;
-    border-bottom: 1px solid var(--border-color);
+    gap: 16px; /* Added gap for better separation */
+    background-color: rgba(15, 20, 25, 0.7); /* Dark mode default */
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    z-index: 100;
+    margin-bottom: -53px !important; /* Pull cover up under the nav */
+    transition: top 0.3s ease;
+}
+
+@media (max-width: 1023px) {
+    .topNav {
+        top: 60px !important; /* Stick below the mobile TopBar */
+    }
+}
+
+/* Light mode specific: Glassmorphism header */
+:global(html:not([data-theme='dark'])) .topNav {
+    background-color: rgba(255, 255, 255, 0.7) !important;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
 }
 
 .backBtn {
@@ -52,11 +71,13 @@
 .backBtn:hover { background-color: var(--bg-hover); }
 
 .navTitle h2 {
-    font-size: 20px;
-    font-weight: 700;
+    font-size: 19px !important;
+    font-weight: 800;
     color: var(--text-primary);
-    margin: 0;
-    line-height: 1.2;
+    margin: 0 !important;
+    padding: 0 !important;
+    line-height: 1.2 !important;
+    letter-spacing: -0.2px;
 }
 
 .navTitle span {
@@ -64,47 +85,81 @@
     color: var(--text-secondary);
 }
 
-/* ─── Cover Banner ─── */
-.coverBanner {
-    width: 100%;
-    height: 120px;
-    background: linear-gradient(135deg, #3b82f6 0%, #10b981 100%);
+/* ─── 2. Cover Banner ─── */
+.coverWrapper {
+    height: 160px;
+    position: relative;
+    background: linear-gradient(135deg, #0d2040 0%, #0a3020 50%, #1a0d38 100%);
+    overflow: hidden;
 }
 
-@media (max-width: 768px) {
-    .coverBanner { height: 100px; }
+.coverOverlay {
+    position: absolute;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse at 30% 50%, rgba(45, 126, 255, 0.18) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 50%, rgba(0, 186, 124, 0.12) 0%, transparent 60%);
 }
 
-/* ─── Profile Header ─── */
-.profileHeader {
-    padding: 0 var(--spacing-lg);
-    border-bottom: 1px solid var(--border-color);
+/* Light mode specific: Cover Banner */
+:global(html:not([data-theme='dark'])) .coverWrapper {
+    background: linear-gradient(135deg, #e0f2fe 0%, #ecfdf5 50%, #f5f3ff 100%) !important;
 }
 
-.headerTop {
+:global(html:not([data-theme='dark'])) .coverOverlay {
+    background: 
+      radial-gradient(ellipse at 30% 50%, rgba(45, 126, 255, 0.1) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 50%, rgba(0, 186, 124, 0.08) 0%, transparent 60%) !important;
+}
+
+/* ─── 3. Floating Profile Card ─── */
+.profileCard {
+    margin: 0 20px !important;
+    position: relative !important;
+    top: -48px !important;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    z-index: 10;
+}
+
+/* Light mode specific: Card separation */
+:global(html:not([data-theme='dark'])) .profileCard {
+    background-color: #ffffff !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+    border: 1px solid rgba(0, 0, 0, 0.08) !important;
+}
+
+.cardHeaderRow {
     display: flex;
+    align-items: flex-end;
     justify-content: space-between;
-    align-items: flex-start;
-}
-
-.avatarSection {
-    margin-top: -60px;
-    margin-bottom: var(--spacing-md);
+    margin-bottom: 12px;
 }
 
 .avatar {
-    width: 120px;
-    height: 120px;
+    width: 68px;
+    height: 68px;
     border-radius: 50%;
-    background: linear-gradient(135deg, #3b82f6, #10b981);
-    border: 4px solid var(--bg-primary);
+    background: linear-gradient(135deg, #2D7EFF, #00ba7c);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 44px;
-    font-weight: 700;
-    color: white;
+    font-weight: 800;
+    font-size: 24px;
+    color: #fff;
+    border: 3px solid var(--bg-secondary);
     overflow: hidden;
+    flex-shrink: 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+/* Light mode specific: Avatar cleanup */
+:global(html:not([data-theme='dark'])) .avatar {
+    border-color: #ffffff !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
 }
 
 .avatarImg {
@@ -113,77 +168,111 @@
     object-fit: cover;
 }
 
-@media (max-width: 768px) {
-    .avatarSection { margin-top: -50px; }
-    .avatar { width: 100px; height: 100px; font-size: 36px; }
+.initialText {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    margin-top: -1px;
+    font-size: 22px;
 }
 
-.headerActions {
-    margin-top: var(--spacing-md);
+.actionButtons {
+    display: flex;
+    gap: 12px;
+    padding-bottom: 4px;
 }
+
+.messageBtn {
+    padding: 8px 20px;
+    border-radius: 9999px;
+    background: transparent;
+    color: var(--text-primary);
+    border: 1px solid var(--border-color);
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.messageBtn:hover { background: var(--bg-hover); }
 
 .connectBtn {
-    background-color: var(--text-primary);
-    color: var(--bg-primary);
-    border: none;
+    padding: 8px 22px;
     border-radius: 9999px;
-    padding: 8px 20px;
+    background-color: var(--primary-blue);
+    color: #fff;
+    border: none;
+    font-size: 14px;
     font-weight: 700;
-    font-size: 15px;
     cursor: pointer;
-    transition: opacity 0.2s;
+    transition: transform 0.2s, opacity 0.2s;
 }
 
-.connectBtn:hover { opacity: 0.9; }
+.connectBtn:hover { transform: translateY(-1px); opacity: 0.9; }
+
+.nameRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 4px;
+}
+
+.name {
+    font-size: 18px !important;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: var(--text-primary);
+    margin: 0;
+}
 
 .verifiedChip {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 5px;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
     background: rgba(16, 185, 129, 0.1);
     color: #10b981;
-    border: 1px solid rgba(16, 185, 129, 0.3);
-    border-radius: 9999px;
-    padding: 6px 14px;
-    font-size: 13px;
-    font-weight: 600;
-    margin-right: 12px;
-}
-
-/* ─── Profile Info ─── */
-.profileInfo {
-    padding-bottom: var(--spacing-lg);
-}
-
-.nameSection { margin-bottom: var(--spacing-sm); }
-
-.name {
-    font-size: 20px;
-    font-weight: 800;
-    color: var(--text-primary);
-    margin: 0 0 6px;
-    display: flex;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 8px;
+    border: 1px solid rgba(16, 185, 129, 0.2);
 }
 
 .handle {
+    font-size: 13px;
     color: var(--text-secondary);
-    font-size: 15px;
+    margin-bottom: 12px;
 }
 
 .bio {
-    font-size: 15px;
-    color: var(--text-primary);
-    line-height: 1.5;
-    margin: var(--spacing-sm) 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+    line-height: 1.55;
+    margin-bottom: 16px;
+    max-width: 800px;
 }
 
-.metadata {
+.specialtyTags {
     display: flex;
-    gap: var(--spacing-lg);
-    margin: var(--spacing-sm) 0;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+}
+
+.tag {
+    font-size: 13px;
+    color: var(--primary-blue);
+    font-weight: 600;
+    background: rgba(45, 126, 255, 0.1);
+    padding: 2px 8px;
+    border-radius: 6px;
+}
+
+.metaRow {
+    display: flex;
+    gap: 20px;
     flex-wrap: wrap;
 }
 
@@ -191,169 +280,206 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    color: var(--text-secondary);
     font-size: 14px;
+    color: var(--text-secondary);
 }
 
-.metaItem svg { color: var(--text-secondary); }
+/* ─── Stats Strip ─── */
+.statsStrip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    border-top: 1px solid var(--border-color);
+    margin-top: 16px;
+    padding-top: 16px;
+}
 
-/* ─── Tabs ─── */
+.statItem {
+    text-align: center;
+    padding: 0 10px;
+}
+
+.statItem + .statItem {
+    border-left: 1px solid var(--border-color);
+}
+
+.statEmoji {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.statValue {
+    font-family: 'IBM Plex Mono', monospace;
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--primary-blue);
+}
+
+.statLabel {
+    font-size: 11px;
+    color: var(--text-secondary);
+    margin-top: 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* ─── 4. Tabs Navigation ─── */
 .tabs {
     display: flex;
     border-bottom: 1px solid var(--border-color);
+    margin-top: -38px;
+    position: relative;
+    z-index: 5;
+    background-color: var(--bg-primary);
+}
+
+/* Light mode specific: Tabs bg contrast */
+:global(html:not([data-theme='dark'])) .tabs {
+    background-color: #ffffff !important;
+    margin-top: -42px;
 }
 
 .tab {
     flex: 1;
-    min-width: max-content;
-    padding: 16px 0;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 15px;
-    font-weight: 600;
+    padding: 14px 12px;
+    text-align: center;
+    font-size: 14px;
     cursor: pointer;
     position: relative;
-    transition: color 0.2s;
+    background: none;
+    border: none;
+    font-weight: 600;
+    color: var(--text-secondary);
+    transition: all 0.2s;
+    font-family: inherit;
 }
 
-.tab:hover {
-    background-color: var(--bg-hover);
-    color: var(--text-primary);
-}
+.tab:hover { color: var(--text-primary); }
+.tab.active { color: var(--text-primary); font-weight: 700; }
 
-.tab.active { color: var(--text-primary); }
-
-.tab.active::after {
-    content: '';
+.indicator {
     position: absolute;
     bottom: 0;
-    left: 10%;
-    right: 10%;
-    height: 4px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60px;
+    height: 3px;
     background-color: var(--primary-blue);
-    border-radius: 4px 4px 0 0;
+    border-radius: 3px 3px 0 0;
 }
 
-/* ─── Tab Content ─── */
-.tabContent {
-    padding: var(--spacing-lg);
-}
-
-@media (max-width: 600px) {
-    .tabContent { padding: 16px 12px; }
-}
-
-.tabPane {
+/* ─── 5. Feed Content Rows ─── */
+.feedContent {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-xl);
 }
 
-/* ─── Cards ─── */
-.card {
-    background-color: var(--bg-secondary);
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-lg);
-    border: 1px solid var(--border-color);
-}
-
-.cardTitle {
-    font-size: 18px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin-top: 0;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
+.feedRow {
+    padding: 24px 32px;
     border-bottom: 1px solid var(--border-color);
-}
-
-.description {
-    color: var(--text-secondary);
-    line-height: 1.6;
-    font-size: 15px;
-}
-
-/* ─── Stats Grid ─── */
-.statsGrid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: var(--spacing-md);
-}
-
-@media (min-width: 769px) {
-    .statsGrid { grid-template-columns: repeat(4, 1fr); }
-}
-
-.statCard {
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-lg);
-    padding: var(--spacing-lg);
     display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
+    gap: 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+    text-decoration: none;
+    color: inherit;
 }
 
-.statIconLg {
-    color: var(--primary-blue);
-    margin-bottom: 12px;
+.feedRow:hover { background-color: rgba(255, 255, 255, 0.02); }
+
+:global(html:not([data-theme='dark'])) .feedRow:hover { 
+    background-color: rgba(0, 0, 0, 0.02) !important; 
 }
 
-.cardLabel {
-    font-size: 13px;
-    color: var(--text-secondary);
-    margin-bottom: 4px;
-}
-
-.cardValueSmall {
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--text-primary);
-}
-
-.expertiseBadge {
-    display: inline-block;
-    background: rgba(59, 130, 246, 0.1);
-    color: #3b82f6;
-    padding: 2px 10px;
-    border-radius: 9999px;
-    font-size: 14px;
-    font-weight: 600;
-    margin-top: 8px;
-}
-
-/* ─── Contact Info ─── */
-.contactList {
+.iconBox {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
     display: flex;
-    flex-direction: column;
-    gap: 12px;
-}
-
-.contactItem {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    color: var(--text-primary);
-    font-size: 15px;
-}
-
-.contactItem svg { color: var(--primary-blue); flex-shrink: 0; }
-
-/* ─── Loading / Error ─── */
-.loadingState {
-    display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 100px 20px;
-    color: var(--text-secondary);
+    font-size: 22px;
+    flex-shrink: 0;
 }
 
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+.blueBox { background: rgba(45, 126, 255, 0.15); border: 1px solid rgba(45, 126, 255, 0.2); }
+.purpleBox { background: rgba(121, 75, 196, 0.15); border: 1px solid rgba(121, 75, 196, 0.2); }
+.greenBox { background: rgba(16, 185, 129, 0.15); border: 1px solid rgba(16, 185, 129, 0.2); }
+
+/* Light mode icon boxes */
+:global(html:not([data-theme='dark'])) .blueBox { background: rgba(45, 126, 255, 0.08) !important; }
+:global(html:not([data-theme='dark'])) .purpleBox { background: rgba(121, 75, 196, 0.08) !important; }
+:global(html:not([data-theme='dark'])) .greenBox { background: rgba(16, 185, 129, 0.08) !important; }
+
+.rowContent { flex: 1; min-width: 0; }
+.rowTitle { 
+    font-size: 15px;
+    font-weight: 600; 
+    color: var(--text-primary); 
+    margin-bottom: 3px; 
+}
+.rowText { 
+    font-size: 14px;
+    color: var(--text-secondary); 
+    line-height: 1.55; 
 }
 
+.chipRow { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+.chip { padding: 2px 10px; border-radius: 9999px; font-size: 12.5px; background-color: var(--bg-hover); border: 1px solid var(--border-color); color: var(--text-secondary); }
+.statusChip { padding: 2px 10px; border-radius: 9999px; font-size: 12.5px; color: #10b981; border: 1px solid rgba(16, 185, 129, 0.2); background: rgba(16, 185, 129, 0.1); }
+.metaText { font-size: 12.5px; color: var(--text-dim); margin-top: 8px; }
+
+/* ─── 6. Certifications (Special Design) ─── */
+.certGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.certCard {
+    background: rgba(121, 75, 196, 0.1);
+    border: 1px solid rgba(121, 75, 196, 0.2);
+    padding: 8px 14px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+/* Light mode specific: Cert cards */
+:global(html:not([data-theme='dark'])) .certCard {
+    background: rgba(121, 75, 196, 0.05) !important;
+    border-color: rgba(121, 75, 196, 0.12) !important;
+}
+
+.certCard:hover {
+    background: rgba(121, 75, 196, 0.15);
+    transform: translateY(-1px);
+}
+
+.certIcon {
+    color: #a855f7;
+    flex-shrink: 0;
+}
+
+.certName {
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* States */
+.loadingState { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 100px 20px; color: var(--text-secondary); }
 .spinIcon { animation: spin 1s linear infinite; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+@media (max-width: 600px) {
+    .profileCard { margin: 0 12px; margin-top: -48px; padding: 16px; }
+    .avatar { width: 64px; height: 64px; font-size: 22px; }
+    .name { font-size: 20px; }
+    .statsStrip { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+    .statItem + .statItem { border-left: none; }
+    .tab { font-size: 13px; }
+    .feedRow { padding: 16px; }
+}

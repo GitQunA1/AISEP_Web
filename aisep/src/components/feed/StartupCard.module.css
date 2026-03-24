@@ -1,9 +1,9 @@
 .card {
   display: flex;
   flex-direction: column;
-  padding: 16px 20px;
+  padding: 18px 20px 22px;
   background-color: var(--bg-primary);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: 8px solid var(--bg-secondary);
   border-right: none;
   border-top: none;
   border-left: none;
@@ -17,246 +17,235 @@
   background-color: rgba(255, 255, 255, 0.018);
 }
 
-.avatarColumn {
-  position: absolute;
-  left: 16px;
-  top: 16px;
-}
-
-.avatarColumn :global(.avatar),
-.avatarColumn :global(.avatarFallback) {
-  width: 40px !important;
-  height: 40px !important;
-}
-
-.avatarColumn :global(.fallbackText) {
-  font-size: 14px !important;
-}
-
-/* For mobile avatar positioning */
-.avatarBtn {
-  background: none;
-  border: none;
-  padding: 0;
-  cursor: pointer;
-  display: block;
-}
-
-.contentColumn {
-  margin-left: 52px; /* Space for smaller 40px avatar */
+/* 1. Header */
+.cardHeader {
   display: flex;
-  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+
+.avatarCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 16px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.headerInfo {
   flex: 1;
+  min-width: 0;
 }
 
-/* Header Rows */
-.headerRow {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 2px;
-}
-
-.nameGroup {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
+.nameRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 2px;
 }
 
 .name {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--text-primary);
 }
 
-.nameClickable {
-    cursor: pointer;
+.projectName {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+  line-height: 1.3;
 }
 
-.nameClickable:hover {
-    text-decoration: underline;
+.clickable {
+  cursor: pointer;
 }
 
-.time {
-    font-size: 13.5px;
-    color: var(--text-secondary);
-    opacity: 0.7;
+.clickableName {
+  cursor: pointer;
 }
-
-
-.headerActions {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-
-/* Row 2: Tags */
-.tagRow {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 10px;
-    margin-bottom: 4px;
-}
-
-.hashtag {
-    color: var(--primary-blue);
-    font-size: 13px;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.hashtag:hover {
+.clickableName:hover {
   text-decoration: underline;
 }
 
-/* Description */
+.date {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.badgeRow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  flex-wrap: wrap;
+}
+
+.aiBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 9999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  background: #f4212e;
+  color: #fff;
+}
+
+.stagePill {
+  padding: 1px 7px;
+  border-radius: 5px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.tag {
+  font-size: 12.5px;
+  color: var(--primary-blue, #2D7EFF);
+  font-weight: 500;
+}
+
+.menuIconWrapper {
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  transition: all 0.2s ease;
+}
+.menuIconWrapper:hover {
+  background-color: var(--bg-hover);
+  color: var(--primary-blue);
+}
+
+/* 2. Description */
 .description {
-  font-size: 14.5px;
-  line-height: 1.5;
+  font-size: 14px;
   color: var(--text-primary);
-  margin: 2px 0 12px 0;
-  opacity: 0.9;
-  
+  line-height: 1.55;
+  margin-bottom: 14px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  
-  flex: 1; /* Stretch and pin action bar */
 }
 
-/* Action Bar */
-.actionRow {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  max-width: 380px;
-  margin-top: auto;
-  padding-top: 4px;
-  opacity: 0.7;
+/* 3. Highlight Grid */
+.gridRow {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  grid-auto-rows: 1fr !important; /* Force all rows to be equal height */
+  gap: 10px !important;
+  align-items: stretch !important;
+  margin-bottom: 14px !important;
 }
 
-.actionBtn {
+.highlightBox {
+  background: var(--surface2, rgba(255,255,255,0.03));
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  padding: 18px 8px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  display: grid !important;
+  align-content: center !important;
+  justify-items: center !important;
+  gap: 4px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  height: 100% !important; /* Force fill the 1fr grid row */
+}
+
+.boxIcon {
+  font-size: 16px;
+  margin-bottom: 6px;
+  position: relative;
+  z-index: 1;
+}
+
+.boxValue {
+  font-family: 'IBM Plex Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 17px;
+  font-weight: 700;
+  position: relative;
+  z-index: 1;
+}
+
+.boxLabel {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-top: 2px;
+  position: relative;
+  z-index: 1;
+}
+
+.blueText { color: var(--primary-blue, #2D7EFF); }
+.greenText { color: var(--green, #00ba7c); }
+.amberText { color: var(--amber, #ffad1f); }
+.grayText { color: var(--text-primary); }
+
+/* 4. Detail Rows */
+.detailRows {
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  padding: 10px 0;
+  margin-bottom: 12px;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.detailRow {
+  display: flex;
   gap: 8px;
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 4px 0;
-  transition: all 0.2s;
   font-size: 13px;
 }
 
-.replyBtn:hover {
-  color: var(--primary-blue);
-}
-
-.likeBtn:hover {
-  color: #f4212e;
-}
-
-.likeBtn.liked {
-  color: #f4212e;
-}
-
-.repostBtn:hover {
-  color: #00ba7c;
-}
-
-.bookmarkBtn:hover {
-  color: var(--primary-blue);
-}
-
-.bookmarkBtn.bookmarked {
-  color: var(--primary-blue);
-}
-
-.actionCount {
-  font-size: 13px;
-}
-
-.menuBtn {
-  margin-left: auto;
-  background: none;
-  border: none;
+.detailLabel {
   color: var(--text-secondary);
-  cursor: pointer;
-  padding: 4px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-  transition: background-color 0.2s;
+  min-width: 90px;
+  flex-shrink: 0;
 }
 
-.menuBtn:hover {
-  background-color: var(--bg-hover);
-  color: var(--primary-blue);
+.detailValue {
+  color: var(--text-primary);
+  flex: 1;
 }
 
-@media (max-width: 900px) {
-  .card {
-    padding: 12px 16px;
-  }
-  .avatarColumn {
-    left: 16px;
-    top: 14px;
-  }
-  .avatar {
-    width: 36px !important;
-    height: 36px !important;
-  }
-  .avatarColumn :global(.avatarFallback) {
-    width: 36px !important;
-    height: 36px !important;
-  }
-  .avatarColumn :global(.fallbackText) {
-    font-size: 13px !important;
-  }
-  .contentColumn {
-    margin-left: 48px;
-  }
+/* 5. Team Line */
+.teamLine {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 0;
 }
 
 @media (max-width: 600px) {
+  .gridRow {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    margin-bottom: 20px !important;
+  }
+  .highlightBox {
+    padding: 14px 12px !important;
+    height: auto !important; /* Allow natural single-row height */
+  }
+  .boxValue {
+    font-size: 15px;
+  }
   .card {
-    padding: 10px 14px;
-  }
-  .avatarColumn {
-    left: 12px;
-    top: 12px;
-  }
-  .avatar {
-    width: 32px !important;
-    height: 32px !important;
-  }
-  .avatarColumn :global(.avatarFallback) {
-    width: 32px !important;
-    height: 32px !important;
-  }
-  .avatarColumn :global(.fallbackText) {
-    font-size: 12px !important;
-  }
-  .contentColumn {
-    margin-left: 42px;
-  }
-  .name {
-    font-size: 14.5px;
-    max-width: 160px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .time {
-    font-size: 11.5px;
-    white-space: nowrap;
-  }
-  .headerActions {
-    gap: 8px;
+    padding: 14px 16px;
   }
 }

@@ -5,6 +5,8 @@
  */
 import apiClient from './apiClient';
 
+const requestCache = new Map();
+
 class AIEvaluationService {
   /**
    * BR-10: Run AI evaluation after IP protection
@@ -452,18 +454,36 @@ class AIEvaluationService {
         return { success: false, message: 'Invalid projectId' };
       }
 
-      console.log('[AI HISTORY] Fetching for project:', projectId);
-      const result = await apiClient.get(`/api/StartupAIAnalysis/${projectId}`);
-      
-      // Normalize data to always be an array
-      const rawData = result.data || result;
-      const normalizedData = Array.isArray(rawData) ? rawData : (rawData ? [rawData] : []);
+      const cacheKey = `history_${projectId}`;
+      if (requestCache.has(cacheKey)) {
+        return requestCache.get(cacheKey);
+      }
 
-      return {
-        success: true,
-        data: normalizedData,
-        message: result.message || 'History fetched successfully'
-      };
+      console.log('[AI HISTORY] Fetching for project:', projectId);
+      
+      const fetchPromise = apiClient.get(`/api/StartupAIAnalysis/${projectId}`)
+        .then(result => {
+          // Normalize data to always be an array
+          const rawData = result.data || result;
+          const normalizedData = Array.isArray(rawData) ? rawData : (rawData ? [rawData] : []);
+          
+          return {
+            success: true,
+            data: normalizedData,
+            message: result.message || 'History fetched successfully'
+          };
+        })
+        .catch(error => {
+          requestCache.delete(cacheKey);
+          throw error;
+        });
+
+      requestCache.set(cacheKey, fetchPromise);
+      
+      // Clear cache after 10 seconds to allow fresh data retrieval later
+      setTimeout(() => requestCache.delete(cacheKey), 10000);
+
+      return await fetchPromise;
     } catch (error) {
       console.error('[AI HISTORY] Error:', error);
       return {

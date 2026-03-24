@@ -57,7 +57,8 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background-color: var(--bg-primary); /* Ensure it covers anything behind if needed */
+  background-color: var(--bg-primary);
+  /* Ensure it covers anything behind if needed */
 }
 
 /* COLUMN 2: CENTER FEED (The ONLY thing that scrolls) */
@@ -66,6 +67,11 @@
   overflow-y: auto;
   scroll-behavior: smooth;
   border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start !important;
+  background: linear-gradient(to bottom, var(--bg-primary) 0%, var(--bg-primary) 100%);
 }
 
 .noScroll {
@@ -79,35 +85,40 @@
   display: block;
 }
 
-/* Center the Feed Stream (Facebook Style Separated Cards) */
-/* Center the Feed Stream (Facebook Style Separated Cards) */
+/* Center the Feed Stream (Facebook/X Style) */
 .feedStreamWrapper {
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
+  max-width: 100% !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
   min-height: 100%;
   border: none;
   background-color: transparent;
 }
 
 .feedGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  padding: 0;
-  align-items: stretch;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  align-items: stretch !important;
 }
 
-.feedGrid > article:nth-child(odd) {
-  border-right: 1px solid var(--border-color);
+.feedGrid>article {
+  border: none !important;
+  border-bottom: 8px solid var(--bg-secondary) !important;
+  width: 100% !important;
+}
+
+.feedGrid>article:last-child {
+  border-bottom: none !important;
 }
 
 @media (max-width: 900px) {
   .feedGrid {
-    grid-template-columns: 1fr;
-  }
-  .feedGrid > article:nth-child(odd) {
-    border-right: none;
+    display: flex !important;
+    flex-direction: column !important;
   }
 }
 
@@ -129,7 +140,7 @@
     height: auto;
     overflow: visible;
   }
-  
+
   .mainContainer.aiMode {
     display: flex;
     flex-direction: column;
@@ -168,10 +179,13 @@
   /* Specific fix for AI Chat Assistant on Mobile */
   .noScroll {
     overflow: hidden !important;
-    height: calc(100vh - 120px); /* Viewport minus TopBar (60px) and BottomNav (60px) */
-    display: flex; /* Make it a flex container */
+    height: calc(100vh - 120px);
+    /* Viewport minus TopBar (60px) and BottomNav (60px) */
+    display: flex;
+    /* Make it a flex container */
     flex-direction: column;
-    padding-bottom: 0; /* Remove padding for flex container */
+    padding-bottom: 0;
+    /* Remove padding for flex container */
   }
 
   @media (max-width: 350px) {
@@ -211,4 +225,19 @@
   margin: 0;
   max-width: 400px;
   line-height: 1.5;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinIcon {
+  animation: spin 1s linear infinite;
+  opacity: 0.7;
 }

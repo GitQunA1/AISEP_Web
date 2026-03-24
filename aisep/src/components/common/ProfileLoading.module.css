@@ -1,0 +1,99 @@
+.container {
+    width: 100%;
+    min-height: 100vh;
+    background-color: var(--bg-primary);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Match Concept C header overlap */
+.coverWrapper {
+    height: 160px;
+    background: linear-gradient(135deg, #0d2040 0%, #0a3020 50%, #1a0d38 100%);
+    position: relative;
+    overflow: hidden;
+}
+
+.coverOverlay {
+    position: absolute;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse at 30% 50%, rgba(45, 126, 255, 0.18) 0%, transparent 60%),
+      radial-gradient(ellipse at 70% 50%, rgba(0, 186, 124, 0.12) 0%, transparent 60%);
+}
+
+:global(html:not([data-theme='dark'])) .coverWrapper {
+    background: linear-gradient(135deg, #e0f2fe 0%, #ecfdf5 50%, #f5f3ff 100%) !important;
+}
+
+.loaderContent {
+    position: relative;
+    margin-top: -48px;
+    display: flex;
+    justify-content: center;
+    padding: 0 20px;
+    z-index: 10;
+}
+
+.loaderCard {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 48px;
+    width: 100%;
+    max-width: 400px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    backdrop-filter: blur(8px);
+}
+
+:global(html:not([data-theme='dark'])) .loaderCard {
+    background-color: #ffffff !important;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.06) !important;
+}
+
+.spinnerWrapper {
+    width: 64px;
+    height: 64px;
+    border-radius: 16px;
+    background: rgba(45, 126, 255, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--primary-blue);
+    position: relative;
+}
+
+.spinnerWrapper::after {
+    content: '';
+    position: absolute;
+    inset: -2px;
+    border-radius: 18px;
+    border: 2px solid var(--primary-blue);
+    opacity: 0.15;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.1; }
+    50% { transform: scale(1.1); opacity: 0.2; }
+}
+
+.spinIcon {
+    animation: spin 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+.loaderMessage {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-align: center;
+}

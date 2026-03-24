@@ -1,518 +1,332 @@
 .container {
+    /* Local Design Tokens - Synced with Global Theme */
+    --local-bg: var(--bg-primary); 
+    --local-surface-hover: var(--bg-hover);
+    --local-blue: var(--primary-blue);
+    --local-text-main: var(--text-primary);
+    --local-text-muted: var(--text-secondary);
+    --local-border: var(--border-color);
+
     width: 100%;
-    max-width: 680px;
-    margin: 0 auto;
-    background-color: transparent;
+    margin: 0;
+    background-color: var(--local-bg);
     min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    /* Removed redundant internal borders to stretch to full column width */
+    position: relative;
+    padding-bottom: 80px;
 }
 
-@media (max-width: 1439px) and (min-width: 1024px) {
-    .container {
-        max-width: 100%;
-        margin: 0;
-    }
-}
-
+/* ─── Unified Sticky Header ─── */
 .header {
-    padding: 24px 20px 12px 20px;
-    background-color: var(--bg-primary);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    padding: 24px 16px 16px 16px;
+    background: rgba(var(--bg-primary-rgb), 0.85);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--local-border);
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
 }
 
 .headerTitle {
-    font-size: 24px;
+    font-size: 23px;
     font-weight: 800;
-    color: var(--text-primary);
-    margin: 0 0 4px 0;
+    color: var(--local-text-main);
+    margin: 0;
     letter-spacing: -0.5px;
 }
 
 .headerSubtitle {
-    font-size: 15px;
-    color: var(--text-secondary);
-    margin: 0;
+    display: block;
+    font-size: 14.5px;
+    color: var(--local-text-muted);
+    margin: -4px 0 8px 0;
 }
 
-.searchSection {
-    padding: 12px 20px;
-    background-color: var(--bg-primary);
+/* ─── Search Row (Inside Header) ─── */
+.searchRow {
     display: flex;
+    align-items: center;
     gap: 12px;
-    align-items: center;
-    position: sticky;
-    top: 0;
-    z-index: 10;
+    position: relative; /* Anchor for FilterModal */
 }
-
-.filterButton {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 18px;
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    border-radius: 9999px;
-    color: var(--text-primary);
-    font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.filterButton:hover {
-    background-color: var(--bg-hover);
-    border-color: var(--text-secondary);
-}
-
-.badge {
-    background-color: var(--primary-blue);
-    color: white;
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 9999px;
-    margin-left: 4px;
-}
-
-/* ==========================
-   SEARCH HEADER
-   ========================== */
-/* Header styles removed, replaced by FeedHeader */
-
-/* Header styles removed, replaced by custom header above */
 
 .searchContainer {
+    flex: 1;
     position: relative;
-    width: 100%;
+    display: flex;
+    align-items: center;
 }
 
 .searchIcon {
     position: absolute;
-    left: 16px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--text-secondary);
+    left: 14px;
+    color: var(--local-text-muted);
 }
 
 .searchInput {
     width: 100%;
-    height: 44px;
-    padding: 12px 12px 12px 50px !important;
-    /* Force padding to prevent overlap */
-    border-radius: 9999px;
     background-color: var(--bg-secondary);
-    /* or #202327 for darker search */
     border: 1px solid transparent;
-    /* Cleaner look */
-    color: var(--text-primary);
+    border-radius: 9999px;
+    padding: 10px 16px 10px 44px;
+    color: var(--local-text-main);
     font-size: 15px;
     transition: all 0.2s;
 }
 
 .searchInput:focus {
     outline: none;
-    background-color: var(--bg-primary);
-    border-color: var(--primary-blue);
-    /* Twitter blue focus */
-    box-shadow: 0 0 0 1px var(--primary-blue);
+    background-color: var(--local-bg);
+    border-color: var(--local-blue);
+    box-shadow: 0 0 0 1px var(--local-blue);
 }
 
-.searchInput::placeholder {
-    color: var(--text-secondary);
+.filterWrapper {
+    position: relative;
 }
 
-/* ==========================
-   FILTER PILLS
-   ========================== */
-.filtersSection {
-    border-bottom: 1px solid var(--border-color);
-    padding: var(--spacing-md);
-    display: flex;
-    flex-direction: column;
-    gap: var(--spacing-sm);
-}
-
-.filterGroup {
+.filterButton {
     display: flex;
     align-items: center;
-    gap: var(--spacing-sm);
-}
-
-.filterLabel {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-secondary);
-    white-space: nowrap;
-    min-width: 65px;
-}
-
-.filterPills {
-    display: flex;
     gap: 8px;
-    overflow-x: auto;
-    flex: 1;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-}
-
-.filterPills::-webkit-scrollbar {
-    display: none;
-}
-
-.filterPill {
-    padding: 6px 14px;
+    padding: 8px 16px;
     border-radius: 9999px;
-    background-color: var(--bg-secondary);
-    border: 1px solid var(--border-color);
-    color: var(--text-secondary);
-    font-size: 13px;
+    background: transparent;
+    border: 1px solid var(--local-border);
+    color: var(--local-text-main);
+    font-size: 14px;
     font-weight: 600;
-    cursor: pointer;
+    transition: background 0.2s;
     white-space: nowrap;
-    transition: all 0.2s;
 }
 
-.filterPill:hover {
-    background-color: var(--bg-hover);
-    border-color: var(--text-secondary);
+.filterButton:hover {
+    background-color: var(--local-surface-hover);
 }
 
-.filterPillActive {
-    background-color: var(--primary-blue);
-    border-color: var(--primary-blue);
-    color: white;
+/* Desktop: inline dropdown anchored to filterWrapper */
+.desktopOnly {
+    position: absolute;
+    top: calc(100% + 10px);
+    right: 0;
+    z-index: 500;
+    animation: slideDown 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.filterPillActive:hover {
-    background-color: #1a8cd8;
-    border-color: #1a8cd8;
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-8px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
-/* ==========================
-   INVESTOR FEED
-   ========================== */
-.feed {
+/* Mobile: centered popup with dark backdrop (matches Home page) */
+.mobileOnly {
+    position: fixed;
+    inset: 0;
+    z-index: 10000;
     display: flex;
-    flex-direction: column;
-    gap: 16px;
-    margin-top: 16px;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    animation: fadeIn 0.2s ease;
 }
 
-/* Investor Card - Twitter/X Feed Style */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.filterBackdrop {
+    position: absolute;
+    inset: 0;
+    background-color: rgba(0, 0, 0, 0.65);
+}
+
+/* Screen size visibility */
+@media (min-width: 1024px) {
+    .mobileOnly { display: none !important; }
+}
+
+@media (max-width: 1023px) {
+    .desktopOnly { display: none !important; }
+}
+
+.badge {
+    background-color: var(--local-blue);
+    color: #fff;
+    padding: 1px 6px;
+    border-radius: 9999px;
+    font-size: 11px;
+}
+
+/* ─── Investor Card (Feed Item) ─── */
 .investorCard {
     padding: 16px;
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    background-color: var(--bg-secondary);
-    transition: background-color 0.2s;
+    border-bottom: 1px solid var(--local-border);
+    display: flex;
+    gap: 12px;
     cursor: pointer;
+    transition: background 0.15s ease;
+    animation: fadeUp 0.4s ease-out forwards;
+}
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .investorCard:hover {
-    background-color: var(--bg-hover);
+    background-color: var(--local-surface-hover);
 }
 
-/* Card Header */
-.cardHeader {
-    display: flex;
-    gap: 12px;
-    margin-bottom: 12px;
+.avatarContainer {
+    flex-shrink: 0;
 }
 
 .avatar {
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     object-fit: cover;
-    flex-shrink: 0;
+    background: linear-gradient(135deg, #2D7EFF, #00ba7c);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 800;
+    font-size: 18px;
 }
 
 .investorInfo {
     flex: 1;
     min-width: 0;
+}
+
+.nameRow {
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    gap: 4px;
+    margin-bottom: 4px;
 }
 
 .nameWrapper {
     display: flex;
     align-items: center;
     gap: 6px;
-    flex-wrap: wrap;
-}
-
-.matchBadge {
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    background-color: rgba(255, 122, 0, 0.1);
-    color: #ff7a00;
-    padding: 4px 12px;
-    border-radius: 9999px;
-    font-size: 13px;
-    font-weight: 700;
-    width: fit-content;
-}
-
-.flameIcon {
-    fill: currentColor;
-}
-
-.nameRow {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-bottom: 2px;
 }
 
 .investorName {
-    font-size: 16px;
-    font-weight: 800;
-    color: var(--text-primary);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--local-text-main);
     margin: 0;
 }
 
 .verifiedBadge {
-    color: var(--primary-blue);
-    flex-shrink: 0;
-}
-
-/* Match Score Badge */
-.matchScore {
-    padding: 3px 10px;
-    border-radius: 9999px;
-    font-size: 12px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-}
-
-.matchHigh {
-    background: linear-gradient(135deg, #00ba7c 0%, #00d68f 100%);
-    color: white;
-    box-shadow: 0 1px 3px rgba(0, 186, 124, 0.3);
-}
-
-.matchMedium {
-    background: linear-gradient(135deg, #ffb800 0%, #ffd000 100%);
-    color: #1a1a1a;
-    box-shadow: 0 1px 3px rgba(255, 184, 0, 0.3);
-}
-
-.matchLow {
-    background-color: var(--bg-secondary);
-    color: var(--text-secondary);
-    border: 1px solid var(--border-color);
+    color: var(--local-blue);
 }
 
 .investorType {
     font-size: 14px;
-    color: var(--text-secondary);
-    margin: 0;
-    font-weight: 400;
+    color: var(--local-text-muted);
 }
 
-/* Thesis/Bio */
+.matchBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 173, 31, 0.12);
+    color: #ffad1f;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+    font-weight: 700;
+    width: fit-content;
+}
+
 .thesis {
     font-size: 15px;
-    color: var(--text-primary);
-    line-height: 1.5;
+    color: var(--local-text-main);
+    line-height: 1.45;
     margin: 0 0 12px 0;
 }
 
-/* Tags */
-.tags {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin-bottom: 12px;
-}
-
-.tagGroup {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    flex-wrap: wrap;
-}
-
-.tagGroup svg {
-    color: var(--text-secondary);
-    flex-shrink: 0;
-}
-
-.tag {
-    padding: 3px 10px;
-    border-radius: 4px;
-    background-color: var(--bg-secondary);
-    color: var(--text-secondary);
-    font-size: 12px;
-    font-weight: 600;
-    border: 1px solid var(--border-color);
-}
-
-/* Metadata */
+/* Metadata Row (Horizontal list with emojis) */
 .metadata {
     display: flex;
+    align-items: center;
     gap: 16px;
+    margin-bottom: 16px;
+    font-size: 12.5px;
+    color: var(--local-text-muted);
     flex-wrap: wrap;
-    margin-bottom: 12px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid var(--border-color);
 }
 
 .metaItem {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 13px;
-    color: var(--text-secondary);
+    gap: 4px;
 }
 
-.metaItem svg {
-    flex-shrink: 0;
-}
-
-.ticketSize {
-    font-weight: 700;
-    color: var(--primary-blue);
-}
-
-/* Actions */
+/* Actions Bottom Left */
 .actions {
     display: flex;
-    gap: 8px;
-    flex-wrap: wrap;
+    gap: 10px;
 }
 
 .primaryBtn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 20px;
-    background-color: var(--primary-blue);
-    color: white;
-    border: none;
+    background-color: var(--local-blue);
+    color: #fff;
+    padding: 8px 18px;
     border-radius: 9999px;
     font-size: 14px;
     font-weight: 700;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: opacity 0.2s;
 }
 
 .primaryBtn:hover {
-    background-color: #1a8cd8;
+    opacity: 0.9;
 }
 
 .viewProfileBtn {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    padding: 8px 20px;
-    background-color: transparent;
-    color: var(--text-primary);
-    border: 1.5px solid var(--text-secondary);
+    background: transparent;
+    border: 1px solid var(--local-border);
+    color: var(--local-text-main);
+    padding: 8px 18px;
     border-radius: 9999px;
     font-size: 14px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-    white-space: nowrap;
+    font-weight: 600;
+    transition: background 0.2s;
 }
 
 .viewProfileBtn:hover {
-    background-color: var(--bg-secondary);
-    border-color: var(--text-primary);
+    background-color: var(--local-surface-hover);
 }
 
-/* ==========================
-   EMPTY STATE
-   ========================== */
+/* Empty States */
 .emptyState {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
     padding: 80px 24px;
     text-align: center;
+    color: var(--local-text-muted);
 }
 
 .emptyIcon {
-    color: var(--text-secondary);
     margin-bottom: 16px;
-    opacity: 0.5;
+    opacity: 0.2;
 }
 
-.emptyState h3 {
-    font-size: 20px;
-    font-weight: 700;
-    color: var(--text-primary);
-    margin: 0 0 8px 0;
-}
-
-.emptyState p {
-    font-size: 15px;
-    color: var(--text-secondary);
-    margin: 0;
-    max-width: 400px;
-    line-height: 1.5;
-}
-
-/* ==========================
-   RESPONSIVE DESIGN
-   ========================== */
 @media (max-width: 600px) {
-
-    .header,
-    .filtersSection {
-        padding: 12px;
-    }
-
-    .investorCard {
-        padding: 12px;
-    }
-
-    .avatar {
-        width: 40px;
-        height: 40px;
-    }
-
-    .filterLabel {
-        min-width: 55px;
-        font-size: 12px;
-    }
-
-    .actions {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .actions button {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .tags {
-        flex-direction: column;
-        gap: 6px;
-    }
-
-    .metadata {
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    /* Add spacing for cards on mobile */
-    .feed {
-        padding: 0 12px;
-    }
-}
-
-@media (min-width: 601px) and (max-width: 768px) {
-    .avatar {
-        width: 44px;
-        height: 44px;
+    .container {
+        border-left: none;
+        border-right: none;
+        max-width: 100%;
     }
 }
