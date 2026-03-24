@@ -15,6 +15,7 @@ import AdvisorsPage from '../../pages/AdvisorsPage';
 import AdvisorDetailView from '../profile/AdvisorDetailView';
 import InvestorDiscovery from '../investors/InvestorDiscovery';
 import AIChatAssistant from '../../pages/AIChatAssistant';
+import AIEvaluationService from '../../services/AIEvaluationService';
 
 import ProfileRequiredModal from '../startup/ProfileRequiredModal';
 import startupProfileService from '../../services/startupProfileService';
@@ -53,10 +54,21 @@ function MainLayout({
   // Fetch all projects (we use getAllProjects to get public feed)
   const [allStartups, setAllStartups] = useState([]);
   const [filteredStartups, setFilteredStartups] = useState([]);
+  const [topRatedStartups, setTopRatedStartups] = useState([]);
+  const [trendingSectors, setTrendingSectors]   = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [feedError, setFeedError] = useState(null);
   const [investorCount, setInvestorCount] = useState(0);
+
+  // Helper for RightPanel labels
+  const SECTOR_LABELS = [
+    'Xu hướng tuần này',
+    'Tăng trưởng nhanh',
+    'Nhiều nhà đầu tư theo dõi',
+    'Mới nhất',
+    'Đang nổi',
+  ];
   const [activeFilters, setActiveFilters] = useState({
     industry: '',
     stage: '',
@@ -132,9 +144,104 @@ function MainLayout({
               status: p.status,
               viewCount: p.viewCount
             }));
+          const approved = res.data.items.filter(p => p.status === 'Approved');
+
+          // 1. Initial mapping
+          const publishedProjects = approved.map(p => ({
+            ...p,
+            id: p.projectId,
+            name: p.projectName,
+            description: p.shortDescription,
+            stage: p.developmentStage,
+            industry: p.keySkills
+              ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)[0] || null
+              : null,
+            tags: p.keySkills
+              ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)
+              : [],
+            industries: p.keySkills
+              ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)
+              : [],
+            score: undefined, // undefined means currently fetching
+            timestamp: new Date(p.approvedAt || p.createdAt).toLocaleDateString('vi-VN'),
+            logo: null
+          }));
 
           setAllStartups(publishedProjects);
           setFilteredStartups(publishedProjects);
+
+          // 2. Fetch AI Histories for each project to get the real score
+          Promise.all(publishedProjects.map(async (startup) => {
+            try {
+              const historyRes = await AIEvaluationService.getProjectAnalysisHistory(startup.id);
+              if (historyRes.success && historyRes.data && historyRes.data.length > 0) {
+                const latest = historyRes.data[0];
+                const score = latest.potentialScore ?? latest.startupScore ?? latest.score;
+                return { id: startup.id, score: score };
+              }
+              return { id: startup.id, score: null }; // null means no history -> __
+            } catch (err) {
+              return { id: startup.id, score: null };
+            }
+          })).then(results => {
+            const updated = publishedProjects.map(s => {
+              const res = results.find(r => r.id === s.id);
+              return res ? { ...s, score: res.score } : s;
+            });
+
+            setAllStartups(updated);
+            setFilteredStartups(updated);
+
+            // 3. Update RightPanel states (Top Rated & Trending)
+            // Re-sort and pick top 3
+            const reSorted = [...updated].sort((a, b) => (b.score || 0) - (a.score || 0));
+            setTopRatedStartups(reSorted.slice(0, 3));
+
+            // Trending Sectors alignment
+            const topSectors = [];
+            const seenSectors = new Set();
+            const sectorCountMap = {};
+
+            // Count everything first
+            updated.forEach(p => {
+              p.industries.forEach(tag => {
+                sectorCountMap[tag] = (sectorCountMap[tag] || 0) + 1;
+              });
+            });
+
+            reSorted.forEach(p => {
+              if (p.industries && p.industries.length > 0) {
+                p.industries.forEach(tag => {
+                  if (!seenSectors.has(tag) && topSectors.length < 4) {
+                    seenSectors.add(tag);
+                    topSectors.push({
+                      name: tag,
+                      count: sectorCountMap[tag] || 1,
+                      label: SECTOR_LABELS[topSectors.length]
+                    });
+                  }
+                });
+              }
+            });
+
+            // Fill with overall top if needed
+            if (topSectors.length < 4) {
+              const remainingOverall = Object.entries(sectorCountMap)
+                .sort((a, b) => b[1] - a[1])
+                .filter(([name]) => !seenSectors.has(name));
+
+              for (const [name, count] of remainingOverall) {
+                if (topSectors.length >= 4) break;
+                topSectors.push({
+                  name,
+                  count,
+                  label: SECTOR_LABELS[topSectors.length]
+                });
+              }
+            }
+            setTrendingSectors(topSectors);
+          });
+
         } else {
           setFeedError(res.message || "Không thể tải danh sách dự án.");
         }
@@ -216,16 +323,16 @@ function MainLayout({
       </div>
 
       {/* 2. Main Feed (Scrollable) */}
-      <main 
-        key={activeView}
-        className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} view-enter`}
-      >
         {/* MOBILE HEADER (Fixed Top) */}
         {/* TopBar visibility is controlled by CSS (display: none on desktop) */}
         <TopBar onMenuClick={toggleMobileMenu} />
 
-        {/* Feed Content or Profile Page */}
-        {children ? (
+        <main 
+          key={activeView}
+          className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} view-enter`}
+        >
+          {/* Feed Content or Profile Page */}
+          {children ? (
           children
         ) : showAdvisors ? (
           selectedAdvisor ? (
@@ -323,6 +430,11 @@ function MainLayout({
           searchQuery={searchQuery} 
           onSearchChange={(e) => setSearchQuery(e.target.value)} 
           showSearch={activeView === 'main'}
+          onFilterChange={handleFilterChange}
+          onShowHome={onShowHome}
+          topRatedStartups={topRatedStartups}
+          trendingSectors={trendingSectors}
+          isLoading={isLoading}
         />
       </div>
 
