@@ -102,15 +102,13 @@ function MainLayout({
         if (res.statusCode === 200 && res.data && res.data.items) {
           // Filter for published projects and map to UI model
           const publishedProjects = res.data.items
-            .filter(p => p.status === 'Approved')
             .map(p => ({
               ...p,
               id: p.projectId,
+              startupId: p.startupId,
               name: p.projectName,
               description: p.shortDescription,
               stage: p.developmentStage,
-              // keySkills is a comma-separated string, e.g. "Technology, IoT"
-              // Parse it into array of tags; used for industry/skill badges
               industry: p.keySkills
                 ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)[0] || null
                 : null,
@@ -119,7 +117,20 @@ function MainLayout({
                 : [],
               aiScore: p.score || 0,
               timestamp: new Date(p.approvedAt || p.createdAt).toLocaleDateString('vi-VN'),
-              logo: null
+              logo: null,
+              // Full project details
+              problemStatement: p.problemStatement,
+              solutionDescription: p.solutionDescription,
+              targetCustomers: p.targetCustomers,
+              uniqueValueProposition: p.uniqueValueProposition,
+              marketSize: p.marketSize,
+              businessModel: p.businessModel,
+              revenue: p.revenue,
+              competitors: p.competitors,
+              teamMembers: p.teamMembers,
+              teamExperience: p.teamExperience,
+              status: p.status,
+              viewCount: p.viewCount
             }));
 
           setAllStartups(publishedProjects);

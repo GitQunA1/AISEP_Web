@@ -66,6 +66,10 @@
   overflow-y: auto;
   scroll-behavior: smooth;
   border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: linear-gradient(to bottom, var(--bg-primary) 0%, var(--bg-primary) 100%);
 }
 
 .noScroll {
@@ -79,35 +83,40 @@
   display: block;
 }
 
-/* Center the Feed Stream (Facebook Style Separated Cards) */
-/* Center the Feed Stream (Facebook Style Separated Cards) */
+/* Center the Feed Stream (Facebook/X Style) */
 .feedStreamWrapper {
-  max-width: 100%;
-  margin: 0;
-  padding: 0;
+  max-width: 650px !important;
+  width: 100% !important;
+  margin: 0 auto !important;
+  padding: 0 !important;
   min-height: 100%;
   border: none;
   background-color: transparent;
 }
 
 .feedGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  padding: 0;
-  align-items: stretch;
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  align-items: stretch !important;
 }
 
-.feedGrid > article:nth-child(odd) {
-  border-right: 1px solid var(--border-color);
+.feedGrid > article {
+  border: none !important;
+  border-bottom: 1px solid var(--border-color) !important;
+  width: 100% !important;
+}
+
+.feedGrid > article:last-child {
+  border-bottom: none !important;
 }
 
 @media (max-width: 900px) {
   .feedGrid {
-    grid-template-columns: 1fr;
-  }
-  .feedGrid > article:nth-child(odd) {
-    border-right: none;
+    display: flex !important;
+    flex-direction: column !important;
   }
 }
 

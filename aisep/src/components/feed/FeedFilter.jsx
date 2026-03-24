@@ -21,6 +21,7 @@ const getIndustryIcon = (name) => {
  * @param {object} user - Current user object
  */
 function FeedFilter({ onFilterChange, industryCounts = {}, totalCount = 0 }) {
+  const [activeSort, setActiveSort] = useState('all');
   const [activeTab, setActiveTab] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
@@ -28,9 +29,24 @@ function FeedFilter({ onFilterChange, industryCounts = {}, totalCount = 0 }) {
     stage: '',
     minScore: 0,
     fundingStage: '',
+    sort: 'all',
   });
 
   const industries = Object.keys(industryCounts).sort();
+  const sortOptions = [
+    { id: 'all', label: 'Tất cả' },
+    { id: 'newest', label: '🆕 Mới nhất' },
+    { id: 'trending', label: '🔥 Trending' },
+    { id: 'rated', label: '⭐ Được đánh giá cao' },
+    { id: 'funded', label: '💰 Đang gây quỹ' },
+  ];
+
+  const handleSortClick = (sortId) => {
+    setActiveSort(sortId);
+    const newFilters = { ...filters, sort: sortId };
+    setFilters(newFilters);
+    if (onFilterChange) onFilterChange(newFilters);
+  };
 
   const handleTabClick = (industry) => {
     setActiveTab(industry);
@@ -48,6 +64,22 @@ function FeedFilter({ onFilterChange, industryCounts = {}, totalCount = 0 }) {
 
   return (
     <div className={styles.filterContainer}>
+      {/* Sort Options Row */}
+      <div className={styles.sortWrapper}>
+        <div className={styles.sortInner}>
+          {sortOptions.map(option => (
+            <button
+              key={option.id}
+              className={`${styles.sortItem} ${activeSort === option.id ? styles.activeSortItem : ''}`}
+              onClick={() => handleSortClick(option.id)}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Industry Filter Tabs */}
       <div className={styles.tabsWrapper}>
         <div className={styles.tabsInner}>
           <div className={styles.tabsList}>

@@ -93,7 +93,59 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile }) {
         {/* ROW 3: Description */}
         <p className={styles.description}>{startup.description}</p>
 
-        {/* ROW 4: Action Bar */}
+        {/* ROW 3.5: Business Info Section */}
+        <div className={styles.businessInfo}>
+          {startup.stage && (
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>Giai đoạn:</span>
+              <span className={styles.infoValue}>{startup.stage}</span>
+            </div>
+          )}
+          {startup.revenue && startup.revenue !== 0 && (
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>Doanh thu:</span>
+              <span className={styles.infoValue}>{startup.revenue.toLocaleString('vi-VN')} VND</span>
+            </div>
+          )}
+          {startup.marketSize && (
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>Thị trường:</span>
+              <span className={styles.infoValue}>${(startup.marketSize / 1000000000).toFixed(1)}B</span>
+            </div>
+          )}
+          {startup.businessModel && (
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>Mô hình:</span>
+              <span className={styles.infoValue}>{startup.businessModel}</span>
+            </div>
+          )}
+          {startup.competitors && (
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>Đối thủ:</span>
+              <span className={styles.infoValue}>{startup.competitors}</span>
+            </div>
+          )}
+          {startup.targetCustomers && (
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>Khách hàng:</span>
+              <span className={styles.infoValue}>{startup.targetCustomers}</span>
+            </div>
+          )}
+          {startup.uniqueValueProposition && (
+            <div className={styles.infoRow}>
+              <span className={styles.infoLabel}>Đề xuất giá trị:</span>
+              <span className={styles.infoValue}>{startup.uniqueValueProposition}</span>
+            </div>
+          )}
+        </div>
+
+        {/* ROW 3.7: Team Info */}
+        {startup.teamMembers && (
+          <div className={styles.teamInfo}>
+            <span className={styles.teamLabel}>Thành viên team:</span>
+            <span className={styles.teamMembers}>{startup.teamMembers}</span>
+          </div>
+        )}
         <div className={styles.actionRow}>
           <button className={`${styles.actionBtn} ${styles.replyBtn}`}>
             <MessageCircle size={17} />

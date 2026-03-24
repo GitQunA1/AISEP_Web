@@ -4,6 +4,53 @@
   position: relative;
 }
 
+/* Sort Options Row */
+.sortWrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 12px 20px 8px 20px;
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
+}
+
+.sortInner {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding: 0;
+}
+
+.sortInner::-webkit-scrollbar {
+  display: none;
+}
+
+.sortItem {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 18px;
+  padding: 6px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.sortItem:hover {
+  background-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.activeSortItem {
+  background-color: var(--primary-blue);
+  color: white;
+  border-color: var(--primary-blue);
+}
+
 .tabsWrapper {
   display: flex;
   flex-direction: column;
@@ -388,4 +435,4 @@
         border-radius: 0 0 20px 20px;
     }
 }
-
+
