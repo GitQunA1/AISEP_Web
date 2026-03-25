@@ -7,6 +7,7 @@ import TopBar from './TopBar';
 import BottomNav from './BottomNav';
 import FeedHeader from '../feed/FeedHeader';
 import StartupCard from '../feed/StartupCard';
+import ProjectDetailView from '../feed/ProjectDetailView';
 import StartupDetail from '../feed/StartupDetail';
 import ProjectSubmissionForm from '../startup/ProjectSubmissionForm';
 import investorService from '../../services/investorService';
@@ -45,7 +46,17 @@ function MainLayout({
 }) {
   const [isPremium] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [selectedStartupId, setSelectedStartupId] = useState(null);
+  const [selectedStartupProfileId, setSelectedStartupProfileId] = useState(null);
+  const [selectedProjectId, setSelectedProjectId] = useState(null);
+
+  React.useEffect(() => {
+    if (window.location.pathname.startsWith('/projects/')) {
+      const id = window.location.pathname.split('/')[2];
+      if (id) {
+        setSelectedProjectId(id);
+      }
+    }
+  }, []);
   const [showProjectForm, setShowProjectForm] = useState(false);
   const [hasStartupProfile, setHasStartupProfile] = useState(null); // null means checking
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -343,10 +354,20 @@ function MainLayout({
           <InvestorDiscovery user={user} />
         ) : showAI ? (
           <AIChatAssistant />
-        ) : selectedStartupId ? (
+        ) : selectedStartupProfileId ? (
           <StartupDetail
-            startupId={selectedStartupId}
-            onBack={() => setSelectedStartupId(null)}
+            startupId={selectedStartupProfileId}
+            onBack={() => setSelectedStartupProfileId(null)}
+          />
+        ) : selectedProjectId ? (
+          <ProjectDetailView
+            projectId={selectedProjectId}
+            onBack={() => {
+              setSelectedProjectId(null);
+              if (window.location.pathname.startsWith('/projects/')) {
+                 window.history.pushState({}, '', '/');
+              }
+            }}
           />
         ) : (
           <>
@@ -410,7 +431,11 @@ function MainLayout({
                       startup={startup}
                       isPremium={isPremium}
                       user={user}
-                      onViewProfile={(id) => setSelectedStartupId(id)}
+                      onViewProfile={(id) => setSelectedStartupProfileId(id)}
+                      onViewProject={(id) => {
+                        setSelectedProjectId(id);
+                        window.history.pushState({}, '', `/projects/${id}`);
+                      }}
                     />
                   ))}
                 </div>
@@ -431,7 +456,7 @@ function MainLayout({
         <RightPanel 
           searchQuery={searchQuery} 
           onSearchChange={(e) => setSearchQuery(e.target.value)} 
-          showSearch={activeView === 'main'}
+          showSearch={activeView === 'main' && !selectedProjectId && !selectedStartupProfileId && !selectedAdvisor}
           onFilterChange={handleFilterChange}
           onShowHome={onShowHome}
           topRatedStartups={topRatedStartups}

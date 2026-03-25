@@ -7,7 +7,7 @@ import styles from './StartupCard.module.css';
  * StartupCard Component - "Visual Priority (Concept C)"
  * Clean, full-width data density
  */
-function StartupCard({ startup, isPremium = false, user, onViewProfile }) {
+function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewProject }) {
   // Utility for avatar gradient based on tag/industry
   const getAvatarGradient = (mainTag) => {
     const t = (mainTag || '').toLowerCase();
@@ -31,13 +31,13 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile }) {
   const startupNameDisp = startup.startupName || startup.organizationName || startup.companyName || 'Startup';
 
   return (
-    <article className={styles.card}>
+    <article className={styles.card} onClick={() => onViewProject && onViewProject(startup.id)} style={{ cursor: onViewProject ? 'pointer' : 'default' }}>
       {/* 1. Header Row */}
       <div className={styles.cardHeader}>
         <div 
           className={`${styles.avatarCircle} ${onViewProfile ? styles.clickable : ''}`}
           style={{ background: getAvatarGradient(mainTag) }}
-          onClick={() => onViewProfile && onViewProfile(startup.startupId ?? startup.id)}
+          onClick={(e) => { e.stopPropagation(); onViewProfile && onViewProfile(startup.startupId ?? startup.id); }}
         >
           {startupNameDisp.charAt(0).toUpperCase()}
         </div>
@@ -46,7 +46,7 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile }) {
           <div className={styles.nameRow}>
             <span 
               className={`${styles.name} ${onViewProfile ? styles.clickableName : ''}`}
-              onClick={() => onViewProfile && onViewProfile(startup.startupId ?? startup.id)}
+              onClick={(e) => { e.stopPropagation(); onViewProfile && onViewProfile(startup.startupId ?? startup.id); }}
             >
               {startupNameDisp}
             </span>

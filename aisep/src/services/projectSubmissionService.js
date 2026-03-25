@@ -142,6 +142,16 @@ export const projectSubmissionService = {
   },
 
   /**
+   * Get project details by ID
+   * @param {string|number} projectId 
+   * @returns {Promise<any>}
+   */
+  getProjectById: async (projectId) => {
+    const response = await apiClient.get(`/api/Projects/${projectId}`);
+    return response;
+  },
+
+  /**
    * Get All Projects (for the public feed)
    * @returns {Promise<any>}
    */
