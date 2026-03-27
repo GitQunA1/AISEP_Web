@@ -9,12 +9,13 @@ import styles from './AdvisorDetailView.module.css';
 import advisorService from '../../services/advisorService';
 import ProfileLoading from '../common/ProfileLoading';
 import ProfileErrorScreen from '../common/ProfileErrorScreen';
+import AuthRequirementScreen from '../common/AuthRequirementScreen';
 
 /**
  * AdvisorDetailView - Enhanced profile view for an Advisor
  * Mirrors the structure of StartupDetail and InvestorDetail
  */
-const AdvisorDetailView = ({ user, advisor, onBack }) => {
+const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
   const [activeTab, setActiveTab] = useState('overview');
   const [bookingStatus, setBookingStatus] = useState(null);
   
@@ -24,7 +25,7 @@ const AdvisorDetailView = ({ user, advisor, onBack }) => {
   // Define role check
   const roleValue = user?.role;
   const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
-  const canConnect = roleStr === 'startup' || roleStr === 'investor' || roleValue === 0 || roleValue === 1;
+  const canConnect = roleStr === 'startup' || roleStr === 'advisor' || roleValue === 0 || roleValue === 2;
 
   useEffect(() => {
     const fetchStatus = async () => {
@@ -56,6 +57,16 @@ const AdvisorDetailView = ({ user, advisor, onBack }) => {
   const handleBookingSuccess = (advisorId) => {
       setBookingStatus(0); // Optimistically update to Pending
   };
+
+  if (!user) {
+    return (
+      <AuthRequirementScreen 
+        type="cố vấn" 
+        onBack={onBack} 
+        onLogin={onShowLogin} 
+      />
+    );
+  }
 
   if (!advisor) {
     return (

@@ -3,6 +3,7 @@ import { X, AlertCircle, Plus, Trash2, Upload, FileText, CheckCircle } from 'luc
 import styles from './ProjectSubmissionForm.module.css';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import { getStageNumericValue } from '../../constants/ProjectStatus';
+import CustomSelect from '../common/CustomSelect';
 
 /**
  * List of available industries matching API structure
@@ -426,72 +427,91 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                   Hình Ảnh Dự Án <span className={styles.optional}>(Tùy chọn)</span>
                 </label>
                 <div style={{ 
-                  border: '2px dashed #ccc', 
-                  borderRadius: '8px', 
-                  padding: '16px',
+                  border: imagePreview ? '1px solid var(--border-color)' : '2px dashed var(--border-color)', 
+                  borderRadius: '12px', 
+                  padding: imagePreview ? '12px' : '32px 16px',
                   textAlign: 'center',
-                  cursor: 'pointer',
+                  cursor: imagePreview ? 'default' : 'pointer',
                   transition: 'all 0.2s',
-                  backgroundColor: imagePreview ? '#f0f7ff' : 'transparent'
-                }}>
+                  backgroundColor: imagePreview ? 'var(--bg-secondary)' : 'transparent',
+                  position: 'relative'
+                }}
+                onClick={(e) => {
+                  if (!imagePreview) {
+                    document.getElementById('projectImageInput').click();
+                  }
+                }}
+                >
                   {imagePreview ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <img 
-                        src={imagePreview} 
-                        alt="Preview" 
-                        style={{ 
-                          maxWidth: '100%', 
-                          maxHeight: '150px', 
-                          borderRadius: '6px',
-                          objectFit: 'cover'
-                        }} 
-                      />
-                      <div style={{ fontSize: '13px', color: '#666' }}>
-                        {formData.projectImageFile?.name}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ 
+                        position: 'relative', 
+                        width: '100%', 
+                        height: '240px', 
+                        borderRadius: '8px', 
+                        overflow: 'hidden', 
+                        backgroundColor: '#000',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1) inset'
+                      }}>
+                        <img 
+                          src={imagePreview} 
+                          alt="Preview" 
+                          style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'contain'
+                          }} 
+                        />
+                        <div style={{ 
+                          position: 'absolute', 
+                          top: '12px', 
+                          right: '12px', 
+                          display: 'flex', 
+                          gap: '8px' 
+                        }}>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); document.getElementById('projectImageInput').click(); }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '6px',
+                              padding: '6px 12px', backgroundColor: 'rgba(0,0,0,0.65)', color: 'white',
+                              border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px',
+                              cursor: 'pointer', fontSize: '13px', fontWeight: '600', backdropFilter: 'blur(8px)',
+                              transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.85)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.65)'}
+                          >
+                            <Upload size={14} /> Thay đổi
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleRemoveImage(); }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '6px',
+                              padding: '6px 12px', backgroundColor: 'rgba(244, 33, 46, 0.85)', color: 'white',
+                              border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', 
+                              cursor: 'pointer', fontSize: '13px', fontWeight: '600', backdropFilter: 'blur(8px)',
+                              transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(244, 33, 46, 1)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(244, 33, 46, 0.85)'}
+                          >
+                            <Trash2 size={14} /> Xoá
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: 'flex', gap: '8px' }}>
-                        <button
-                          type="button"
-                          onClick={() => document.getElementById('projectImageInput').click()}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: '#2196F3',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '13px'
-                          }}
-                        >
-                          Thay đổi
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleRemoveImage}
-                          style={{
-                            padding: '6px 12px',
-                            backgroundColor: '#f44336',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '13px'
-                          }}
-                        >
-                          Xoá
-                        </button>
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        <FileText size={14} /> {formData.projectImageFile?.name || 'project_image_preview'}
                       </div>
                     </div>
                   ) : (
-                    <div 
-                      onClick={() => document.getElementById('projectImageInput').click()}
-                      style={{ cursor: 'pointer', padding: '20px 0' }}
-                    >
-                      <Upload size={32} style={{ margin: '0 auto 8px', color: '#2196F3' }} />
-                      <p style={{ margin: '8px 0 4px', fontSize: '14px', fontWeight: '500' }}>
+                    <div>
+                      <Upload size={32} style={{ margin: '0 auto 12px', color: 'var(--primary-blue)' }} />
+                      <p style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
                         Nhấn để chọn hình ảnh
                       </p>
-                      <p style={{ margin: '0', fontSize: '12px', color: '#999' }}>
+                      <p style={{ margin: '0', fontSize: '13px', color: 'var(--text-secondary)' }}>
                         PNG, JPG, GIF (Tối đa 5MB)
                       </p>
                     </div>
@@ -526,17 +546,17 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                 <label className={styles.label}>
                   Giai Đoạn Phát Triển <span className={styles.required}>*</span>
                 </label>
-                <select
+                <CustomSelect
                   name="developmentStage"
-                  value={formData.developmentStage}
+                  value={String(formData.developmentStage)}
                   onChange={handleInputChange}
-                  className={styles.select}
-                >
-                  <option value="" disabled>Chọn giai đoạn...</option>
-                  <option value="0">Ý tưởng (Idea)</option>
-                  <option value="1">MVP</option>
-                  <option value="2">Vận hành (Growth)</option>
-                </select>
+                  placeholder="Chọn giai đoạn..."
+                  options={[
+                    { label: 'Ý tưởng (Idea)', value: '0' },
+                    { label: 'MVP', value: '1' },
+                    { label: 'Vận hành (Growth)', value: '2' }
+                  ]}
+                />
                 {errors.developmentStage && <span className={styles.errorText}>{errors.developmentStage}</span>}
               </div>
 
@@ -544,19 +564,13 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                 <label className={styles.label}>
                   Lĩnh Vực <span className={styles.required}>*</span>
                 </label>
-                <select
+                <CustomSelect
                   name="industry"
                   value={String(formData.industry)}
                   onChange={handleInputChange}
-                  className={styles.select}
-                >
-                  <option value="">Chọn lĩnh vực...</option>
-                  {INDUSTRIES.map(ind => (
-                    <option key={ind.value} value={String(ind.value)}>
-                      {ind.label}
-                    </option>
-                  ))}
-                </select>
+                  placeholder="Chọn lĩnh vực..."
+                  options={INDUSTRIES.map(ind => ({ label: ind.label, value: String(ind.value) }))}
+                />
                 {errors.industry && <span className={styles.errorText}>{errors.industry}</span>}
               </div>
 

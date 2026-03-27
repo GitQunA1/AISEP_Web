@@ -66,8 +66,11 @@ function App() {
       setUser(parsedUser);
       
       // For operation staff, default to dashboard view; others default to main
-      const userRole = (parsedUser.role !== undefined && parsedUser.role !== null) ? parsedUser.role.toString().toLowerCase() : '';
-      if (userRole === 'operationstaff' || userRole === '3') {
+      const roleStr = parsedUser.role?.toString().toLowerCase() || '';
+      const roleNum = Number(parsedUser.role);
+      const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
+      
+      if (isStaff) {
         setCurrentView('dashboard');
       } else {
         setCurrentView('main');
@@ -84,16 +87,18 @@ function App() {
     setIsSessionExpired(false); // Reset session expired flag
 
     // Determine role-based redirect
-    const userRole = (userData.role !== undefined && userData.role !== null) ? userData.role.toString().toLowerCase() : '';
+    const roleStr = userData.role?.toString().toLowerCase() || '';
+    const roleNum = Number(userData.role);
+    const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
     
     // Operation Staff redirects to dashboard directly
-    if (userRole === 'operationstaff' || userRole === '3') {
+    if (isStaff) {
       setCurrentView('dashboard');
       return;
     }
     
     // Startup users check profile
-    if (userRole === 'startup' || userRole === '0') {
+    if (roleStr === 'startup' || roleStr === '0') {
       try {
         const response = await startupProfileService.getStartupProfileByUserId(userData.userId);
         if (!response) {
@@ -168,8 +173,12 @@ function App() {
     setCurrentView('investors');
   };
 
-  const handleShowDashboard = () => {
-    setCurrentView('dashboard');
+  const handleShowDashboard = (section = 'statistics') => {
+    if (section === 'statistics' || section === '') {
+      setCurrentView('dashboard');
+    } else {
+      setCurrentView(`dashboard_${section}`);
+    }
   };
 
   const handleShowAI = () => {
@@ -197,7 +206,7 @@ function App() {
           onShowRegister={handleShowRegister}
           onBack={handleBackToMain}
         />
-      ) : ['main', 'advisors', 'investors', 'ai', 'dashboard'].includes(currentView) ? (
+      ) : (['main', 'advisors', 'investors', 'ai', 'dashboard'].includes(currentView) || currentView.startsWith('dashboard_')) ? (
         <MainLayout
           onShowRegister={handleShowRegister}
           onShowLogin={handleShowLogin}
@@ -213,10 +222,11 @@ function App() {
           showAI={currentView === 'ai'}
           activeView={currentView}
         >
-          {currentView === 'dashboard' && (
+          {currentView.startsWith('dashboard') && (
             (() => {
               const roleStr = user?.role?.toString().toLowerCase() || '';
               const roleNum = Number(user?.role);
+              const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
               
               if (roleStr === 'startup' || roleNum === 0) {
                 return <StartupDashboard user={user} />;
@@ -224,8 +234,9 @@ function App() {
                 return <InvestorDashboard user={user} />;
               } else if (roleStr === 'advisor' || roleNum === 2) {
                 return <AdvisorDashboard user={user} />;
-              } else if (roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3) {
-                return <OperationStaffDashboard user={user} />;
+              } else if (isStaff) {
+                const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'statistics';
+                return <OperationStaffDashboard user={user} initialSection={section} />;
               } else {
                 return <div style={{ padding: '20px', textAlign: 'center' }}><p>Dashboard not available for your role</p></div>;
               }

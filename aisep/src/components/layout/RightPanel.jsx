@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Zap, Pin, Loader, Search, Flame, Star } from 'lucide-react';
+import { Zap, Pin, Loader, Search, Flame, Star, Lock } from 'lucide-react';
 import styles from './RightPanel.module.css';
 import Badge from '../common/Badge';
 import projectSubmissionService from '../../services/projectSubmissionService';
@@ -47,9 +47,11 @@ function RightPanel({
   showSearch = true,
   onFilterChange,
   onShowHome,
+  onShowLogin,
   topRatedStartups = [],
   trendingSectors = [],
-  isLoading = false
+  isLoading = false,
+  user
 }) {
   const handleSectorClick = (sectorName) => {
     if (onFilterChange) {
@@ -87,6 +89,13 @@ function RightPanel({
           {isLoading ? (
             <div className={styles.loadingContainer}>
               <Loader size={20} className={styles.spinIcon} />
+            </div>
+          ) : !user ? (
+            <div className={styles.guestLock}>
+              <Lock size={20} className={styles.lockIcon} />
+              <p className={styles.lockText}>
+                Vui lòng <span className={styles.loginLink} onClick={onShowLogin}>đăng nhập</span> để theo dõi bảng xếp hạng AI
+              </p>
             </div>
           ) : topRatedStartups.length > 0 ? (
             topRatedStartups.map((startup, idx) => (

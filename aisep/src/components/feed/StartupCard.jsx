@@ -1,5 +1,5 @@
 import React from 'react';
-import { MoreHorizontal } from 'lucide-react';
+import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock } from 'lucide-react';
 import Badge from '../common/Badge';
 import styles from './StartupCard.module.css';
 
@@ -7,7 +7,7 @@ import styles from './StartupCard.module.css';
  * StartupCard Component - "Visual Priority (Concept C)"
  * Clean, full-width data density
  */
-function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewProject }) {
+function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewProject, index = 0, isReturning = false }) {
   // Utility for avatar gradient based on tag/industry
   const getAvatarGradient = (mainTag) => {
     const t = (mainTag || '').toLowerCase();
@@ -28,16 +28,43 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewPr
 
   const mainTag = (startup.tags && startup.tags.length > 0) ? startup.tags[0] : (startup.industry || '');
   const stageStyles = getStageColor(startup.stage);
+  
+  // Priority: mapped startupName > organization > company > project-owner-name fallback
+  // The 'startup' object passed from MainLayout should have either startupName or the original fields
   const startupNameDisp = startup.startupName || startup.organizationName || startup.companyName || 'Startup';
+  
+  // Robust ID extraction for navigation
+  const sid = startup.startupId || startup.userId || startup.id;
+
+  const PremiumLock = () => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '12px', fontWeight: 'bold', color: '#ffad1f', background: 'rgba(255, 173, 31, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+      <Lock size={12} strokeWidth={2.5} /> Premium
+    </div>
+  );
+
+  const PremiumLockText = () => (
+    <span style={{ color: '#ffad1f', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+      <Lock size={12} strokeWidth={2.5} /> Yêu cầu Premium
+    </span>
+  );
 
   return (
-    <article className={styles.card} onClick={() => onViewProject && onViewProject(startup.id)} style={{ cursor: onViewProject ? 'pointer' : 'default' }}>
+    <article 
+      key={startup.id}
+      className={styles.card} 
+      onClick={() => onViewProject && onViewProject(startup.id)} 
+      style={{ 
+        cursor: onViewProject ? 'pointer' : 'default',
+        '--index': index,
+        ...(isReturning ? { animation: 'none', opacity: 1, transform: 'none' } : {})
+      }}
+    >
       {/* 1. Header Row */}
       <div className={styles.cardHeader}>
         <div 
           className={`${styles.avatarCircle} ${onViewProfile ? styles.clickable : ''}`}
           style={{ background: getAvatarGradient(mainTag) }}
-          onClick={(e) => { e.stopPropagation(); onViewProfile && onViewProfile(startup.startupId ?? startup.id); }}
+          onClick={(e) => { e.stopPropagation(); onViewProfile && onViewProfile(sid); }}
         >
           {startupNameDisp.charAt(0).toUpperCase()}
         </div>
@@ -46,7 +73,7 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewPr
           <div className={styles.nameRow}>
             <span 
               className={`${styles.name} ${onViewProfile ? styles.clickableName : ''}`}
-              onClick={(e) => { e.stopPropagation(); onViewProfile && onViewProfile(startup.startupId ?? startup.id); }}
+              onClick={(e) => { e.stopPropagation(); onViewProfile && onViewProfile(sid); }}
             >
               {startupNameDisp}
             </span>
@@ -91,84 +118,73 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewPr
         </div>
       </div>
 
-      <h3 className={styles.projectName}>{startup.name}</h3>
+      {/* 2. Main Content (Side-by-side on desktop) */}
+      <div className={styles.bodyWrapper}>
+        <div className={styles.mainInfo}>
+          <h3 className={styles.projectName}>{startup.name}</h3>
 
-      {/* 2. Description (2-line clamp) */}
-      <div className={styles.description}>
-        {startup.description}
-      </div>
-
-      {/* 2.5 Project Image */}
-      {startup.imageUrl && (
-        <div style={{
-          width: '100%',
-          height: 'auto',
-          borderRadius: '8px',
-          overflow: 'hidden',
-          marginBottom: '16px',
-          backgroundColor: 'rgba(0, 0, 0, 0.05)'
-        }}>
-          <img 
-            src={startup.imageUrl} 
-            alt={startup.name}
-            style={{
-              width: '100%',
-              height: 'auto',
-              objectFit: 'contain',
-              display: 'block'
-            }}
-          />
+          {/* Description (2-line clamp) */}
+          <div className={styles.description}>
+            {startup.description}
+          </div>
         </div>
-      )}
+
+        {/* Project Image Thumbnail */}
+        {startup.imageUrl && (
+          <div className={styles.imageWrapper}>
+            <img 
+              src={startup.imageUrl} 
+              alt={startup.name}
+              loading="lazy"
+            />
+          </div>
+        )}
+      </div>
 
       {/* 3. Three-column Highlight Grid */}
       <div className={styles.gridRow}>
         {/* Revenue */}
         <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(45, 126, 255, 0.08)', borderColor: 'rgba(45, 126, 255, 0.2)' }}>
-          <div className={styles.boxIcon}>💵</div>
-          <div className={`${styles.boxValue} ${styles.blueText}`} style={{ fontSize: '15px' }}>
-            {startup.revenue ? `${startup.revenue.toLocaleString('vi-VN')} VND` : '0 VND'}
-          </div>
+          <div className={styles.boxIcon}><DollarSign size={20} style={{ color: '#2D7EFF' }} strokeWidth={2.5} /></div>
+          {startup.revenue !== undefined ? (
+            <div className={`${styles.boxValue} ${styles.blueText}`} style={{ fontSize: '15px' }}>
+              {startup.revenue ? `${startup.revenue.toLocaleString('vi-VN')} VND` : '0 VND'}
+            </div>
+          ) : <PremiumLock />}
           <div className={styles.boxLabel}>Doanh thu</div>
         </div>
 
         {/* Market Size */}
         <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(0, 186, 124, 0.08)', borderColor: 'rgba(0, 186, 124, 0.2)' }}>
-          <div className={styles.boxIcon}>📊</div>
-          <div className={`${styles.boxValue} ${styles.greenText}`} style={{ fontSize: '15px' }}>
-            {startup.marketSize ? `${startup.marketSize.toLocaleString('vi-VN')} VND` : '0 VND'}
-          </div>
+          <div className={styles.boxIcon}><BarChart3 size={20} style={{ color: '#00ba7c' }} strokeWidth={2.5} /></div>
+          {startup.marketSize !== undefined ? (
+            <div className={`${styles.boxValue} ${styles.greenText}`} style={{ fontSize: '15px' }}>
+              {startup.marketSize ? `${startup.marketSize.toLocaleString('vi-VN')} VND` : '0 VND'}
+            </div>
+          ) : <PremiumLock />}
           <div className={styles.boxLabel}>Thị trường</div>
         </div>
 
-        {/* Dynamic Box 3 */}
-        {startup.growthRate ? (
-           <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(255, 173, 31, 0.08)', borderColor: 'rgba(255, 173, 31, 0.2)' }}>
-             <div className={styles.boxIcon}>📈</div>
-             <div className={`${styles.boxValue} ${styles.amberText}`}>+{startup.growthRate}%</div>
-             <div className={styles.boxLabel}>Tăng trưởng</div>
-           </div>
-        ) : startup.competitors ? (
-           <div className={styles.highlightBox}>
-             <div className={styles.boxIcon}>⚔️</div>
-             <div className={`${styles.boxValue} ${styles.grayText}`} style={{ fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{startup.competitors}</div>
-             <div className={styles.boxLabel}>Đối thủ chính</div>
-           </div>
-        ) : (
-           <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(45, 126, 255, 0.08)', borderColor: 'rgba(45, 126, 255, 0.2)' }}>
-             <div className={styles.boxIcon}>💡</div>
-             <div className={`${styles.boxValue} ${styles.blueText}`}>Khác biệt</div>
-             <div className={styles.boxLabel}>Giá trị cốt lõi</div>
-           </div>
-        )}
+        {/* Competitors (Always Show) */}
+        <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(113, 118, 123, 0.08)', borderColor: 'rgba(113, 118, 123, 0.2)' }}>
+          <div className={styles.boxIcon}><Swords size={20} style={{ color: '#71767b' }} strokeWidth={2.5} /></div>
+          {startup.competitors !== undefined ? (
+            <div className={`${styles.boxValue} ${styles.grayText}`} style={{ fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {startup.competitors || '—'}
+            </div>
+          ) : <PremiumLock />}
+          <div className={styles.boxLabel}>Đối thủ chính</div>
+        </div>
       </div>
 
       {/* 4. Detail Rows */}
       <div className={styles.detailRows}>
-        {startup.businessModel && (
+        {(startup.businessModel === undefined || startup.businessModel) && (
           <div className={styles.detailRow}>
             <span className={styles.detailLabel}>Mô hình KD</span>
-            <span className={styles.detailValue}>{startup.businessModel}</span>
+            <span className={styles.detailValue}>
+               {startup.businessModel !== undefined ? startup.businessModel : <PremiumLockText />}
+            </span>
           </div>
         )}
         {startup.targetCustomers && (
@@ -186,9 +202,10 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewPr
       </div>
 
       {/* 5. Team Line */}
-      {startup.teamMembers && (
+      {(startup.teamMembers === undefined || startup.teamMembers) && (
         <div className={styles.teamLine}>
-          <strong style={{ color: 'var(--text-primary)' }}>Team:</strong> {startup.teamMembers}
+          <strong style={{ color: 'var(--text-primary)' }}>Team:</strong>{' '}
+          {startup.teamMembers !== undefined ? startup.teamMembers : <PremiumLockText />}
         </div>
       )}
     </article>

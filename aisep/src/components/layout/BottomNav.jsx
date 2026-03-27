@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Search, TrendingUp, Users, User, LayoutDashboard, Sparkles } from 'lucide-react';
+import { Home, Search, TrendingUp, Users, User, LayoutDashboard, Sparkles, FileText, Calendar, ShieldCheck, Activity } from 'lucide-react';
 import styles from './BottomNav.module.css';
 
 /**
@@ -7,13 +7,29 @@ import styles from './BottomNav.module.css';
  * Contains main navigation icons at the bottom of screen
  */
 function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInvestors, onShowDashboard, onShowAI, activeTab }) {
-  const navItems = [
+  let navItems = [
     { icon: Home, label: 'Home', displayLabel: 'Trang chủ', href: '#' },
-    { icon: Sparkles, label: 'AI', displayLabel: 'Trợ lý AI', id: 'ai' },
     { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Dashboard', href: '#', showWhenLoggedIn: true },
     { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#', hideFor: ['investor'] },
     { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor'] },
   ];
+
+  // For Staff role, prioritize Dashboard at the top
+  const roleStr = user?.role?.toString().toLowerCase() || '';
+  const roleNum = Number(user?.role);
+  const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
+
+  if (isStaff) {
+    const staffItems = [
+      { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Dashboard', href: '#', showWhenLoggedIn: true },
+      { icon: FileText, label: 'Projects', displayLabel: 'Dự án', href: '#', showWhenLoggedIn: true },
+      { icon: Calendar, label: 'Bookings', displayLabel: 'Booking', href: '#', showWhenLoggedIn: true },
+      { icon: ShieldCheck, label: 'Approvals', displayLabel: 'Phê duyệt', href: '#', showWhenLoggedIn: true },
+    ];
+    const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
+    const homeItem = navItems.find(item => item.label === 'Home');
+    navItems = [...staffItems, homeItem, ...otherItems];
+  }
 
   const handleClick = (e, label) => {
     e.preventDefault();
@@ -21,16 +37,25 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
       onShowHome();
     }
     if (label === 'Dashboard' && onShowDashboard) {
-      onShowDashboard();
+      onShowDashboard('statistics');
+    }
+    if (label === 'Projects' && onShowDashboard) {
+      onShowDashboard('project_management');
+    }
+    if (label === 'Bookings' && onShowDashboard) {
+      onShowDashboard('bookings');
+    }
+    if (label === 'Approvals' && onShowDashboard) {
+      onShowDashboard('approvals');
+    }
+    if (label === 'Activity' && onShowDashboard) {
+      onShowDashboard('activity');
     }
     if (label === 'Advisors' && onShowAdvisors) {
       onShowAdvisors();
     }
     if (label === 'Investors' && onShowInvestors) {
       onShowInvestors();
-    }
-    if (label === 'AI' && onShowAI) {
-      onShowAI();
     }
   };
 

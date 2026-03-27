@@ -4,8 +4,9 @@ import styles from './InvestorDetail.module.css';
 import investorService from '../../services/investorService';
 import ProfileLoading from '../common/ProfileLoading';
 import ProfileErrorScreen from '../common/ProfileErrorScreen';
+import AuthRequirementScreen from '../common/AuthRequirementScreen';
 
-export default function InvestorDetail({ investorId, onBack, user }) {
+export default function InvestorDetail({ investorId, onBack, user, onShowLogin }) {
     const [investor, setInvestor] = useState(null);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -35,16 +36,26 @@ export default function InvestorDetail({ investorId, onBack, user }) {
     }, [investorId]);
 
     const handlePitchClick = () => {
-        if (!user) {
-            alert('Bạn cần đăng nhập để thực hiện hành động này.');
-            return;
-        }
-        if (user.role !== 'startup') {
-            alert('Chỉ tài khoản Startup mới có thể gửi yêu cầu kết nối cho nhà đầu tư.');
+        const roleValue = user?.role;
+        const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
+        const canConnect = roleStr === 'startup' || roleStr === 'advisor' || roleValue === 0 || roleValue === 2;
+        
+        if (!canConnect) {
+            alert('Chỉ tài khoản Startup hoặc Cố vấn mới có thể gửi yêu cầu kết nối cho nhà đầu tư.');
             return;
         }
         alert(`Yêu cầu kết nối đã được gửi tới ${investor?.userName || 'nhà đầu tư'}! (Tính năng đang phát triển)`);
     };
+
+    if (!user) {
+        return (
+            <AuthRequirementScreen 
+                type="nhà đầu tư" 
+                onBack={onBack} 
+                onLogin={onShowLogin} 
+            />
+        );
+    }
 
     if (isLoading) {
         return <ProfileLoading message="Đang tải thông tin nhà đầu tư..." />;
@@ -105,9 +116,17 @@ export default function InvestorDetail({ investorId, onBack, user }) {
                         <div className={styles.initialText}>{initial}</div>
                     </div>
                     <div className={styles.headerActions}>
-                        <button className={styles.connectBtn} onClick={handlePitchClick}>
-                            Kết nối
-                        </button>
+                        {(() => {
+                            const roleValue = user?.role;
+                            const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
+                            const canConnect = roleStr === 'startup' || roleStr === 'advisor' || roleValue === 0 || roleValue === 2;
+                            
+                            return canConnect && (
+                                <button className={styles.connectBtn} onClick={handlePitchClick}>
+                                    Kết nối
+                                </button>
+                            );
+                        })()}
                     </div>
                 </div>
 

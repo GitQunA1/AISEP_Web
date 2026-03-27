@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, ArrowLeft, ClipboardList, TrendingUp, Sword, FolderOpen, Users } from 'lucide-react';
+import { Loader2, ArrowLeft, ClipboardList, TrendingUp, Sword, FolderOpen, Users, DollarSign, BarChart3, Zap } from 'lucide-react';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import AIEvaluationService from '../../services/AIEvaluationService';
 
@@ -325,7 +325,7 @@ export default function ProjectDetailView({ projectId, onBack }) {
           STICKY TOPBAR
           ════════════════════════ */}
       <div style={{
-        position: 'sticky', top: 0, zIndex: 100,
+        position: 'sticky', zIndex: 100,
         minHeight: 53, height: 53,
         background: 'var(--pd-topbar)',
         backdropFilter: 'blur(12px)',
@@ -442,9 +442,9 @@ export default function ProjectDetailView({ projectId, onBack }) {
           paddingTop: 16,
         }}>
           {[
-            { icon: '💵', val: project.revenue ? Number(project.revenue).toLocaleString('vi-VN') + ' VND' : '—', lbl: 'Doanh thu', color: T.blue },
-            { icon: '📊', val: project.marketSize ? Number(project.marketSize).toLocaleString('vi-VN') + ' VND' : '—', lbl: 'Quy mô thị trường', color: T.green },
-            { icon: '⚡', val: latestAI != null ? String(latestAI) : 'Chưa có', lbl: 'Điểm AI', color: latestAI != null ? T.amber : T.textDim },
+            { icon: <DollarSign size={20} color={T.blue} strokeWidth={2.5} />, val: project.revenue ? Number(project.revenue).toLocaleString('vi-VN') + ' VND' : '—', lbl: 'Doanh thu', color: T.blue },
+            { icon: <BarChart3 size={20} color={T.green} strokeWidth={2.5} />, val: project.marketSize ? Number(project.marketSize).toLocaleString('vi-VN') + ' VND' : '—', lbl: 'Quy mô thị trường', color: T.green },
+            { icon: <Zap size={20} color={latestAI != null ? T.amber : T.textDim} strokeWidth={2.5} />, val: latestAI != null ? String(latestAI) : 'Chưa có', lbl: 'Điểm AI', color: latestAI != null ? T.amber : T.textDim },
           ].map((k, i, arr) => (
             <div key={i} style={{
               textAlign: 'center',
@@ -452,7 +452,7 @@ export default function ProjectDetailView({ projectId, onBack }) {
               borderBottom: (isMobile && i < arr.length - 1) ? `1px solid ${T.border}` : 'none',
               padding: isMobile ? '12px 10px' : '0 10px',
             }}>
-              <div style={{ fontSize: 18, marginBottom: 4 }}>{k.icon}</div>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 6 }}>{k.icon}</div>
               <div style={{
                 fontFamily: "'IBM Plex Mono', monospace",
                 fontSize: 17, fontWeight: 700, color: k.color,
@@ -581,7 +581,7 @@ export default function ProjectDetailView({ projectId, onBack }) {
             display: 'flex', alignItems: 'center', gap: 12,
             boxShadow: T.shadow,
           }}>
-            <span style={{ fontSize: 22, flexShrink: 0 }}>⚡</span>
+            <Zap size={22} color={T.amber} fill={T.amber} style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, fontSize: 13, color: T.textMuted, lineHeight: 1.5 }}>
               <strong style={{ color: T.text, fontWeight: 700, fontSize: 13.5 }}>Lịch sử đánh giá AI</strong><br />
               {aiHistory.length > 0
