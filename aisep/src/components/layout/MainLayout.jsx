@@ -147,15 +147,12 @@ function MainLayout({
               name: p.projectName,
               description: p.shortDescription,
               stage: p.developmentStage,
-              industry: p.keySkills
-                ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)[0] || null
-                : null,
-              tags: p.keySkills
-                ? p.keySkills.split(',').map(s => s.trim()).filter(Boolean)
-                : [],
+              industry: p.industry,
+              imageUrl: p.projectImageUrl,
+              tags: [], // No tags from new API
               aiScore: undefined,
-              score: undefined,
-              timestamp: new Date(p.approvedAt || p.createdAt).toLocaleDateString('vi-VN'),
+              score: p.startupPotentialScore || undefined,
+              timestamp: new Date().toLocaleDateString('vi-VN'),
               logo: null,
               // Full project details
               problemStatement: p.problemStatement,
@@ -469,9 +466,10 @@ function MainLayout({
       {showProjectForm && (
         <ProjectSubmissionForm
           onClose={() => setShowProjectForm(false)}
-          onSuccess={(data) => {
-            setShowProjectForm(false);
-            setShowSuccessModal(true);
+          onSuccess={async (data) => {
+            // User clicked "Đến Startup Dashboard" button
+            // Navigate to dashboard
+            onShowDashboard?.();
           }}
           user={user}
         />
@@ -487,7 +485,11 @@ function MainLayout({
               Dự án của bạn đã được tạo thành công. Bạn có thể tải lên các tài liệu bổ sung (Pitch Deck, Business Plan) và nộp dự án bất cứ lúc nào tại mục <strong>Quản lý dự án</strong> trong <strong>Startup Dashboard</strong>.
             </span>
           }
-          primaryBtnText="Tuyệt vời"
+          primaryBtnText="Đến Startup Dashboard"
+          onPrimaryClick={() => {
+            setShowSuccessModal(false);
+            onShowDashboard?.();
+          }}
         />
       )}
 

@@ -98,6 +98,29 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewPr
         {startup.description}
       </div>
 
+      {/* 2.5 Project Image */}
+      {startup.imageUrl && (
+        <div style={{
+          width: '100%',
+          height: 'auto',
+          borderRadius: '8px',
+          overflow: 'hidden',
+          marginBottom: '16px',
+          backgroundColor: 'rgba(0, 0, 0, 0.05)'
+        }}>
+          <img 
+            src={startup.imageUrl} 
+            alt={startup.name}
+            style={{
+              width: '100%',
+              height: 'auto',
+              objectFit: 'contain',
+              display: 'block'
+            }}
+          />
+        </div>
+      )}
+
       {/* 3. Three-column Highlight Grid */}
       <div className={styles.gridRow}>
         {/* Revenue */}
