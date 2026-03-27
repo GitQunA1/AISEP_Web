@@ -1651,15 +1651,20 @@ export default function StartupDashboard({ user }) {
                     onClose={() => setShowProjectForm(false)}
                     initialData={detailProject}
                     onSuccess={async () => {
-                        setShowProjectForm(false);
-                        setSuccessMessage(detailProject ? 'Cập nhật dự án thành công. Dự án đã trở về trạng thái Bản nháp.' : 'Tạo dự án thành công.');
-                        setShowSuccessModal(true);
-
-                        // Reload projects
+                        // Reload projects first
                         const response = await projectSubmissionService.getMyProjects();
                         if (response.success && response.data) {
                             setMyProjects(Array.isArray(response.data) ? response.data : (response.data.items || []));
                         }
+                        
+                        // For create: keep form open to show success modal with dashboard button
+                        // For edit: close form immediately
+                        if (detailProject) {  // This means it's an edit
+                            setShowProjectForm(false);
+                            setSuccessMessage('Cập nhật dự án thành công. Dự án đã trở về trạng thái Bản nháp.');
+                            setShowSuccessModal(true);
+                        }
+                        // For create (detailProject is null), don't close form so success modal can show
                     }}
                     user={user}
                 />

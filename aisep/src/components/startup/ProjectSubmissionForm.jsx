@@ -1,8 +1,30 @@
 import React, { useState, useEffect } from 'react';
-import { X, AlertCircle, Plus, Trash2, Upload, FileText } from 'lucide-react';
+import { X, AlertCircle, Plus, Trash2, Upload, FileText, CheckCircle } from 'lucide-react';
 import styles from './ProjectSubmissionForm.module.css';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import { getStageNumericValue } from '../../constants/ProjectStatus';
+import CustomSelect from '../common/CustomSelect';
+
+/**
+ * List of available industries matching API structure
+ */
+const INDUSTRIES = [
+  { label: 'Fintech', value: 0 },
+  { label: 'Edtech', value: 1 },
+  { label: 'Healthtech', value: 2 },
+  { label: 'Agritech', value: 3 },
+  { label: 'E_Commerce', value: 4 },
+  { label: 'Logistics', value: 5 },
+  { label: 'Proptech', value: 6 },
+  { label: 'Cleantech', value: 7 },
+  { label: 'SaaS', value: 8 },
+  { label: 'AI_BigData', value: 9 },
+  { label: 'Web3_Crypto', value: 10 },
+  { label: 'Food_Beverage', value: 11 },
+  { label: 'Manufacturing', value: 12 },
+  { label: 'Media_Entertainment', value: 13 },
+  { label: 'Other', value: 14 },
+];
 
 /**
  * ProjectSubmissionForm - Form for submitting new startup projects
@@ -12,11 +34,14 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
   const isEdit = !!initialData;
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [successProjectId, setSuccessProjectId] = useState(null);
 
   const [formData, setFormData] = useState(initialData ? {
     projectName: initialData.projectName || initialData.name || '',
     shortDescription: initialData.shortDescription || '',
     developmentStage: getStageNumericValue(initialData.developmentStage),
+    industry: initialData.industry || '',
     problemStatement: initialData.problemStatement || '',
     solutionDescription: initialData.solutionDescription || '',
     targetCustomers: initialData.targetCustomers || '',
@@ -36,10 +61,12 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
       : [{ name: '', role: '' }],
     keySkills: initialData.keySkills || '',
     teamExperience: initialData.teamExperience || '',
+    projectImageFile: null,
   } : {
     projectName: '',
     shortDescription: '',
     developmentStage: '',
+    industry: '',
     problemStatement: '',
     solutionDescription: '',
     targetCustomers: '',
@@ -51,11 +78,13 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     teamMembers: [{ name: '', role: '' }],
     keySkills: '',
     teamExperience: '',
+    projectImageFile: null,
   });
 
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [imagePreview, setImagePreview] = useState(null);
 
   const isFirstRender = React.useRef(true);
   const prevStageRef = React.useRef(formData.developmentStage);
@@ -72,6 +101,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
       if (!isEdit) {
         setFormData(prev => ({
           ...prev,
+          industry: '',
           solutionDescription: '',
           targetCustomers: '',
           uniqueValueProposition: '',
@@ -96,6 +126,39 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     if (errors[name]) setErrors(prev => ({ ...prev, [name]: '' }));
+  };
+
+  const handleImageChange = (e) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setErrors(prev => ({ ...prev, projectImageFile: 'Vui lòng chọn tệp hình ảnh' }));
+        return;
+      }
+
+      // Validate file size (5MB max)
+      if (file.size > 5 * 1024 * 1024) {
+        setErrors(prev => ({ ...prev, projectImageFile: 'Kích thước hình ảnh không quá 5MB' }));
+        return;
+      }
+
+      setFormData(prev => ({ ...prev, projectImageFile: file }));
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+      
+      if (errors.projectImageFile) setErrors(prev => ({ ...prev, projectImageFile: '' }));
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setFormData(prev => ({ ...prev, projectImageFile: null }));
+    setImagePreview(null);
   };
 
   const addTeamMember = () => {
@@ -126,6 +189,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
       if (!formData.projectName.trim()) newErrors.projectName = 'Tên dự án là bắt buộc';
       if (!formData.shortDescription.trim()) newErrors.shortDescription = 'Mô tả ngắn là bắt buộc';
       if (formData.developmentStage === '') newErrors.developmentStage = 'Vui lòng chọn giai đoạn phát triển';
+      if (formData.industry === '') newErrors.industry = 'Vui lòng chọn lĩnh vực';
       if (!formData.problemStatement.trim()) newErrors.problemStatement = 'Mô tả vấn đề là bắt buộc';
     }
 
@@ -186,14 +250,25 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     setIsSubmitting(true);
     try {
       const payload = {
-        ...formData,
+        projectName: formData.projectName.trim(),
+        shortDescription: formData.shortDescription.trim(),
         developmentStage: parseInt(formData.developmentStage),
+        industry: parseInt(formData.industry) || 0,
+        problemStatement: formData.problemStatement.trim(),
+        solutionDescription: formData.solutionDescription.trim(),
+        targetCustomers: formData.targetCustomers.trim(),
+        uniqueValueProposition: formData.uniqueValueProposition.trim(),
         marketSize: parseInt(formData.marketSize) || 0,
+        businessModel: formData.businessModel.trim(),
         revenue: parseInt(formData.revenue) || 0,
+        competitors: formData.competitors.trim(),
         teamMembers: formData.teamMembers
           .filter(m => m.name.trim())
           .map(m => m.role.trim() ? `${m.name.trim()} (${m.role.trim()})` : m.name.trim())
           .join(', '),
+        keySkills: formData.keySkills.trim(),
+        teamExperience: formData.teamExperience.trim(),
+        projectImageFile: formData.projectImageFile,
       };
 
       // Handle documents separately if needed by projectSubmissionService
@@ -206,8 +281,10 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
         
 
       if (response && response.success) {
-        onSuccess?.(formData);
-        onClose();
+        const projectId = response.data?.projectId || response.data?.id;
+        setSuccessProjectId(projectId);
+        setIsSuccessModalOpen(true);
+        // Don't call onSuccess yet - wait for user to click "Đến Startup Dashboard" button
       } else {
         setSubmitError(response?.message || 'Lỗi khi gửi dự án. Vui lòng thử lại.');
       }
@@ -223,18 +300,83 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
   };
 
   return (
-    <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className={styles.modalContent}>
-        {/* Header */}
-        <div className={styles.modalHeader}>
-          <div>
-            <h2 className={styles.headerTitle}>{isEdit ? 'Cập nhật dự án' : 'Đăng Dự Án'}</h2>
-            <p className={styles.headerSubtitle}>Bước {currentStep} của {totalSteps}</p>
+    <>
+      {/* Success Modal - Show when submission is successful */}
+      {isSuccessModalOpen && (
+        <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+          <div className={styles.modalContent} style={{ maxWidth: '500px' }}>
+            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+              <CheckCircle size={64} style={{ color: '#4caf50', margin: '0 auto 20px' }} />
+              <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', color: '#333' }}>
+                Dự án được tạo thành công!
+              </h2>
+              <p style={{ fontSize: '14px', color: '#666', lineHeight: '1.6', marginBottom: '24px' }}>
+                Dự án của bạn đã được tạo thành công. Bạn có thể tải lên các tài liệu bổ sung (Pitch Deck, Business Plan) và nộp dự án bất cứ lúc nào tại mục <strong>Quản lý dự án</strong> trong <strong>Startup Dashboard</strong>.
+              </p>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
+                <button
+                  onClick={onClose}
+                  style={{
+                    padding: '10px 24px',
+                    backgroundColor: '#f0f0f0',
+                    color: '#333',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#e0e0e0'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#f0f0f0'}
+                >
+                  Đóng
+                </button>
+                <button
+                  onClick={() => {
+                    setIsSuccessModalOpen(false);
+                    setTimeout(() => {
+                      onClose();
+                      onSuccess?.(formData);
+                    }, 300);
+                  }}
+                  style={{
+                    padding: '10px 24px',
+                    backgroundColor: '#2196F3',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    transition: 'background-color 0.2s'
+                  }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = '#1976D2'}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = '#2196F3'}
+                >
+                  Đến Startup Dashboard
+                </button>
+              </div>
+            </div>
           </div>
-          <button onClick={onClose} className={styles.closeButton}>
-            <X size={24} />
-          </button>
         </div>
+      )}
+
+      {/* Form Modal - Show when not submitted successfully yet */}
+      {!isSuccessModalOpen && (
+        <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+          <div className={styles.modalContent}>
+            {/* Header */}
+            <div className={styles.modalHeader}>
+              <div>
+                <h2 className={styles.headerTitle}>{isEdit ? 'Cập nhật dự án' : 'Đăng Dự Án'}</h2>
+                <p className={styles.headerSubtitle}>Bước {currentStep} của {totalSteps}</p>
+              </div>
+              <button onClick={onClose} className={styles.closeButton}>
+                <X size={24} />
+              </button>
+            </div>
 
         {/* Progress Bar */}
         <div className={styles.progressBarTrack}>
@@ -282,6 +424,111 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
 
               <div className={styles.formGroup}>
                 <label className={styles.label}>
+                  Hình Ảnh Dự Án <span className={styles.optional}>(Tùy chọn)</span>
+                </label>
+                <div style={{ 
+                  border: imagePreview ? '1px solid var(--border-color)' : '2px dashed var(--border-color)', 
+                  borderRadius: '12px', 
+                  padding: imagePreview ? '12px' : '32px 16px',
+                  textAlign: 'center',
+                  cursor: imagePreview ? 'default' : 'pointer',
+                  transition: 'all 0.2s',
+                  backgroundColor: imagePreview ? 'var(--bg-secondary)' : 'transparent',
+                  position: 'relative'
+                }}
+                onClick={(e) => {
+                  if (!imagePreview) {
+                    document.getElementById('projectImageInput').click();
+                  }
+                }}
+                >
+                  {imagePreview ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      <div style={{ 
+                        position: 'relative', 
+                        width: '100%', 
+                        height: '240px', 
+                        borderRadius: '8px', 
+                        overflow: 'hidden', 
+                        backgroundColor: '#000',
+                        boxShadow: '0 4px 12px rgba(0,0,0,0.1) inset'
+                      }}>
+                        <img 
+                          src={imagePreview} 
+                          alt="Preview" 
+                          style={{ 
+                            width: '100%', 
+                            height: '100%', 
+                            objectFit: 'contain'
+                          }} 
+                        />
+                        <div style={{ 
+                          position: 'absolute', 
+                          top: '12px', 
+                          right: '12px', 
+                          display: 'flex', 
+                          gap: '8px' 
+                        }}>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); document.getElementById('projectImageInput').click(); }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '6px',
+                              padding: '6px 12px', backgroundColor: 'rgba(0,0,0,0.65)', color: 'white',
+                              border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px',
+                              cursor: 'pointer', fontSize: '13px', fontWeight: '600', backdropFilter: 'blur(8px)',
+                              transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.85)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(0,0,0,0.65)'}
+                          >
+                            <Upload size={14} /> Thay đổi
+                          </button>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleRemoveImage(); }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: '6px',
+                              padding: '6px 12px', backgroundColor: 'rgba(244, 33, 46, 0.85)', color: 'white',
+                              border: '1px solid rgba(255,255,255,0.15)', borderRadius: '8px', 
+                              cursor: 'pointer', fontSize: '13px', fontWeight: '600', backdropFilter: 'blur(8px)',
+                              transition: 'background-color 0.2s'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.backgroundColor = 'rgba(244, 33, 46, 1)'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'rgba(244, 33, 46, 0.85)'}
+                          >
+                            <Trash2 size={14} /> Xoá
+                          </button>
+                        </div>
+                      </div>
+                      <div style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '500', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                        <FileText size={14} /> {formData.projectImageFile?.name || 'project_image_preview'}
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <Upload size={32} style={{ margin: '0 auto 12px', color: 'var(--primary-blue)' }} />
+                      <p style={{ margin: '0 0 6px', fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                        Nhấn để chọn hình ảnh
+                      </p>
+                      <p style={{ margin: '0', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                        PNG, JPG, GIF (Tối đa 5MB)
+                      </p>
+                    </div>
+                  )}
+                  <input
+                    id="projectImageInput"
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageChange}
+                    style={{ display: 'none' }}
+                  />
+                </div>
+                {errors.projectImageFile && <span className={styles.errorText}>{errors.projectImageFile}</span>}
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>
                   Mô Tả Ngắn <span className={styles.required}>*</span>
                 </label>
                 <textarea
@@ -299,18 +546,32 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                 <label className={styles.label}>
                   Giai Đoạn Phát Triển <span className={styles.required}>*</span>
                 </label>
-                <select
+                <CustomSelect
                   name="developmentStage"
-                  value={formData.developmentStage}
+                  value={String(formData.developmentStage)}
                   onChange={handleInputChange}
-                  className={styles.select}
-                >
-                  <option value="" disabled>Chọn giai đoạn...</option>
-                  <option value="0">Ý tưởng (Idea)</option>
-                  <option value="1">MVP</option>
-                  <option value="2">Vận hành (Growth)</option>
-                </select>
+                  placeholder="Chọn giai đoạn..."
+                  options={[
+                    { label: 'Ý tưởng (Idea)', value: '0' },
+                    { label: 'MVP', value: '1' },
+                    { label: 'Vận hành (Growth)', value: '2' }
+                  ]}
+                />
                 {errors.developmentStage && <span className={styles.errorText}>{errors.developmentStage}</span>}
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>
+                  Lĩnh Vực <span className={styles.required}>*</span>
+                </label>
+                <CustomSelect
+                  name="industry"
+                  value={String(formData.industry)}
+                  onChange={handleInputChange}
+                  placeholder="Chọn lĩnh vực..."
+                  options={INDUSTRIES.map(ind => ({ label: ind.label, value: String(ind.value) }))}
+                />
+                {errors.industry && <span className={styles.errorText}>{errors.industry}</span>}
               </div>
 
               <div className={styles.formGroup}>
@@ -556,7 +817,9 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
             </button>
           )}
         </div>
-      </div>
-    </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }

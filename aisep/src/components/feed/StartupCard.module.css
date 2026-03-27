@@ -11,6 +11,21 @@
   position: relative;
   border-radius: 0;
   box-shadow: none;
+
+  /* Staggered Entrance Animation */
+  opacity: 0;
+  transform: translateY(12px);
+  animation: cardReveal 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+  /* Cap staggering at 12 items (12 * 0.06s = 0.72s max delay) */
+  animation-delay: calc(min(var(--index, 0), 12) * 0.06s);
+  will-change: transform, opacity;
+}
+
+@keyframes cardReveal {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .card:hover {
@@ -128,17 +143,46 @@
   color: var(--primary-blue);
 }
 
-/* 2. Description */
+/* 2. Main Content Area (Thumbnail Layout) */
+.bodyWrapper {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
+  align-items: flex-start;
+}
+
+.mainInfo {
+  flex: 1;
+  min-width: 0; /* enables text truncation in children if needed */
+}
+
 .description {
   font-size: 14px;
   color: var(--text-primary);
   line-height: 1.55;
-  margin-bottom: 14px;
+  margin-bottom: 0; /* removed bottom margin since bodyWrapper handles spacing */
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+
+.imageWrapper {
+  flex: 1; /* Expand thumbnail to 50% width on desktop */
+  min-width: 0; /* Ensures proper equal splitting */
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  background-color: var(--surface2, rgba(255,255,255,0.03));
+}
+
+.imageWrapper img {
+  width: 100%;
+  aspect-ratio: 16/9;
+  object-fit: cover;
+  object-position: center;
+  display: block;
 }
 
 /* 3. Highlight Grid */
@@ -232,18 +276,34 @@
 }
 
 @media (max-width: 600px) {
+  .bodyWrapper {
+    flex-direction: column;
+    gap: 12px;
+  }
+  .imageWrapper {
+    flex: auto;
+    width: 100%;
+  }
   .gridRow {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 12px !important;
+    display: grid !important;
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
     margin-bottom: 20px !important;
   }
   .highlightBox {
-    padding: 14px 12px !important;
-    height: auto !important; /* Allow natural single-row height */
+    padding: 12px 4px !important;
+    height: auto !important;
   }
   .boxValue {
-    font-size: 15px;
+    font-size: 13px !important;
+  }
+  .boxLabel {
+    font-size: 10px;
+    margin-top: 4px;
+    line-height: 1.2;
+  }
+  .boxIcon {
+    margin-bottom: 4px;
   }
   .card {
     padding: 14px 16px;

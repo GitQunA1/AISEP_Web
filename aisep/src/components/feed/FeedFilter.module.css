@@ -28,6 +28,7 @@
   padding: 4px 0;
   align-items: center;
   padding-bottom: 2px;
+  position: relative; /* Ensure it's original offset parent for indicator */
 }
 
 .tabsList::-webkit-scrollbar {
@@ -58,15 +59,14 @@
   color: var(--primary-blue);
 }
 
-.activeTab::after {
-  content: '';
+.activeIndicator {
   position: absolute;
-  bottom: -1px;
-  left: 0;
-  right: 0;
+  bottom: 0px;
   height: 3px;
   background-color: var(--primary-blue);
   border-radius: 99px;
+  transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+  pointer-events: none;
 }
 
 .tabIcon {

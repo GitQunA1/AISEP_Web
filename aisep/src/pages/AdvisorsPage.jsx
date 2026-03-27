@@ -8,7 +8,7 @@ import bookingService from '../services/bookingService';
 import AdvisorBookingModal from '../components/profile/AdvisorBookingModal';
 import styles from './AdvisorsPage.module.css';
 
-export default function AdvisorsPage({ user, onSelectAdvisor }) {
+export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
     const [advisors, setAdvisors] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -28,7 +28,7 @@ export default function AdvisorsPage({ user, onSelectAdvisor }) {
 
     const roleValue = user?.role;
     const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
-    const canConnect = roleStr === 'startup' || roleStr === 'investor' || roleValue === 0 || roleValue === 1;
+    const canConnect = roleStr === 'startup' || roleStr === 'advisor' || roleValue === 0 || roleValue === 2;
 
     useEffect(() => {
         const fetchAdvisors = async () => {

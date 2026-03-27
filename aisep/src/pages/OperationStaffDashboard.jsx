@@ -17,8 +17,21 @@ import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/Projec
  * OperationStaffDashboard - Dashboard for Operation Staff
  * Features: Document verification, User approvals, Activity monitoring, Request management
  */
-export default function OperationStaffDashboard({ user }) {
-    const [activeSection, setActiveSection] = useState('statistics');
+export default function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
+    // Safety check for styles
+    const s = local || {};
+    if (!local) {
+        console.warn('OperationStaffDashboard: local styles (OperationStaffDashboard.module.css) could not be loaded.');
+    }
+
+    const [activeSection, setActiveSection] = useState(initialSection);
+
+    // Sync internal state with prop changes from sidebar
+    useEffect(() => {
+        if (initialSection) {
+            setActiveSection(initialSection);
+        }
+    }, [initialSection]);
 
     const [pendingProjects, setPendingProjects] = useState([]);
     const [approvedProjects, setApprovedProjects] = useState([]);
@@ -81,6 +94,7 @@ export default function OperationStaffDashboard({ user }) {
         avgApprovalTime: avgApprovalTime,
         totalUsers: totalUsers,
         systemHealth: systemHealth,
+        pendingDocuments: 0,
         approvedProjects: approvedProjects.length,
         rejectedProjects: rejectedProjects.length
     };
@@ -90,12 +104,12 @@ export default function OperationStaffDashboard({ user }) {
     const confirmedBookingsList = allBookings.filter(b => b.status === 'Confirmed');
     const completedBookingsList = allBookings.filter(b => b.status === 'Completed');
 
-    const displayedBookings = bookingFilters === '' 
-        ? allBookings 
+    const displayedBookings = bookingFilters === ''
+        ? allBookings
         : bookingFilters === 'status:Pending' ? pendingBookingsList
-        : bookingFilters === 'status:Confirmed' ? confirmedBookingsList
-        : bookingFilters === 'status:Completed' ? completedBookingsList
-        : allBookings;
+            : bookingFilters === 'status:Confirmed' ? confirmedBookingsList
+                : bookingFilters === 'status:Completed' ? completedBookingsList
+                    : allBookings;
 
     // We can slice displayedBookings if we want client-side pagination
     const paginatedBookings = displayedBookings.slice((bookingPage - 1) * bookingPageSize, bookingPage * bookingPageSize);
@@ -257,7 +271,10 @@ export default function OperationStaffDashboard({ user }) {
                 setAnalysisHistory([]);
             }
         } catch (error) {
-            console.error('Error fetching analysis history:', error);
+            // Only log if it's not a permission error or if debugging
+            if (error?.response?.status !== 403) {
+                console.error('Error fetching analysis history:', error);
+            }
             setAnalysisHistory([]);
         } finally {
             setIsLoadingHistory(false);
@@ -270,17 +287,7 @@ export default function OperationStaffDashboard({ user }) {
         fetchAnalysisHistory(project.projectId);
     };
 
-    const handleVerifyDocument = (id) => {
-        setPendingDocuments(pendingDocuments.map(doc =>
-            doc.id === id ? { ...doc, status: 'verified' } : doc
-        ));
-    };
 
-    const handleRejectDocument = (id) => {
-        setPendingDocuments(pendingDocuments.map(doc =>
-            doc.id === id ? { ...doc, status: 'rejected' } : doc
-        ));
-    };
 
     const handleApproveStartup = async (id) => {
         if (processingProjectId) return;
@@ -415,90 +422,71 @@ export default function OperationStaffDashboard({ user }) {
                 user={user}
             />
 
-            {/* Quick Stats */}
-            <h3 className={styles.cardTitle} style={{ margin: '20px 24px 8px', fontSize: '14px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                Hoạt động hôm nay
-            </h3>
-            <div className={styles.statsGrid}>
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconYellow}`}>
-                        <FileCheck size={20} />
+            {/* Quick Stats - Only show in main statistics/analytics dashboard views */}
+            {['statistics', 'analytics'].includes(activeSection) && (
+                <>
+                    <h3 className={styles.cardTitle} style={{ margin: '20px 24px 8px', fontSize: '14px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                        Hoạt động hôm nay
+                    </h3>
+                    <div className={styles.statsGrid}>
+                        <div className={styles.statCard}>
+                            <div className={`${styles.statIcon} ${styles.iconYellow}`}>
+                                <FileCheck size={20} />
+                            </div>
+                            <div className={styles.statInfo}>
+                                <div className={styles.statValue}>{dashboardData.pendingDocuments}</div>
+                                <div className={styles.statLabel}>Tài liệu chờ kiểm tra</div>
+                            </div>
+                        </div>
+
+                        <div className={styles.statCard}>
+                            <div className={`${styles.statIcon} ${styles.iconBlue}`}>
+                                <Users size={20} />
+                            </div>
+                            <div className={styles.statInfo}>
+                                <div className={styles.statValue}>{dashboardData.pendingApprovals}</div>
+                                <div className={styles.statLabel}>Phê duyệt chờ xử lý</div>
+                            </div>
+                        </div>
                     </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.pendingDocuments}</div>
-                        <div className={styles.statLabel}>Tài liệu chờ kiểm tra</div>
-                    </div>
+                </>
+            )}
+
+            {/* Navigation Tabs (Only for main statistics/analytics) */}
+            {['statistics', 'analytics'].includes(activeSection) && (
+                <div className={styles.tabs}>
+                    <button
+                        className={`${styles.tab} ${activeSection === 'statistics' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('statistics')}
+                    >
+                        Thống kê
+                    </button>
+                    <button
+                        className={`${styles.tab} ${activeSection === 'analytics' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('analytics')}
+                    >
+                        Phân tích
+                    </button>
                 </div>
-
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconBlue}`}>
-                        <Users size={20} />
-                    </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.pendingApprovals}</div>
-                        <div className={styles.statLabel}>Phê duyệt chờ xử lý</div>
-                    </div>
-                </div>
-
-            </div>
-
-            {/* Navigation Tabs */}
-            <div className={styles.tabs}>
-                <button
-                    className={`${styles.tab} ${activeSection === 'statistics' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('statistics')}
-                >
-                    Thống kê
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'analytics' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('analytics')}
-                >
-                    Phân tích
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'project_management' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('project_management')}
-                >
-                    Quản lý dự án
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'bookings' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('bookings')}
-                >
-                    Quản lý Booking
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'approvals' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('approvals')}
-                >
-                    Phê duyệt Startup
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'activity' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('activity')}
-                >
-                    Giám sát hoạt động
-                </button>
-            </div>
+            )}
 
             {/* Content Sections */}
             <div className={styles.content}>
                 {/* STATISTICS SECTION */}
                 {activeSection === 'statistics' && (
                     <div className={styles.section}>
-                        <div className={local.statisticsSection}>
+                        <div className={s.statisticsSection}>
                             {/* Main KPI Cards Grid */}
-                            <div className={local.statsGrid}>
+                            <div className={s.statsGrid}>
                                 {/* Total Projects Card */}
-                                <div className={local.kpiCard}>
-                                    <div className={local.kpiHeader}>
-                                        <span className={local.statLabel}>Tổng dự án</span>
-                                        <span className={local.statValue}>
+                                <div className={s.kpiCard}>
+                                    <div className={s.kpiHeader}>
+                                        <span className={s.statLabel}>Tổng dự án</span>
+                                        <span className={s.statValue}>
                                             {dashboardData.pendingProjects + dashboardData.approvedProjects + dashboardData.rejectedProjects}
                                         </span>
                                     </div>
-                                    <div className={local.kpiBreakdown}>
+                                    <div className={s.kpiBreakdown}>
                                         <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><CheckCircle size={14} color="#10b981" /> Phê duyệt</span><strong>{dashboardData.approvedProjects}</strong></div>
                                         <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><History size={14} color="#f59e0b" /> Chờ xử lý</span><strong>{dashboardData.pendingProjects}</strong></div>
                                         <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><X size={14} color="#ef4444" /> Từ chối</span><strong>{dashboardData.rejectedProjects}</strong></div>
@@ -506,10 +494,10 @@ export default function OperationStaffDashboard({ user }) {
                                 </div>
 
                                 {/* Approval Rate Card */}
-                                <div className={local.kpiCard}>
-                                    <div className={local.kpiHeader}>
-                                        <span className={local.statLabel}>Tỉ lệ chấp thuận</span>
-                                        <span className={local.statValue}>
+                                <div className={s.kpiCard}>
+                                    <div className={s.kpiHeader}>
+                                        <span className={s.statLabel}>Tỉ lệ chấp thuận</span>
+                                        <span className={s.statValue}>
                                             {dashboardData.pendingProjects + dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
                                                 ? Math.round((dashboardData.approvedProjects / (dashboardData.pendingProjects + dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
                                                 : 0}%
@@ -521,24 +509,24 @@ export default function OperationStaffDashboard({ user }) {
                                 </div>
 
                                 {/* Pending Items Card */}
-                                <div className={local.kpiCard}>
-                                    <div className={local.kpiHeader}>
-                                        <span className={local.statLabel}>Chờ xử lý</span>
-                                        <span className={local.statValue}>
+                                <div className={s.kpiCard}>
+                                    <div className={s.kpiHeader}>
+                                        <span className={s.statLabel}>Chờ xử lý</span>
+                                        <span className={s.statValue}>
                                             {dashboardData.pendingProjects + dashboardData.pendingApprovals}
                                         </span>
                                     </div>
-                                    <div className={local.kpiBreakdown}>
+                                    <div className={s.kpiBreakdown}>
                                         <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FileCheck size={14} /> Dự án</span><strong>{dashboardData.pendingProjects}</strong></div>
                                         <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Users size={14} /> Người dùng</span><strong>{dashboardData.pendingApprovals}</strong></div>
                                     </div>
                                 </div>
 
                                 {/* System Health Card */}
-                                <div className={local.kpiCard}>
-                                    <div className={local.kpiHeader}>
-                                        <span className={local.statLabel}>Tính khỏe hệ thống</span>
-                                        <span className={local.statValue}>{systemHealth}%</span>
+                                <div className={s.kpiCard}>
+                                    <div className={s.kpiHeader}>
+                                        <span className={s.statLabel}>Tính khỏe hệ thống</span>
+                                        <span className={s.statValue}>{systemHealth}%</span>
                                     </div>
                                     <div style={{
                                         fontSize: '11px',
@@ -566,32 +554,32 @@ export default function OperationStaffDashboard({ user }) {
                                         Chỉ số hiệu suất chi tiết
                                     </h3>
                                 </div>
-                                <div className={local.detailedStatsRow}>
-                                    <div className={local.statItem}>
-                                        <div className={local.statLabel}>Dự án chờ xử lý</div>
-                                        <div className={local.statValue}>{dashboardData.pendingProjects}</div>
+                                <div className={s.detailedStatsRow}>
+                                    <div className={s.statItem}>
+                                        <div className={s.statLabel}>Dự án chờ xử lý</div>
+                                        <div className={s.statValue}>{dashboardData.pendingProjects}</div>
                                         <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '2px', marginTop: '12px' }}>
                                             <div style={{ height: '100%', width: dashboardData.pendingProjects > 10 ? '100%' : (dashboardData.pendingProjects * 10) + '%', backgroundColor: '#f59e0b', borderRadius: '2px' }}></div>
                                         </div>
                                     </div>
-                                    <div className={local.statItem}>
-                                        <div className={local.statLabel}>Người dùng chờ phê duyệt</div>
-                                        <div className={local.statValue}>{dashboardData.pendingApprovals}</div>
+                                    <div className={s.statItem}>
+                                        <div className={s.statLabel}>Người dùng chờ phê duyệt</div>
+                                        <div className={s.statValue}>{dashboardData.pendingApprovals}</div>
                                         <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '2px', marginTop: '12px' }}>
                                             <div style={{ height: '100%', width: dashboardData.pendingApprovals > 10 ? '100%' : (dashboardData.pendingApprovals * 10) + '%', backgroundColor: 'var(--primary-blue)', borderRadius: '2px' }}></div>
                                         </div>
                                     </div>
-                                    <div className={local.statItem}>
-                                        <div className={local.statLabel}>Dự án phê duyệt</div>
-                                        <div className={local.statValue}>{dashboardData.approvedProjects}</div>
+                                    <div className={s.statItem}>
+                                        <div className={s.statLabel}>Dự án phê duyệt</div>
+                                        <div className={s.statValue}>{dashboardData.approvedProjects}</div>
                                     </div>
-                                    <div className={local.statItem}>
-                                        <div className={local.statLabel}>Dự án từ chối</div>
-                                        <div className={local.statValue} style={{ color: '#ef4444' }}>{dashboardData.rejectedProjects}</div>
+                                    <div className={s.statItem}>
+                                        <div className={s.statLabel}>Dự án từ chối</div>
+                                        <div className={s.statValue} style={{ color: '#ef4444' }}>{dashboardData.rejectedProjects}</div>
                                     </div>
-                                    <div className={local.statItem}>
-                                        <div className={local.statLabel}>Thời gian TB (giờ)</div>
-                                        <div className={local.statValue}>{dashboardData.avgApprovalTime || '-'}</div>
+                                    <div className={s.statItem}>
+                                        <div className={s.statLabel}>Thời gian TB (giờ)</div>
+                                        <div className={s.statValue}>{dashboardData.avgApprovalTime || '-'}</div>
                                     </div>
                                 </div>
                             </div>
@@ -602,9 +590,9 @@ export default function OperationStaffDashboard({ user }) {
                 {/* ANALYTICS SECTION */}
                 {activeSection === 'analytics' && (
                     <div className={styles.section}>
-                        <div className={local.analyticsSection}>
+                        <div className={s.analyticsSection}>
                             {/* Main Analytics Grid */}
-                            <div className={local.analyticsGrid}>
+                            <div className={s.analyticsGrid}>
                                 {/* Project Distribution (Donut Chart) */}
                                 <div className={styles.card}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
@@ -636,27 +624,27 @@ export default function OperationStaffDashboard({ user }) {
                                         </div>
 
                                         {/* Legend */}
-                                        <div style={{ flex: 1 }} className={local.legendList}>
-                                            <div className={local.legendItem}>
-                                                <div className={local.legendLabel}>
-                                                    <div className={local.indicatorCircle} style={{ backgroundColor: '#10b981' }}></div>
+                                        <div style={{ flex: 1 }} className={s.legendList}>
+                                            <div className={s.legendItem}>
+                                                <div className={s.legendLabel}>
+                                                    <div className={s.indicatorCircle} style={{ backgroundColor: '#10b981' }}></div>
                                                     Phê duyệt
                                                 </div>
-                                                <div className={local.legendValue}>{dashboardData.approvedProjects}</div>
+                                                <div className={s.legendValue}>{dashboardData.approvedProjects}</div>
                                             </div>
-                                            <div className={local.legendItem}>
-                                                <div className={local.legendLabel}>
-                                                    <div className={local.indicatorCircle} style={{ backgroundColor: '#f59e0b' }}></div>
+                                            <div className={s.legendItem}>
+                                                <div className={s.legendLabel}>
+                                                    <div className={s.indicatorCircle} style={{ backgroundColor: '#f59e0b' }}></div>
                                                     Chờ xử lý
                                                 </div>
-                                                <div className={local.legendValue}>{dashboardData.pendingProjects}</div>
+                                                <div className={s.legendValue}>{dashboardData.pendingProjects}</div>
                                             </div>
-                                            <div className={local.legendItem}>
-                                                <div className={local.legendLabel}>
-                                                    <div className={local.indicatorCircle} style={{ backgroundColor: '#ef4444' }}></div>
+                                            <div className={s.legendItem}>
+                                                <div className={s.legendLabel}>
+                                                    <div className={s.indicatorCircle} style={{ backgroundColor: '#ef4444' }}></div>
                                                     Từ chối
                                                 </div>
-                                                <div className={local.legendValue}>{dashboardData.rejectedProjects}</div>
+                                                <div className={s.legendValue}>{dashboardData.rejectedProjects}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -671,9 +659,9 @@ export default function OperationStaffDashboard({ user }) {
                                         </h3>
                                     </div>
 
-                                    <div className={local.performanceGrid}>
-                                        <div className={local.progressWrapper}>
-                                            <div className={local.progressLabelRow}>
+                                    <div className={s.performanceGrid}>
+                                        <div className={s.progressWrapper}>
+                                            <div className={s.progressLabelRow}>
                                                 <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Tỉ lệ phê duyệt</span>
                                                 <span style={{ fontSize: '14px', fontWeight: '700', color: '#10b981' }}>
                                                     {dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
@@ -681,8 +669,8 @@ export default function OperationStaffDashboard({ user }) {
                                                         : 0}%
                                                 </span>
                                             </div>
-                                            <div className={local.progressTrack}>
-                                                <div className={local.progressFill} style={{
+                                            <div className={s.progressTrack}>
+                                                <div className={s.progressFill} style={{
                                                     width: (dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
                                                         ? Math.round((dashboardData.approvedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
                                                         : 0) + '%',
@@ -691,8 +679,8 @@ export default function OperationStaffDashboard({ user }) {
                                             </div>
                                         </div>
 
-                                        <div className={local.progressWrapper}>
-                                            <div className={local.progressLabelRow}>
+                                        <div className={s.progressWrapper}>
+                                            <div className={s.progressLabelRow}>
                                                 <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Tỉ lệ hoàn thành</span>
                                                 <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--primary-blue)' }}>
                                                     {dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects > 0
@@ -700,8 +688,8 @@ export default function OperationStaffDashboard({ user }) {
                                                         : 0}%
                                                 </span>
                                             </div>
-                                            <div className={local.progressTrack}>
-                                                <div className={local.progressFill} style={{
+                                            <div className={s.progressTrack}>
+                                                <div className={s.progressFill} style={{
                                                     width: (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects > 0
                                                         ? Math.round(((dashboardData.approvedProjects + dashboardData.rejectedProjects) / (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects)) * 100)
                                                         : 0) + '%'
@@ -709,8 +697,8 @@ export default function OperationStaffDashboard({ user }) {
                                             </div>
                                         </div>
 
-                                        <div className={local.progressWrapper}>
-                                            <div className={local.progressLabelRow}>
+                                        <div className={s.progressWrapper}>
+                                            <div className={s.progressLabelRow}>
                                                 <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Tỉ lệ từ chối</span>
                                                 <span style={{ fontSize: '14px', fontWeight: '700', color: '#ef4444' }}>
                                                     {dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
@@ -718,8 +706,8 @@ export default function OperationStaffDashboard({ user }) {
                                                         : 0}%
                                                 </span>
                                             </div>
-                                            <div className={local.progressTrack}>
-                                                <div className={local.progressFill} style={{
+                                            <div className={s.progressTrack}>
+                                                <div className={s.progressFill} style={{
                                                     width: (dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
                                                         ? Math.round((dashboardData.rejectedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
                                                         : 0) + '%',
@@ -732,29 +720,29 @@ export default function OperationStaffDashboard({ user }) {
                             </div>
 
                             {/* Action Summary Row */}
-                            <div className={local.summaryGrid}>
-                                <div className={local.summaryCard}>
-                                    <div className={local.summaryIndicator} style={{ backgroundColor: '#f59e0b' }}></div>
+                            <div className={s.summaryGrid}>
+                                <div className={s.summaryCard}>
+                                    <div className={s.summaryIndicator} style={{ backgroundColor: '#f59e0b' }}></div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <Briefcase size={16} color="#f59e0b" />
-                                        <div className={local.summaryTitle}>Duyệt dự án</div>
+                                        <div className={s.summaryTitle}>Duyệt dự án</div>
                                     </div>
-                                    <div className={local.summaryValue}>{dashboardData.pendingProjects}</div>
-                                    <div className={local.summaryText}>
+                                    <div className={s.summaryValue}>{dashboardData.pendingProjects}</div>
+                                    <div className={s.summaryText}>
                                         {dashboardData.pendingProjects > 0
                                             ? `${dashboardData.pendingProjects} dự án đang chờ phê duyệt của bạn`
                                             : 'Không có dự án nào chờ xử lý'}
                                     </div>
                                 </div>
 
-                                <div className={local.summaryCard}>
-                                    <div className={local.summaryIndicator} style={{ backgroundColor: 'var(--primary-blue)' }}></div>
+                                <div className={s.summaryCard}>
+                                    <div className={s.summaryIndicator} style={{ backgroundColor: 'var(--primary-blue)' }}></div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <Users size={16} color="var(--primary-blue)" />
-                                        <div className={local.summaryTitle}>Phân bổ người dùng</div>
+                                        <div className={s.summaryTitle}>Phân bổ người dùng</div>
                                     </div>
-                                    <div className={local.summaryValue}>{dashboardData.pendingApprovals}</div>
-                                    <div className={local.summaryText}>
+                                    <div className={s.summaryValue}>{dashboardData.pendingApprovals}</div>
+                                    <div className={s.summaryText}>
                                         {dashboardData.pendingApprovals > 0
                                             ? `${dashboardData.pendingApprovals} yêu cầu chờ xác nhận`
                                             : 'Tất cả người dùng đã được phê duyệt'}
@@ -781,28 +769,28 @@ export default function OperationStaffDashboard({ user }) {
                                         className={projectFilter === 'all' ? styles.primaryBtn : styles.secondaryBtn}
                                         style={{ padding: '8px 20px', fontSize: '12px' }}
                                     >
-                                        Tất cả ({pendingProjects.length + approvedProjects.length + rejectedProjects.length})
+                                        Tất cả ({(pendingProjects?.length || 0) + (approvedProjects?.length || 0) + (rejectedProjects?.length || 0)})
                                     </button>
                                     <button
                                         onClick={() => setProjectFilter('pending')}
                                         className={projectFilter === 'pending' ? styles.primaryBtn : styles.secondaryBtn}
                                         style={{ padding: '8px 20px', fontSize: '12px' }}
                                     >
-                                        Chờ xử lý ({pendingProjects.length})
+                                        Chờ xử lý ({pendingProjects?.length || 0})
                                     </button>
                                     <button
                                         onClick={() => setProjectFilter('approved')}
                                         className={projectFilter === 'approved' ? styles.primaryBtn : styles.secondaryBtn}
                                         style={{ padding: '8px 20px', fontSize: '12px' }}
                                     >
-                                        Đã duyệt ({approvedProjects.length})
+                                        Đã duyệt ({approvedProjects?.length || 0})
                                     </button>
                                     <button
                                         onClick={() => setProjectFilter('rejected')}
                                         className={projectFilter === 'rejected' ? styles.primaryBtn : styles.secondaryBtn}
                                         style={{ padding: '8px 20px', fontSize: '12px' }}
                                     >
-                                        Từ chối ({rejectedProjects.length})
+                                        Từ chối ({rejectedProjects?.length || 0})
                                     </button>
                                 </div>
                             </div>
@@ -814,63 +802,64 @@ export default function OperationStaffDashboard({ user }) {
                                     </div>
                                 ) : (
                                     [
-                                        ...(projectFilter === 'all' || projectFilter === 'pending' ? pendingProjects : []),
-                                        ...(projectFilter === 'all' || projectFilter === 'approved' ? approvedProjects : []),
-                                        ...(projectFilter === 'all' || projectFilter === 'rejected' ? rejectedProjects : [])
+                                        ...(projectFilter === 'all' || projectFilter === 'pending' ? (Array.isArray(pendingProjects) ? pendingProjects : []) : []),
+                                        ...(projectFilter === 'all' || projectFilter === 'approved' ? (Array.isArray(approvedProjects) ? approvedProjects : []) : []),
+                                        ...(projectFilter === 'all' || projectFilter === 'rejected' ? (Array.isArray(rejectedProjects) ? rejectedProjects : []) : [])
                                     ].length === 0 ? (
                                         <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                                             Không có dự án nào trong mục này
                                         </div>
                                     ) : (
                                         [
-                                            ...(projectFilter === 'all' || projectFilter === 'pending' ? pendingProjects : []),
-                                            ...(projectFilter === 'all' || projectFilter === 'approved' ? approvedProjects : []),
-                                            ...(projectFilter === 'all' || projectFilter === 'rejected' ? rejectedProjects : [])
+                                            ...(projectFilter === 'all' || projectFilter === 'pending' ? (Array.isArray(pendingProjects) ? pendingProjects : []) : []),
+                                            ...(projectFilter === 'all' || projectFilter === 'approved' ? (Array.isArray(approvedProjects) ? approvedProjects : []) : []),
+                                            ...(projectFilter === 'all' || projectFilter === 'rejected' ? (Array.isArray(rejectedProjects) ? rejectedProjects : []) : [])
                                         ].map(project => (
                                             <div
-                                                key={project.projectId}
-                                                className={local.projectCard}
-                                                style={{ borderLeftColor: STATUS_COLORS[project.status || 'Pending'] }}
+                                                key={project?.projectId || Math.random()}
+                                                className={s.projectCard}
+                                                style={{ borderLeftColor: STATUS_COLORS[project?.status || 'Pending'] || '#ccc' }}
                                             >
-                                                <div className={local.projectHeader}>
-                                                    <div className={local.titleRow}>
-                                                        <h4 className={local.projectTitle}>{project.projectName}</h4>
+                                                <div className={s.projectHeader}>
+                                                    <div className={s.titleRow}>
+                                                        <h4 className={s.projectTitle}>{project?.projectName || 'Dự án không tên'}</h4>
                                                         <span
-                                                            className={local.statusBadge}
+                                                            className={s.statusBadge}
                                                             style={{
-                                                                backgroundColor: `${STATUS_COLORS[project.status || 'Pending']}25`,
-                                                                color: STATUS_COLORS[project.status || 'Pending'],
-                                                                border: `1px solid ${STATUS_COLORS[project.status || 'Pending']}40`
+                                                                backgroundColor: `${STATUS_COLORS[project?.status || 'Pending']}25`,
+                                                                color: STATUS_COLORS[project?.status || 'Pending'],
+                                                                fontWeight: '600',
+                                                                border: `1px solid ${STATUS_COLORS[project?.status || 'Pending']}40`
                                                             }}
                                                         >
-                                                            {STATUS_LABELS[project.status || 'Pending'] || 'Đang chờ duyệt'}
+                                                            {STATUS_LABELS[project?.status || 'Pending'] || 'Đang chờ duyệt'}
                                                         </span>
                                                     </div>
-                                                    <p className={local.projectDesc}>{project.shortDescription}</p>
+                                                    <p className={s.projectDesc}>{project?.shortDescription || '-'}</p>
                                                 </div>
 
-                                                <div className={local.tagContainer}>
-                                                    <span className={local.metaTag}>
-                                                        {project.developmentStage === 0 ? 'Ý tưởng' : project.developmentStage === 1 ? 'MVP' : project.developmentStage === 'MVP' ? 'MVP' : 'Tăng trưởng'}
+                                                <div className={s.tagContainer}>
+                                                    <span className={s.metaTag}>
+                                                        {project?.developmentStage === 0 ? 'Ý tưởng' : project?.developmentStage === 1 ? 'MVP' : project?.developmentStage === 'MVP' ? 'MVP' : 'Tăng trưởng'}
                                                     </span>
                                                 </div>
 
-                                                <div className={local.fieldRow}>
-                                                    <span className={local.fieldLabel}>Vấn đề:</span>
-                                                    <span className={local.fieldValue} title={project.problemStatement}>{project.problemStatement}</span>
+                                                <div className={s.fieldRow}>
+                                                    <span className={s.fieldLabel}>Vấn đề:</span>
+                                                    <span className={s.fieldValue} title={project?.problemStatement || ''}>{project?.problemStatement || '-'}</span>
                                                 </div>
-                                                <div className={local.fieldRow}>
-                                                    <span className={local.fieldLabel}>Giải pháp:</span>
-                                                    <span className={local.fieldValue} title={project.solutionDescription}>{project.solutionDescription}</span>
+                                                <div className={s.fieldRow}>
+                                                    <span className={s.fieldLabel}>Giải pháp:</span>
+                                                    <span className={s.fieldValue} title={project?.solutionDescription || ''}>{project?.solutionDescription || '-'}</span>
                                                 </div>
 
-                                                <div className={local.divider}></div>
+                                                <div className={s.divider}></div>
 
-                                                <div className={local.footer}>
-                                                    <div className={local.metaInfo}>
-                                                        📅 Nộp: {new Date(project.createdAt).toLocaleDateString('vi-VN')} | 👥 Đội: {project.teamMembers}
+                                                <div className={s.footer}>
+                                                    <div className={s.metaInfo}>
+                                                        📅 Nộp: {project?.createdAt ? new Date(project.createdAt).toLocaleDateString('vi-VN') : 'N/A'} | 👥 Đội: {project?.teamMembers?.toString() || '0'}
                                                     </div>
-                                                    <div className={local.buttonGroup}>
+                                                    <div className={s.buttonGroup}>
                                                         <button
                                                             onClick={() => openDetailModal(project)}
                                                             className={styles.secondaryBtn}
@@ -966,12 +955,12 @@ export default function OperationStaffDashboard({ user }) {
                             {/* Booking List */}
                             <div className={styles.list}>
                                 {isLoadingBookings ? (
-                                    <div style={{ 
-                                        padding: '60px 20px', 
-                                        display: 'flex', 
-                                        flexDirection: 'column', 
-                                        alignItems: 'center', 
-                                        justifyContent: 'center', 
+                                    <div style={{
+                                        padding: '60px 20px',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
                                         color: 'var(--text-secondary)',
                                         gap: '16px'
                                     }}>
@@ -986,73 +975,55 @@ export default function OperationStaffDashboard({ user }) {
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
                                         {paginatedBookings.map((booking, index) => (
-                                            <div key={`${booking.id}-${index}`} className={local.bookingCard}>
-                                                <div className={local.bookingMainInfo}>
-                                                    <div className={local.bookingHeader} style={{ justifyContent: 'flex-start', gap: '8px' }}>
-                                                        <span className={local.bookingTitle}>
-                                                            #{booking.id}
+                                            <div key={`${booking?.id || index}-${index}`} className={s.bookingCard}>
+                                                <div className={s.bookingMainInfo}>
+                                                    <div className={s.bookingHeader} style={{ justifyContent: 'flex-start', gap: '8px' }}>
+                                                        <span className={s.bookingTitle}>
+                                                            #{booking?.id || '-'}
                                                         </span>
-                                                        <div className={`${local.bookingBadge} ${
-                                                            booking.status === 'Pending' ? local.bookingBadgePending : 
-                                                            booking.status === 'Confirmed' ? local.bookingBadgeConfirmed : 
-                                                            local.bookingBadgeCompleted
-                                                        }`}>
-                                                            {booking.status === 'Pending' ? 'Chờ xác nhận' : 
-                                                             booking.status === 'Confirmed' ? 'Đã xác nhận' : 'Hoàn thành'}
+                                                        <div className={`${s.bookingBadge} ${booking?.status === 'Pending' ? s.bookingBadgePending :
+                                                                booking?.status === 'Confirmed' ? s.bookingBadgeConfirmed :
+                                                                    s.bookingBadgeCompleted
+                                                            }`}>
+                                                            {booking?.status === 'Pending' ? 'Chờ xác nhận' :
+                                                                booking?.status === 'Confirmed' ? 'Đã xác nhận' : 'Hoàn thành'}
                                                         </div>
                                                     </div>
 
-                                                    <div className={local.participantsRow}>
-                                                        <span className={local.advisorText}>{booking.advisorName}</span>
-                                                        <div className={local.linkLine}>
-                                                            <div className={local.line} />
-                                                            <ArrowRight size={14} className={local.linkArrow} />
+                                                    <div className={s.participantsRow}>
+                                                        <span className={s.advisorText}>{booking?.advisorName || '-'}</span>
+                                                        <div className={s.linkLine}>
+                                                            <div className={s.line} />
+                                                            <ArrowRight size={14} className={s.linkArrow} />
                                                         </div>
-                                                        <span className={local.customerText}>{booking.customerName}</span>
+                                                        <span className={s.customerText}>{booking?.customerName || '-'}</span>
                                                     </div>
 
-                                                    <div className={local.priceRow} style={{ marginTop: '-4px', marginBottom: '8px' }}>
-                                                        <div className={local.priceTag}>
-                                                            {Number(booking.price).toLocaleString('vi-VN')} <span>VND</span>
+                                                    <div className={s.priceRow} style={{ marginTop: '-4px', marginBottom: '8px' }}>
+                                                        <div className={s.priceTag}>
+                                                            {Number(booking?.price || 0).toLocaleString('vi-VN')} <span>VND</span>
                                                         </div>
                                                     </div>
 
-                                                    <div className={local.bookingFooterWrapper} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: '16px' }}>
-                                                        <div className={local.footerLeft} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                            <div className={local.metaRow} style={{ marginTop: 0, paddingTop: 0, borderTop: 'none', gap: '12px' }}>
-                                                                <div className={local.metaItem}>
+                                                    <div className={s.bookingFooterWrapper} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: '16px' }}>
+                                                        <div className={s.footerLeft} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                            <div className={s.metaRow} style={{ marginTop: 0, paddingTop: 0, borderTop: 'none', gap: '12px' }}>
+                                                                <div className={s.metaItem}>
                                                                     <Calendar size={13} />
-                                                                    <span>{new Date(booking.startTime).toLocaleDateString('vi-VN')}</span>
+                                                                    <span>{booking?.startTime ? new Date(booking.startTime).toLocaleDateString('vi-VN') : '-'}</span>
                                                                 </div>
-                                                                <div className={local.metaItem}>
+                                                                <div className={s.metaItem}>
                                                                     <Clock size={13} />
-                                                                    <span>{new Date(booking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                    <span>{booking?.startTime ? new Date(booking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
                                                                 </div>
                                                             </div>
-                                                            <div className={local.bookingIdList} style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>
-                                                                KHÁCH: <span style={{ color: 'var(--text-secondary)' }}>{booking.customerName}</span> • CỐ VẤN: <span style={{ color: 'var(--text-secondary)' }}>{booking.advisorName}</span>
+                                                            <div className={s.bookingIdList} style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>
+                                                                KHÁCH: <span style={{ color: 'var(--text-secondary)' }}>{booking?.customerName || '-'}</span> • CỐ VẤN: <span style={{ color: 'var(--text-secondary)' }}>{booking?.advisorName || '-'}</span>
                                                             </div>
                                                         </div>
-
-                                                        <div className={local.bookingActions}>
-                                                            {booking.status === 'Pending' && (
-                                                                <>
-                                                                    <button 
-                                                                        className={styles.primaryBtn} 
-                                                                        style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '99px' }}
-                                                                    >
-                                                                        Duyệt
-                                                                    </button>
-                                                                    <button 
-                                                                        className={styles.secondaryBtn} 
-                                                                        style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '99px', color: 'var(--staff-danger)' }}
-                                                                    >
-                                                                        Từ chối
-                                                                    </button>
-                                                                </>
-                                                            )}
-                                                            <button 
-                                                                onClick={() => handleViewBookingDetails(booking.id)}
+                                                        <div className={s.bookingActions}>
+                                                            <button
+                                                                onClick={() => handleViewBookingDetails(booking?.id)}
                                                                 className={styles.secondaryBtn}
                                                                 style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '99px' }}
                                                             >
@@ -1128,36 +1099,36 @@ export default function OperationStaffDashboard({ user }) {
                                         <p>Chưa có yêu cầu phê duyệt Startup nào.</p>
                                     </div>
                                 ) : pendingStartups.map(startup => (
-                                    <div key={startup.id} className={styles.listItem}>
+                                    <div key={startup?.id || Math.random()} className={styles.listItem}>
                                         <div className={styles.listContent} style={{ width: '100%' }}>
                                             <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
                                                 <h4 className={styles.listTitle} style={{ margin: 0 }}>
-                                                    {startup.companyName || 'Công ty khởi nghiệp'}
+                                                    {startup?.companyName || startup?.name || 'Công ty khởi nghiệp'}
                                                 </h4>
                                                 <span className={`${styles.badge} ${styles.badgePending}`}>
-                                                    {startup.industry || 'Chưa xác định'}
+                                                    {startup?.industry || 'Chưa xác định'}
                                                 </span>
                                             </div>
                                             <div className={styles.listMeta} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                <span>Người đại diện: {startup.founder || 'Chưa cập nhật'}</span>
-                                                <span>Email: {startup.email || 'Chưa cập nhật'}</span>
-                                                <span>Ngày đăng ký: {startup.createdAt ? new Date(startup.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</span>
+                                                <span>Người đại diện: {startup?.founder || startup?.representName || 'Chưa cập nhật'}</span>
+                                                <span>Email: {startup?.email || 'Chưa cập nhật'}</span>
+                                                <span>Ngày đăng ký: {startup?.createdAt ? new Date(startup.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</span>
                                             </div>
                                         </div>
                                         <div className={styles.listActions}>
                                             <button
                                                 className={styles.primaryBtn}
                                                 style={{ borderRadius: '99px', padding: '6px 16px', fontSize: '13px' }}
-                                                onClick={() => handleApproveStartup(startup.id)}
-                                                disabled={processingProjectId === startup.id}
+                                                onClick={() => handleApproveStartup(startup?.id)}
+                                                disabled={processingProjectId === startup?.id}
                                             >
                                                 Phê duyệt
                                             </button>
                                             <button
                                                 className={styles.secondaryBtn}
                                                 style={{ borderRadius: '99px', padding: '6px 16px', fontSize: '13px', color: 'var(--staff-danger)' }}
-                                                onClick={() => handleRejectStartup(startup.id, null)}
-                                                disabled={processingProjectId === startup.id}
+                                                onClick={() => handleRejectStartup(startup?.id, null)}
+                                                disabled={processingProjectId === startup?.id}
                                             >
                                                 Từ chối
                                             </button>
@@ -1630,11 +1601,11 @@ export default function OperationStaffDashboard({ user }) {
                                     </div>
 
                                     {/* Price Info */}
-                                    <div style={{ 
-                                        marginBottom: '24px', 
-                                        padding: '20px', 
-                                        backgroundColor: 'var(--bg-secondary)', 
-                                        borderRadius: '12px', 
+                                    <div style={{
+                                        marginBottom: '24px',
+                                        padding: '20px',
+                                        backgroundColor: 'var(--bg-secondary)',
+                                        borderRadius: '12px',
                                         border: '1px solid var(--border-color)',
                                         display: 'flex',
                                         justifyContent: 'space-between',
@@ -1659,14 +1630,13 @@ export default function OperationStaffDashboard({ user }) {
                                             </div>
                                             <div>
                                                 <span style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Trạng thái hiện tại:</span>
-                                                <div className={`${local.bookingBadge} ${
-                                                    selectedBooking.status === 'Pending' ? local.bookingBadgePending : 
-                                                    selectedBooking.status === 'Confirmed' ? local.bookingBadgeConfirmed : 
-                                                    local.bookingBadgeCompleted
-                                                }`} style={{ display: 'inline-flex' }}>
+                                                <div className={`${s.bookingBadge} ${selectedBooking.status === 'Pending' ? s.bookingBadgePending :
+                                                        selectedBooking.status === 'Confirmed' ? s.bookingBadgeConfirmed :
+                                                            s.bookingBadgeCompleted
+                                                    }`} style={{ display: 'inline-flex' }}>
                                                     {selectedBooking.status === 'Pending' ? <Clock size={12} /> : <CheckCircle size={12} />}
-                                                    {selectedBooking.status === 'Pending' ? 'Chờ xác nhận' : 
-                                                     selectedBooking.status === 'Confirmed' ? 'Đã xác nhận' : 'Hoàn thành'}
+                                                    {selectedBooking.status === 'Pending' ? 'Chờ xác nhận' :
+                                                        selectedBooking.status === 'Confirmed' ? 'Đã xác nhận' : 'Hoàn thành'}
                                                 </div>
                                             </div>
                                         </div>

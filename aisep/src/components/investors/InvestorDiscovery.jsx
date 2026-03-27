@@ -6,7 +6,7 @@ import InvestorDetail from './InvestorDetail';
 import investorService from '../../services/investorService';
 import styles from './InvestorDiscovery.module.css';
 
-export default function InvestorDiscovery({ user }) {
+export default function InvestorDiscovery({ user, onShowLogin }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [selectedInvestorId, setSelectedInvestorId] = useState(null);
@@ -139,6 +139,18 @@ export default function InvestorDiscovery({ user }) {
                 document.body
             )}
 
+            {/* Role-based restriction for connection requests */}
+            {(() => {
+                const roleValue = user?.role;
+                const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
+                const canConnect = roleStr === 'startup' || roleStr === 'advisor' || roleValue === 0 || roleValue === 2;
+                
+                return (
+                    /* This is purely for logical state, no UI here */
+                    null
+                );
+            })()}
+
             {/* Investor Feed */}
             <div className={styles.feed}>
                 {isLoading ? (
@@ -193,13 +205,21 @@ export default function InvestorDiscovery({ user }) {
 
                                 {/* Actions Group (Bottom Left) */}
                                 <div className={styles.actions}>
-                                    <button className={styles.primaryBtn} onClick={(e) => {
-                                        e.stopPropagation();
-                                        alert(`Yêu cầu kết nối đã được gửi tới ${investor.name}!`);
-                                    }}>
-                                        <TrendingUp size={15} />
-                                        <span>Yêu cầu kết nối</span>
-                                    </button>
+                                    {(() => {
+                                        const roleValue = user?.role;
+                                        const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
+                                        const canConnect = roleStr === 'startup' || roleStr === 'advisor' || roleValue === 0 || roleValue === 2;
+                                        
+                                        return canConnect && (
+                                            <button className={styles.primaryBtn} onClick={(e) => {
+                                                e.stopPropagation();
+                                                alert(`Yêu cầu kết nối đã được gửi tới ${investor.name}!`);
+                                            }}>
+                                                <TrendingUp size={15} />
+                                                <span>Yêu cầu kết nối</span>
+                                            </button>
+                                        );
+                                    })()}
                                     <button className={styles.viewProfileBtn} onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedInvestorId(investor.id);

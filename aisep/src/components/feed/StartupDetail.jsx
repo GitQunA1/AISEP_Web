@@ -7,11 +7,12 @@ import styles from './StartupDetail.module.css';
 import startupProfileService from '../../services/startupProfileService';
 import ProfileLoading from '../common/ProfileLoading';
 import ProfileErrorScreen from '../common/ProfileErrorScreen';
+import AuthRequirementScreen from '../common/AuthRequirementScreen';
 
 const DISPLAY = (val, fallback = 'Đang cập nhật') =>
   val && String(val).trim() ? val : fallback;
 
-export default function StartupDetail({ startupId, onBack }) {
+export default function StartupDetail({ startupId, onBack, user, onShowLogin }) {
   const [startup, setStartup] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -37,6 +38,16 @@ export default function StartupDetail({ startupId, onBack }) {
 
     if (startupId) fetchStartup();
   }, [startupId]);
+
+  if (!user) {
+    return (
+      <AuthRequirementScreen 
+        type="startup" 
+        onBack={onBack} 
+        onLogin={onShowLogin} 
+      />
+    );
+  }
 
   if (isLoading) {
     return <ProfileLoading message="Đang tải thông tin startup..." />;
@@ -100,9 +111,19 @@ export default function StartupDetail({ startupId, onBack }) {
             )}
           </div>
           <div className={styles.headerActions}>
-            <button className={styles.connectBtn}>
-              Kết nối
-            </button>
+            {(() => {
+                const roleValue = user?.role;
+                const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
+                const canConnect = roleStr === 'startup' || roleStr === 'advisor' || roleValue === 0 || roleValue === 2;
+                
+                return canConnect && (
+                    <button className={styles.connectBtn} onClick={() => {
+                        alert(`Yêu cầu kết nối đã được gửi tới ${startup.companyName}!`);
+                    }}>
+                      Kết nối
+                    </button>
+                );
+            })()}
           </div>
         </div>
 

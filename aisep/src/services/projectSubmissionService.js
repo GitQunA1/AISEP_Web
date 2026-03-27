@@ -7,12 +7,23 @@ import apiClient from './apiClient';
 export const projectSubmissionService = {
   /**
    * Submit startup project information
-   * @param {Object} projectData - Must contain: projectName, shortDescription, developmentStage, problemStatement, solutionDescription, targetCustomers, uniqueValueProposition, marketSize, businessModel, revenue, competitors, teamMembers, keySkills, teamExperience
-   * @returns {Promise<any>}
-   */
-  /**
-   * Submit startup project information
-   * @param {Object} projectData 
+   * @param {Object} projectData - Project submission object containing:
+   * @param {string} projectData.projectName - Project name (required)
+   * @param {string} projectData.shortDescription - Short description (required)
+   * @param {number} projectData.developmentStage - Development stage: 0=Idea, 1=MVP, 2=Growth (required)
+   * @param {number} projectData.industry - Industry ID 0-14 (required)
+   * @param {string} projectData.problemStatement - Problem statement (required)
+   * @param {string} projectData.solutionDescription - Solution description (required)
+   * @param {string} projectData.targetCustomers - Target customers description (required)
+   * @param {string} projectData.uniqueValueProposition - UVP (required for MVP/Growth)
+   * @param {number} projectData.marketSize - Market size in VND (0 or optional for Idea)
+   * @param {string} projectData.businessModel - Business model (required for MVP/Growth)
+   * @param {number} projectData.revenue - Current revenue in VND (0 or optional for Idea)
+   * @param {string} projectData.competitors - Competitors description (required for MVP/Growth)
+   * @param {string} projectData.teamMembers - Team members as comma-separated (required)
+   * @param {string} projectData.keySkills - Key skills/tags as comma-separated (required for MVP/Growth)
+   * @param {string} projectData.teamExperience - Team experience description (required for Growth)
+   * @param {File} projectData.projectImageFile - Project image file (optional, max 5MB)
    * @returns {Promise<any>}
    */
   submitStartupInfo: async (projectData) => {
@@ -31,7 +42,7 @@ export const projectSubmissionService = {
 
   /**
    * Creates a new startup project
-   * @param {Object} projectData 
+   * @param {Object} projectData - Same structure as submitStartupInfo (includes projectImageFile)
    * @returns {Promise<any>}
    */
   createProject: async (projectData) => {
@@ -51,7 +62,7 @@ export const projectSubmissionService = {
   /**
    * Update an existing draft project
    * @param {string|number} id - The project ID
-   * @param {Object} projectData 
+   * @param {Object} projectData - Same structure as submitStartupInfo (includes projectImageFile)
    * @returns {Promise<any>}
    */
   updateProject: async (id, projectData) => {
@@ -153,10 +164,11 @@ export const projectSubmissionService = {
 
   /**
    * Get All Projects (for the public feed)
+   * Uses GET /api/Projects/non-premium endpoint with pagination
    * @returns {Promise<any>}
    */
   getAllProjects: async () => {
-    const response = await apiClient.get('/api/Projects?pageSize=100');
+    const response = await apiClient.get('/api/Projects/non-premium?pageSize=100');
     return response;
   },
 
