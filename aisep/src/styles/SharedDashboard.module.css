@@ -359,6 +359,7 @@
     font-weight: 700;
     cursor: pointer;
     transition: background-color 0.2s;
+    min-width: 130px; /* Prevent shrinking when text changes to ellipsis */
 }
 
 .primaryBtn:hover {
@@ -1185,13 +1186,25 @@
 .statusBadge {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
+    justify-content: center; /* Center horizontally */
+    gap: 6px;
     background-color: rgba(23, 191, 99, 0.1);
     color: #17bf63;
     padding: 2px 8px;
     border-radius: 9999px;
     font-size: 11px;
     font-weight: 700;
+    min-width: 100px; /* Prevent shrinking during loading dots/spinner */
+    height: 22px; /* Fixed height for stability */
+}
+
+.statusBadgeUnverified {
+    background-color: rgba(107, 114, 128, 0.1);
+    color: #9ca3af;
+}
+
+.statusBadgeLoading {
+    opacity: 0.8;
 }
 
 .tableActions {
