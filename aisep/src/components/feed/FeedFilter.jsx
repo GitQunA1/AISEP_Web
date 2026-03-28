@@ -8,15 +8,15 @@ import styles from './FeedFilter.module.css';
  * @param {function} onFilterChange - Callback when filters change
  * @param {object} totalCount - Total number of projects
  */
-function FeedFilter({ onFilterChange, totalCount = 0 }) {
-  const [activeSort, setActiveSort] = useState('all');
+function FeedFilter({ onFilterChange, totalCount = 0, activeFilters }) {
+  const [activeSort, setActiveSort] = useState(activeFilters?.sort || 'all');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
-    industry: '',
-    stage: '',
-    minScore: 0,
-    fundingStage: '',
-    sort: 'all',
+    industry: activeFilters?.industry || '',
+    stage: activeFilters?.stage || '',
+    minScore: activeFilters?.minScore || 0,
+    fundingStage: activeFilters?.fundingStage || '',
+    sort: activeFilters?.sort || 'all',
   });
   
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0, opacity: 0 });
@@ -58,6 +58,34 @@ function FeedFilter({ onFilterChange, totalCount = 0 }) {
     setFilters(newFilters);
     if (onFilterChange) onFilterChange(newFilters);
   };
+
+  // Keep state in sync if activeFilters changes from outside (e.g. from props)
+  useEffect(() => {
+    if (activeFilters) {
+      if (activeFilters.sort !== activeSort) {
+        setActiveSort(activeFilters.sort || 'all');
+      }
+      setFilters(prev => {
+        // Only update if actually different to avoid cycles
+        if (
+          prev.industry !== activeFilters.industry ||
+          prev.stage !== activeFilters.stage ||
+          prev.minScore !== activeFilters.minScore ||
+          prev.fundingStage !== activeFilters.fundingStage ||
+          prev.sort !== activeFilters.sort
+        ) {
+          return {
+            industry: activeFilters.industry || '',
+            stage: activeFilters.stage || '',
+            minScore: activeFilters.minScore || 0,
+            fundingStage: activeFilters.fundingStage || '',
+            sort: activeFilters.sort || 'all',
+          };
+        }
+        return prev;
+      });
+    }
+  }, [activeFilters]);
 
   const handleFilterChange = (filterName, value) => {
     const newFilters = { ...filters, [filterName]: value };
