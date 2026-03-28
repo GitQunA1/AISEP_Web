@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeft, Rocket, TrendingUp, Award, Shield } from 'lucide-react';
+import { ArrowLeft, Rocket, TrendingUp, Award } from 'lucide-react';
 import styles from './RegisterSelection.module.css';
 
 /**
@@ -28,12 +28,6 @@ function RegisterSelection({ onBack, onRoleSelect }) {
       icon: Award,
       title: 'Cố vấn',
       description: 'Kiếm thu nhập từ chuyên môn bằng cách tư vấn startup và cung cấp dịch vụ tư vấn chuyên nghiệp.',
-    },
-    {
-      id: 'operation_staff',
-      icon: Shield,
-      title: 'Nhân viên vận hành',
-      description: 'Quản lý hoạt động nền tảng, xác minh tài liệu và phê duyệt đăng ký người dùng.',
     },
   ];
 

@@ -256,9 +256,9 @@
   /* Show big logo */
 
   .cardsGrid {
-    grid-template-columns: repeat(4, 1fr);
-    /* 4 Cards in a row */
-    max-width: 1200px;
+    grid-template-columns: repeat(3, 1fr);
+    /* 3 Cards in a row */
+    max-width: 1000px;
     gap: 24px;
   }
 

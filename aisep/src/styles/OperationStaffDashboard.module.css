@@ -520,16 +520,17 @@
     gap: 20px;
 }
 
-.summaryCard {
-    padding: 20px;
+.summaryC.bcard {
+    position: relative;
+    padding: 22px 20px;
     background-color: var(--bg-secondary);
     border: 1px solid var(--border-color);
     border-radius: 16px;
+    margin-bottom: 20px;
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    transition: background-color 0.2s;
-    position: relative;
+    gap: 14px;
     overflow: hidden;
 }
 
@@ -537,12 +538,17 @@
     background-color: var(--bg-hover);
 }
 
-.summaryIndicator {
+.summaryIndi.bcardStrip {
     position: absolute;
     left: 0;
     top: 0;
     bottom: 0;
-    width: 4px;
+    width: 3px;
+    transition: width 0.3s ease;
+}
+
+.bcard:hover .bcardStrip {
+    width: 5px;
 }
 
 .summaryTitle {
@@ -851,6 +857,10 @@ btnReject {
     border-bottom-color: #ff7a00;
 }
 
+.bcolHead.draft {
+    border-bottom-color: #64748b;
+}
+
 .bcolHead.appr {
     border-bottom-color: #00ba7c;
 }
@@ -887,6 +897,11 @@ btnReject {
     box-shadow: 0 0 8px rgba(255, 122, 0, 0.4);
 }
 
+.bctDot.draft {
+    background: #64748b;
+    box-shadow: 0 0 8px rgba(100, 116, 139, 0.4);
+}
+
 .bctDot.appr {
     background: #00ba7c;
     box-shadow: 0 0 8px rgba(0, 186, 124, 0.4);
@@ -918,6 +933,11 @@ btnReject {
 .bcolN.pend {
     color: #ff7a00;
     background: rgba(255, 122, 0, 0.1);
+}
+
+.bcolN.draft {
+    color: #64748b;
+    background: rgba(100, 116, 139, 0.1);
 }
 
 .bcolN.appr {
@@ -996,6 +1016,10 @@ btnReject {
     background: #ff7a00;
 }
 
+.bcardStrip.draft {
+    background: #64748b;
+}
+
 .bcardStrip.appr {
     background: #00ba7c;
 }
@@ -1027,8 +1051,9 @@ btnReject {
 
 .bcardMainInfo {
     display: flex;
-    align-items: center;
-    gap: 6px;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
     flex: 1;
     min-width: 0;
 }
@@ -1145,35 +1170,33 @@ btnReject {
     border-top: 1px solid var(--border-color);
 }
 
-
 .baBtn {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 10px 8px;
-    border-radius: 12px;
+    gap: 8px;
+    padding: 0 16px;
+    height: 38px;
+    border-radius: 10px;
     font-size: 13px;
     color: var(--text-primary);
     cursor: pointer;
-    transition: all .15s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid var(--border-color);
     background: rgba(var(--bg-primary-rgb), 0.08);
-    /* More visible background */
     font-weight: 600;
 }
 
 .baBtn svg {
-    width: 14px;
-    height: 14px;
-    fill: currentColor;
+    width: 16px !important;
+    height: 16px !important;
 }
 
 .baBtn:hover {
     color: var(--primary-blue);
     background: rgba(29, 155, 240, 0.1);
     border-color: var(--primary-blue);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 12px rgba(29, 155, 240, 0.1);
 }
 
 .baBtn.rej {
@@ -1395,6 +1418,10 @@ btnReject {
         padding: 8px 0 100px 0;
     }
 
+    .activeMobileTab[data-status='draft']::after {
+        background: #64748b;
+    }
+
     .activeMobileTab[data-status='pend']::after {
         background: #ff7a00;
     }
@@ -1552,6 +1579,7 @@ btnReject {
     color: #ff7a00 !important;
     border-color: rgba(255, 122, 0, 0.2) !important;
 }
+
 
 .bookingBadgeConfirmed {
     background: rgba(29, 155, 240, 0.1) !important;
