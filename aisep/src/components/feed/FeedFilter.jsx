@@ -23,6 +23,27 @@ function FeedFilter({ onFilterChange, totalCount = 0, activeFilters }) {
   const tabsRef = useRef(null);
   const tabElementsRef = useRef({});
 
+  // Scroll visibility for mobile indicators
+  const [showLeftIndicator, setShowLeftIndicator] = useState(false);
+  const [showRightIndicator, setShowRightIndicator] = useState(false);
+
+  const checkScroll = () => {
+    if (tabsRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = tabsRef.current;
+      setShowLeftIndicator(scrollLeft > 10);
+      setShowRightIndicator(scrollLeft < scrollWidth - clientWidth - 10);
+    }
+  };
+
+  useEffect(() => {
+    const timer = setTimeout(checkScroll, 100);
+    window.addEventListener('resize', checkScroll);
+    return () => {
+      clearTimeout(timer);
+      window.removeEventListener('resize', checkScroll);
+    };
+  }, [totalCount]);
+
   // Update underline indicator whenever activeSort or sortOptions change
   useEffect(() => {
     const updateIndicator = () => {
@@ -138,32 +159,36 @@ function FeedFilter({ onFilterChange, totalCount = 0, activeFilters }) {
     <div className={styles.filterContainer}>
       <div className={styles.tabsWrapper}>
         <div className={styles.tabsInner}>
-          <div className={styles.tabsList} ref={tabsRef}>
-            {sortOptions.map(option => {
-              const IconComponent = option.icon;
-              return (
-                <button 
-                  key={option.id}
-                  ref={el => tabElementsRef.current[option.id] = el}
-                  className={`${styles.tabItem} ${activeSort === option.id ? styles.activeTab : ''}`}
-                  onClick={() => handleSortClick(option.id)}
-                >
-                  <span className={styles.tabIcon}><IconComponent size={14} /></span>
-                  <span>{option.label}</span>
-                  {option.id === 'all' && <span className={styles.tabCount}>{totalCount}</span>}
-                </button>
-              );
-            })}
-            
-            {/* Sliding Underline Indicator */}
-            <div 
-              className={styles.activeIndicator} 
-              style={{
-                left: `${indicatorStyle.left}px`,
-                width: `${indicatorStyle.width}px`,
-                opacity: indicatorStyle.opacity
-              }} 
-            />
+          <div className={styles.tabsListWrapper}>
+            {showLeftIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorLeft}`} />}
+            <div className={styles.tabsList} ref={tabsRef} onScroll={checkScroll}>
+              {sortOptions.map(option => {
+                const IconComponent = option.icon;
+                return (
+                  <button 
+                    key={option.id}
+                    ref={el => tabElementsRef.current[option.id] = el}
+                    className={`${styles.tabItem} ${activeSort === option.id ? styles.activeTab : ''}`}
+                    onClick={() => handleSortClick(option.id)}
+                  >
+                    <span className={styles.tabIcon}><IconComponent size={14} /></span>
+                    <span>{option.label}</span>
+                    {option.id === 'all' && <span className={styles.tabCount}>{totalCount}</span>}
+                  </button>
+                );
+              })}
+              
+              {/* Sliding Underline Indicator */}
+              <div 
+                className={styles.activeIndicator} 
+                style={{
+                  left: `${indicatorStyle.left}px`,
+                  width: `${indicatorStyle.width}px`,
+                  opacity: indicatorStyle.opacity
+                }} 
+              />
+            </div>
+            {showRightIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorRight}`} />}
           </div>
           
           <div className={styles.filterToggleWrapper}>
