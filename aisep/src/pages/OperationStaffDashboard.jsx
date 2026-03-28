@@ -14,6 +14,111 @@ import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/ProjectStatus';
 
 /**
+ * ProjectKanbanCard - Single card for the Kanban board
+ */
+const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, processingProjectId, processingAction }) => {
+    // Determine development stage label and class
+    const getDevStageTag = (stage) => {
+        if (stage === 0 || stage === 'Idea') return { label: 'Ý tưởng', class: local.btagIdea };
+        if (stage === 1 || stage === 'MVP') return { label: 'MVP', class: local.btagMvp };
+        return { label: 'Tăng trưởng', class: local.btagGrowth };
+    };
+
+    const stageInfo = getDevStageTag(project?.developmentStage);
+    const teamSize = project?.teamMembers?.toString().split(',').length || 0;
+    const teamMembers = project?.teamMembers?.toString().split(',') || [];
+
+    // Helper for mini avatars
+    const avaClasses = [local.maB, local.maP, local.maG, local.maPk, local.maO];
+
+    return (
+        <div className={local.bcard}>
+            <div className={`${local.bcardStrip} ${local[status]}`}></div>
+            <div className={local.bcardBody}>
+                <div className={local.bcardRow1}>
+                    <div className={local.bcardMainInfo}>
+                        <div className={local.bcardName} title={project?.projectName}>
+                            {project?.projectName || 'Dự án không tên'}
+                        </div>
+                        <span className={`${local.btag} ${stageInfo.class}`}>{stageInfo.label}</span>
+                    </div>
+                    <div className={local.bcardTime}>
+                        {project?.createdAt ? new Date(project.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                    </div>
+                </div>
+
+                <p className={local.bcardDesc}>{project?.shortDescription || '-'}</p>
+
+                <div className={local.bcardFields}>
+                    <div className={local.bf}>
+                        <div className={local.bfKey}>Vấn đề</div>
+                        <div className={local.bfVal} title={project?.problemStatement}>{project?.problemStatement || '-'}</div>
+                    </div>
+                    <div className={local.bf}>
+                        <div className={local.bfKey}>Giải pháp</div>
+                        <div className={local.bfVal} title={project?.solutionDescription}>{project?.solutionDescription || '-'}</div>
+                    </div>
+                </div>
+
+                <div className={local.bcardTeam}>
+                    {teamMembers.slice(0, 3).map((name, i) => (
+                        <div 
+                            key={i} 
+                            className={`${local.miniAva} ${avaClasses[i % avaClasses.length]}`}
+                            style={i > 0 ? { marginLeft: '-8px', border: '2px solid var(--bg-primary)' } : {}}
+                            title={name.trim()}
+                        >
+                            {name.trim().charAt(0).toUpperCase()}
+                        </div>
+                    ))}
+                    {teamSize > 3 && <span>+{teamSize - 3} thành viên</span>}
+                    {teamSize <= 3 && teamSize > 0 && <span>{teamSize} thành viên</span>}
+                </div>
+
+                <div className={local.bcardActions}>
+                    <button className={local.baBtn} onClick={onDetail} title="Chi tiết">
+                        <ArrowRight size={14} />
+                        Chi tiết
+                    </button>
+
+                    {status === 'pend' && (
+                        <>
+                            <button 
+                                className={`${local.baBtn} ${local.rej}`} 
+                                onClick={onReject} 
+                                disabled={processingProjectId !== null}
+                                title="Từ chối"
+                            >
+                                {processingProjectId === project.projectId && processingAction === 'reject' ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+                                )}
+                                Từ chối
+                            </button>
+                            <button 
+                                className={`${local.baBtn} ${local.apr}`} 
+                                onClick={onApprove} 
+                                disabled={processingProjectId !== null}
+                                title="Phê duyệt"
+                            >
+                                {processingProjectId === project.projectId && processingAction === 'approve' ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                ) : (
+                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg>
+                                )}
+                                Duyệt
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+
+/**
  * OperationStaffDashboard - Dashboard for Operation Staff
  * Features: Document verification, User approvals, Activity monitoring, Request management
  */
@@ -58,6 +163,7 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
     const [showHistoryView, setShowHistoryView] = useState(false);
     const [selectedHistoryResult, setSelectedHistoryResult] = useState(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     // Additional Statistics state for enhanced dashboard
     const [totalProjects, setTotalProjects] = useState(0);
@@ -72,6 +178,16 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
     const [isLoadingBookings, setIsLoadingBookings] = useState(false);
     const [bookingFilters, setBookingFilters] = useState('');
     const [bookingPage, setBookingPage] = useState(1);
+
+    // Mobile States
+    const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+    const [activeMobileTab, setActiveMobileTab] = useState('pend'); // 'pend', 'appr', 'rej'
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth <= 1024);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
     const [bookingPageSize, setBookingPageSize] = useState(10);
     const [allBookings, setAllBookings] = useState([]);
 
@@ -346,7 +462,11 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
         try {
             const response = await projectSubmissionService.approveProject(projectId);
             if (response?.success) {
-                setPendingProjects(pendingProjects.filter(p => p.projectId !== projectId));
+                const projectToMove = pendingProjects.find(p => p.projectId === projectId);
+                if (projectToMove) {
+                    setApprovedProjects([{ ...projectToMove, status: 'Approved' }, ...approvedProjects]);
+                    setPendingProjects(pendingProjects.filter(p => p.projectId !== projectId));
+                }
                 setModalType('success');
                 setModalMessage('✓ ' + (response?.message || 'Dự án đã được phê duyệt thành công!'));
                 setShowModal(true);
@@ -388,7 +508,11 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
         try {
             const response = await projectSubmissionService.rejectProject(projectId, reason);
             if (response?.success) {
-                setPendingProjects(pendingProjects.filter(p => p.projectId !== projectId));
+                const projectToMove = pendingProjects.find(p => p.projectId === projectId);
+                if (projectToMove) {
+                    setRejectedProjects([{ ...projectToMove, status: 'Rejected' }, ...rejectedProjects]);
+                    setPendingProjects(pendingProjects.filter(p => p.projectId !== projectId));
+                }
                 setModalType('success');
                 setModalMessage('✓ ' + (response?.message || 'Dự án đã bị từ chối!'));
                 setShowModal(true);
@@ -412,6 +536,21 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
         }
     };
 
+    const filterProjects = (projects) => {
+        if (!searchTerm || !searchTerm.trim()) return projects || [];
+        const lowerSearch = searchTerm.toLowerCase();
+        return (projects || []).filter(p => 
+            p.projectName?.toLowerCase().includes(lowerSearch) ||
+            p.companyName?.toLowerCase().includes(lowerSearch) ||
+            p.startupName?.toLowerCase().includes(lowerSearch) ||
+            p.shortDescription?.toLowerCase().includes(lowerSearch)
+        );
+    };
+
+    const filteredPending = filterProjects(pendingProjects);
+    const filteredApproved = filterProjects(approvedProjects);
+    const filteredRejected = filterProjects(rejectedProjects);
+
     return (
         <div className={styles.container}>
             {/* Unified Header */}
@@ -420,6 +559,8 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
                 subtitle={`Xin chào, ${user?.name || 'Nhân viên'}! Quản lý hoạt động nền tảng và các yêu cầu phê duyệt.`}
                 showFilter={false}
                 user={user}
+                searchTerm={searchTerm}
+                onSearchChange={activeSection === 'project_management' ? setSearchTerm : null}
             />
 
             {/* Quick Stats - Only show in main statistics/analytics dashboard views */}
@@ -754,165 +895,149 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
                 )}
 
                 {/* Project Management Section (All statuses) */}
+                {/* Project Management Kanban Board */}
                 {activeSection === 'project_management' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <div className={styles.cardHeader} style={{ marginBottom: '24px' }}>
-                                <h3 className={styles.cardTitle} style={{ marginBottom: 0 }}>Quản lý dự án</h3>
-                                <div style={{
-                                    display: 'flex',
-                                    gap: '8px',
-                                    flexWrap: 'wrap'
-                                }}>
-                                    <button
-                                        onClick={() => setProjectFilter('all')}
-                                        className={projectFilter === 'all' ? styles.primaryBtn : styles.secondaryBtn}
-                                        style={{ padding: '8px 20px', fontSize: '12px' }}
-                                    >
-                                        Tất cả ({(pendingProjects?.length || 0) + (approvedProjects?.length || 0) + (rejectedProjects?.length || 0)})
-                                    </button>
-                                    <button
-                                        onClick={() => setProjectFilter('pending')}
-                                        className={projectFilter === 'pending' ? styles.primaryBtn : styles.secondaryBtn}
-                                        style={{ padding: '8px 20px', fontSize: '12px' }}
-                                    >
-                                        Chờ xử lý ({pendingProjects?.length || 0})
-                                    </button>
-                                    <button
-                                        onClick={() => setProjectFilter('approved')}
-                                        className={projectFilter === 'approved' ? styles.primaryBtn : styles.secondaryBtn}
-                                        style={{ padding: '8px 20px', fontSize: '12px' }}
-                                    >
-                                        Đã duyệt ({approvedProjects?.length || 0})
-                                    </button>
-                                    <button
-                                        onClick={() => setProjectFilter('rejected')}
-                                        className={projectFilter === 'rejected' ? styles.primaryBtn : styles.secondaryBtn}
-                                        style={{ padding: '8px 20px', fontSize: '12px' }}
-                                    >
-                                        Từ chối ({rejectedProjects?.length || 0})
-                                    </button>
-                                </div>
+                    <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, gap: 0 }}>
+                        
+                        {/* Mobile Tab Switcher */}
+                        {isMobile && (
+                            <div className={local.mobileTabSwitcher}>
+                                <button 
+                                    className={`${local.mobileTab} ${activeMobileTab === 'pend' ? local.activeMobileTab : ''}`}
+                                    onClick={() => setActiveMobileTab('pend')}
+                                    data-status="pend"
+                                >
+                                    <div className={`${local.bctDot} ${local.pend}`}></div>
+                                    <span>Chờ Xử Lý</span>
+                                    <span className={local.mobileTabCount}>{filteredPending.length}</span>
+                                </button>
+                                <button 
+                                    className={`${local.mobileTab} ${activeMobileTab === 'appr' ? local.activeMobileTab : ''}`}
+                                    onClick={() => setActiveMobileTab('appr')}
+                                    data-status="appr"
+                                >
+                                    <div className={`${local.bctDot} ${local.appr}`}></div>
+                                    <span>Đã Duyệt</span>
+                                    <span className={local.mobileTabCount}>{filteredApproved.length}</span>
+                                </button>
+                                <button 
+                                    className={`${local.mobileTab} ${activeMobileTab === 'rej' ? local.activeMobileTab : ''}`}
+                                    onClick={() => setActiveMobileTab('rej')}
+                                    data-status="rej"
+                                >
+                                    <div className={`${local.bctDot} ${local.rej}`}></div>
+                                    <span>Từ Chối</span>
+                                    <span className={local.mobileTabCount}>{filteredRejected.length}</span>
+                                </button>
                             </div>
+                        )}
 
-                            <div className={styles.list}>
-                                {isLoadingProjects ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                        ⏳ Đang tải danh sách dự án...
-                                    </div>
-                                ) : (
-                                    [
-                                        ...(projectFilter === 'all' || projectFilter === 'pending' ? (Array.isArray(pendingProjects) ? pendingProjects : []) : []),
-                                        ...(projectFilter === 'all' || projectFilter === 'approved' ? (Array.isArray(approvedProjects) ? approvedProjects : []) : []),
-                                        ...(projectFilter === 'all' || projectFilter === 'rejected' ? (Array.isArray(rejectedProjects) ? rejectedProjects : []) : [])
-                                    ].length === 0 ? (
-                                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                            Không có dự án nào trong mục này
-                                        </div>
-                                    ) : (
-                                        [
-                                            ...(projectFilter === 'all' || projectFilter === 'pending' ? (Array.isArray(pendingProjects) ? pendingProjects : []) : []),
-                                            ...(projectFilter === 'all' || projectFilter === 'approved' ? (Array.isArray(approvedProjects) ? approvedProjects : []) : []),
-                                            ...(projectFilter === 'all' || projectFilter === 'rejected' ? (Array.isArray(rejectedProjects) ? rejectedProjects : []) : [])
-                                        ].map(project => (
-                                            <div
-                                                key={project?.projectId || Math.random()}
-                                                className={s.projectCard}
-                                                style={{ borderLeftColor: STATUS_COLORS[project?.status || 'Pending'] || '#ccc' }}
-                                            >
-                                                <div className={s.projectHeader}>
-                                                    <div className={s.titleRow}>
-                                                        <h4 className={s.projectTitle}>{project?.projectName || 'Dự án không tên'}</h4>
-                                                        <span
-                                                            className={s.statusBadge}
-                                                            style={{
-                                                                backgroundColor: `${STATUS_COLORS[project?.status || 'Pending']}25`,
-                                                                color: STATUS_COLORS[project?.status || 'Pending'],
-                                                                fontWeight: '600',
-                                                                border: `1px solid ${STATUS_COLORS[project?.status || 'Pending']}40`
-                                                            }}
-                                                        >
-                                                            {STATUS_LABELS[project?.status || 'Pending'] || 'Đang chờ duyệt'}
-                                                        </span>
-                                                    </div>
-                                                    <p className={s.projectDesc}>{project?.shortDescription || '-'}</p>
-                                                </div>
-
-                                                <div className={s.tagContainer}>
-                                                    <span className={s.metaTag}>
-                                                        {project?.developmentStage === 0 ? 'Ý tưởng' : project?.developmentStage === 1 ? 'MVP' : project?.developmentStage === 'MVP' ? 'MVP' : 'Tăng trưởng'}
-                                                    </span>
-                                                </div>
-
-                                                <div className={s.fieldRow}>
-                                                    <span className={s.fieldLabel}>Vấn đề:</span>
-                                                    <span className={s.fieldValue} title={project?.problemStatement || ''}>{project?.problemStatement || '-'}</span>
-                                                </div>
-                                                <div className={s.fieldRow}>
-                                                    <span className={s.fieldLabel}>Giải pháp:</span>
-                                                    <span className={s.fieldValue} title={project?.solutionDescription || ''}>{project?.solutionDescription || '-'}</span>
-                                                </div>
-
-                                                <div className={s.divider}></div>
-
-                                                <div className={s.footer}>
-                                                    <div className={s.metaInfo}>
-                                                        📅 Nộp: {project?.createdAt ? new Date(project.createdAt).toLocaleDateString('vi-VN') : 'N/A'} | 👥 Đội: {project?.teamMembers?.toString() || '0'}
-                                                    </div>
-                                                    <div className={s.buttonGroup}>
-                                                        <button
-                                                            onClick={() => openDetailModal(project)}
-                                                            className={styles.secondaryBtn}
-                                                            style={{ minWidth: '100px' }}
-                                                        >
-                                                            Chi tiết
-                                                        </button>
-                                                        {project.status === 'Pending' && (
-                                                            <>
-                                                                <button
-                                                                    onClick={() => handleRejectProject(project.projectId)}
-                                                                    className={styles.dangerBtn}
-                                                                    disabled={processingProjectId !== null}
-                                                                    style={{
-                                                                        opacity: processingProjectId !== null ? 0.6 : 1,
-                                                                        cursor: processingProjectId !== null ? 'not-allowed' : 'pointer',
-                                                                        minWidth: '100px'
-                                                                    }}
-                                                                >
-                                                                    {processingProjectId === project.projectId && processingAction === 'reject' ? (
-                                                                        <Loader2 size={18} className={styles.spinner} />
-                                                                    ) : (
-                                                                        'Từ chối'
-                                                                    )}
-                                                                </button>
-                                                                <button
-                                                                    onClick={() => handleApproveProject(project.projectId)}
-                                                                    className={styles.primaryBtn}
-                                                                    disabled={processingProjectId !== null}
-                                                                    style={{
-                                                                        opacity: processingProjectId !== null ? 0.6 : 1,
-                                                                        cursor: processingProjectId !== null ? 'not-allowed' : 'pointer',
-                                                                        minWidth: '100px'
-                                                                    }}
-                                                                >
-                                                                    {processingProjectId === project.projectId && processingAction === 'approve' ? (
-                                                                        <Loader2 size={18} className={styles.spinner} />
-                                                                    ) : (
-                                                                        'Phê duyệt'
-                                                                    )}
-                                                                </button>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </div>
+                        <div className={local.boardGrid}>
+                            {/* Pending Column */}
+                            {(!isMobile || activeMobileTab === 'pend') && (
+                                <div className={local.bcol}>
+                                    {!isMobile && (
+                                        <div className={`${local.bcolHead} ${local.pend}`}>
+                                            <div className={local.bcolTitle}>
+                                                <div className={`${local.bctDot} ${local.pend}`}></div>
+                                                Chờ Xử Lý
                                             </div>
-                                        ))
-                                    )
-                                )}
-                            </div>
+                                            <div className={`${local.bcolN} ${local.pend}`}>{filteredPending.length}</div>
+                                        </div>
+                                    )}
+                                    <div className={local.bcolCards}>
+                                        {isLoadingProjects ? (
+                                            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                                <Loader2 className="animate-spin" size={24} style={{ margin: '0 auto 12px' }} />
+                                                <p style={{ fontSize: '13px' }}>Đang tải...</p>
+                                            </div>
+                                        ) : (filteredPending.length === 0 ? (
+                                            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                {searchTerm ? `Không tìm thấy dự án nào khớp với "${searchTerm}"` : 'Không có dự án chờ xử lý'}
+                                            </div>
+                                        ) : (
+                                            filteredPending.map(project => (
+                                                <ProjectKanbanCard 
+                                                    key={project.projectId} 
+                                                    project={project} 
+                                                    status="pend" 
+                                                    onDetail={() => openDetailModal(project)}
+                                                    onApprove={() => handleApproveProject(project.projectId)}
+                                                    onReject={() => handleRejectProject(project.projectId)}
+                                                    processingProjectId={processingProjectId}
+                                                    processingAction={processingAction}
+                                                />
+                                            ))
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Approved Column */}
+                            {(!isMobile || activeMobileTab === 'appr') && (
+                                <div className={local.bcol}>
+                                    {!isMobile && (
+                                        <div className={`${local.bcolHead} ${local.appr}`}>
+                                            <div className={local.bcolTitle}>
+                                                <div className={`${local.bctDot} ${local.appr}`}></div>
+                                                Đã Duyệt
+                                            </div>
+                                            <div className={`${local.bcolN} ${local.appr}`}>{filteredApproved.length}</div>
+                                        </div>
+                                    )}
+                                    <div className={local.bcolCards}>
+                                        {filteredApproved.length === 0 ? (
+                                            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                {searchTerm ? `Không tìm thấy dự án nào khớp với "${searchTerm}"` : 'Chưa có dự án nào được duyệt'}
+                                            </div>
+                                        ) : (
+                                            filteredApproved.map(project => (
+                                                <ProjectKanbanCard 
+                                                    key={project.projectId} 
+                                                    project={project} 
+                                                    status="appr" 
+                                                    onDetail={() => openDetailModal(project)}
+                                                />
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Rejected Column */}
+                            {(!isMobile || activeMobileTab === 'rej') && (
+                                <div className={local.bcol}>
+                                    {!isMobile && (
+                                        <div className={`${local.bcolHead} ${local.rej}`}>
+                                            <div className={local.bcolTitle}>
+                                                <div className={`${local.bctDot} ${local.rej}`}></div>
+                                                Từ Chối
+                                            </div>
+                                            <div className={`${local.bcolN} ${local.rej}`}>{filteredRejected.length}</div>
+                                        </div>
+                                    )}
+                                    <div className={local.bcolCards}>
+                                        {filteredRejected.length === 0 ? (
+                                            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                {searchTerm ? `Không tìm thấy dự án nào khớp với "${searchTerm}"` : 'Chưa có dự án nào bị từ chối'}
+                                            </div>
+                                        ) : (
+                                            filteredRejected.map(project => (
+                                                <ProjectKanbanCard 
+                                                    key={project.projectId} 
+                                                    project={project} 
+                                                    status="rej" 
+                                                    onDetail={() => openDetailModal(project)}
+                                                />
+                                            ))
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
+
 
                 {/* Booking Management Section */}
                 {activeSection === 'bookings' && (

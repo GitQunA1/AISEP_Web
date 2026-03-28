@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, Search, TrendingUp, Users, User, LayoutDashboard, Sparkles, FileText, Calendar, ShieldCheck, Activity } from 'lucide-react';
+import { Home, Compass, Search, TrendingUp, Users, User, LayoutDashboard, Sparkles, FileText, Calendar, ShieldCheck, Activity } from 'lucide-react';
 import styles from './BottomNav.module.css';
 
 /**
@@ -8,7 +8,7 @@ import styles from './BottomNav.module.css';
  */
 function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInvestors, onShowDashboard, onShowAI, activeTab }) {
   let navItems = [
-    { icon: Home, label: 'Home', displayLabel: 'Trang chủ', href: '#' },
+    { icon: Compass, label: 'Home', displayLabel: 'Khám phá dự án', href: '#' },
     { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Dashboard', href: '#', showWhenLoggedIn: true },
     { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#', hideFor: ['investor'] },
     { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor'] },
