@@ -22,7 +22,57 @@
     width: 100%;
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;
+    align-items: center;
+    gap: 20px;
+}
+
+.actionsSection {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+    justify-content: flex-end;
+}
+
+.searchWrapper {
+    position: relative;
+    width: 100%;
+    max-width: 380px;
+    display: flex;
+    align-items: center;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 14px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+    pointer-events: none;
+    transition: all 0.2s ease;
+}
+
+.searchInput {
+    width: 100%;
+    height: 42px;
+    padding: 0 16px 0 42px;
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 9999px;
+    color: var(--text-primary);
+    font-size: 14px;
+    transition: all 0.2s ease;
+}
+
+.searchInput:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    background-color: var(--bg-primary);
+    box-shadow: 0 0 0 3px rgba(29, 155, 240, 0.1);
+}
+
+.searchInput:focus + .searchIcon {
+    color: var(--primary-blue);
+    opacity: 1;
 }
 
 .titleSection {
@@ -32,17 +82,18 @@
 }
 
 .title {
-    font-size: 26px;
-    font-weight: 700;
+    font-size: 23px;
+    font-weight: 800;
     color: var(--text-primary);
     margin: 0;
+    letter-spacing: -0.5px;
     transition: color var(--transition-base);
 }
 
 .subtitle {
     font-size: 14.5px;
     color: var(--text-secondary);
-    margin: 4px 0 0 0;
+    margin: -4px 0 0 0;
     transition: color var(--transition-base);
     opacity: 0.8;
 }
@@ -114,6 +165,12 @@
     opacity: 0.5;
 }
 
+@media (max-width: 1100px) {
+  .searchWrapper {
+    max-width: 280px;
+  }
+}
+
 @media (max-width: 768px) {
   .feedHeader {
     padding: 16px 0 0 0;
@@ -121,8 +178,25 @@
   .headerInner {
     padding: 0 14px 12px 14px;
   }
-  .title {
-    font-size: 22px;
+  .headerContent {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+  .actionsSection {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .searchWrapper {
+    max-width: 100%;
+    order: 2;
+  }
+  .primaryBtn {
+    order: 1;
+    width: auto;
+    padding: 8px 16px;
   }
   .statValue {
     font-size: 22px;

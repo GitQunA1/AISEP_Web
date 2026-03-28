@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus } from 'lucide-react';
+import { Plus, Search } from 'lucide-react';
 import styles from './FeedHeader.module.css';
 import FeedFilter from './FeedFilter';
 
@@ -20,7 +20,10 @@ function FeedHeader({
   showFilter = true,
   showStats = false,
   stats = { approvedCount: 0, investorCount: 0, industryCount: 0 },
-  industryCounts = {}
+  industryCounts = {},
+  searchTerm = "",
+  onSearchChange,
+  searchPlaceholder = "Tìm kiếm dự án..."
 }) {
   return (
     <div className={styles.container}>
@@ -28,20 +31,35 @@ function FeedHeader({
         <div className={styles.headerInner}>
           <div className={styles.headerContent}>
             <div className={styles.titleSection}>
-              <h2 className={styles.title}>{title}</h2>
+              <h1 className={styles.title}>{title}</h1>
               <p className={styles.subtitle}>{subtitle}</p>
             </div>
 
-            {/* "Đăng Dự Án" button for startups */}
-            {((user?.role?.toString().toLowerCase() === 'startup') || user?.role === 0 || user?.role === '0') && onShowProjectForm && (
-              <button
-                onClick={onShowProjectForm}
-                className={styles.primaryBtn}
-              >
-                <Plus size={18} />
-                Đăng Dự Án
-              </button>
-            )}
+            <div className={styles.actionsSection}>
+              {onSearchChange && (
+                <div className={styles.searchWrapper}>
+                  <Search className={styles.searchIcon} size={18} />
+                  <input
+                    type="text"
+                    className={styles.searchInput}
+                    placeholder={searchPlaceholder}
+                    value={searchTerm}
+                    onChange={(e) => onSearchChange(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {/* "Đăng Dự Án" button for startups */}
+              {((user?.role?.toString().toLowerCase() === 'startup') || user?.role === 0 || user?.role === '0') && onShowProjectForm && (
+                <button
+                  onClick={onShowProjectForm}
+                  className={styles.primaryBtn}
+                >
+                  <Plus size={18} />
+                  Đăng Dự Án
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
