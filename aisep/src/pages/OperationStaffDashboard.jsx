@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileCheck, CheckCircle, AlertCircle, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, FileText, Loader2, TrendingUp, ExternalLink, Shield, History, Calendar, PieChart, Briefcase, Clock, DollarSign } from 'lucide-react';
+import { FileCheck, CheckCircle, AlertCircle, Search, Archive, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, FileText, Loader2, TrendingUp, ExternalLink, Shield, History, Calendar, PieChart, Briefcase, Clock, DollarSign } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import local from '../styles/OperationStaffDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
@@ -62,8 +62,8 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
 
                 <div className={local.bcardTeam}>
                     {teamMembers.slice(0, 3).map((name, i) => (
-                        <div 
-                            key={i} 
+                        <div
+                            key={i}
                             className={`${local.miniAva} ${avaClasses[i % avaClasses.length]}`}
                             style={i > 0 ? { marginLeft: '-8px', border: '2px solid var(--bg-primary)' } : {}}
                             title={name.trim()}
@@ -83,9 +83,9 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
 
                     {status === 'pend' && (
                         <>
-                            <button 
-                                className={`${local.baBtn} ${local.rej}`} 
-                                onClick={onReject} 
+                            <button
+                                className={`${local.baBtn} ${local.rej}`}
+                                onClick={onReject}
                                 disabled={processingProjectId !== null}
                                 title="Từ chối"
                             >
@@ -96,9 +96,9 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
                                 )}
                                 Từ chối
                             </button>
-                            <button 
-                                className={`${local.baBtn} ${local.apr}`} 
-                                onClick={onApprove} 
+                            <button
+                                className={`${local.baBtn} ${local.apr}`}
+                                onClick={onApprove}
                                 disabled={processingProjectId !== null}
                                 title="Phê duyệt"
                             >
@@ -117,12 +117,141 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
     );
 };
 
+/**
+ * BookingKanbanCard - Single card for the Booking Kanban board
+ */
+const BookingKanbanCard = ({ booking, status, onDetail }) => {
+    // Generate an alias dynamically based on status mapping
+    // map status from 'pend', 'conf', 'comp'
+    let statusLabel = 'Chờ xác nhận';
+    let localStatus = status; // To map API status names to CSS classes
+
+    if (status === 'conf' || status === 'Confirmed') {
+        statusLabel = 'Đã xác nhận';
+        localStatus = 'conf';
+    } else if (status === 'comp' || status === 'Completed') {
+        statusLabel = 'Hoàn thành';
+        localStatus = 'comp';
+    } else if (status === 'canc' || status === 'Cancel' || status === 'Cancelled') {
+        statusLabel = 'Đã hủy';
+        localStatus = 'rej'; // Re-use the rejected/red CSS class from projects
+    } else {
+        localStatus = 'pend';
+    }
+
+    return (
+        <div className={local.bcard}>
+            <div className={`${local.bcardStrip} ${local[localStatus]}`}></div>
+            <div className={local.bcardBody}>
+                <div className={local.bcardRow1}>
+                    <div className={local.bcardMainInfo}>
+                        <div className={local.bcardName} style={{ fontFamily: 'monospace', fontSize: '13px', color: 'var(--text-secondary)' }} title={`#${booking?.id || '-'}`}>
+                            #{booking?.id || '-'}
+                        </div>
+                        <span className={`${local.btag}`} style={{
+                            background: localStatus === 'pend' ? 'rgba(255, 122, 0, 0.1)' : localStatus === 'conf' ? 'rgba(29, 155, 240, 0.1)' : localStatus === 'comp' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 33, 46, 0.1)',
+                            color: localStatus === 'pend' ? '#ff7a00' : localStatus === 'conf' ? '#1d9bf0' : localStatus === 'comp' ? '#10b981' : '#f4212e'
+                        }}>
+                            {statusLabel}
+                        </span>
+                    </div>
+                </div>
+
+                <div style={{ marginTop: '12px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '14px', fontWeight: '800' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: '600', width: '50px', flexShrink: 0, textTransform: 'uppercase' }}>Cố vấn</span>
+                            <span style={{
+                                color: localStatus === 'pend' ? '#ff7a00' : localStatus === 'conf' ? '#1d9bf0' : localStatus === 'comp' ? '#10b981' : '#f4212e',
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                            }}>
+                                {booking?.advisorName || 'N/A'}
+                            </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: '600', width: '50px', flexShrink: 0, textTransform: 'uppercase' }}>Khách</span>
+                            <span style={{
+                                color: localStatus === 'pend' ? '#ff7a00' : localStatus === 'conf' ? '#1d9bf0' : localStatus === 'comp' ? '#10b981' : '#f4212e',
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
+                            }}>
+                                {booking?.customerName || 'N/A'}
+                            </span>
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: '12px', fontSize: '14px', fontWeight: '700', color: '#f59e0b' }}>
+                        {Number(booking?.price || 0).toLocaleString('vi-VN')} <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>VND</span>
+                    </div>
+                </div>
+
+                <div className={local.bcardFields} style={{ gridTemplateColumns: '1fr', gap: '6px', marginBottom: '8px' }}>
+                    <div className={local.bf} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                        <Calendar size={13} style={{ flexShrink: 0 }} />
+                        <span style={{ whiteSpace: 'nowrap' }}>{booking?.startTime ? new Date(booking.startTime).toLocaleDateString('vi-VN') : '-'}</span>
+                        <Clock size={13} style={{ marginLeft: '4px', flexShrink: 0 }} />
+                        <span style={{ whiteSpace: 'nowrap' }}>{booking?.startTime ? new Date(booking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                    </div>
+                </div>
+
+                <div className={local.bcardActions} style={{ gridTemplateColumns: '1fr', marginTop: 'auto' }}>
+                    <button className={local.baBtn} style={{ marginLeft: 'auto', padding: '6px 16px' }} onClick={onDetail} title="Chi tiết">
+                        Chi tiết
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/**
+ * KanbanSkeleton - Shimmering loading placeholder
+ */
+const KanbanSkeleton = ({ count = 3 }) => {
+    return (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px 0' }}>
+            {Array.from({ length: count }).map((_, i) => (
+                <div key={i} className={local.skeletonCard}>
+                    <div className={local.shimmer}></div>
+                    <div className={local.skTitle}></div>
+                    <div className={local.skDesc}></div>
+                    <div className={local.skDesc} style={{ width: '70%' }}></div>
+                    <div className={local.skTags}>
+                        <div className={local.skTag}></div>
+                        <div className={local.skTag}></div>
+                    </div>
+                    <div className={local.skBottom}></div>
+                </div>
+            ))}
+        </div>
+    );
+};
+
+/**
+ * EmptyState - Reusable empty or error view
+ */
+const EmptyState = ({ icon: Icon, title, message, onRetry, isError = false }) => {
+    return (
+        <div className={local.emptyStateContainer}>
+            <div className={local.emptyStateIcon}>
+                <Icon size={48} strokeWidth={1.5} color={isError ? '#f4212e' : 'var(--text-muted)'} />
+            </div>
+            <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)' }}>{title}</h4>
+            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '280px', lineHeight: '1.5' }}>{message}</p>
+            {onRetry && (
+                <button className={local.retryBtn} onClick={onRetry}>
+                    Thử lại
+                </button>
+            )}
+        </div>
+    );
+};
+
 
 /**
  * OperationStaffDashboard - Dashboard for Operation Staff
  * Features: Document verification, User approvals, Activity monitoring, Request management
  */
-export default function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
+function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
     // Safety check for styles
     const s = local || {};
     if (!local) {
@@ -178,6 +307,10 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
     const [isLoadingBookings, setIsLoadingBookings] = useState(false);
     const [bookingFilters, setBookingFilters] = useState('');
     const [bookingPage, setBookingPage] = useState(1);
+    const [bookingSearchTerm, setBookingSearchTerm] = useState('');
+    const [activeMobileBookingTab, setActiveMobileBookingTab] = useState('pend'); // 'pend', 'conf', 'comp'
+    const [bookingsError, setBookingsError] = useState(null);
+    const [projectsError, setProjectsError] = useState(null);
 
     // Mobile States
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
@@ -199,6 +332,22 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [isLoadingBookingDetail, setIsLoadingBookingDetail] = useState(false);
 
+    const filterBookings = (list) => {
+        if (!bookingSearchTerm || !bookingSearchTerm.trim()) return list || [];
+        const lowerSearch = bookingSearchTerm.toLowerCase();
+        return (list || []).filter(b =>
+            b.advisorName?.toLowerCase().includes(lowerSearch) ||
+            b.customerName?.toLowerCase().includes(lowerSearch) ||
+            b.id?.toString().toLowerCase().includes(lowerSearch)
+        );
+    };
+
+    // Derived booking lists
+    const pendingBookingsList = filterBookings(allBookings.filter(b => b.status === 'Pending'));
+    const confirmedBookingsList = filterBookings(allBookings.filter(b => b.status === 'Confirmed'));
+    const completedBookingsList = filterBookings(allBookings.filter(b => b.status === 'Completed'));
+    const cancelledBookingsList = filterBookings(allBookings.filter(b => b.status === 'Cancel' || b.status === 'Cancelled'));
+
     const dashboardData = {
         pendingApprovals: pendingStartups.length,
         pendingProjects: pendingProjects.length,
@@ -215,10 +364,31 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
         rejectedProjects: rejectedProjects.length
     };
 
-    // Derived booking lists
-    const pendingBookingsList = allBookings.filter(b => b.status === 'Pending');
-    const confirmedBookingsList = allBookings.filter(b => b.status === 'Confirmed');
-    const completedBookingsList = allBookings.filter(b => b.status === 'Completed');
+    // Mobile Tab Scroll Tracking
+    const tabSwitcherRef = React.useRef(null);
+    const [showLeftTabIndicator, setShowLeftTabIndicator] = useState(false);
+    const [showRightTabIndicator, setShowRightTabIndicator] = useState(false);
+
+    const checkTabScroll = () => {
+        if (tabSwitcherRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = tabSwitcherRef.current;
+            setShowLeftTabIndicator(scrollLeft > 10);
+            setShowRightTabIndicator(scrollLeft < scrollWidth - clientWidth - 10);
+        }
+    };
+
+    // Check scroll on mount, section change, or data change
+    useEffect(() => {
+        if (activeSection === 'bookings' && isMobile) {
+            // Need a slight delay to ensure DOM is updated and widths are calculated
+            const timer = setTimeout(checkTabScroll, 100);
+            window.addEventListener('resize', checkTabScroll);
+            return () => {
+                clearTimeout(timer);
+                window.removeEventListener('resize', checkTabScroll);
+            };
+        }
+    }, [activeSection, isMobile, activeMobileBookingTab, pendingBookingsList.length, confirmedBookingsList.length, completedBookingsList.length, cancelledBookingsList.length]);
 
     const displayedBookings = bookingFilters === ''
         ? allBookings
@@ -233,14 +403,18 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
     // Fetch bookings
     const fetchBookings = async () => {
         setIsLoadingBookings(true);
+        setBookingsError(null);
         try {
             // Fetch all bookings at once for client-side filtering and counting
             const response = await bookingService.getAllBookings('', '', 1, 100);
             if (response && response.items) {
                 setAllBookings(response.items || []);
+            } else {
+                setBookingsError('Không thể tải dữ liệu booking. Vui lòng thử lại sau.');
             }
         } catch (error) {
             console.error('Error fetching bookings:', error);
+            setBookingsError('Lỗi kết nối máy chủ hoặc API không phản hồi.');
             setAllBookings([]);
         } finally {
             setIsLoadingBookings(false);
@@ -273,70 +447,74 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
         }
     };
 
-    // Fetch projects on tab change
+    const fetchPendingProjects = async () => {
+        setIsLoadingProjects(true);
+        setProjectsError(null);
+        try {
+            const response = await projectSubmissionService.getPendingProjects();
+            if (response.success && response.data) {
+                const projects = response.data.items || [];
+                setPendingProjects(projects);
+            } else {
+                setProjectsError('Không thể tải danh sách dự án chờ xử lý.');
+            }
+        } catch (error) {
+            console.error('Error fetching pending projects:', error);
+            setProjectsError('Lỗi kết nối máy chủ khi tải dự án.');
+            setPendingProjects([]);
+        } finally {
+            setIsLoadingProjects(false);
+        }
+    };
+
+    const fetchApprovedProjects = async () => {
+        setIsLoadingProjects(true);
+        try {
+            const response = await projectSubmissionService.getApprovedProjects();
+            if (response.success && response.data) {
+                const projects = response.data.items || [];
+                setApprovedProjects(projects);
+            }
+        } catch (error) {
+            console.error('Error fetching approved projects:', error);
+            setApprovedProjects([]);
+        } finally {
+            setIsLoadingProjects(false);
+        }
+    };
+
+    const fetchRejectedProjects = async () => {
+        setIsLoadingProjects(true);
+        try {
+            const response = await projectSubmissionService.getRejectedProjects();
+            if (response.success && response.data) {
+                const projects = response.data.items || [];
+                setRejectedProjects(projects);
+            }
+        } catch (error) {
+            console.error('Error fetching rejected projects:', error);
+            setRejectedProjects([]);
+        } finally {
+            setIsLoadingProjects(false);
+        }
+    };
+
+    const fetchPendingStartups = async () => {
+        setIsLoadingStartups(true);
+        try {
+            const response = await startupProfileService.getAllStartups();
+            const items = Array.isArray(response) ? response : (response?.data?.items || response?.items || []);
+            const unverified = items.filter(s => s.approvalStatus === 'Pending' || s.approvalStatus === 'Unverified');
+            setPendingStartups(unverified);
+        } catch (error) {
+            console.error('Error fetching pending startups:', error);
+        } finally {
+            setIsLoadingStartups(false);
+        }
+    };
+
+    // Fetch data on tab change
     React.useEffect(() => {
-        const fetchPendingProjects = async () => {
-            setIsLoadingProjects(true);
-            try {
-                const response = await projectSubmissionService.getPendingProjects();
-                if (response.success && response.data) {
-                    const projects = response.data.items || [];
-                    setPendingProjects(projects);
-                }
-            } catch (error) {
-                console.error('Error fetching pending projects:', error);
-                setPendingProjects([]);
-            } finally {
-                setIsLoadingProjects(false);
-            }
-        };
-
-        const fetchApprovedProjects = async () => {
-            setIsLoadingProjects(true);
-            try {
-                const response = await projectSubmissionService.getApprovedProjects();
-                if (response.success && response.data) {
-                    const projects = response.data.items || [];
-                    setApprovedProjects(projects);
-                }
-            } catch (error) {
-                console.error('Error fetching approved projects:', error);
-                setApprovedProjects([]);
-            } finally {
-                setIsLoadingProjects(false);
-            }
-        };
-
-        const fetchRejectedProjects = async () => {
-            setIsLoadingProjects(true);
-            try {
-                const response = await projectSubmissionService.getRejectedProjects();
-                if (response.success && response.data) {
-                    const projects = response.data.items || [];
-                    setRejectedProjects(projects);
-                }
-            } catch (error) {
-                console.error('Error fetching rejected projects:', error);
-                setRejectedProjects([]);
-            } finally {
-                setIsLoadingProjects(false);
-            }
-        };
-
-        const fetchPendingStartups = async () => {
-            setIsLoadingStartups(true);
-            try {
-                const response = await startupProfileService.getAllStartups();
-                const items = Array.isArray(response) ? response : (response?.data?.items || response?.items || []);
-                const unverified = items.filter(s => s.approvalStatus === 'Pending' || s.approvalStatus === 'Unverified');
-                setPendingStartups(unverified);
-            } catch (error) {
-                console.error('Error fetching pending startups:', error);
-            } finally {
-                setIsLoadingStartups(false);
-            }
-        };
-
         if (activeSection === 'project_management') {
             fetchPendingProjects();
             fetchApprovedProjects();
@@ -539,7 +717,7 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
     const filterProjects = (projects) => {
         if (!searchTerm || !searchTerm.trim()) return projects || [];
         const lowerSearch = searchTerm.toLowerCase();
-        return (projects || []).filter(p => 
+        return (projects || []).filter(p =>
             p.projectName?.toLowerCase().includes(lowerSearch) ||
             p.companyName?.toLowerCase().includes(lowerSearch) ||
             p.startupName?.toLowerCase().includes(lowerSearch) ||
@@ -559,8 +737,9 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
                 subtitle={`Xin chào, ${user?.name || 'Nhân viên'}! Quản lý hoạt động nền tảng và các yêu cầu phê duyệt.`}
                 showFilter={false}
                 user={user}
-                searchTerm={searchTerm}
-                onSearchChange={activeSection === 'project_management' ? setSearchTerm : null}
+                searchTerm={activeSection === 'project_management' ? searchTerm : (activeSection === 'bookings' ? bookingSearchTerm : '')}
+                onSearchChange={activeSection === 'project_management' ? setSearchTerm : (activeSection === 'bookings' ? setBookingSearchTerm : null)}
+                searchPlaceholder={activeSection === 'project_management' ? "Tìm kiếm dự án..." : (activeSection === 'bookings' ? "Tìm kiếm booking..." : "Tìm kiếm...")}
             />
 
             {/* Quick Stats - Only show in main statistics/analytics dashboard views */}
@@ -898,11 +1077,11 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
                 {/* Project Management Kanban Board */}
                 {activeSection === 'project_management' && (
                     <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, gap: 0 }}>
-                        
+
                         {/* Mobile Tab Switcher */}
                         {isMobile && (
                             <div className={local.mobileTabSwitcher}>
-                                <button 
+                                <button
                                     className={`${local.mobileTab} ${activeMobileTab === 'pend' ? local.activeMobileTab : ''}`}
                                     onClick={() => setActiveMobileTab('pend')}
                                     data-status="pend"
@@ -911,7 +1090,7 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
                                     <span>Chờ Xử Lý</span>
                                     <span className={local.mobileTabCount}>{filteredPending.length}</span>
                                 </button>
-                                <button 
+                                <button
                                     className={`${local.mobileTab} ${activeMobileTab === 'appr' ? local.activeMobileTab : ''}`}
                                     onClick={() => setActiveMobileTab('appr')}
                                     data-status="appr"
@@ -920,7 +1099,7 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
                                     <span>Đã Duyệt</span>
                                     <span className={local.mobileTabCount}>{filteredApproved.length}</span>
                                 </button>
-                                <button 
+                                <button
                                     className={`${local.mobileTab} ${activeMobileTab === 'rej' ? local.activeMobileTab : ''}`}
                                     onClick={() => setActiveMobileTab('rej')}
                                     data-status="rej"
@@ -932,271 +1111,353 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
                             </div>
                         )}
 
-                        <div className={local.boardGrid}>
-                            {/* Pending Column */}
-                            {(!isMobile || activeMobileTab === 'pend') && (
-                                <div className={local.bcol}>
-                                    {!isMobile && (
-                                        <div className={`${local.bcolHead} ${local.pend}`}>
-                                            <div className={local.bcolTitle}>
-                                                <div className={`${local.bctDot} ${local.pend}`}></div>
-                                                Chờ Xử Lý
+                        {projectsError ? (
+                            <div className={local.errorWrapper}>
+                                <EmptyState
+                                    icon={AlertCircle}
+                                    title="Lỗi tải dữ liệu"
+                                    message={projectsError}
+                                    isError={true}
+                                    onRetry={() => {
+                                        setProjectsError(null);
+                                        fetchPendingProjects();
+                                        fetchApprovedProjects();
+                                        fetchRejectedProjects();
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <div className={local.boardGrid}>
+                                {/* Pending Column */}
+                                {(!isMobile || activeMobileTab === 'pend') && (
+                                    <div className={local.bcol}>
+                                        {!isMobile && (
+                                            <div className={`${local.bcolHead} ${local.pend}`}>
+                                                <div className={local.bcolTitle}>
+                                                    <div className={`${local.bctDot} ${local.pend}`}></div>
+                                                    Chờ Xử Lý
+                                                </div>
+                                                <div className={`${local.bcolN} ${local.pend}`}>{filteredPending.length}</div>
                                             </div>
-                                            <div className={`${local.bcolN} ${local.pend}`}>{filteredPending.length}</div>
-                                        </div>
-                                    )}
-                                    <div className={local.bcolCards}>
-                                        {isLoadingProjects ? (
-                                            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                                <Loader2 className="animate-spin" size={24} style={{ margin: '0 auto 12px' }} />
-                                                <p style={{ fontSize: '13px' }}>Đang tải...</p>
-                                            </div>
-                                        ) : (filteredPending.length === 0 ? (
-                                            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                                                {searchTerm ? `Không tìm thấy dự án nào khớp với "${searchTerm}"` : 'Không có dự án chờ xử lý'}
-                                            </div>
-                                        ) : (
-                                            filteredPending.map(project => (
-                                                <ProjectKanbanCard 
-                                                    key={project.projectId} 
-                                                    project={project} 
-                                                    status="pend" 
-                                                    onDetail={() => openDetailModal(project)}
-                                                    onApprove={() => handleApproveProject(project.projectId)}
-                                                    onReject={() => handleRejectProject(project.projectId)}
-                                                    processingProjectId={processingProjectId}
-                                                    processingAction={processingAction}
-                                                />
-                                            ))
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Approved Column */}
-                            {(!isMobile || activeMobileTab === 'appr') && (
-                                <div className={local.bcol}>
-                                    {!isMobile && (
-                                        <div className={`${local.bcolHead} ${local.appr}`}>
-                                            <div className={local.bcolTitle}>
-                                                <div className={`${local.bctDot} ${local.appr}`}></div>
-                                                Đã Duyệt
-                                            </div>
-                                            <div className={`${local.bcolN} ${local.appr}`}>{filteredApproved.length}</div>
-                                        </div>
-                                    )}
-                                    <div className={local.bcolCards}>
-                                        {filteredApproved.length === 0 ? (
-                                            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                                                {searchTerm ? `Không tìm thấy dự án nào khớp với "${searchTerm}"` : 'Chưa có dự án nào được duyệt'}
-                                            </div>
-                                        ) : (
-                                            filteredApproved.map(project => (
-                                                <ProjectKanbanCard 
-                                                    key={project.projectId} 
-                                                    project={project} 
-                                                    status="appr" 
-                                                    onDetail={() => openDetailModal(project)}
-                                                />
-                                            ))
                                         )}
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Rejected Column */}
-                            {(!isMobile || activeMobileTab === 'rej') && (
-                                <div className={local.bcol}>
-                                    {!isMobile && (
-                                        <div className={`${local.bcolHead} ${local.rej}`}>
-                                            <div className={local.bcolTitle}>
-                                                <div className={`${local.bctDot} ${local.rej}`}></div>
-                                                Từ Chối
-                                            </div>
-                                            <div className={`${local.bcolN} ${local.rej}`}>{filteredRejected.length}</div>
-                                        </div>
-                                    )}
-                                    <div className={local.bcolCards}>
-                                        {filteredRejected.length === 0 ? (
-                                            <div style={{ padding: '40px 20px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                                                {searchTerm ? `Không tìm thấy dự án nào khớp với "${searchTerm}"` : 'Chưa có dự án nào bị từ chối'}
-                                            </div>
-                                        ) : (
-                                            filteredRejected.map(project => (
-                                                <ProjectKanbanCard 
-                                                    key={project.projectId} 
-                                                    project={project} 
-                                                    status="rej" 
-                                                    onDetail={() => openDetailModal(project)}
+                                        <div className={local.bcolCards}>
+                                            {isLoadingProjects ? (
+                                                <KanbanSkeleton count={3} />
+                                            ) : (filteredPending.length === 0 ? (
+                                                <EmptyState
+                                                    icon={searchTerm ? Search : Archive}
+                                                    title={searchTerm ? "Không tìm thấy" : "Trống"}
+                                                    message={searchTerm ? `Không tìm thấy dự án nào khớp với "${searchTerm}"` : 'Không có dự án chờ xử lý'}
                                                 />
-                                            ))
-                                        )}
+                                            ) : (
+                                                filteredPending.map(project => (
+                                                    <ProjectKanbanCard
+                                                        key={project.projectId}
+                                                        project={project}
+                                                        status="pend"
+                                                        onDetail={() => openDetailModal(project)}
+                                                        onApprove={() => handleApproveProject(project.projectId)}
+                                                        onReject={() => handleRejectProject(project.projectId)}
+                                                        processingProjectId={processingProjectId}
+                                                        processingAction={processingAction}
+                                                    />
+                                                ))
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                            )}
-                        </div>
+                                )}
+
+                                {/* Approved Column */}
+                                {(!isMobile || activeMobileTab === 'appr') && (
+                                    <div className={local.bcol}>
+                                        {!isMobile && (
+                                            <div className={`${local.bcolHead} ${local.appr}`}>
+                                                <div className={local.bcolTitle}>
+                                                    <div className={`${local.bctDot} ${local.appr}`}></div>
+                                                    Đã Duyệt
+                                                </div>
+                                                <div className={`${local.bcolN} ${local.appr}`}>{filteredApproved.length}</div>
+                                            </div>
+                                        )}
+                                        <div className={local.bcolCards}>
+                                            {isLoadingProjects ? (
+                                                <KanbanSkeleton count={2} />
+                                            ) : (filteredApproved.length === 0 ? (
+                                                <EmptyState
+                                                    icon={searchTerm ? Search : Archive}
+                                                    title={searchTerm ? "Không tìm thấy" : "Trống"}
+                                                    message={searchTerm ? `Không tìm thấy dự án nào khớp với "${searchTerm}"` : 'Chưa có dự án nào được duyệt'}
+                                                />
+                                            ) : (
+                                                filteredApproved.map(project => (
+                                                    <ProjectKanbanCard
+                                                        key={project.projectId}
+                                                        project={project}
+                                                        status="appr"
+                                                        onDetail={() => openDetailModal(project)}
+                                                    />
+                                                ))
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Rejected Column */}
+                                {(!isMobile || activeMobileTab === 'rej') && (
+                                    <div className={local.bcol}>
+                                        {!isMobile && (
+                                            <div className={`${local.bcolHead} ${local.rej}`}>
+                                                <div className={local.bcolTitle}>
+                                                    <div className={`${local.bctDot} ${local.rej}`}></div>
+                                                    Từ Chối
+                                                </div>
+                                                <div className={`${local.bcolN} ${local.rej}`}>{filteredRejected.length}</div>
+                                            </div>
+                                        )}
+                                        <div className={local.bcolCards}>
+                                            {isLoadingProjects ? (
+                                                <KanbanSkeleton count={1} />
+                                            ) : (filteredRejected.length === 0 ? (
+                                                <EmptyState
+                                                    icon={searchTerm ? Search : Archive}
+                                                    title={searchTerm ? "Không tìm thấy" : "Trống"}
+                                                    message={searchTerm ? `Không tìm thấy dự án nào khớp với "${searchTerm}"` : 'Chưa có dự án nào bị từ chối'}
+                                                />
+                                            ) : (
+                                                filteredRejected.map(project => (
+                                                    <ProjectKanbanCard
+                                                        key={project.projectId}
+                                                        project={project}
+                                                        status="rej"
+                                                        onDetail={() => openDetailModal(project)}
+                                                    />
+                                                ))
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 
 
                 {/* Booking Management Section */}
                 {activeSection === 'bookings' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <div className={styles.cardHeader} style={{ marginBottom: '24px' }}>
-                                <h3 className={styles.cardTitle} style={{ marginBottom: 0 }}>Quản lý Booking</h3>
-                                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, gap: 0 }}>
+
+                        {/* Mobile Tab Switcher for Bookings */}
+                        {isMobile && (
+                            <div className={local.tabSwitcherWrapper}>
+                                {showLeftTabIndicator && <div className={`${local.scrollIndicator} ${local.scrollIndicatorLeft}`} />}
+                                <div
+                                    className={local.mobileTabSwitcher}
+                                    data-tabs="4"
+                                    ref={tabSwitcherRef}
+                                    onScroll={checkTabScroll}
+                                >
                                     <button
-                                        onClick={() => { setBookingFilters(''); setBookingPage(1); }}
-                                        className={bookingFilters === '' ? styles.primaryBtn : styles.secondaryBtn}
-                                        style={{ padding: '8px 20px', fontSize: '12px' }}
+                                        className={`${local.mobileTab} ${activeMobileBookingTab === 'pend' ? local.activeMobileTab : ''}`}
+                                        onClick={() => setActiveMobileBookingTab('pend')}
+                                        data-status="pend"
                                     >
-                                        Tất cả ({allBookings.length})
+                                        <div className={`${local.bctDot} ${local.pend}`}></div>
+                                        <span>Chờ xác nhận</span>
+                                        <span className={local.mobileTabCount}>{pendingBookingsList.length}</span>
                                     </button>
                                     <button
-                                        onClick={() => { setBookingFilters('status:Pending'); setBookingPage(1); }}
-                                        className={bookingFilters === 'status:Pending' ? styles.primaryBtn : styles.secondaryBtn}
-                                        style={{ padding: '8px 20px', fontSize: '12px' }}
+                                        className={`${local.mobileTab} ${activeMobileBookingTab === 'conf' ? local.activeMobileTab : ''}`}
+                                        onClick={() => setActiveMobileBookingTab('conf')}
+                                        data-status="conf"
                                     >
-                                        Chờ xác nhận ({pendingBookingsList.length})
+                                        <div className={`${local.bctDot} ${local.conf}`}></div>
+                                        <span>Đã xác nhận</span>
+                                        <span className={local.mobileTabCount}>{confirmedBookingsList.length}</span>
                                     </button>
                                     <button
-                                        onClick={() => { setBookingFilters('status:Confirmed'); setBookingPage(1); }}
-                                        className={bookingFilters === 'status:Confirmed' ? styles.primaryBtn : styles.secondaryBtn}
-                                        style={{ padding: '8px 20px', fontSize: '12px' }}
+                                        className={`${local.mobileTab} ${activeMobileBookingTab === 'comp' ? local.activeMobileTab : ''}`}
+                                        onClick={() => setActiveMobileBookingTab('comp')}
+                                        data-status="comp"
                                     >
-                                        Đã xác nhận ({confirmedBookingsList.length})
+                                        <div className={`${local.bctDot} ${local.comp}`}></div>
+                                        <span>Hoàn thành</span>
+                                        <span className={local.mobileTabCount}>{completedBookingsList.length}</span>
                                     </button>
                                     <button
-                                        onClick={() => { setBookingFilters('status:Completed'); setBookingPage(1); }}
-                                        className={bookingFilters === 'status:Completed' ? styles.primaryBtn : styles.secondaryBtn}
-                                        style={{ padding: '8px 20px', fontSize: '12px' }}
+                                        className={`${local.mobileTab} ${activeMobileBookingTab === 'canc' ? local.activeMobileTab : ''}`}
+                                        onClick={() => setActiveMobileBookingTab('canc')}
+                                        data-status="rej"
                                     >
-                                        Hoàn thành ({completedBookingsList.length})
+                                        <div className={`${local.bctDot} ${local.rej}`}></div>
+                                        <span>Đã hủy</span>
+                                        <span className={local.mobileTabCount}>{cancelledBookingsList.length}</span>
                                     </button>
                                 </div>
+                                {showRightTabIndicator && <div className={`${local.scrollIndicator} ${local.scrollIndicatorRight}`} />}
                             </div>
+                        )}
 
-                            {/* Booking List */}
-                            <div className={styles.list}>
-                                {isLoadingBookings ? (
-                                    <div style={{
-                                        padding: '60px 20px',
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        color: 'var(--text-secondary)',
-                                        gap: '16px'
-                                    }}>
-                                        <Loader2 className="animate-spin" size={28} color="var(--primary-blue)" />
-                                        <span style={{ fontSize: '14px', fontWeight: '500' }}>Đang tải danh sách booking...</span>
-                                    </div>
-                                ) : paginatedBookings.length === 0 ? (
-                                    <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                        <Calendar size={32} style={{ margin: '0 auto 12px', opacity: 0.3 }} />
-                                        <p>Không có booking nào trong danh sách này.</p>
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                        {paginatedBookings.map((booking, index) => (
-                                            <div key={`${booking?.id || index}-${index}`} className={s.bookingCard}>
-                                                <div className={s.bookingMainInfo}>
-                                                    <div className={s.bookingHeader} style={{ justifyContent: 'flex-start', gap: '8px' }}>
-                                                        <span className={s.bookingTitle}>
-                                                            #{booking?.id || '-'}
-                                                        </span>
-                                                        <div className={`${s.bookingBadge} ${booking?.status === 'Pending' ? s.bookingBadgePending :
-                                                                booking?.status === 'Confirmed' ? s.bookingBadgeConfirmed :
-                                                                    s.bookingBadgeCompleted
-                                                            }`}>
-                                                            {booking?.status === 'Pending' ? 'Chờ xác nhận' :
-                                                                booking?.status === 'Confirmed' ? 'Đã xác nhận' : 'Hoàn thành'}
-                                                        </div>
-                                                    </div>
-
-                                                    <div className={s.participantsRow}>
-                                                        <span className={s.advisorText}>{booking?.advisorName || '-'}</span>
-                                                        <div className={s.linkLine}>
-                                                            <div className={s.line} />
-                                                            <ArrowRight size={14} className={s.linkArrow} />
-                                                        </div>
-                                                        <span className={s.customerText}>{booking?.customerName || '-'}</span>
-                                                    </div>
-
-                                                    <div className={s.priceRow} style={{ marginTop: '-4px', marginBottom: '8px' }}>
-                                                        <div className={s.priceTag}>
-                                                            {Number(booking?.price || 0).toLocaleString('vi-VN')} <span>VND</span>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className={s.bookingFooterWrapper} style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', marginTop: '16px' }}>
-                                                        <div className={s.footerLeft} style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                            <div className={s.metaRow} style={{ marginTop: 0, paddingTop: 0, borderTop: 'none', gap: '12px' }}>
-                                                                <div className={s.metaItem}>
-                                                                    <Calendar size={13} />
-                                                                    <span>{booking?.startTime ? new Date(booking.startTime).toLocaleDateString('vi-VN') : '-'}</span>
-                                                                </div>
-                                                                <div className={s.metaItem}>
-                                                                    <Clock size={13} />
-                                                                    <span>{booking?.startTime ? new Date(booking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
-                                                                </div>
-                                                            </div>
-                                                            <div className={s.bookingIdList} style={{ fontSize: '10px', color: 'var(--text-muted)', fontWeight: '600', textTransform: 'uppercase' }}>
-                                                                KHÁCH: <span style={{ color: 'var(--text-secondary)' }}>{booking?.customerName || '-'}</span> • CỐ VẤN: <span style={{ color: 'var(--text-secondary)' }}>{booking?.advisorName || '-'}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div className={s.bookingActions}>
-                                                            <button
-                                                                onClick={() => handleViewBookingDetails(booking?.id)}
-                                                                className={styles.secondaryBtn}
-                                                                style={{ padding: '6px 16px', fontSize: '13px', borderRadius: '99px' }}
-                                                            >
-                                                                Chi tiết
-                                                            </button>
-                                                        </div>
-                                                    </div>
+                        {bookingsError ? (
+                            <div className={local.errorWrapper}>
+                                <EmptyState
+                                    icon={AlertCircle}
+                                    title="Lỗi tải dữ liệu"
+                                    message={bookingsError}
+                                    isError={true}
+                                    onRetry={() => {
+                                        setBookingsError(null);
+                                        fetchBookings();
+                                    }}
+                                />
+                            </div>
+                        ) : (
+                            <div className={local.boardGrid} style={{
+                                gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
+                                minHeight: isMobile ? 'auto' : 'calc(100vh - 150px)',
+                                overflowX: isMobile ? 'hidden' : 'auto',
+                                margin: isMobile ? '0' : '-24px -24px -84px -24px'
+                            }}>
+                                {/* Pending Bookings Column */}
+                                {(!isMobile || activeMobileBookingTab === 'pend') && (
+                                    <div className={local.bcol}>
+                                        {!isMobile && (
+                                            <div className={`${local.bcolHead} ${local.pend}`}>
+                                                <div className={local.bcolTitle}>
+                                                    <div className={`${local.bctDot} ${local.pend}`}></div>
+                                                    Chờ xác nhận
                                                 </div>
+                                                <div className={`${local.bcolN} ${local.pend}`}>{pendingBookingsList.length}</div>
                                             </div>
-                                        ))}
+                                        )}
+                                        <div className={local.bcolCards}>
+                                            {isLoadingBookings ? (
+                                                <KanbanSkeleton count={3} />
+                                            ) : (pendingBookingsList.length === 0 ? (
+                                                <EmptyState
+                                                    icon={bookingSearchTerm ? Search : Archive}
+                                                    title={bookingSearchTerm ? "Không tìm thấy" : "Trống"}
+                                                    message={bookingSearchTerm ? `Không tìm thấy booking nào khớp với "${bookingSearchTerm}"` : 'Không có booking chờ xác nhận'}
+                                                />
+                                            ) : (
+                                                pendingBookingsList.map(booking => (
+                                                    <BookingKanbanCard
+                                                        key={booking.id}
+                                                        booking={booking}
+                                                        status="pend"
+                                                        onDetail={() => handleViewBookingDetails(booking.id)}
+                                                    />
+                                                ))
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Confirmed Bookings Column */}
+                                {(!isMobile || activeMobileBookingTab === 'conf') && (
+                                    <div className={local.bcol}>
+                                        {!isMobile && (
+                                            <div className={`${local.bcolHead} ${local.conf}`}>
+                                                <div className={local.bcolTitle}>
+                                                    <div className={`${local.bctDot} ${local.conf}`}></div>
+                                                    Đã xác nhận
+                                                </div>
+                                                <div className={`${local.bcolN} ${local.conf}`}>{confirmedBookingsList.length}</div>
+                                            </div>
+                                        )}
+                                        <div className={local.bcolCards}>
+                                            {isLoadingBookings ? (
+                                                <KanbanSkeleton count={2} />
+                                            ) : (confirmedBookingsList.length === 0 ? (
+                                                <EmptyState
+                                                    icon={bookingSearchTerm ? Search : Archive}
+                                                    title={bookingSearchTerm ? "Không tìm thấy" : "Trống"}
+                                                    message={bookingSearchTerm ? `Không tìm thấy booking nào khớp with "${bookingSearchTerm}"` : 'Chưa có booking nào được xác nhận'}
+                                                />
+                                            ) : (
+                                                confirmedBookingsList.map(booking => (
+                                                    <BookingKanbanCard
+                                                        key={booking.id}
+                                                        booking={booking}
+                                                        status="conf"
+                                                        onDetail={() => handleViewBookingDetails(booking.id)}
+                                                    />
+                                                ))
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Completed Bookings Column */}
+                                {(!isMobile || activeMobileBookingTab === 'comp') && (
+                                    <div className={local.bcol}>
+                                        {!isMobile && (
+                                            <div className={`${local.bcolHead} ${local.comp}`}>
+                                                <div className={local.bcolTitle}>
+                                                    <div className={`${local.bctDot} ${local.comp}`}></div>
+                                                    Hoàn thành
+                                                </div>
+                                                <div className={`${local.bcolN} ${local.comp}`}>{completedBookingsList.length}</div>
+                                            </div>
+                                        )}
+                                        <div className={local.bcolCards}>
+                                            {isLoadingBookings ? (
+                                                <KanbanSkeleton count={4} />
+                                            ) : (completedBookingsList.length === 0 ? (
+                                                <EmptyState
+                                                    icon={bookingSearchTerm ? Search : Archive}
+                                                    title={bookingSearchTerm ? "Không tìm thấy" : "Trống"}
+                                                    message={bookingSearchTerm ? `Không tìm thấy booking nào khớp with "${bookingSearchTerm}"` : 'Chưa có booking nào hoàn thành'}
+                                                />
+                                            ) : (
+                                                completedBookingsList.map(booking => (
+                                                    <BookingKanbanCard
+                                                        key={booking.id}
+                                                        booking={booking}
+                                                        status="comp"
+                                                        onDetail={() => handleViewBookingDetails(booking.id)}
+                                                    />
+                                                ))
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Cancelled Bookings Column */}
+                                {(!isMobile || activeMobileBookingTab === 'canc') && (
+                                    <div className={local.bcol}>
+                                        {!isMobile && (
+                                            <div className={`${local.bcolHead} ${local.rej}`}>
+                                                <div className={local.bcolTitle}>
+                                                    <div className={`${local.bctDot} ${local.rej}`}></div>
+                                                    Đã hủy
+                                                </div>
+                                                <div className={`${local.bcolN} ${local.rej}`}>{cancelledBookingsList.length}</div>
+                                            </div>
+                                        )}
+                                        <div className={local.bcolCards}>
+                                            {isLoadingBookings ? (
+                                                <KanbanSkeleton count={1} />
+                                            ) : (cancelledBookingsList.length === 0 ? (
+                                                <EmptyState
+                                                    icon={bookingSearchTerm ? Search : Archive}
+                                                    title={bookingSearchTerm ? "Không tìm thấy" : "Trống"}
+                                                    message={bookingSearchTerm ? `Không tìm thấy booking nào khớp with "${bookingSearchTerm}"` : 'Không có booking nào bị hủy'}
+                                                />
+                                            ) : (
+                                                cancelledBookingsList.map(booking => (
+                                                    <BookingKanbanCard
+                                                        key={booking.id}
+                                                        booking={booking}
+                                                        status="canc"
+                                                        onDetail={() => handleViewBookingDetails(booking.id)}
+                                                    />
+                                                ))
+                                            ))}
+                                        </div>
                                     </div>
                                 )}
                             </div>
-
-                            {/* Pagination */}
-                            {displayedBookings.length > 0 && (
-                                <div style={{
-                                    marginTop: '24px',
-                                    display: 'flex',
-                                    justifyContent: 'space-between',
-                                    alignItems: 'center',
-                                    paddingTop: '16px',
-                                    borderTop: '1px solid var(--border-color)'
-                                }}>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                        Trang <strong>{bookingPage}</strong> trên {Math.max(1, Math.ceil(displayedBookings.length / bookingPageSize))}
-                                    </div>
-                                    <div style={{ display: 'flex', gap: '8px' }}>
-                                        <button
-                                            onClick={() => setBookingPage(Math.max(1, bookingPage - 1))}
-                                            disabled={bookingPage === 1}
-                                            className={styles.secondaryBtn}
-                                            style={{ padding: '6px 16px', opacity: bookingPage === 1 ? 0.5 : 1 }}
-                                        >
-                                            Trước
-                                        </button>
-                                        <button
-                                            onClick={() => setBookingPage(Math.min(Math.ceil(displayedBookings.length / bookingPageSize), bookingPage + 1))}
-                                            disabled={bookingPage >= Math.ceil(displayedBookings.length / bookingPageSize)}
-                                            className={styles.secondaryBtn}
-                                            style={{ padding: '6px 16px', opacity: bookingPage >= Math.ceil(displayedBookings.length / bookingPageSize) ? 0.5 : 1 }}
-                                        >
-                                            Sau
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
+                        )}
                     </div>
                 )}
 
@@ -1641,23 +1902,24 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
                     className={styles.modalOverlay}
                     onClick={(e) => e.target === e.currentTarget && setShowBookingModal(false)}
                 >
-                    <div className={styles.modalContent} style={{ maxWidth: '650px', width: '92%' }}>
+                    <div className={styles.modalContent} style={{ maxWidth: '800px', width: '95%' }}>
                         {/* Modal Header */}
                         <div className={styles.modalHeader}>
-                            <div>
-                                <h2 className={styles.headerTitle} style={{ margin: '0 0 8px 0' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <h2 className={styles.headerTitle} style={{ margin: 0 }}>
                                     Booking #{selectedBooking.id}
                                 </h2>
                                 <span
-                                    className={styles.badge}
-                                    style={{
-                                        backgroundColor: selectedBooking.status === 'Pending' ? '#fef3c7' : selectedBooking.status === 'Confirmed' ? '#d1fae5' : '#e0e7ff',
-                                        color: selectedBooking.status === 'Pending' ? '#92400e' : selectedBooking.status === 'Confirmed' ? '#065f46' : '#312e81',
-                                        border: '1px solid currentColor',
-                                        opacity: 0.3
-                                    }}
+                                    className={`${local.bookingBadge} ${selectedBooking.status === 'Pending' ? local.bookingBadgePending :
+                                        selectedBooking.status === 'Confirmed' ? local.bookingBadgeConfirmed :
+                                            selectedBooking.status === 'Completed' ? local.bookingBadgeCompleted :
+                                                local.bookingBadgeCancelled
+                                        }`}
+                                    style={{ marginTop: '0' }}
                                 >
-                                    {selectedBooking.status === 'Pending' ? '⏳ Chờ xác nhận' : selectedBooking.status === 'Confirmed' ? '✓ Đã xác nhận' : '✓ Hoàn thành'}
+                                    {selectedBooking.status === 'Pending' ? 'Chờ xác nhận' :
+                                        selectedBooking.status === 'Confirmed' ? 'Đã xác nhận' :
+                                            selectedBooking.status === 'Completed' ? 'Hoàn thành' : 'Đã hủy'}
                                 </span>
                             </div>
                             <button
@@ -1669,109 +1931,114 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
                         </div>
 
                         {/* Modal Body */}
-                        <div style={{ padding: '24px', overflowY: 'auto', maxHeight: 'calc(90vh - 120px)' }}>
+                        <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
                             {isLoadingBookingDetail ? (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-secondary)', padding: '32px' }}>
-                                    <Loader2 size={18} className={styles.spinner} />
-                                    Đang tải chi tiết...
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-secondary)', padding: '60px 0' }}>
+                                    <Loader2 size={24} className={styles.spinner} />
+                                    <span>Đang tải thông tin chi tiết...</span>
                                 </div>
                             ) : (
-                                <>
-                                    {/* Advisor and Customer Info */}
-                                    <div style={{ marginBottom: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                        <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>Cố vấn</div>
-                                            <div style={{ fontSize: '15px', fontWeight: '800', marginBottom: '6px', color: 'var(--text-primary)' }}>
-                                                {selectedBooking.advisorName}
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                                    {/* 1. Thông tin nhân sự */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>1. Thông tin nhân sự</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                                            <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700' }}>Cố vấn chuyên môn</div>
+                                                <div style={{
+                                                    fontSize: '16px', fontWeight: '800', marginBottom: '4px',
+                                                    color: selectedBooking.status === 'Pending' ? '#ff7a00' :
+                                                        selectedBooking.status === 'Confirmed' ? '#1d9bf0' :
+                                                            selectedBooking.status === 'Completed' ? '#10b981' : '#f4212e'
+                                                }}>
+                                                    {selectedBooking.advisorName}
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>Mã: {selectedBooking.advisorId}</div>
                                             </div>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '4px 8px', backgroundColor: 'var(--bg-hover)', borderRadius: '6px', display: 'inline-block', fontFamily: 'monospace' }}>
-                                                ID: {selectedBooking.advisorId}
-                                            </div>
-                                        </div>
-                                        <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>Khách hàng</div>
-                                            <div style={{ fontSize: '15px', fontWeight: '800', marginBottom: '6px', color: 'var(--text-primary)' }}>
-                                                {selectedBooking.customerName}
-                                            </div>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '4px 8px', backgroundColor: 'var(--bg-hover)', borderRadius: '6px', display: 'inline-block', fontFamily: 'monospace' }}>
-                                                ID: {selectedBooking.customerId}
+                                            <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700' }}>Startup / Khách hàng</div>
+                                                <div style={{
+                                                    fontSize: '16px', fontWeight: '800', marginBottom: '4px',
+                                                    color: selectedBooking.status === 'Pending' ? '#ff7a00' :
+                                                        selectedBooking.status === 'Confirmed' ? '#1d9bf0' :
+                                                            selectedBooking.status === 'Completed' ? '#10b981' : '#f4212e'
+                                                }}>
+                                                    {selectedBooking.customerName}
+                                                </div>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>Mã: {selectedBooking.customerId}</div>
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Time Info */}
-                                    <div style={{ marginBottom: '24px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                        <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '10px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <Calendar size={12} /> Bắt đầu
+                                    {/* 2. Thời gian tư vấn */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>2. Thời gian tư vấn</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
+                                            <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-blue)' }}>
+                                                    <Calendar size={20} />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Bắt đầu</div>
+                                                    <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                        {new Date(selectedBooking.startTime).toLocaleDateString('vi-VN')}
+                                                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '400', marginLeft: '8px' }}>
+                                                            {new Date(selectedBooking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            <div style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-primary)', fontWeight: '600' }}>
-                                                {new Date(selectedBooking.startTime).toLocaleDateString('vi-VN')}
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '400' }}>
-                                                    {new Date(selectedBooking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                            <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '16px' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-blue)' }}>
+                                                    <Clock size={20} />
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Kết thúc</div>
+                                                    <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                        {new Date(selectedBooking.endTime).toLocaleDateString('vi-VN')}
+                                                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '400', marginLeft: '8px' }}>
+                                                            {new Date(selectedBooking.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                        <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '10px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <Clock size={12} /> Kết thúc
-                                            </div>
-                                            <div style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-primary)', fontWeight: '600' }}>
-                                                {new Date(selectedBooking.endTime).toLocaleDateString('vi-VN')}
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '400' }}>
-                                                    {new Date(selectedBooking.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+
+                                    {/* 3. Chi phí & Hệ thống */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>3. Chi phí &amp; Hệ thống</h4>
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                            <div style={{ padding: '20px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', position: 'relative', overflow: 'hidden' }}>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700' }}>Chi phí tư vấn</div>
+                                                <div style={{ fontSize: '24px', fontWeight: '900', color: '#f59e0b' }}>
+                                                    {Number(selectedBooking.price).toLocaleString('vi-VN')} <span style={{ fontSize: '14px', fontWeight: '600' }}>₫</span>
                                                 </div>
+                                                <div style={{ position: 'absolute', right: '12px', bottom: '-10px', fontSize: '60px', fontWeight: '900', opacity: 0.05, color: '#f59e0b', userSelect: 'none' }}>₫</div>
                                             </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Price Info */}
-                                    <div style={{
-                                        marginBottom: '24px',
-                                        padding: '20px',
-                                        backgroundColor: 'var(--bg-secondary)',
-                                        borderRadius: '12px',
-                                        border: '1px solid var(--border-color)',
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center'
-                                    }}>
-                                        <div>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>Chi phí tư vấn</div>
-                                            <div style={{ fontSize: '24px', fontWeight: '900', color: 'var(--staff-warning)' }}>
-                                                {Number(selectedBooking.price).toLocaleString('vi-VN')} <span style={{ fontSize: '14px', fontWeight: '600' }}>VND</span>
-                                            </div>
-                                        </div>
-                                        <DollarSign size={32} style={{ opacity: 0.1, color: 'var(--staff-warning)' }} />
-                                    </div>
-
-                                    {/* Booking ID and Details */}
-                                    <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                                        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px', textTransform: 'uppercase', fontWeight: '700', letterSpacing: '0.5px' }}>Chi tiết hệ thống</div>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px' }}>
-                                            <div>
-                                                <span style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Mã tham chiếu:</span>
-                                                <div style={{ fontWeight: '700', color: 'var(--text-primary)', fontSize: '13px', fontFamily: 'monospace' }}>{selectedBooking.id}</div>
-                                            </div>
-                                            <div>
-                                                <span style={{ color: 'var(--text-secondary)', display: 'block', marginBottom: '4px' }}>Trạng thái hiện tại:</span>
-                                                <div className={`${s.bookingBadge} ${selectedBooking.status === 'Pending' ? s.bookingBadgePending :
-                                                        selectedBooking.status === 'Confirmed' ? s.bookingBadgeConfirmed :
-                                                            s.bookingBadgeCompleted
-                                                    }`} style={{ display: 'inline-flex' }}>
-                                                    {selectedBooking.status === 'Pending' ? <Clock size={12} /> : <CheckCircle size={12} />}
+                                            <div style={{ padding: '20px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px', textTransform: 'uppercase', fontWeight: '700' }}>Trạng thái hiện tại</div>
+                                                <div className={`${local.bookingBadge} ${selectedBooking.status === 'Pending' ? local.bookingBadgePending :
+                                                    selectedBooking.status === 'Confirmed' ? local.bookingBadgeConfirmed :
+                                                        selectedBooking.status === 'Completed' ? local.bookingBadgeCompleted :
+                                                            local.bookingBadgeCancelled
+                                                    }`} style={{ padding: '8px 16px', fontSize: '13px' }}>
+                                                    {selectedBooking.status === 'Pending' ? <Clock size={14} /> :
+                                                        selectedBooking.status === 'Confirmed' ? <CheckCircle size={14} /> :
+                                                            selectedBooking.status === 'Completed' ? <CheckCircle size={14} /> : <X size={14} />}
                                                     {selectedBooking.status === 'Pending' ? 'Chờ xác nhận' :
-                                                        selectedBooking.status === 'Confirmed' ? 'Đã xác nhận' : 'Hoàn thành'}
+                                                        selectedBooking.status === 'Confirmed' ? 'Đã xác nhận' :
+                                                            selectedBooking.status === 'Completed' ? 'Hoàn thành' : 'Đã hủy'}
                                                 </div>
                                             </div>
                                         </div>
                                     </div>
-                                </>
+                                </div>
                             )}
                         </div>
 
                         {/* Modal Footer */}
-                        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: 'var(--bg-secondary)', borderRadius: '0 0 16px 16px' }}>
+                        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: 'var(--bg-secondary)' }}>
                             <button
                                 onClick={() => setShowBookingModal(false)}
                                 className={styles.secondaryBtn}
@@ -1797,4 +2064,6 @@ export default function OperationStaffDashboard({ user, initialSection = 'statis
             )}
         </div>
     );
-}
+};
+
+export default OperationStaffDashboard;

@@ -8,9 +8,9 @@ import styles from './BottomNav.module.css';
  */
 function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInvestors, onShowDashboard, onShowAI, activeTab }) {
   let navItems = [
-    { icon: Compass, label: 'Home', displayLabel: 'Khám phá dự án', href: '#' },
-    { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Dashboard', href: '#', showWhenLoggedIn: true },
-    { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#', hideFor: ['investor'] },
+    { icon: Compass, label: 'Home', displayLabel: 'Khám phá', href: '#' },
+    { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Tổng quan', href: '#', showWhenLoggedIn: true },
+    { icon: TrendingUp, label: 'Investors', displayLabel: 'Đầu tư', href: '#', hideFor: ['investor'] },
     { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor'] },
   ];
 
@@ -21,7 +21,7 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
 
   if (isStaff) {
     const staffItems = [
-      { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Dashboard', href: '#', showWhenLoggedIn: true },
+      { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Tổng quan', href: '#', showWhenLoggedIn: true },
       { icon: FileText, label: 'Projects', displayLabel: 'Dự án', href: '#', showWhenLoggedIn: true },
       { icon: Calendar, label: 'Bookings', displayLabel: 'Booking', href: '#', showWhenLoggedIn: true },
       { icon: ShieldCheck, label: 'Approvals', displayLabel: 'Phê duyệt', href: '#', showWhenLoggedIn: true },
