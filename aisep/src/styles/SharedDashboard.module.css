@@ -41,6 +41,24 @@
 }
 
 /* Stats Grid */
+/* Stats Grid Wrapper (Supports Collapsing Animation) */
+.statsWrapper {
+    max-height: 500px;
+    opacity: 1;
+    overflow: hidden;
+    transition: max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1),
+        opacity 0.3s ease,
+        transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    transform: translateY(0);
+}
+
+.statsWrapper.collapsed {
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(-20px);
+    pointer-events: none;
+}
+
 .statsGrid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -161,20 +179,85 @@
     overflow-x: auto;
     scrollbar-width: none;
     background-color: var(--bg-primary);
+    position: relative;
+    /* Positioning context for the animated indicator */
+}
+
+/* New Animated Tab Indicator */
+.tabIndicator {
+    position: absolute;
+    bottom: 0;
+    height: 4px;
+    background-color: var(--primary-blue);
+    border-radius: 4px 4px 0 0;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+        width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    z-index: 101;
+    pointer-events: none;
+}
+
+/* Hide static indicator when using animated version */
+.animatedTabs .tab.active::after {
+    display: none;
+}
+
+/* Tab Swapping & Scrolling (Mobile) */
+.tabSwitcherWrapper {
     position: sticky;
     top: 0;
     z-index: 100;
+    background-color: var(--bg-primary);
+    width: 100%;
 }
 
 @media (max-width: 1023px) {
-    .tabs {
+    .tabSwitcherWrapper {
         top: 60px;
         /* Below the fixed TopBar */
     }
 }
 
-.tabs::-webkit-scrollbar {
-    display: none;
+.scrollIndicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40px;
+    z-index: 102;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.3s ease;
+}
+
+.scrollIndicatorLeft {
+    left: 0;
+    background: linear-gradient(to right, var(--bg-primary) 20%, transparent);
+}
+
+.scrollIndicatorRight {
+    right: 0;
+    background: linear-gradient(to left, var(--bg-primary) 20%, transparent);
+}
+
+.scrollIndicator::after {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-right: 2px solid var(--primary-blue);
+    border-bottom: 2px solid var(--text-primary);
+    border-bottom-color: var(--primary-blue);
+    opacity: 1;
+}
+
+.scrollIndicatorLeft::after {
+    transform: rotate(135deg);
+    margin-left: 4px;
+}
+
+.scrollIndicatorRight::after {
+    transform: rotate(-45deg);
+    margin-right: 4px;
 }
 
 .tab {
@@ -222,6 +305,19 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
+    animation: fadeInUpContent 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes fadeInUpContent {
+    0% {
+        opacity: 0;
+        transform: translateY(12px);
+    }
+
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .sectionGrid {
@@ -359,7 +455,8 @@
     font-weight: 700;
     cursor: pointer;
     transition: background-color 0.2s;
-    min-width: 130px; /* Prevent shrinking when text changes to ellipsis */
+    min-width: 130px;
+    /* Prevent shrinking when text changes to ellipsis */
 }
 
 .primaryBtn:hover {
@@ -1186,7 +1283,8 @@
 .statusBadge {
     display: inline-flex;
     align-items: center;
-    justify-content: center; /* Center horizontally */
+    justify-content: center;
+    /* Center horizontally */
     gap: 6px;
     background-color: rgba(23, 191, 99, 0.1);
     color: #17bf63;
@@ -1194,8 +1292,10 @@
     border-radius: 9999px;
     font-size: 11px;
     font-weight: 700;
-    min-width: 100px; /* Prevent shrinking during loading dots/spinner */
-    height: 22px; /* Fixed height for stability */
+    min-width: 100px;
+    /* Prevent shrinking during loading dots/spinner */
+    height: 22px;
+    /* Fixed height for stability */
 }
 
 .statusBadgeUnverified {

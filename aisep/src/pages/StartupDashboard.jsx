@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History } from 'lucide-react';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
@@ -16,6 +16,7 @@ import projectSubmissionService from '../services/projectSubmissionService.js';
 import startupProfileService from '../services/startupProfileService.js';
 import { PROJECT_STATUS, isUserEditable, STATUS_LABELS, STATUS_COLORS, getStageLabel } from '../constants/ProjectStatus.js';
 import { translateAIResults } from '../utils/translateAIResults.js';
+import kanban from '../styles/OperationStaffDashboard.module.css';
 
 import StartupProfileBanner from '../components/startup/StartupProfileBanner';
 
@@ -24,8 +25,23 @@ import StartupProfileBanner from '../components/startup/StartupProfileBanner';
  * Features: Overview stats, Profile completion, Documents, AI Score, Advisor requests
  */
 export default function StartupDashboard({ user }) {
+    const [isMobile, setIsMobile] = React.useState(window.innerWidth < 850);
+    const [showLeftTabIndicator, setShowLeftTabIndicator] = React.useState(false);
+    const [showRightTabIndicator, setShowRightTabIndicator] = React.useState(false);
+    
+    // Kanban Tab Indicator States
+    const [showLeftKanbanIndicator, setShowLeftKanbanIndicator] = React.useState(false);
+    const [showRightKanbanIndicator, setShowRightKanbanIndicator] = React.useState(false);
+
     const [activeSection, setActiveSection] = React.useState('overview');
+    const [activeProjectMobileTab, setActiveProjectMobileTab] = React.useState('draft');
+    const [projectSearchTerm, setProjectSearchTerm] = React.useState('');
     const [showCompleteInfoForm, setShowCompleteInfoForm] = React.useState(false);
+    
+    // Refs for scroll tracking
+    const tabsRef = React.useRef(null);
+    const kanbanTabsRef = React.useRef(null);
+    const [indicatorStyle, setIndicatorStyle] = React.useState({ transform: 'translateX(0)', width: '0px' });
     const [successMessage, setSuccessMessage] = React.useState('');
     const [successTitle, setSuccessTitle] = React.useState('');
     const [successPrimaryBtn, setSuccessPrimaryBtn] = React.useState('');
@@ -61,7 +77,6 @@ export default function StartupDashboard({ user }) {
     const [myProjects, setMyProjects] = React.useState([]);
     const [startupProfile, setStartupProfile] = React.useState(null);
     const [showProjectForm, setShowProjectForm] = React.useState(false);
-    const [projectFilter, setProjectFilter] = React.useState('all');
     const [analysisHistory, setAnalysisHistory] = React.useState([]);
     const [isLoadingHistory, setIsLoadingHistory] = React.useState(false);
     const [showHistoryView, setShowHistoryView] = React.useState(false);
@@ -74,6 +89,64 @@ export default function StartupDashboard({ user }) {
     const [documentToDelete, setDocumentToDelete] = React.useState(null);
     const [blockedFiles, setBlockedFiles] = React.useState([]); // Session-based blacklist for verified docs
     const hiddenFileInput = React.useRef(null);
+
+    React.useLayoutEffect(() => {
+        const updateIndicator = () => {
+            if (tabsRef.current) {
+                // Animated Line Style
+                const activeTab = tabsRef.current.querySelector(`.${styles.tab}.${styles.active}`);
+                if (activeTab) {
+                    setIndicatorStyle({
+                        transform: `translateX(${activeTab.offsetLeft}px)`,
+                        width: `${activeTab.offsetWidth}px`
+                    });
+                }
+
+                // Scroll Indicators Logic
+                const { scrollLeft, scrollWidth, clientWidth } = tabsRef.current;
+                setShowLeftTabIndicator(scrollLeft > 5);
+                setShowRightTabIndicator(scrollLeft < scrollWidth - clientWidth - 5);
+            }
+        };
+
+        const handleResize = () => {
+            setIsMobile(window.innerWidth < 850);
+            updateIndicator();
+        };
+
+        // Use a small timeout to ensure DOM is ready and styles are applied
+        const timer = setTimeout(updateIndicator, 10);
+        window.addEventListener('resize', handleResize);
+
+        return () => {
+            clearTimeout(timer);
+            window.removeEventListener('resize', handleResize);
+        };
+    }, [activeSection]);
+
+    const checkTabScroll = () => {
+        if (tabsRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = tabsRef.current;
+            setShowLeftTabIndicator(scrollLeft > 5);
+            setShowRightTabIndicator(scrollLeft < scrollWidth - clientWidth - 5);
+        }
+    };
+
+    const checkKanbanScroll = () => {
+        if (kanbanTabsRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = kanbanTabsRef.current;
+            setShowLeftKanbanIndicator(scrollLeft > 5);
+            setShowRightKanbanIndicator(scrollLeft < scrollWidth - clientWidth - 5);
+        }
+    };
+
+    // Initialize Kanban scroll state on tab switch
+    React.useEffect(() => {
+        if (activeSection === 'my-projects' && isMobile) {
+            // Small delay to allow DOM to render
+            setTimeout(checkKanbanScroll, 50);
+        }
+    }, [activeSection, isMobile, activeProjectMobileTab]);
 
     // Initialize section from localStorage if set (e.g., redirect from project creation)
     React.useEffect(() => {
@@ -602,7 +675,7 @@ export default function StartupDashboard({ user }) {
         }
     };
 
-// BR-15: Submit Project for Staff Review (WITHOUT AI - Direct submission)
+    // BR-15: Submit Project for Staff Review (WITHOUT AI - Direct submission)
     const handleSubmitProject = async (projectId) => {
         if (!projectId) {
             console.error('[SUBMIT] Invalid projectId:', projectId);
@@ -613,7 +686,7 @@ export default function StartupDashboard({ user }) {
         }
 
         const validId = projectId ? parseInt(projectId) || projectId : null;
-        
+
         // Show loading state while checking requirements
         setIsSubmittingProject(true);
         setSubmittingProjectId(validId);
@@ -621,7 +694,7 @@ export default function StartupDashboard({ user }) {
             // Check if project has at least one document (PitchDeck, BusinessPlan, etc.)
             const docResponse = await projectSubmissionService.getDocuments(validId);
             const projectDocs = Array.isArray(docResponse.data) ? docResponse.data : (docResponse.data?.items || []);
-            
+
             if (projectDocs.length === 0) {
                 setSuccessModalType('error');
                 setSuccessTitle('Yêu cầu tài liệu');
@@ -656,7 +729,7 @@ export default function StartupDashboard({ user }) {
 
         const projectId = parseInt(pendingSubmitProjectId) || pendingSubmitProjectId;
         console.log('[SUBMIT] Submitting project directly:', projectId);
-        
+
         setShowSubmitConfirmation(false);
         setIsSubmittingProject(true);
         setSubmittingProjectId(projectId);
@@ -709,7 +782,7 @@ export default function StartupDashboard({ user }) {
 
         const validId = parseInt(projectId) || projectId;
         console.log('[AI] Running AI Evaluation for projectId:', validId);
-        
+
         setIsEvaluatingAI(true);
         setEvaluatingProjectId(validId);
         setAiEvaluationError(null);
@@ -752,11 +825,11 @@ export default function StartupDashboard({ user }) {
         try {
             // TODO: API call to save results
             // const response = await AIEvaluationService.saveAIResults(aiEvaluationResult);
-            
+
             setSuccessModalType('success');
             setSuccessMessage('Kết quả chấm điểm AI đã được lưu thành công!');
             setShowSuccessModal(true);
-            
+
             setShowAIEvaluationModal(false);
             setAIEvaluationResult(null);
         } catch (error) {
@@ -841,76 +914,91 @@ export default function StartupDashboard({ user }) {
                 />
             )}
 
-            {/* Quick Stats */}
-            <div className={styles.statsGrid}>
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconCyan}`}>
-                        <Eye size={20} />
+            {/* Quick Stats (Collapsible) */}
+            <div className={`${styles.statsWrapper} ${activeSection !== 'overview' ? styles.collapsed : ''}`}>
+                <div className={styles.statsGrid}>
+                    <div className={styles.statCard}>
+                        <div className={`${styles.statIcon} ${styles.iconCyan}`}>
+                            <Eye size={20} />
+                        </div>
+                        <div className={styles.statInfo}>
+                            <div className={styles.statValue}>{dashboardData.profileViews}</div>
+                            <div className={styles.statLabel}>Lượt xem hồ sơ</div>
+                        </div>
                     </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.profileViews}</div>
-                        <div className={styles.statLabel}>Lượt xem hồ sơ</div>
-                    </div>
-                </div>
 
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconYellow}`}>
-                        <Users size={20} />
+                    <div className={styles.statCard}>
+                        <div className={`${styles.statIcon} ${styles.iconYellow}`}>
+                            <Users size={20} />
+                        </div>
+                        <div className={styles.statInfo}>
+                            <div className={styles.statValue}>{dashboardData.investorInterests}</div>
+                            <div className={styles.statLabel}>Nhà đầu tư quan tâm</div>
+                        </div>
                     </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.investorInterests}</div>
-                        <div className={styles.statLabel}>Nhà đầu tư quan tâm</div>
-                    </div>
-                </div>
 
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconGreen}`}>
-                        <FileText size={20} />
+                    <div className={styles.statCard}>
+                        <div className={`${styles.statIcon} ${styles.iconGreen}`}>
+                            <FileText size={20} />
+                        </div>
+                        <div className={styles.statInfo}>
+                            <div className={styles.statValue}>{dashboardData.documentsUploaded}</div>
+                            <div className={styles.statLabel}>Tài liệu đã tải lên</div>
+                        </div>
                     </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.documentsUploaded}</div>
-                        <div className={styles.statLabel}>Tài liệu đã tải lên</div>
-                    </div>
-                </div>
 
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconPurple}`}>
-                        <TrendingUp size={20} />
-                    </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.aiScore}</div>
-                        <div className={styles.statLabel}>Điểm AI / 100</div>
+                    <div className={styles.statCard}>
+                        <div className={`${styles.statIcon} ${styles.iconPurple}`}>
+                            <TrendingUp size={20} />
+                        </div>
+                        <div className={styles.statInfo}>
+                            <div className={styles.statValue}>{dashboardData.aiScore}</div>
+                            <div className={styles.statLabel}>Điểm AI / 100</div>
+                        </div>
                     </div>
                 </div>
             </div>
 
             {/* Navigation Tabs */}
-            <div className={styles.tabs}>
-                <button
-                    className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('overview')}
-                >
-                    Tổng quan
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'complete-info' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('complete-info')}
-                >
-                    Thông tin bổ sung
-                </button>
+            <div className={styles.tabSwitcherWrapper}>
+                {isMobile && showLeftTabIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorLeft}`} />}
 
-                <button
-                    className={`${styles.tab} ${activeSection === 'my-projects' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('my-projects')}
+                <div
+                    className={`${styles.tabs} ${styles.animatedTabs}`}
+                    ref={tabsRef}
+                    onScroll={checkTabScroll}
                 >
-                    Dự án của tôi
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'advisors' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('advisors')}
-                >
-                    Yêu cầu tư vấn
-                </button>
+                    <button
+                        className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('overview')}
+                    >
+                        Tổng quan
+                    </button>
+                    <button
+                        className={`${styles.tab} ${activeSection === 'complete-info' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('complete-info')}
+                    >
+                        Thông tin bổ sung
+                    </button>
+
+                    <button
+                        className={`${styles.tab} ${activeSection === 'my-projects' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('my-projects')}
+                    >
+                        Dự án của tôi
+                    </button>
+                    <button
+                        className={`${styles.tab} ${activeSection === 'advisors' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('advisors')}
+                    >
+                        Yêu cầu tư vấn
+                    </button>
+
+                    {/* Animated Indicator Line */}
+                    <div className={styles.tabIndicator} style={indicatorStyle} />
+                </div>
+
+                {isMobile && showRightTabIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorRight}`} />}
             </div>
 
             {/* Content Sections */}
@@ -987,140 +1075,271 @@ export default function StartupDashboard({ user }) {
                 )}
 
 
-                {/* My Projects Section */}
+                {/* My Projects Section - KANBAN REDESIGN */}
                 {activeSection === 'my-projects' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle} style={{ marginBottom: 0 }}>Danh sách dự án của tôi</h3>
-                                <div className={styles.filterTabs} style={{ display: 'flex', gap: '8px' }}>
-                                    {[
-                                        { id: 'all', label: 'Tất cả' },
-                                        { id: 'draft', label: 'Bản nháp' },
-                                        { id: 'pending', label: 'Chờ duyệt' },
-                                        { id: 'approved', label: 'Đã duyệt' },
-                                        { id: 'rejected', label: 'Bị từ chối' }
-                                    ].map(filter => (
-                                        <button
-                                            key={filter.id}
-                                            onClick={() => setProjectFilter(filter.id)}
-                                            className={projectFilter === filter.id ? styles.primaryBtn : styles.secondaryBtn}
-                                            style={{
-                                                padding: '4px 12px',
-                                                fontSize: '12px',
-                                                height: '32px',
-                                                minWidth: 'auto'
-                                            }}
-                                        >
-                                            {filter.label}
-                                        </button>
-                                    ))}
+                    <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
+                        <div className={kanban.statisticsSection} style={{ gap: 0 }}>
+                            {/* Search and Header Row */}
+                            <div className={styles.cardHeader} style={{ 
+                                background: 'var(--bg-secondary)', 
+                                borderRadius: '12px', 
+                                padding: '16px 20px', 
+                                border: '1px solid var(--border-color)',
+                                marginBottom: 0
+                            }}>
+                                <h3 className={styles.cardTitle} style={{ marginBottom: 0 }}>Dự án của tôi</h3>
+                                <div className={styles.searchWrapper} style={{ position: 'relative', width: isMobile ? '100%' : '300px', marginTop: isMobile ? '12px' : 0 }}>
+                                    <Search className={styles.searchIcon} size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Tìm kiếm dự án..." 
+                                        className={styles.searchInput}
+                                        value={projectSearchTerm}
+                                        onChange={(e) => setProjectSearchTerm(e.target.value)}
+                                        style={{ 
+                                            width: '100%', 
+                                            padding: '10px 12px 10px 36px', 
+                                            borderRadius: '9999px', 
+                                            border: '1px solid rgba(29, 155, 240, 0.4)', 
+                                            background: 'var(--bg-primary)', 
+                                            fontSize: '13px', 
+                                            color: 'var(--text-primary)',
+                                            outline: 'none',
+                                            transition: 'all 0.2s ease',
+                                            boxShadow: projectSearchTerm ? '0 0 10px rgba(29, 155, 240, 0.1)' : 'none'
+                                        }}
+                                        onFocus={(e) => {
+                                            e.target.style.borderColor = 'var(--primary-blue)';
+                                            e.target.style.boxShadow = '0 0 0 3px rgba(29, 155, 240, 0.15)';
+                                        }}
+                                        onBlur={(e) => {
+                                            e.target.style.borderColor = 'rgba(29, 155, 240, 0.3)';
+                                            e.target.style.boxShadow = projectSearchTerm ? '0 0 10px rgba(29, 155, 240, 0.1)' : 'none';
+                                        }}
+                                    />
                                 </div>
                             </div>
-                            <div className={styles.list}>
-                                {isLoadingInitialData ? (
-                                    <div className={styles.loadingState}>
-                                        <Loader2 className={styles.spinner} size={24} />
-                                        <span>Đang tải danh sách dự án...</span>
+
+                            {/* Mobile Column Switcher - Segmented Control */}
+                            {isMobile && (
+                                <div className={kanban.tabSwitcherWrapper} style={{ marginTop: '16px', marginBottom: '16px' }}>
+                                    {showLeftKanbanIndicator && <div className={`${kanban.scrollIndicator} ${kanban.scrollIndicatorLeft}`} />}
+                                    <div className={kanban.mobileTabSwitcher} data-tabs="4" ref={kanbanTabsRef} onScroll={checkKanbanScroll} style={{ padding: '2px', background: 'var(--bg-secondary)', borderRadius: '14px', border: '1px solid var(--border-color)' }}>
+                                        {[
+                                            { id: 'draft', label: 'Bản nháp', color: 'draft' },
+                                            { id: 'pending', label: 'Chờ duyệt', color: 'pend' },
+                                            { id: 'approved', label: 'Đã duyệt', color: 'appr' },
+                                            { id: 'rejected', label: 'Bị từ chối', color: 'rej' }
+                                        ].map(tab => (
+                                            <button 
+                                                key={tab.id}
+                                                className={`${kanban.mobileTab} ${activeProjectMobileTab === tab.id ? kanban.activeMobileTab : ''}`}
+                                                onClick={() => setActiveProjectMobileTab(tab.id)}
+                                                data-status={tab.color}
+                                                style={{ flex: 1, padding: '10px 4px' }}
+                                            >
+                                                <span style={{ fontSize: '12px', fontWeight: 700 }}>{tab.label}</span>
+                                            </button>
+                                        ))}
                                     </div>
-                                ) : myProjects.length === 0 ? (
-                                    <div className={styles.emptyState}>
-                                        <p>Bạn chưa đăng dự án nào.</p>
-                                    </div>
-                                ) : (
-                                    (() => {
+                                    {showRightKanbanIndicator && <div className={`${kanban.scrollIndicator} ${kanban.scrollIndicatorRight}`} />}
+                                </div>
+                            )}
+
+                             {/* Separator Line */}
+                            {!isMobile && (
+                                <div style={{ height: '1px', background: 'var(--border-color)', margin: '20px -24px 0 -24px', opacity: 0.6 }}></div>
+                            )}
+
+                            {isLoadingInitialData ? (
+                                <div className={kanban.boardGrid} style={{ marginTop: '24px', gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', width: 'auto', margin: '24px -24px -84px -24px', opacity: 0.6 }}>
+                                    {[1, 2, 3, 4].map(i => (
+                                        <div key={i} className={kanban.bcol}>
+                                            <div className={kanban.bcolCards}>
+                                                <div className={kanban.skeletonCard}><div className={kanban.shimmer}></div></div>
+                                                <div className={kanban.skeletonCard}><div className={kanban.shimmer}></div></div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <div className={kanban.boardGrid} style={{ 
+                                    marginTop: 0, 
+                                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', 
+                                    width: 'auto', 
+                                    margin: isMobile ? 0 : '0 -24px -84px -24px',
+                                    border: 'none',
+                                    background: 'transparent'
+                                }}>
+                                    {/* Kanban Columns */}
+                                    {(() => {
                                         const filteredProjects = myProjects.filter(p => {
-                                            if (projectFilter === 'all') return true;
-                                            const status = p.status || 'Draft';
-                                            if (projectFilter === 'draft') return status === 'Draft' || status === 'IpProtected';
-                                            if (projectFilter === 'pending') return status === 'Pending' || status === 'Submitted';
-                                            if (projectFilter === 'approved') return status === 'Approved' || status === 'Published';
-                                            if (projectFilter === 'rejected') return status === 'Rejected';
-                                            return true;
+                                            const name = (p.name || p.projectName || '').toLowerCase();
+                                            const desc = (p.shortDescription || p.description || '').toLowerCase();
+                                            const search = projectSearchTerm.toLowerCase();
+                                            return name.includes(search) || desc.includes(search);
                                         });
 
-                                        if (filteredProjects.length === 0) {
+                                        const columns = [
+                                            { 
+                                                id: 'draft', 
+                                                label: 'Bản nháp', 
+                                                color: 'draft',
+                                                projects: filteredProjects.filter(p => p.status === 'Draft' || p.status === 'IpProtected')
+                                            },
+                                            { 
+                                                id: 'pending', 
+                                                label: 'Chờ duyệt', 
+                                                color: 'pend',
+                                                projects: filteredProjects.filter(p => p.status === 'Pending' || p.status === 'Submitted')
+                                            },
+                                            { 
+                                                id: 'approved', 
+                                                label: 'Đã duyệt', 
+                                                color: 'appr',
+                                                projects: filteredProjects.filter(p => p.status === 'Approved' || p.status === 'Published')
+                                            },
+                                            { 
+                                                id: 'rejected', 
+                                                label: 'Bị từ chối', 
+                                                color: 'rej',
+                                                projects: filteredProjects.filter(p => p.status === 'Rejected')
+                                            }
+                                        ];
+
+                                        return columns.map((col, index) => {
+                                            // On mobile, only show the active tab
+                                            if (isMobile && activeProjectMobileTab !== col.id) return null;
+
                                             return (
-                                                <div className={styles.emptyState}>
-                                                    <p>Không có dự án nào trong mục này.</p>
-                                                </div>
-                                            );
-                                        }
-
-                                        return filteredProjects.map(p => (
-                                            <div
-                                                key={p.id || p.projectId}
-                                                className={styles.listItem}
-                                                style={{ borderLeftColor: STATUS_COLORS[p.status || 'Draft'] }}
-                                            >
-                                                <div className={styles.listContent}>
-                                                    <div className={styles.listItemHeader}>
-                                                        <h4 className={styles.listItemTitle}>
-                                                            {p.name || p.projectName}
-                                                        </h4>
-                                                        <span
-                                                            className={styles.badge}
-                                                            style={{
-                                                                backgroundColor: `${STATUS_COLORS[p.status || 'Draft']}25`,
-                                                                color: STATUS_COLORS[p.status || 'Draft'],
-                                                                border: `1px solid ${STATUS_COLORS[p.status || 'Draft']}40`
-                                                            }}
-                                                        >
-                                                            {STATUS_LABELS[p.status || 'Draft'] || 'Bản nháp'}
-                                                        </span>
-                                                    </div>
-                                                    <p className={styles.subtitle}>{p.shortDescription || p.description}</p>
-                                                    <div className={styles.listMeta}>
-                                                        <span>Giai đoạn: {getStageLabel(p.developmentStage)}</span>
-                                                        {p.submittedDate && <span> • Nộp ngày: {p.submittedDate}</span>}
-                                                    </div>
-
-                                                    {p.status === 'Rejected' && p.rejectionReason && (
-                                                        <div className={styles.rejectionBox}>
-                                                            <div className={styles.rejectionTitle}>
-                                                                <AlertCircle size={14} />
-                                                                <span>Lý do từ chối:</span>
+                                                <div 
+                                                    key={col.id} 
+                                                    className={kanban.bcol} 
+                                                    style={{ 
+                                                        borderRight: (isMobile || index === columns.length - 1) ? 'none' : '1px solid var(--border-color)', 
+                                                        borderLeft: 'none', 
+                                                        minWidth: 0 
+                                                    }}
+                                                >
+                                                    {!isMobile && (
+                                                        <div className={`${kanban.bcolHead} ${kanban[col.color]}`}>
+                                                            <div className={kanban.bcolTitle}>
+                                                                <div className={`${kanban.bctDot} ${kanban[col.color]}`}></div>
+                                                                {col.label}
                                                             </div>
-                                                            <p className={styles.rejectionText}>{p.rejectionReason}</p>
+                                                            <div className={`${kanban.bcolN} ${kanban[col.color]}`}>{col.projects.length}</div>
                                                         </div>
                                                     )}
+                                                    
+                                                    <div className={kanban.bcolCards}>
+                                                        {col.projects.length === 0 ? (
+                                                            <div className={kanban.emptyStateContainer} style={{ minHeight: '300px' }}>
+                                                                <RefreshCw className={kanban.emptyStateIcon} size={32} style={{ opacity: 0.3 }} />
+                                                                <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                                    {projectSearchTerm ? 'Không tìm thấy dự án' : 'Hàng đợi trống'}
+                                                                </p>
+                                                            </div>
+                                                        ) : (
+                                                            col.projects.map(p => (
+                                                                <div key={p.id || p.projectId} className={kanban.bcard}>
+                                                                    <div className={`${kanban.bcardStrip} ${kanban[col.color]}`}></div>
+                                                                    <div className={kanban.bcardBody}>
+                                                                        <div className={kanban.bcardRow1}>
+                                                                            <div className={kanban.bcardMainInfo}>
+                                                                                <div className={kanban.bcardName} title={p.name || p.projectName}>
+                                                                                    {p.name || p.projectName}
+                                                                                </div>
+                                                                                <span className={`${kanban.btag} ${p.developmentStage === 'MVP' ? kanban.btagMvp : p.developmentStage === 'Idea' ? kanban.btagIdea : kanban.btagGrowth}`}>
+                                                                                    {getStageLabel(p.developmentStage)}
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                        <p className={kanban.bcardDesc}>{p.shortDescription || p.description}</p>
+                                                                        
+                                                                        {p.status === 'Rejected' && p.rejectionReason && (
+                                                                            <div style={{ padding: '10px', background: 'rgba(244, 33, 46, 0.05)', borderRadius: '10px', border: '1px solid rgba(244, 33, 46, 0.1)', marginBottom: '12px' }}>
+                                                                                <div style={{ fontSize: '12px', color: '#f4212e', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
+                                                                                    <AlertCircle size={14} /> Lý do từ chối
+                                                                                </div>
+                                                                                <p style={{ fontSize: '12px', color: 'var(--text-secondary)', margin: 0, lineHeight: 1.4 }}>{p.rejectionReason}</p>
+                                                                            </div>
+                                                                        )}
+
+                                                                        <div className={kanban.bcardActions}>
+                                                                            {p.status === 'Draft' ? (
+                                                                                <>
+                                                                                    <button
+                                                                                        className={kanban.baBtn}
+                                                                                        style={{ color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.2)', background: 'rgba(245, 158, 11, 0.05)' }}
+                                                                                        onClick={() => handleRunAIEvaluation(p.id || p.projectId)}
+                                                                                        disabled={isEvaluatingAI && evaluatingProjectId === (p.id || p.projectId)}
+                                                                                        title="Phân tích AI"
+                                                                                    >
+                                                                                        <Sparkles size={16} />
+                                                                                    </button>
+                                                                                    <button
+                                                                                        className={`${kanban.baBtn} ${kanban.apr}`}
+                                                                                        onClick={() => {
+                                                                                            setPendingSubmitProjectId(p.id || p.projectId);
+                                                                                            setShowSubmitConfirmation(true);
+                                                                                        }}
+                                                                                        disabled={isSubmittingProject && submittingProjectId === (p.id || p.projectId)}
+                                                                                        title="Nộp dự án"
+                                                                                    >
+                                                                                        <Send size={16} />
+                                                                                    </button>
+                                                                                    <button 
+                                                                                        className={kanban.baBtn}
+                                                                                        onClick={() => {
+                                                                                            setDetailProject(p);
+                                                                                            setShowDetailModal(true);
+                                                                                            fetchAnalysisHistory(p.id || p.projectId);
+                                                                                        }}
+                                                                                        title="Chi tiết dự án"
+                                                                                    >
+                                                                                        <ArrowRight size={16} />
+                                                                                    </button>
+                                                                                </>
+                                                                            ) : (
+                                                                                <>
+                                                                                    {(p.status === 'IpProtected') && (
+                                                                                        <button
+                                                                                            className={`${kanban.baBtn} ${kanban.apr}`}
+                                                                                            onClick={() => {
+                                                                                                setPendingSubmitProjectId(p.id || p.projectId);
+                                                                                                setShowSubmitConfirmation(true);
+                                                                                            }}
+                                                                                            disabled={isSubmittingProject && submittingProjectId === (p.id || p.projectId)}
+                                                                                            title="Nộp dự án"
+                                                                                        >
+                                                                                            <Send size={16} /> Nộp
+                                                                                        </button>
+                                                                                    )}
+                                                                                    <button 
+                                                                                        className={kanban.baBtn}
+                                                                                        onClick={() => {
+                                                                                            setDetailProject(p);
+                                                                                            setShowDetailModal(true);
+                                                                                            fetchAnalysisHistory(p.id || p.projectId);
+                                                                                        }}
+                                                                                        title="Chi tiết dự án"
+                                                                                    >
+                                                                                        Chi tiết <ArrowRight size={16} />
+                                                                                    </button>
+                                                                                </>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
                                                 </div>
-                                                <div className={styles.listActions}>
-                                                    {p.status === 'Draft' && (
-                                                        <>
-                                                            <button
-                                                                className={styles.aiBtn}
-                                                                onClick={() => handleRunAIEvaluation(p.id || p.projectId)}
-                                                                disabled={isEvaluatingAI}
-                                                                title="Chạy đánh giá AI cho dự án này"
-                                                            >
-                                                                {isEvaluatingAI && evaluatingProjectId === (p.id || p.projectId) ? 'Đang chấm...' : 'Phân Tích AI'}
-                                                            </button>
-                                                            <button
-                                                                className={styles.primaryBtn}
-                                                                onClick={() => handleSubmitProject(p.id || p.projectId)}
-                                                                disabled={isSubmittingProject}
-                                                            >
-                                                                {isSubmittingProject && submittingProjectId === (p.id || p.projectId) ? '...' : 'Nộp dự án'}
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                    <button
-                                                        className={styles.secondaryBtn}
-                                                        onClick={() => {
-                                                            setDetailProject(p);
-                                                            setShowDetailModal(true);
-                                                            fetchAnalysisHistory(p.id || p.projectId);
-                                                        }}
-                                                    >
-                                                        Chi tiết
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        ));
-                                    })()
-                                )}
-                            </div>
+                                            );
+                                        });
+                                    })()}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -1304,21 +1523,21 @@ export default function StartupDashboard({ user }) {
                         {/* Modal Body */}
                         <div style={{ padding: '24px', overflowY: 'auto', flex: 1, maxHeight: '80vh' }}>
                             {/* AI History Section */}
-                            <div style={{ 
-                                marginBottom: '24px', 
-                                padding: '16px', 
-                                backgroundColor: 'rgba(29, 155, 240, 0.05)', 
-                                borderRadius: '12px', 
-                                border: '1px solid var(--border-color)' 
+                            <div style={{
+                                marginBottom: '24px',
+                                padding: '16px',
+                                backgroundColor: 'rgba(29, 155, 240, 0.05)',
+                                borderRadius: '12px',
+                                border: '1px solid var(--border-color)'
                             }}>
-                                <h4 style={{ 
-                                    fontSize: '14px', 
-                                    fontWeight: '800', 
-                                    marginBottom: '12px', 
-                                    color: 'var(--text-primary)', 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    gap: '8px' 
+                                <h4 style={{
+                                    fontSize: '14px',
+                                    fontWeight: '800',
+                                    marginBottom: '12px',
+                                    color: 'var(--text-primary)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
                                 }}>
                                     <History size={18} color="var(--primary-blue)" />
                                     Lịch sử đánh giá AI
@@ -1329,10 +1548,10 @@ export default function StartupDashboard({ user }) {
                                         Đang tải lịch sử...
                                     </div>
                                 ) : analysisHistory.length > 0 ? (
-                                    <div style={{ 
-                                        display: 'flex', 
-                                        gap: '12px', 
-                                        overflowX: 'auto', 
+                                    <div style={{
+                                        display: 'flex',
+                                        gap: '12px',
+                                        overflowX: 'auto',
                                         paddingBottom: '8px',
                                         msOverflowStyle: 'none',
                                         scrollbarWidth: 'none'
@@ -1741,7 +1960,7 @@ export default function StartupDashboard({ user }) {
                         if (response.success && response.data) {
                             setMyProjects(Array.isArray(response.data) ? response.data : (response.data.items || []));
                         }
-                        
+
                         // For create: keep form open to show success modal with dashboard button
                         // For edit: close form immediately
                         if (detailProject) {  // This means it's an edit
