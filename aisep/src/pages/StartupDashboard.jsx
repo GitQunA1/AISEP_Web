@@ -40,6 +40,8 @@ export default function StartupDashboard({ user }) {
     const [showSubmitConfirmation, setShowSubmitConfirmation] = React.useState(false);
     const [pendingSubmitProjectId, setPendingSubmitProjectId] = React.useState(null);
     const [isSubmittingProject, setIsSubmittingProject] = React.useState(false);
+    const [submittingProjectId, setSubmittingProjectId] = React.useState(null);
+    const [blockchainVerifications, setBlockchainVerifications] = React.useState({});
     const [showSuccessModal, setShowSuccessModal] = React.useState(false);
     const [isLoadingDocuments, setIsLoadingDocuments] = React.useState(false);
     const [isUploading, setIsUploading] = React.useState(false);
@@ -323,12 +325,18 @@ export default function StartupDashboard({ user }) {
                     fullName: doc.fileName || doc.documentType, // Keep full name for title/tooltips
                     type: doc.documentType,
                     uploadDate: new Date(doc.uploadedAt || doc.verifiedAt || new Date()).toLocaleDateString('vi-VN'),
-                    status: 'verified',
+                    status: doc.blockchainTxHash ? 'verified' : 'unverified', // Initial hint if hash exists
                     hash: doc.fileHash,
                     txHash: doc.blockchainTxHash, // Capture transaction hash
                     url: doc.fileUrl
                 }));
                 setDocuments(mappedDocs);
+
+                // Auto-verify all documents on blockchain (BR-08)
+                docItems.forEach(doc => {
+                    const docId = doc.id || doc.documentId;
+                    if (docId) verifyDocOnBlockchain(docId);
+                });
             } else {
                 setDocuments([]);
             }
@@ -337,6 +345,35 @@ export default function StartupDashboard({ user }) {
             setDocuments([]);
         } finally {
             setIsLoadingDocuments(false);
+        }
+    };
+
+    const verifyDocOnBlockchain = async (docId) => {
+        // Set loading state
+        setBlockchainVerifications(prev => ({
+            ...prev,
+            [docId]: { status: 'loading' }
+        }));
+
+        try {
+            const response = await projectSubmissionService.verifyDocument(docId);
+            if (response && response.data && response.data.isAuthentic) {
+                setBlockchainVerifications(prev => ({
+                    ...prev,
+                    [docId]: { status: 'verified', txHash: response.data.txHash }
+                }));
+            } else {
+                setBlockchainVerifications(prev => ({
+                    ...prev,
+                    [docId]: { status: 'unverified' }
+                }));
+            }
+        } catch (error) {
+            // Treat verification error (like document not found on chain) as unverified
+            setBlockchainVerifications(prev => ({
+                ...prev,
+                [docId]: { status: 'unverified' }
+            }));
         }
     };
 
@@ -412,7 +449,8 @@ export default function StartupDashboard({ user }) {
             const res = await projectSubmissionService.uploadDocument(projectId, file, documentType);
             if (res && (res.success || res.isSuccess)) {
                 setSuccessModalType('success');
-                setSuccessMessage('Tải tài liệu lên thành công. Tài liệu đã được lưu lên blockchain.');
+                setSuccessTitle('Tải lên thành công');
+                setSuccessMessage('Tải tài liệu lên thành công.');
                 setShowSuccessModal(true);
                 fetchProjectDocuments(projectId);
             } else {
@@ -575,15 +613,35 @@ export default function StartupDashboard({ user }) {
         }
 
         const validId = projectId ? parseInt(projectId) || projectId : null;
-        console.log('[SUBMIT] handleSubmitProject called with:', {
-            projectIdInput: projectId,
-            projectIdParsed: validId,
-            type: typeof validId
-        });
+        
+        // Show loading state while checking requirements
+        setIsSubmittingProject(true);
+        setSubmittingProjectId(validId);
+        try {
+            // Check if project has at least one document (PitchDeck, BusinessPlan, etc.)
+            const docResponse = await projectSubmissionService.getDocuments(validId);
+            const projectDocs = Array.isArray(docResponse.data) ? docResponse.data : (docResponse.data?.items || []);
+            
+            if (projectDocs.length === 0) {
+                setSuccessModalType('error');
+                setSuccessTitle('Yêu cầu tài liệu');
+                setSuccessMessage('Vui lòng tải lên ít nhất một tài liệu (Pitch Deck, Kế hoạch kinh doanh,...) trong phần Chi tiết dự án trước khi nộp để đội ngũ có thể xem xét.');
+                setShowSuccessModal(true);
+                return;
+            }
 
-        // Show confirmation modal instead of window.confirm
-        setPendingSubmitProjectId(validId);
-        setShowSubmitConfirmation(true);
+            // If has documents, proceed to confirmation modal
+            setPendingSubmitProjectId(validId);
+            setShowSubmitConfirmation(true);
+        } catch (error) {
+            console.error('[SUBMIT] Error checking documents:', error);
+            setSuccessModalType('error');
+            setSuccessMessage('Đã xảy ra lỗi khi kiểm tra tài liệu dự án. Vui lòng thử lại.');
+            setShowSuccessModal(true);
+        } finally {
+            setIsSubmittingProject(false);
+            setSubmittingProjectId(null);
+        }
     };
 
     // Handle confirm from confirmation modal - DIRECT SUBMISSION (No AI)
@@ -601,6 +659,7 @@ export default function StartupDashboard({ user }) {
         
         setShowSubmitConfirmation(false);
         setIsSubmittingProject(true);
+        setSubmittingProjectId(projectId);
 
         try {
             const res = await projectSubmissionService.submitProject(projectId);
@@ -633,6 +692,7 @@ export default function StartupDashboard({ user }) {
             setShowSuccessModal(true);
         } finally {
             setIsSubmittingProject(false);
+            setSubmittingProjectId(null);
             setPendingSubmitProjectId(null);
         }
     };
@@ -1041,7 +1101,7 @@ export default function StartupDashboard({ user }) {
                                                                 onClick={() => handleSubmitProject(p.id || p.projectId)}
                                                                 disabled={isSubmittingProject}
                                                             >
-                                                                {isSubmittingProject ? '...' : 'Nộp dự án'}
+                                                                {isSubmittingProject && submittingProjectId === (p.id || p.projectId) ? '...' : 'Nộp dự án'}
                                                             </button>
                                                         </>
                                                     )}
@@ -1543,10 +1603,35 @@ export default function StartupDashboard({ user }) {
                                                             <td>{doc.type}</td>
                                                             <td>{doc.uploadDate}</td>
                                                             <td>
-                                                                <span className={styles.statusBadge}>
-                                                                    <Shield size={12} />
-                                                                    Blockchain
-                                                                </span>
+                                                                {(() => {
+                                                                    const verification = blockchainVerifications[doc.id];
+                                                                    const status = verification?.status || (doc.txHash ? 'verified' : 'loading');
+
+                                                                    if (status === 'loading') {
+                                                                        return (
+                                                                            <span className={`${styles.statusBadge} ${styles.statusBadgeLoading}`}>
+                                                                                <Loader2 size={12} className={styles.spinner} />
+                                                                                Xác thực...
+                                                                            </span>
+                                                                        );
+                                                                    }
+
+                                                                    if (status === 'verified') {
+                                                                        return (
+                                                                            <span className={styles.statusBadge}>
+                                                                                <Shield size={12} />
+                                                                                Blockchain
+                                                                            </span>
+                                                                        );
+                                                                    }
+
+                                                                    return (
+                                                                        <span className={`${styles.statusBadge} ${styles.statusBadgeUnverified}`}>
+                                                                            <Shield size={12} />
+                                                                            Chưa nộp
+                                                                        </span>
+                                                                    );
+                                                                })()}
                                                             </td>
                                                             <td>
                                                                 <div className={styles.tableActions}>
@@ -1607,7 +1692,7 @@ export default function StartupDashboard({ user }) {
                                     }}
                                     disabled={isSubmittingProject}
                                 >
-                                    {isSubmittingProject ? 'Đang nộp...' : 'Nộp dự án'}
+                                    {isSubmittingProject && submittingProjectId === (detailProject.projectId || detailProject.id) ? '...' : 'Nộp dự án'}
                                 </button>
                             )}
                             {(detailProject.status === 'Draft' || detailProject.status === 'Rejected') && (
