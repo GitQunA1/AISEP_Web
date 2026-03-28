@@ -162,6 +162,7 @@ function MainLayout({
     stage: '',
     minScore: 0,
     fundingStage: '',
+    sort: 'all',
   });
 
   useEffect(() => {
@@ -480,6 +481,7 @@ function MainLayout({
           <ProjectDetailView
             projectId={selectedProjectId}
             user={user}
+            onShowLogin={onShowLogin}
             onBack={() => {
               setSelectedProjectId(null);
               if (window.location.pathname.startsWith('/projects/')) {
@@ -494,6 +496,7 @@ function MainLayout({
               <FeedHeader
                 user={user}
                 onFilterChange={handleFilterChange}
+                activeFilters={activeFilters}
                 showStats={true}
                 onShowProjectForm={() => {
                   const userRole = (user?.role !== undefined && user?.role !== null) ? user.role.toString().toLowerCase() : '';

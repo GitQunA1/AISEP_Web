@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Loader2, ArrowLeft, ClipboardList, TrendingUp, Sword, FolderOpen, Users, DollarSign, BarChart3, Zap } from 'lucide-react';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import AIEvaluationService from '../../services/AIEvaluationService';
+import ProfileErrorScreen from '../common/ProfileErrorScreen';
+import AuthRequirementScreen from '../common/AuthRequirementScreen';
+import ProfileLoading from '../common/ProfileLoading';
 
 /* ─── Design tokens (hardcoded to guarantee correct rendering) ─── */
 const T = {
@@ -178,7 +181,7 @@ const MobileDocCard = ({ doc }) => (
 );
 
 /* ─── Main Component ─────────────────────────────────────── */
-export default function ProjectDetailView({ projectId, onBack }) {
+export default function ProjectDetailView({ projectId, onBack, user, onShowLogin }) {
   const [project, setProject] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [aiHistory, setAiHistory] = useState([]);
@@ -193,7 +196,7 @@ export default function ProjectDetailView({ projectId, onBack }) {
   }, []);
 
   useEffect(() => {
-    if (!projectId) return;
+    if (!projectId || !user) return;
     setLoading(true); setError(null);
     Promise.all([
       projectSubmissionService.getProjectById(projectId),
@@ -210,7 +213,8 @@ export default function ProjectDetailView({ projectId, onBack }) {
           tags: d.keySkills ? d.keySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
         });
       } else {
-        setError('Không tìm thấy thông tin dự án.');
+        const msg = pRes?.message || 'Không tìm thấy thông tin dự án.';
+        setError(msg);
       }
       const rawDocs = dRes?.data?.items ?? (Array.isArray(dRes?.data) ? dRes?.data : []);
       const truncateName = (name, max = 28) => {
@@ -228,42 +232,41 @@ export default function ProjectDetailView({ projectId, onBack }) {
         url: doc.fileUrl,
       })));
       setAiHistory(aRes?.data || []);
-    }).catch(err => setError(err?.message || 'Lỗi khi tải dự án.'))
+    }).catch(err => {
+      console.error("ProjectDetailView Fetch Error:", err);
+      const is401 = err?.message?.includes('401') || err?.response?.status === 401;
+      setError(is401 ? 'Unauthorized' : (err?.message || 'Lỗi khi tải dự án.'));
+    })
       .finally(() => setLoading(false));
-  }, [projectId]);
+  }, [projectId, user]);
+
+  /* ── Auth screen ── */
+  if (!user || error === 'Unauthorized') {
+    return (
+      <AuthRequirementScreen 
+        type="dự án" 
+        onBack={onBack} 
+        onLogin={onShowLogin} 
+      />
+    );
+  }
 
   /* ── Loading state ── */
-  if (loading) return (
-    <div style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      flex: 1, width: '100%', background: T.bg, minHeight: '400px'
-    }}>
-      <Loader2 size={28} style={{ color: T.blue, animation: 'spin 1s linear infinite' }} />
-      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
-    </div>
-  );
+  if (loading) return <ProfileLoading message="Đang tải thông tin dự án..." />;
 
   /* ── Error state ── */
   if (error || !project) return (
-    <div style={{
-      display: 'flex', flexDirection: 'column', alignItems: 'center',
-      justifyContent: 'center', flex: 1, width: '100%', gap: 16,
-      color: T.textMuted, background: T.bg, minHeight: '400px'
-    }}>
-      <span style={{ fontSize: 42 }}>⚠️</span>
-      <div style={{ fontSize: 14 }}>{error || 'Dự án không tồn tại.'}</div>
-      <button
-        onClick={onBack}
-        style={{
-          padding: '8px 22px', borderRadius: 9999,
-          background: T.surface2, border: `1px solid ${T.border}`,
-          color: T.text, cursor: 'pointer', fontSize: 13,
-          fontFamily: "'IBM Plex Sans', sans-serif",
-        }}
-      >
-        ← Quay lại
-      </button>
-    </div>
+    <ProfileErrorScreen 
+      title="dự án" 
+      message={error} 
+      onBack={onBack} 
+      onRetry={() => {
+        setLoading(true);
+        setError(null);
+        // useEffect will refetch due to state change if logic permits or we just refetch here
+        window.location.reload(); 
+      }}
+    />
   );
 
   /* ── Derived values ── */

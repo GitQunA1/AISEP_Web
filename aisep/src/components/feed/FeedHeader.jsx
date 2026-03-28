@@ -13,6 +13,7 @@ import FeedFilter from './FeedFilter';
 function FeedHeader({ 
   user, 
   onFilterChange, 
+  activeFilters, 
   onShowProjectForm, 
   title = "Khám phá dự án", 
   subtitle = "Khám phá các dự án sáng tạo được hỗ trợ bởi AI", 
@@ -48,6 +49,7 @@ function FeedHeader({
         {showFilter && (
           <FeedFilter 
             user={user} 
+            activeFilters={activeFilters}
             onFilterChange={onFilterChange} 
             industryCounts={industryCounts}
             totalCount={stats.approvedCount}
