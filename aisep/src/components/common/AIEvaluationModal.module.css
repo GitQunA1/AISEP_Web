@@ -8,7 +8,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 20001 !important; /* Above project detail modal (9999) and Confirmation (20000) */
+    z-index: 50001 !important; /* Above project detail modal (10002) and Confirmation (50000) */
     backdrop-filter: blur(8px);
     animation: fadeIn 0.2s ease-out;
     padding: 40px;
@@ -460,7 +460,7 @@
 @media (max-width: 1024px) {
     .backdrop {
         padding: 0;
-        z-index: 20002 !important; /* Higher than detail modal wrap */
+        z-index: 50001 !important; /* Higher than detail modal wrap */
     }
 
     .modal {
