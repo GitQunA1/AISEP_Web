@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search } from 'lucide-react';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2 } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
@@ -25,7 +25,7 @@ import StartupProfileBanner from '../components/startup/StartupProfileBanner';
  * Features: Overview stats, Profile completion, Documents, AI Score, Advisor requests
  */
 export default function StartupDashboard({ user }) {
-    const [isMobile, setIsMobile] = React.useState(window.innerWidth < 850);
+    const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 1024);
     const [showLeftTabIndicator, setShowLeftTabIndicator] = React.useState(false);
     const [showRightTabIndicator, setShowRightTabIndicator] = React.useState(false);
     
@@ -82,6 +82,7 @@ export default function StartupDashboard({ user }) {
     const [showHistoryView, setShowHistoryView] = React.useState(false);
     const [selectedHistoryResult, setSelectedHistoryResult] = React.useState(null);
     const [evaluatingProjectId, setEvaluatingProjectId] = React.useState(null);
+    const [showFullscreenImage, setShowFullscreenImage] = React.useState(false);
 
     // Document Deletion States
     const [isDeletingDocument, setIsDeletingDocument] = React.useState(false);
@@ -110,7 +111,7 @@ export default function StartupDashboard({ user }) {
         };
 
         const handleResize = () => {
-            setIsMobile(window.innerWidth < 850);
+            setIsMobile(window.innerWidth <= 1024);
             updateIndicator();
         };
 
@@ -139,6 +140,17 @@ export default function StartupDashboard({ user }) {
             setShowRightKanbanIndicator(scrollLeft < scrollWidth - clientWidth - 5);
         }
     };
+
+    React.useEffect(() => {
+        if (showDetailModal || showFullscreenImage) {
+            document.body.style.overflow = 'hidden';
+        } else {
+            document.body.style.overflow = 'unset';
+        }
+        return () => {
+            document.body.style.overflow = 'unset';
+        };
+    }, [showDetailModal, showFullscreenImage]);
 
     // Initialize Kanban scroll state on tab switch
     React.useEffect(() => {
@@ -897,6 +909,17 @@ export default function StartupDashboard({ user }) {
             setIsSubmittingProject(false);
         }
     };
+    const parseTeamMembers = (text) => {
+        if (!text) return [];
+        const members = text.split(/[\n,]+/).map(m => m.trim()).filter(Boolean);
+        return members.map(m => {
+            const match = m.match(/^(.*?)\s*\((.*?)\)$/);
+            if (match) {
+                return { name: match[1].trim(), role: match[2].trim() };
+            }
+            return { name: m, role: 'Thành viên' };
+        });
+    };
 
     return (
         <div className={styles.container}>
@@ -1411,7 +1434,8 @@ export default function StartupDashboard({ user }) {
                                                 </div>
                                             )}
                                         </div>
-                                    )))}
+                                    ))
+                                )}
                             </div>
                         </div>
                     </div>
@@ -1494,219 +1518,398 @@ export default function StartupDashboard({ user }) {
 
             {/* Consolidated Modals at end of file */}
 
-            {/* Project Detail Modal */}
+            {/* Project Detail Modal - Redesigned V3 (Split Screen Hero) */}
             {showDetailModal && detailProject && (
                 <div
                     className={styles.modalOverlay}
                     onClick={(e) => e.target === e.currentTarget && setShowDetailModal(false)}
                 >
-                    <div className={styles.modalContent} style={{ maxWidth: '800px', width: '90%' }}>
-                        <div className={styles.modalHeader}>
-                            <div>
-                                <h2 className={styles.headerTitle} style={{ margin: '0 0 8px 0' }}>{detailProject.projectName || detailProject.name}</h2>
-                                <span
-                                    className={styles.badge}
-                                    style={{
-                                        backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}25`,
-                                        color: STATUS_COLORS[detailProject.status || 'Draft'],
-                                        border: `1px solid ${STATUS_COLORS[detailProject.status || 'Draft']}40`
-                                    }}
+                    <div className={styles.modalContent}>
+                        
+                        <div className={styles.modalSplitWrapper}>
+                            {/* --- LEFT SIDE: HERO POSTER (Desktop) --- */}
+                            {detailProject.projectImageUrl && (
+                                <div 
+                                    className={`${styles.modalSplitHero} ${styles.desktopOnly}`}
+                                    onClick={() => setShowFullscreenImage(true)}
+                                    style={{ cursor: 'zoom-in' }}
                                 >
-                                    {STATUS_LABELS[detailProject.status || 'Draft'] || 'Bản nháp'}
-                                </span>
-                            </div>
-                            <button onClick={() => setShowDetailModal(false)} className={styles.closeButton} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)' }}>
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        {/* Modal Body */}
-                        <div style={{ padding: '24px', overflowY: 'auto', flex: 1, maxHeight: '80vh' }}>
-                            {/* AI History Section */}
-                            <div style={{
-                                marginBottom: '24px',
-                                padding: '16px',
-                                backgroundColor: 'rgba(29, 155, 240, 0.05)',
-                                borderRadius: '12px',
-                                border: '1px solid var(--border-color)'
-                            }}>
-                                <h4 style={{
-                                    fontSize: '14px',
-                                    fontWeight: '800',
-                                    marginBottom: '12px',
-                                    color: 'var(--text-primary)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px'
-                                }}>
-                                    <History size={18} color="var(--primary-blue)" />
-                                    Lịch sử đánh giá AI
-                                </h4>
-                                {isLoadingHistory ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                                        <Loader2 size={14} className={styles.spinner} />
-                                        Đang tải lịch sử...
-                                    </div>
-                                ) : analysisHistory.length > 0 ? (
-                                    <div style={{
-                                        display: 'flex',
-                                        gap: '12px',
-                                        overflowX: 'auto',
-                                        paddingBottom: '8px',
-                                        msOverflowStyle: 'none',
-                                        scrollbarWidth: 'none'
-                                    }}>
-                                        {analysisHistory.map((item, index) => (
-                                            <button
-                                                key={item.evaluationId || index}
-                                                onClick={() => {
-                                                    setSelectedHistoryResult({ data: item });
-                                                    setShowHistoryView(true);
-                                                }}
+                                    <img
+                                        src={detailProject.projectImageUrl}
+                                        alt={detailProject.projectName}
+                                        className={styles.heroPosterImage}
+                                        onLoad={(e) => { e.target.style.opacity = 1; }}
+                                        style={{ opacity: 0, transition: 'opacity 0.6s ease' }}
+                                    />
+                                    <div className={styles.heroPosterOverlay}>
+                                        <h2 className={styles.heroPosterTitle}>{detailProject.projectName}</h2>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <span
+                                                className={styles.badge}
                                                 style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    padding: '10px 16px',
-                                                    backgroundColor: 'var(--bg-primary)',
-                                                    border: '1px solid var(--border-color)',
-                                                    borderRadius: '12px',
-                                                    minWidth: '100px',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                                                }}
-                                                onMouseOver={(e) => {
-                                                    e.currentTarget.style.borderColor = 'var(--primary-blue)';
-                                                    e.currentTarget.style.backgroundColor = 'rgba(29, 155, 240, 0.02)';
-                                                }}
-                                                onMouseOut={(e) => {
-                                                    e.currentTarget.style.borderColor = 'var(--border-color)';
-                                                    e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
+                                                    backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}25`,
+                                                    color: STATUS_COLORS[detailProject.status || 'Draft'],
+                                                    border: `1px solid ${STATUS_COLORS[detailProject.status || 'Draft']}40`,
+                                                    padding: '4px 12px',
+                                                    borderRadius: '6px',
+                                                    fontWeight: 700,
+                                                    fontSize: '12px',
+                                                    backdropFilter: 'blur(8px)'
                                                 }}
                                             >
-                                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '4px' }}>
-                                                    {new Date(item.createdAt || item.evaluatedAt || Date.now()).toLocaleDateString('vi-VN')}
-                                                </span>
-                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-                                                    <span style={{ fontSize: '18px', fontWeight: '900', color: 'var(--primary-blue)' }}>
-                                                        {item.potentialScore || 0}
-                                                    </span>
-                                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600' }}>/100</span>
+                                                {STATUS_LABELS[detailProject.status || 'Draft'] || 'Bản nháp'}
+                                            </span>
+                                            {detailProject.status === 'Approved' && (
+                                                <div style={{ 
+                                                    backgroundColor: 'rgba(16, 185, 129, 0.2)', 
+                                                    padding: '4px 8px', 
+                                                    borderRadius: '6px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    fontSize: '11px',
+                                                    color: '#10b981',
+                                                    fontWeight: 800,
+                                                    backdropFilter: 'blur(8px)'
+                                                }}>
+                                                    <CheckCircle size={12} strokeWidth={3} /> READY
                                                 </div>
-                                            </button>
-                                        ))}
+                                            )}
+                                        </div>
                                     </div>
-                                ) : (
-                                    <div style={{ color: 'var(--text-secondary)', fontSize: '13px', padding: '4px 0' }}>
-                                        Chưa có dữ liệu đánh giá
-                                    </div>
-                                )}
-                            </div>
-
-                            {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
-                                <div className={styles.rejectionBox} style={{ marginBottom: '24px', marginTop: 0 }}>
-                                    <div className={styles.rejectionTitle}>
-                                        <AlertCircle size={16} />
-                                        <span style={{ fontSize: '15px' }}>Phản hồi từ đội ngũ vận hành:</span>
-                                    </div>
-                                    <p className={styles.rejectionText} style={{ fontSize: '15px' }}>{detailProject.rejectionReason}</p>
+                                    <button 
+                                        className={styles.heroMaximizeHint}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowFullscreenImage(true);
+                                        }}
+                                        title="Xem ảnh đầy đủ"
+                                    >
+                                        <Maximize2 size={24} />
+                                    </button>
                                 </div>
                             )}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>1. Thông tin cơ bản</h4>
 
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Mô tả ngắn</label>
-                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.shortDescription}</p>
-                                    </div>
-
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Giai đoạn phát triển</label>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <TrendingUp size={16} color="var(--primary-blue)" />
-                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)' }}>
+                            {/* --- RIGHT SIDE: CONTENT AREA --- */}
+                            <div className={styles.modalSplitContentArea}>
+                                {/* --- Desktop-Only Header (Restoration) --- */}
+                                {!isMobile && (
+                                    <div className={styles.modalSplitDesktopHeader}>
+                                        <h2 className={styles.modalSplitDesktopTitle}>{detailProject.projectName}</h2>
+                                        <div className={styles.modalSplitDesktopBadges}>
+                                            <div style={{ 
+                                                fontSize: '11px', 
+                                                fontWeight: 800, 
+                                                color: 'var(--primary-blue)', 
+                                                backgroundColor: 'rgba(29, 155, 240, 0.1)', 
+                                                padding: '4px 8px', 
+                                                borderRadius: '6px'
+                                            }}>
                                                 {getStageLabel(detailProject.developmentStage)}
-                                            </p>
+                                            </div>
+                                            <span 
+                                                style={{
+                                                    backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}25`,
+                                                    color: STATUS_COLORS[detailProject.status || 'Draft'],
+                                                    border: `1px solid ${STATUS_COLORS[detailProject.status || 'Draft']}40`,
+                                                    padding: '4px 12px',
+                                                    borderRadius: '6px',
+                                                    fontWeight: 700,
+                                                    fontSize: '12px',
+                                                }}
+                                            >
+                                                {STATUS_LABELS[detailProject.status || 'Draft'] || 'Bản nháp'}
+                                            </span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* --- Mobile Fixed Header (When NO image exists) --- */}
+                                {isMobile && !detailProject.projectImageUrl && (
+                                    <div className={`${styles.mobileFixedHeader} ${styles.mobileOnly}`} style={{ 
+                                        flexDirection: 'row', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'space-between',
+                                        flexWrap: 'nowrap',
+                                        gap: '12px'
+                                    }}>
+                                        <h3 className={styles.mobileFixedTitle}>{detailProject.projectName}</h3>
+                                        <div className={styles.mobileHeaderRight}>
+                                            <div style={{ 
+                                                fontSize: '11px', 
+                                                fontWeight: 800, 
+                                                color: 'var(--primary-blue)', 
+                                                backgroundColor: 'rgba(29, 155, 240, 0.1)', 
+                                                padding: '4px 8px', 
+                                                borderRadius: '6px',
+                                                whiteSpace: 'nowrap'
+                                            }}>
+                                                {getStageLabel(detailProject.developmentStage)}
+                                            </div>
+                                            <button
+                                                className={styles.modalCloseBtn}
+                                                onClick={() => setShowDetailModal(false)}
+                                                style={{ 
+                                                    position: 'relative', 
+                                                    top: 'auto', 
+                                                    right: 'auto', 
+                                                    width: '36px', 
+                                                    height: '36px', 
+                                                    padding: 0,
+                                                    display: 'flex'
+                                                }}
+                                            >
+                                                <X size={18} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Close Button (Desktop Only toggle in CSS) */}
+                                <button
+                                    className={`${styles.modalCloseBtn} ${styles.desktopOnly}`}
+                                    onClick={() => setShowDetailModal(false)}
+                                    title="Đóng"
+                                >
+                                    <X size={20} />
+                                </button>
+
+                                {/* --- Mobile Hero Section (When image exists) --- */}
+                                {isMobile && detailProject.projectImageUrl && (
+                                    <div className={`${styles.mobileHeroSection} ${styles.mobileOnly}`}>
+                                        <div className={styles.mobileHeroWrapper} onClick={() => setShowFullscreenImage(true)}>
+                                            <img src={detailProject.projectImageUrl} className={styles.mobileHeroImage} alt={detailProject.projectName} />
+                                            
+                                            {/* Floating Glassy Close Button */}
+                                            <button 
+                                                className={styles.glassyCloseBtn}
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setShowDetailModal(false);
+                                                }}
+                                            >
+                                                <X size={18} />
+                                            </button>
+
+                                            <div className={styles.mobileHeroOverlay}>
+                                                <h2 className={styles.mobileHeroTitle} style={{ textShadow: '0 2px 4px rgba(0,0,0,0.5)' }}>
+                                                    {detailProject.projectName}
+                                                </h2>
+                                                <div className={styles.mobileHeroBadges} style={{ marginTop: '12px' }}>
+                                                    <span className={styles.mobileHeroBadge}>
+                                                        {STATUS_LABELS[detailProject.status || 'Draft'] || 'Bản nháp'}
+                                                    </span>
+                                                    <span className={styles.mobileHeroBadge} style={{ backgroundColor: 'rgba(255,255,255,0.2)', backdropFilter: 'blur(4px)', color: 'white' }}>
+                                                        {getStageLabel(detailProject.developmentStage)}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Main Content Scrollable Wrapper */}
+                                <div className={`${styles.modalContentBody} ${isMobile && detailProject.projectImageUrl ? styles.withHero : ''}`}>
+                                    {/* AI History & Analysis Summary */}
+                                    <div style={{ marginBottom: '0' }}>
+                                        <div style={{
+                                            padding: '24px',
+                                            backgroundColor: 'rgba(29, 155, 240, 0.03)',
+                                            borderRadius: '24px',
+                                            border: '1px solid rgba(29, 155, 240, 0.1)',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            gap: '20px'
+                                        }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(29, 155, 240, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                    <Zap size={22} color="var(--primary-blue)" fill="var(--primary-blue)" />
+                                                </div>
+                                                <div>
+                                                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 900, color: 'var(--text-primary)' }}>ĐÁNH GIÁ TIỀM NĂNG</h4>
+                                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Cung cấp bởi AISEP</span>
+                                                </div>
+                                            </div>
+                                            <button 
+                                                className={styles.primaryBtn} 
+                                                style={{ padding: '8px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: 700 }}
+                                                onClick={() => handleRunAIEvaluation(detailProject.projectId || detailProject.id)}
+                                                disabled={isEvaluatingAI && evaluatingProjectId === (detailProject.projectId || detailProject.id)}
+                                            >
+                                                {isEvaluatingAI && evaluatingProjectId === (detailProject.projectId || detailProject.id) ? (
+                                                    <><Loader2 className={styles.spinner} size={14} /> Đang phân tích...</>
+                                                ) : analysisHistory.length > 0 ? 'Phân tích lại' : 'Phân tích ngay'}
+                                            </button>
+                                        </div>
+
+                                        <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '4px 0' }}>
+                                            {isLoadingHistory ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                                                    <Loader2 className={styles.spinner} size={16} /> Đang cập nhật lịch sử...
+                                                </div>
+                                            ) : analysisHistory.length > 0 ? (
+                                                analysisHistory.map((item, idx) => (
+                                                    <div key={idx} onClick={() => { setSelectedHistoryResult({ data: item }); setShowHistoryView(true); }} className={styles.scoreCard}>
+                                                        <div className={styles.scoreHeader}>
+                                                            <span className={styles.scoreMainValue}>{item.potentialScore}</span>
+                                                            <span className={styles.scoreMaxLabel}>/100</span>
+                                                        </div>
+                                                        <span className={styles.scoreDate}>
+                                                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : 'Mới'}
+                                                        </span>
+                                                    </div>
+                                                ))
+                                            ) : (
+                                                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Dự án này chưa có bản phân tích tiềm năng nào.</p>
+                                            )}
                                         </div>
                                     </div>
 
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Vấn đề cần giải quyết</label>
-                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.problemStatement}</p>
-                                    </div>
-
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Giải pháp đề xuất</label>
-                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.solutionDescription}</p>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>2. Thị trường & Mô hình</h4>
-
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Khách hàng mục tiêu</label>
-                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.targetCustomers}</p>
-                                    </div>
-
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Giá trị độc đáo (UVP)</label>
-                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.uniqueValueProposition}</p>
-                                    </div>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Quy mô thị trường</label>
-                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '700' }}>
-                                                {detailProject.marketSize ? `${detailProject.marketSize.toLocaleString()} VND` : '—'}
-                                            </p>
+                                    {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
+                                        <div style={{
+                                            marginTop: '16px',
+                                            padding: '20px',
+                                            backgroundColor: 'rgba(244, 33, 46, 0.05)',
+                                            borderRadius: '24px',
+                                            border: '1px solid rgba(244, 33, 46, 0.1)',
+                                            display: 'flex',
+                                            gap: '16px'
+                                        }}>
+                                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(244, 33, 46, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                <AlertCircle size={22} color="#f4212e" />
+                                            </div>
+                                            <div>
+                                                <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 900, color: '#f4212e' }}>LÝ DO TỪ CHỐI</h4>
+                                                <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)' }}>{detailProject.rejectionReason}</p>
+                                            </div>
                                         </div>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Doanh thu</label>
-                                            <p style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '700' }}>
-                                                {detailProject.revenue ? `${detailProject.revenue.toLocaleString()} VND` : '—'}
-                                            </p>
+                                    )}
+                                </div>
+
+                                {/* Detailed Project Information Sections */}
+                                    {/* Section 1: Basic Info */}
+                                    <section>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                                            <div style={{ width: '4px', height: '24px', backgroundColor: 'var(--primary-blue)', borderRadius: '4px' }} />
+                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>1. THÔNG TIN CỐT LÕI</h3>
                                         </div>
-                                    </div>
+                                        
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.05em' }}>Mô tả dự án</label>
+                                                <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.8 }}>{detailProject.shortDescription}</p>
+                                            </div>
+                                            
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '32px' }}>
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.05em' }}>Giai đoạn dự án</label>
+                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', padding: '8px 14px', backgroundColor: 'var(--bg-secondary)', borderRadius: '10px', fontSize: '14px', fontWeight: 700, color: 'var(--primary-blue)' }}>
+                                                        <TrendingUp size={16} /> {getStageLabel(detailProject.developmentStage)}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.05em' }}>Lĩnh vực chính</label>
+                                                    <p style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>{detailProject.mainTag || 'Công nghệ'}</p>
+                                                </div>
+                                            </div>
 
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Mô hình kinh doanh</label>
-                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.businessModel}</p>
-                                    </div>
+                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px' }}>Vấn đề nhức nhối</label>
+                                                    <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.8 }}>{detailProject.problemStatement}</p>
+                                                </div>
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px' }}>Giải pháp đột phá</label>
+                                                    <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.8 }}>{detailProject.solutionDescription}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    {/* Section 2: Market & Finance */}
+                                    <section>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                                            <div style={{ width: '4px', height: '24px', backgroundColor: '#10b981', borderRadius: '4px' }} />
+                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>2. THỊ TRƯỜNG & TÀI CHÍNH</h3>
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '32px' }}>
+                                            <div style={{ padding: '20px', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderRadius: '20px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
+                                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Quy mô thị trường</label>
+                                                <p style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)' }}>{detailProject.marketSize ? Number(detailProject.marketSize).toLocaleString('vi-VN') + ' VND' : '—'}</p>
+                                            </div>
+                                            <div style={{ padding: '20px', backgroundColor: 'rgba(29, 155, 240, 0.05)', borderRadius: '20px', border: '1px solid rgba(29, 155, 240, 0.1)' }}>
+                                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Doanh thu dự kiến</label>
+                                                <p style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--primary-blue)' }}>{detailProject.revenue ? Number(detailProject.revenue).toLocaleString('vi-VN') + ' VND' : '—'}</p>
+                                            </div>
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px' }}>Khách hàng mục tiêu</label>
+                                                <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)' }}>{detailProject.targetCustomers}</p>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px' }}>Giá trị độc đáo (UVP)</label>
+                                                <p style={{ margin: 0, fontSize: '16px', color: 'var(--text-primary)', fontStyle: 'italic', fontWeight: 600, letterSpacing: '0.01em', lineHeight: 1.6 }}>
+                                                    {detailProject.uniqueValueProposition}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    {/* Section 3: Team */}
+                                    <section>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                                            <div style={{ width: '4px', height: '24px', backgroundColor: '#f59e0b', borderRadius: '4px' }} />
+                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>3. ĐỘI NGŨ SÁNG LẬP</h3>
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '16px' }}>Thành viên & Vai trò</label>
+                                                <div className={styles.teamGrid}>
+                                                    {parseTeamMembers(detailProject.teamMembers).map((member, idx) => (
+                                                        <div key={idx} className={styles.teamMemberCard} style={{ backgroundColor: 'var(--bg-hover)' }}>
+                                                            <div className={styles.teamMemberAvatar}>
+                                                                <Users size={20} />
+                                                            </div>
+                                                            <div className={styles.teamMemberInfo}>
+                                                                <p className={styles.teamMemberName}>{member.name}</p>
+                                                                <span className={styles.teamMemberRole}>{member.role}</span>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    {/* Section 4: Competition [NEW] */}
+                                    <section>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                                            <div style={{ width: '4px', height: '24px', backgroundColor: '#f43f5e', borderRadius: '4px' }} />
+                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>4. CẠNH TRANH</h3>
+                                        </div>
+
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px' }}>Kinh nghiệm đội ngũ</label>
+                                                <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.8 }}>{detailProject.keySkills || '—'}</p>
+                                            </div>
+                                            <div>
+                                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px' }}>Đối thủ cạnh tranh</label>
+                                                <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.8 }}>{detailProject.competitors || '—'}</p>
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    <section>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                                    <div style={{ width: '4px', height: '24px', backgroundColor: 'var(--primary-blue)', borderRadius: '4px' }} />
+                                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>5. TÀI LIỆU DỰ ÁN</h3>
                                 </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>3. Đội ngũ</h4>
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Thành viên & Vai trò</label>
-                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{detailProject.teamMembers}</p>
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Kỹ năng cốt lõi</label>
-                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)' }}>{detailProject.keySkills}</p>
-                                    </div>
-                                </div>
-
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <h4 style={{ color: 'var(--primary-blue)', fontSize: '16px', fontWeight: '800', marginBottom: '4px' }}>4. Cạnh tranh</h4>
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Kinh nghiệm đội ngũ</label>
-                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.teamExperience}</p>
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label} style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>Đối thủ cạnh tranh</label>
-                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.competitors}</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div style={{ marginTop: '32px', borderTop: '1px solid var(--border-color)', paddingTop: '32px' }}>
-                                <h4 style={{ color: 'var(--primary-blue)', fontSize: '18px', fontWeight: '800', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                    <FileText size={20} />
-                                    5. Tài liệu của dự án
-                                </h4>
 
                                 {/* Upload Section */}
                                 <div
@@ -1799,247 +2002,367 @@ export default function StartupDashboard({ user }) {
                                             <p>Chưa có tài liệu nào được tải lên cho dự án này.</p>
                                         </div>
                                     ) : (
-                                        <div className={styles.tableWrapper}>
-                                            <table className={styles.docsTable}>
-                                                <thead>
-                                                    <tr>
-                                                        <th>Tên tài liệu</th>
-                                                        <th>Loại</th>
-                                                        <th>Ngày tải</th>
-                                                        <th>Xác thực</th>
-                                                        <th>Thao tác</th>
-                                                    </tr>
-                                                </thead>
-                                                <tbody>
-                                                    {documents.map((doc) => (
-                                                        <tr key={doc.id}>
-                                                            <td>
-                                                                <div className={styles.docNameCell}>
-                                                                    <FileText size={16} />
-                                                                    <span title={doc.fullName}>{doc.name}</span>
-                                                                </div>
-                                                            </td>
-                                                            <td>{doc.type}</td>
-                                                            <td>{doc.uploadDate}</td>
-                                                            <td>
-                                                                {(() => {
-                                                                    const verification = blockchainVerifications[doc.id];
-                                                                    const status = verification?.status || (doc.txHash ? 'verified' : 'loading');
-
-                                                                    if (status === 'loading') {
-                                                                        return (
-                                                                            <span className={`${styles.statusBadge} ${styles.statusBadgeLoading}`}>
-                                                                                <Loader2 size={12} className={styles.spinner} />
-                                                                                Xác thực...
-                                                                            </span>
-                                                                        );
-                                                                    }
-
-                                                                    if (status === 'verified') {
-                                                                        return (
-                                                                            <span className={styles.statusBadge}>
-                                                                                <Shield size={12} />
-                                                                                Blockchain
-                                                                            </span>
-                                                                        );
-                                                                    }
-
-                                                                    return (
-                                                                        <span className={`${styles.statusBadge} ${styles.statusBadgeUnverified}`}>
-                                                                            <Shield size={12} />
-                                                                            Chưa nộp
-                                                                        </span>
-                                                                    );
-                                                                })()}
-                                                            </td>
-                                                            <td>
-                                                                <div className={styles.tableActions}>
-                                                                    <button
-                                                                        className={styles.iconBtn}
-                                                                        title="Xem"
-                                                                        onClick={() => window.open(doc.url, '_blank')}
-                                                                    >
-                                                                        <ExternalLink size={16} />
-                                                                    </button>
-                                                                    <button
-                                                                        className={styles.iconBtn}
-                                                                        title="Xác thực"
-                                                                        onClick={() => handleVerifyDocument(doc.id, doc.fullName, doc.txHash)}
-                                                                        disabled={verifyingDocId !== null}
-                                                                    >
-                                                                        {verifyingDocId === doc.id ? (
-                                                                            <Loader2 size={16} className={styles.spinner} />
-                                                                        ) : (
-                                                                            <Shield size={16} />
-                                                                        )}
-                                                                    </button>
-                                                                    <button
-                                                                        className={styles.iconBtnDanger}
-                                                                        title="Xóa"
-                                                                        onClick={() => handleDeleteDocument(doc)}
-                                                                        disabled={detailProject.status !== 'Draft' || isDeletingDocument}
-                                                                        style={{
-                                                                            opacity: (detailProject.status !== 'Draft' || isDeletingDocument) ? 0.5 : 1,
-                                                                            cursor: (detailProject.status !== 'Draft' || isDeletingDocument) ? 'not-allowed' : 'pointer'
-                                                                        }}
-                                                                    >
-                                                                        {isDeletingDocument && documentToDelete?.id === doc.id ? (
-                                                                            <Loader2 size={16} className={styles.spinner} />
-                                                                        ) : (
-                                                                            <Trash2 size={16} />
-                                                                        )}
-                                                                    </button>
-                                                                </div>
-                                                            </td>
+                                        <>
+                                            {/* Desktop Table View */}
+                                            <div className={`${styles.tableWrapper} ${styles.desktopOnly}`}>
+                                                <table className={styles.docsTable}>
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Tên tài liệu</th>
+                                                            <th>Loại</th>
+                                                            <th>Ngày tải</th>
+                                                            <th>Xác thực</th>
+                                                            <th>Thao tác</th>
                                                         </tr>
-                                                    ))}
-                                                </tbody>
-                                            </table>
-                                        </div>
+                                                    </thead>
+                                                    <tbody>
+                                                        {documents.map((doc) => (
+                                                            <tr key={doc.id}>
+                                                                <td>
+                                                                    <div className={styles.docNameCell}>
+                                                                        <FileText size={16} />
+                                                                        <span title={doc.fullName}>{doc.name}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td>{doc.type}</td>
+                                                                <td>{doc.uploadDate}</td>
+                                                                <td>
+                                                                    {(() => {
+                                                                        const verification = blockchainVerifications[doc.id];
+                                                                        const status = verification?.status || (doc.txHash ? 'verified' : 'loading');
+
+                                                                        if (status === 'loading') {
+                                                                            return (
+                                                                                <span className={`${styles.statusBadge} ${styles.statusBadgeLoading}`}>
+                                                                                    <Loader2 size={12} className={styles.spinner} />
+                                                                                    Xác thực...
+                                                                                </span>
+                                                                            );
+                                                                        }
+
+                                                                        if (status === 'verified') {
+                                                                            return (
+                                                                                <span className={styles.statusBadge}>
+                                                                                    <Shield size={12} />
+                                                                                    Blockchain
+                                                                                </span>
+                                                                            );
+                                                                        }
+
+                                                                        return (
+                                                                            <span className={`${styles.statusBadge} ${styles.statusBadgeUnverified}`}>
+                                                                                <Shield size={12} />
+                                                                                Chưa nộp
+                                                                            </span>
+                                                                        );
+                                                                    })()}
+                                                                </td>
+                                                                <td>
+                                                                    <div className={styles.tableActions}>
+                                                                        <button
+                                                                            className={styles.iconBtn}
+                                                                            title="Xem"
+                                                                            onClick={() => window.open(doc.url, '_blank')}
+                                                                        >
+                                                                            <ExternalLink size={16} />
+                                                                        </button>
+                                                                        <button
+                                                                            className={styles.iconBtn}
+                                                                            title="Xác thực"
+                                                                            onClick={() => handleVerifyDocument(doc.id, doc.fullName, doc.txHash)}
+                                                                            disabled={verifyingDocId !== null}
+                                                                        >
+                                                                            {verifyingDocId === doc.id ? (
+                                                                                <Loader2 size={16} className={styles.spinner} />
+                                                                            ) : (
+                                                                                <Shield size={16} />
+                                                                            )}
+                                                                        </button>
+                                                                        <button
+                                                                            className={styles.iconBtnDanger}
+                                                                            title="Xóa"
+                                                                            onClick={() => handleDeleteDocument(doc)}
+                                                                            disabled={detailProject.status !== 'Draft' || isDeletingDocument}
+                                                                            style={{
+                                                                                opacity: (detailProject.status !== 'Draft' || isDeletingDocument) ? 0.5 : 1,
+                                                                                cursor: (detailProject.status !== 'Draft' || isDeletingDocument) ? 'not-allowed' : 'pointer'
+                                                                            }}
+                                                                        >
+                                                                            {isDeletingDocument && documentToDelete?.id === doc.id ? (
+                                                                                <Loader2 size={16} className={styles.spinner} />
+                                                                            ) : (
+                                                                                <Trash2 size={16} />
+                                                                            )}
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+
+                                            {/* Mobile Card View */}
+                                            <div className={`${styles.mobileDocsList} ${styles.mobileOnly}`}>
+                                                {documents.map((doc) => {
+                                                    const verification = blockchainVerifications[doc.id];
+                                                    const status = verification?.status || (doc.txHash ? 'verified' : 'loading');
+
+                                                    return (
+                                                        <div key={doc.id} className={styles.docCard}>
+                                                            <div className={styles.docCardHeader}>
+                                                                <FileText size={18} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
+                                                                <span className={styles.docCardTitle} title={doc.fullName}>
+                                                                    {doc.name}
+                                                                </span>
+                                                            </div>
+
+                                                            <div className={styles.docCardMeta}>
+                                                                <span className={styles.docCardBadge} style={{ 
+                                                                    backgroundColor: 'rgba(29, 155, 240, 0.1)', 
+                                                                    color: 'var(--primary-blue)' 
+                                                                }}>
+                                                                    {doc.type}
+                                                                </span>
+
+                                                                {status === 'loading' ? (
+                                                                    <span className={`${styles.docCardBadge} ${styles.statusBadgeLoading}`}>
+                                                                        <Loader2 size={10} className={styles.spinner} />
+                                                                        Xác thực...
+                                                                    </span>
+                                                                ) : status === 'verified' ? (
+                                                                    <span className={`${styles.docCardBadge}`} style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+                                                                        <Shield size={10} style={{ marginRight: '4px' }} />
+                                                                        Blockchain
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className={`${styles.docCardBadge}`} style={{ backgroundColor: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e' }}>
+                                                                        <Shield size={10} style={{ marginRight: '4px' }} />
+                                                                        Chưa nộp
+                                                                    </span>
+                                                                )}
+                                                                
+                                                                <span className={styles.docCardDate}>{doc.uploadDate}</span>
+                                                            </div>
+
+                                                            <div className={styles.docCardActions}>
+                                                                <button
+                                                                    className={`${styles.docActionBtn} ${styles.viewBtn}`}
+                                                                    onClick={() => window.open(doc.url, '_blank')}
+                                                                >
+                                                                    <ExternalLink size={14} />
+                                                                    Xem
+                                                                </button>
+                                                                
+                                                                <button
+                                                                    className={`${styles.docActionBtn} ${styles.viewBtn}`}
+                                                                    style={{ color: 'var(--text-primary)', border: '1px solid var(--border-color)', backgroundColor: 'transparent' }}
+                                                                    onClick={() => handleVerifyDocument(doc.id, doc.fullName, doc.txHash)}
+                                                                    disabled={verifyingDocId !== null}
+                                                                >
+                                                                    {verifyingDocId === doc.id ? (
+                                                                        <Loader2 size={14} className={styles.spinner} />
+                                                                    ) : (
+                                                                        <Shield size={14} />
+                                                                    )}
+                                                                    Xác thực
+                                                                </button>
+
+                                                                <button
+                                                                    className={`${styles.docActionBtn} ${styles.deleteBtn}`}
+                                                                    onClick={() => handleDeleteDocument(doc)}
+                                                                    disabled={detailProject.status !== 'Draft' || isDeletingDocument}
+                                                                    style={{
+                                                                        opacity: (detailProject.status !== 'Draft' || isDeletingDocument) ? 0.5 : 1
+                                                                    }}
+                                                                >
+                                                                    {isDeletingDocument && documentToDelete?.id === doc.id ? (
+                                                                        <Loader2 size={14} className={styles.spinner} />
+                                                                    ) : (
+                                                                        <Trash2 size={14} />
+                                                                    )}
+                                                                    Xóa
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+                                        </>
                                     )}
                                 </div>
-                            </div>
-                        </div>
+                            </section>
+                        </div> {/* end of gap: 48px wrapper */}
+                    </div> {/* end of modalSplitContentArea */}
+                </div> {/* end of modalSplitWrapper */}
 
-                        <div className={styles.actions} style={{ padding: '20px 24px', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)', display: 'flex', gap: '12px' }}>
-                            {detailProject.status === 'Draft' && (
-                                <button
-                                    className={styles.primaryBtn}
-                                    style={{ flex: '2', borderRadius: '9999px' }}
-                                    onClick={() => {
-                                        handleSubmitProject(detailProject.projectId || detailProject.id);
-                                    }}
-                                    disabled={isSubmittingProject}
-                                >
-                                    {isSubmittingProject && submittingProjectId === (detailProject.projectId || detailProject.id) ? '...' : 'Nộp dự án'}
-                                </button>
-                            )}
-                            {(detailProject.status === 'Draft' || detailProject.status === 'Rejected') && (
-                                <button
-                                    className={styles.secondaryBtn}
-                                    style={{ flex: '1', borderRadius: '9999px', borderColor: 'var(--primary-blue)', color: 'var(--primary-blue)' }}
-                                    onClick={() => {
-                                        setShowDetailModal(false);
-                                        setShowProjectForm(true);
-                                    }}
-                                >
-                                    Chỉnh sửa
-                                </button>
-                            )}
-                            <button
-                                className={styles.secondaryBtn}
-                                style={{ flex: '1', borderRadius: '9999px' }}
-                                onClick={() => setShowDetailModal(false)}
-                            >
-                                Đóng
-                            </button>
-                        </div>
-                    </div>
+                {/* Fixed Action Footer (Available on both Desktop & Mobile) */}
+                <div className={styles.stickyActions}>
+                    {detailProject.status === 'Draft' && (
+                        <button
+                            className={styles.primaryBtn}
+                            style={{ flex: '2', borderRadius: '9999px' }}
+                            onClick={() => {
+                                handleSubmitProject(detailProject.projectId || detailProject.id);
+                            }}
+                            disabled={isSubmittingProject}
+                        >
+                            {isSubmittingProject && submittingProjectId === (detailProject.projectId || detailProject.id) ? '...' : 'Nộp dự án'}
+                        </button>
+                    )}
+                    {(detailProject.status === 'Draft' || detailProject.status === 'Rejected') && (
+                        <button
+                            className={styles.secondaryBtn}
+                            style={{ flex: '1', borderRadius: '9999px', borderColor: 'var(--primary-blue)', color: 'var(--primary-blue)' }}
+                            onClick={() => {
+                                setShowDetailModal(false);
+                                setShowProjectForm(true);
+                            }}
+                        >
+                            Chỉnh sửa
+                        </button>
+                    )}
+                    <button
+                        className={styles.secondaryBtn}
+                        style={{ flex: '1', borderRadius: '9999px' }}
+                        onClick={() => setShowDetailModal(false)}
+                    >
+                        Đóng
+                    </button>
                 </div>
-            )}
-
-            {showSuccessModal && (
-                <SuccessModal
-                    onClose={() => setShowSuccessModal(false)}
-                    title={successTitle || "Thông báo"}
-                    message={successMessage}
-                    primaryBtnText={successPrimaryBtn}
-                    secondaryBtnText={successSecondaryBtn}
-                    onSecondaryClick={onSuccessSecondaryClick}
-                    type={successModalType}
-                />
-            )}
-
-            {showProjectForm && (
-                <ProjectSubmissionForm
-                    onClose={() => setShowProjectForm(false)}
-                    initialData={detailProject}
-                    onSuccess={async () => {
-                        // Reload projects first
-                        const response = await projectSubmissionService.getMyProjects();
-                        if (response.success && response.data) {
-                            setMyProjects(Array.isArray(response.data) ? response.data : (response.data.items || []));
-                        }
-
-                        // For create: keep form open to show success modal with dashboard button
-                        // For edit: close form immediately
-                        if (detailProject) {  // This means it's an edit
-                            setShowProjectForm(false);
-                            setSuccessMessage('Cập nhật dự án thành công. Dự án đã trở về trạng thái Bản nháp.');
-                            setShowSuccessModal(true);
-                        }
-                        // For create (detailProject is null), don't close form so success modal can show
-                    }}
-                    user={user}
-                />
-            )}
-
-            {showAIEvaluationModal && (
-                <AIEvaluationModal
-                    isOpen={showAIEvaluationModal}
-                    analysisResult={aiEvaluationResult?.analysis}
-                    eligibilityResult={aiEvaluationResult?.eligibility}
-                    isLoading={isEvaluatingAI}
-                    error={aiEvaluationError}
-                    projectName={myProjects.find(p => (p.id || p.projectId) === aiEvaluationResult?.projectId)?.projectName || 'Dự án'}
-                    isEvaluationOnly={true}
-                    onSubmit={handleSaveAIResults}
-                    onCancel={handleCancelAIEvaluation}
-                />
-            )}
-
-            {showVerificationModal && (
-                <BlockchainVerificationModal
-                    isOpen={showVerificationModal}
-                    onClose={() => setShowVerificationModal(false)}
-                    verificationData={verificationData}
-                    documentName={verificationDocumentName}
-                />
-            )}
-
-            <ConfirmationModal
-                isOpen={showSubmitConfirmation}
-                type="info"
-                title="Nộp dự án"
-                message="Bạn có chắc chắn muốn nộp dự án này để được xem xét?"
-                primaryBtnText="Nộp"
-                secondaryBtnText="Hủy"
-                isLoading={isSubmittingProject}
-                onPrimaryClick={handleConfirmSubmit}
-                onSecondaryClick={() => {
-                    setShowSubmitConfirmation(false);
-                    setPendingSubmitProjectId(null);
-                }}
-            />
-
-            <ConfirmationModal
-                isOpen={showDeleteConfirm}
-                title="Xác nhận xóa tài liệu"
-                message={`Bạn có chắc chắn muốn xóa tài liệu "${documentToDelete?.name}"? Hành động này không thể hoàn tác. Bạn sẽ không thể tải lại tệp này lên hệ thống nếu tệp đã được xác thực với Blockchain.`}
-                type="warning"
-                primaryBtnText={isDeletingDocument ? "Đang xóa..." : "Xóa tài liệu"}
-                secondaryBtnText="Hủy"
-                onPrimaryClick={confirmDeleteDocument}
-                onSecondaryClick={() => {
-                    setShowDeleteConfirm(false);
-                    setDocumentToDelete(null);
-                }}
-                isLoading={isDeletingDocument}
-            />
-
-            {showHistoryView && selectedHistoryResult && (
-                <AIEvaluationModal
-                    isOpen={showHistoryView}
-                    analysisResult={selectedHistoryResult}
-                    isLoading={false}
-                    isHistoryMode={true}
-                    projectName={detailProject?.projectName || 'Dự án'}
-                    onCancel={() => {
-                        setShowHistoryView(false);
-                        setSelectedHistoryResult(null);
-                    }}
-                />
-            )}
+            </div> {/* end of modalContent */}
         </div>
+    )}
+
+    {showSuccessModal && (
+        <SuccessModal
+            onClose={() => setShowSuccessModal(false)}
+            title={successTitle || "Thông báo"}
+            message={successMessage}
+            primaryBtnText={successPrimaryBtn}
+            secondaryBtnText={successSecondaryBtn}
+            onSecondaryClick={onSuccessSecondaryClick}
+            type={successModalType}
+        />
+    )}
+
+    {showProjectForm && (
+        <ProjectSubmissionForm
+            onClose={() => setShowProjectForm(false)}
+            initialData={detailProject}
+            onSuccess={async () => {
+                // Reload projects first
+                const response = await projectSubmissionService.getMyProjects();
+                if (response.success && response.data) {
+                    setMyProjects(Array.isArray(response.data) ? response.data : (response.data.items || []));
+                }
+
+                // For create: keep form open to show success modal with dashboard button
+                // For edit: close form immediately
+                if (detailProject) {  // This means it's an edit
+                    setShowProjectForm(false);
+                    setSuccessMessage('Cập nhật dự án thành công. Dự án đã trở về trạng thái Bản nháp.');
+                    setShowSuccessModal(true);
+                }
+                // For create (detailProject is null), don't close form so success modal can show
+            }}
+            user={user}
+        />
+    )}
+
+    {showAIEvaluationModal && (
+        <AIEvaluationModal
+            isOpen={showAIEvaluationModal}
+            analysisResult={aiEvaluationResult?.analysis}
+            eligibilityResult={aiEvaluationResult?.eligibility}
+            isLoading={isEvaluatingAI}
+            error={aiEvaluationError}
+            projectName={myProjects.find(p => (p.id || p.projectId) === aiEvaluationResult?.projectId)?.projectName || 'Dự án'}
+            isEvaluationOnly={true}
+            onSubmit={handleSaveAIResults}
+            onCancel={handleCancelAIEvaluation}
+        />
+    )}
+
+    {showVerificationModal && (
+        <BlockchainVerificationModal
+            isOpen={showVerificationModal}
+            onClose={() => setShowVerificationModal(false)}
+            verificationData={verificationData}
+            documentName={verificationDocumentName}
+        />
+    )}
+
+    <ConfirmationModal
+        isOpen={showSubmitConfirmation}
+        type="info"
+        title="Nộp dự án"
+        message="Bạn có chắc chắn muốn nộp dự án này để được xem xét?"
+        primaryBtnText="Nộp"
+        secondaryBtnText="Hủy"
+        isLoading={isSubmittingProject}
+        onPrimaryClick={handleConfirmSubmit}
+        onSecondaryClick={() => {
+            setShowSubmitConfirmation(false);
+            setPendingSubmitProjectId(null);
+        }}
+    />
+
+    <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        title="Xác nhận xóa tài liệu"
+        message={`Bạn có chắc chắn muốn xóa tài liệu "${documentToDelete?.name}"? Hành động này không thể hoàn tác. Bạn sẽ không thể tải lại tệp này lên hệ thống nếu tệp đã được xác thực với Blockchain.`}
+        type="warning"
+        primaryBtnText={isDeletingDocument ? "Đang xóa..." : "Xóa tài liệu"}
+        secondaryBtnText="Hủy"
+        onPrimaryClick={confirmDeleteDocument}
+        onSecondaryClick={() => {
+            setShowDeleteConfirm(false);
+            setDocumentToDelete(null);
+        }}
+        isLoading={isDeletingDocument}
+    />
+
+    {showHistoryView && selectedHistoryResult && (
+        <AIEvaluationModal
+            isOpen={showHistoryView}
+            analysisResult={selectedHistoryResult}
+            isLoading={false}
+            isHistoryMode={true}
+            projectName={detailProject?.projectName || 'Dự án'}
+            onCancel={() => {
+                setShowHistoryView(false);
+                setSelectedHistoryResult(null);
+            }}
+        />
+    )}
+
+    {showFullscreenImage && detailProject?.projectImageUrl && (
+        <div 
+            className={styles.imageLightbox}
+            onClick={() => setShowFullscreenImage(false)}
+        >
+            <div className={styles.lightboxOverlay} />
+            <button 
+                className={styles.lightboxClose}
+                onClick={() => setShowFullscreenImage(false)}
+                title="Đóng"
+            >
+                <X size={32} />
+            </button>
+            <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
+                <img 
+                    src={detailProject.projectImageUrl} 
+                    alt={detailProject.projectName} 
+                    className={styles.lightboxImage}
+                />
+                <div className={styles.lightboxCaption}>
+                    <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 900 }}>{detailProject.projectName}</h3>
+                    <p style={{ margin: '4px 0 0 0', opacity: 0.8, fontSize: '14px', fontWeight: 700 }}>{STATUS_LABELS[detailProject.status || 'Draft']}</p>
+                </div>
+            </div>
+        </div>
+    )}
+            </div>
     );
 }
