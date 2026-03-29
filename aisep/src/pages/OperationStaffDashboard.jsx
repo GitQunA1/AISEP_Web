@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileCheck, CheckCircle, AlertCircle, Search, Archive, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, FileText, Loader2, TrendingUp, ExternalLink, Shield, History, Calendar, PieChart, Briefcase, Clock, DollarSign } from 'lucide-react';
+import { FileCheck, CheckCircle, AlertCircle, Search, Archive, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, XCircle, FileText, Loader2, TrendingUp, ExternalLink, Shield, History, Calendar, PieChart, Briefcase, Clock, DollarSign } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import local from '../styles/OperationStaffDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
@@ -77,7 +77,7 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
 
                 <div className={local.bcardActions}>
                     <button className={local.baBtn} onClick={onDetail} title="Chi tiết">
-                        <ArrowRight size={14} />
+                        <ArrowRight size={16} />
                         Chi tiết
                     </button>
 
@@ -90,9 +90,9 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
                                 title="Từ chối"
                             >
                                 {processingProjectId === project.projectId && processingAction === 'reject' ? (
-                                    <Loader2 size={14} className="animate-spin" />
+                                    <Loader2 size={16} className="animate-spin" />
                                 ) : (
-                                    <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"></path></svg>
+                                    <XCircle size={16} />
                                 )}
                                 Từ chối
                             </button>
@@ -103,9 +103,9 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
                                 title="Phê duyệt"
                             >
                                 {processingProjectId === project.projectId && processingAction === 'approve' ? (
-                                    <Loader2 size={14} className="animate-spin" />
+                                    <Loader2 size={16} className="animate-spin" />
                                 ) : (
-                                    <svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"></path></svg>
+                                    <CheckCircle size={16} />
                                 )}
                                 Duyệt
                             </button>

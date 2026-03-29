@@ -994,7 +994,6 @@ btnReject {
     background-color: var(--bg-hover);
     border-color: var(--primary-blue);
     box-shadow: var(--shadow-lg);
-    transform: translateY(-2px);
 }
 
 /* Dark mode specific hover border — more subtle and integrated */
@@ -1161,9 +1160,9 @@ btnReject {
 
 /* action row - toolbar */
 .bcardActions {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
-    gap: 8px;
+    display: flex;
+    justify-content: stretch;
+    gap: 6px;
     padding: 12px 0 0 0;
     margin: 16px 0 0 0;
     background-color: transparent;
@@ -1174,9 +1173,9 @@ btnReject {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 8px;
-    padding: 0 16px;
-    height: 38px;
+    gap: 6px;
+    padding: 0 8px;
+    height: 34px;
     border-radius: 10px;
     font-size: 13px;
     color: var(--text-primary);
@@ -1185,11 +1184,23 @@ btnReject {
     border: 1px solid var(--border-color);
     background: rgba(var(--bg-primary-rgb), 0.08);
     font-weight: 600;
+    white-space: nowrap;
+    flex: 1;
+    min-width: 0;
 }
 
 .baBtn svg {
     width: 16px !important;
     height: 16px !important;
+    transition: transform 0.2s ease;
+}
+
+.baBtn:hover svg {
+    transform: scale(1.1) rotate(-5deg);
+}
+
+.baBtn.apr:hover svg {
+    transform: scale(1.1) rotate(5deg);
 }
 
 .baBtn:hover {
