@@ -21,6 +21,11 @@
 }
 
 @media (max-width: 1023px) {
+    .container {
+        min-height: auto;
+        padding-bottom: 10px;
+    }
+
     .pageHeader {
         top: 60px;
         /* Stick below the fixed TopBar */
