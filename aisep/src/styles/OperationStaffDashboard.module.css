@@ -1415,7 +1415,7 @@ btnReject {
     }
 
     .bcolCards {
-        padding: 8px 0 100px 0;
+        padding: 8px 0 20px 0;
     }
 
     .activeMobileTab[data-status='draft']::after {
