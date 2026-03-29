@@ -9,14 +9,14 @@ import styles from './FeedFilter.module.css';
  * @param {object} totalCount - Total number of projects
  */
 function FeedFilter({ onFilterChange, totalCount = 0, activeFilters }) {
-  const [activeSort, setActiveSort] = useState(activeFilters?.sort || 'all');
+  const [activeSort, setActiveSort] = useState(activeFilters?.sort || 'newest');
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     industry: activeFilters?.industry || '',
     stage: activeFilters?.stage || '',
     minScore: activeFilters?.minScore || 0,
     fundingStage: activeFilters?.fundingStage || '',
-    sort: activeFilters?.sort || 'all',
+    sort: activeFilters?.sort || 'newest',
   });
   
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0, opacity: 0 });
@@ -68,8 +68,8 @@ function FeedFilter({ onFilterChange, totalCount = 0, activeFilters }) {
   }, [activeSort]);
 
   const sortOptions = [
-    { id: 'all', label: 'Tất cả', icon: List },
     { id: 'newest', label: 'Mới nhất', icon: Clock },
+    { id: 'oldest', label: 'Cũ nhất', icon: List },
     { id: 'rated', label: 'Được đánh giá cao', icon: Star },
   ];
 
@@ -84,7 +84,7 @@ function FeedFilter({ onFilterChange, totalCount = 0, activeFilters }) {
   useEffect(() => {
     if (activeFilters) {
       if (activeFilters.sort !== activeSort) {
-        setActiveSort(activeFilters.sort || 'all');
+        setActiveSort(activeFilters.sort || 'newest');
       }
       setFilters(prev => {
         // Only update if actually different to avoid cycles
@@ -100,7 +100,7 @@ function FeedFilter({ onFilterChange, totalCount = 0, activeFilters }) {
             stage: activeFilters.stage || '',
             minScore: activeFilters.minScore || 0,
             fundingStage: activeFilters.fundingStage || '',
-            sort: activeFilters.sort || 'all',
+            sort: activeFilters.sort || 'newest',
           };
         }
         return prev;
@@ -173,7 +173,7 @@ function FeedFilter({ onFilterChange, totalCount = 0, activeFilters }) {
                   >
                     <span className={styles.tabIcon}><IconComponent size={14} /></span>
                     <span>{option.label}</span>
-                    {option.id === 'all' && <span className={styles.tabCount}>{totalCount}</span>}
+                    {option.id === 'newest' && <span className={styles.tabCount}>{totalCount}</span>}
                   </button>
                 );
               })}

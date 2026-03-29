@@ -162,7 +162,7 @@ function MainLayout({
     stage: '',
     minScore: 0,
     fundingStage: '',
-    sort: 'all',
+    sort: 'newest',
   });
 
   useEffect(() => {
@@ -386,6 +386,9 @@ function MainLayout({
       switch (activeFilters.sort) {
         case 'newest':
           filtered.sort((a, b) => (b.id || 0) - (a.id || 0));
+          break;
+        case 'oldest':
+          filtered.sort((a, b) => (a.id || 0) - (b.id || 0));
           break;
         case 'trending':
           filtered.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
