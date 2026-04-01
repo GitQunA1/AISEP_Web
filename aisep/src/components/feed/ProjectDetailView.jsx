@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, ArrowLeft, ClipboardList, TrendingUp, Sword, FolderOpen, Users, DollarSign, BarChart3, Zap } from 'lucide-react';
+import { Loader2, ArrowLeft, ClipboardList, TrendingUp, Sword, FolderOpen, Users, DollarSign, BarChart3, Zap, User } from 'lucide-react';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import AIEvaluationService from '../../services/AIEvaluationService';
+import bookingService from '../../services/bookingService';
 import ProfileErrorScreen from '../common/ProfileErrorScreen';
 import AuthRequirementScreen from '../common/AuthRequirementScreen';
 import ProfileLoading from '../common/ProfileLoading';
@@ -185,6 +186,7 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
   const [project, setProject] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [aiHistory, setAiHistory] = useState([]);
+  const [advisorBookings, setAdvisorBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 850);
@@ -202,7 +204,8 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
       projectSubmissionService.getProjectById(projectId),
       projectSubmissionService.getDocuments(projectId).catch(() => null),
       AIEvaluationService.getProjectAnalysisHistory(projectId).catch(() => null),
-    ]).then(([pRes, dRes, aRes]) => {
+      bookingService.getAllBookings(`ProjectId==${projectId}`, '-Id', 1, 20).catch(() => null),
+    ]).then(([pRes, dRes, aRes, bRes]) => {
       if (pRes?.success && pRes?.data) {
         const d = pRes.data;
         setProject({
@@ -221,7 +224,7 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
         if (!name || name.length <= max) return name;
         const ext = name.includes('.') ? '.' + name.split('.').pop() : '';
         const base = name.slice(0, name.length - ext.length);
-        return base.slice(0, max - ext.length - 1) + '…' + ext;
+        return base.slice(0, max - ext.length - 1) + '\u2026' + ext;
       };
       setDocuments(rawDocs.map(doc => ({
         id: doc.documentId,
@@ -232,6 +235,9 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
         url: doc.fileUrl,
       })));
       setAiHistory(aRes?.data || []);
+      // Bookings: extract list from paged result
+      const bList = bRes?.items ?? (Array.isArray(bRes) ? bRes : []);
+      setAdvisorBookings(bList);
     }).catch(err => {
       console.error("ProjectDetailView Fetch Error:", err);
       const is401 = err?.message?.includes('401') || err?.response?.status === 401;
@@ -600,6 +606,64 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
               </div>
             )}
           </div>
+
+          {/* Advisor Card */}
+          {advisorBookings.length > 0 && (
+            <SectionCard>
+              <SectionHeader><User size={14} style={{ color: T.blue }} /> Cố Vấn Được Phân Công</SectionHeader>
+              <SectionBody>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {/* Deduplicate by advisorId */}
+                  {[...new Map(advisorBookings.map(b => [b.advisorId, b])).values()].map((b, i) => {
+                    const statusMap = {
+                      0: { label: 'Chờ xác nhận', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+                      'Pending': { label: 'Chờ xác nhận', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
+                      1: { label: 'Chờ thanh toán', color: T.blue, bg: T.blueDim },
+                      'ApprovedAwaitingPayment': { label: 'Chờ thanh toán', color: T.blue, bg: T.blueDim },
+                      2: { label: 'Đã xác nhận', color: T.green, bg: T.greenDim },
+                      'Confirmed': { label: 'Đã xác nhận', color: T.green, bg: T.greenDim },
+                      3: { label: 'Hoàn thành', color: T.green, bg: T.greenDim },
+                      'Completed': { label: 'Hoàn thành', color: T.green, bg: T.greenDim },
+                      4: { label: 'Đã hủy', color: T.red, bg: 'rgba(244,33,46,0.1)' },
+                      'Cancel': { label: 'Đã hủy', color: T.red, bg: 'rgba(244,33,46,0.1)' },
+                      5: { label: 'Không phản hồi', color: T.red, bg: 'rgba(244,33,46,0.1)' },
+                      'NoResponse': { label: 'Không phản hồi', color: T.red, bg: 'rgba(244,33,46,0.1)' },
+                    };
+                    const s = statusMap[b.status] || { label: String(b.status), color: T.textMuted, bg: T.surface3 };
+                    const initial = (b.advisorName || 'A').charAt(0).toUpperCase();
+                    return (
+                      <div key={i} style={{
+                        display: 'flex', alignItems: 'center', gap: 12,
+                        padding: '10px 0',
+                        borderBottom: i < advisorBookings.length - 1 ? `1px solid ${T.border}` : 'none',
+                      }}>
+                        <div style={{
+                          width: 36, height: 36, borderRadius: '50%',
+                          background: 'linear-gradient(135deg, #1d9bf0, #7c3aed)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontWeight: 800, fontSize: 14, color: '#fff', flexShrink: 0,
+                        }}>
+                          {initial}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text }}>{b.advisorName}</div>
+                          <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>
+                            {new Date(b.startTime).toLocaleDateString('vi-VN')} • {b.slotCount} slot
+                          </div>
+                        </div>
+                        <span style={{
+                          padding: '3px 10px', borderRadius: 9999,
+                          fontSize: 11, fontWeight: 700,
+                          background: s.bg, color: s.color,
+                          whiteSpace: 'nowrap', flexShrink: 0,
+                        }}>{s.label}</span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </SectionBody>
+            </SectionCard>
+          )}
 
         </div>{/* /left col */}
 

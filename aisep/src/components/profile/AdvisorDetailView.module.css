@@ -198,6 +198,10 @@
 .messageBtn:hover { background: var(--bg-hover); }
 
 .connectBtn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     padding: 8px 22px;
     border-radius: 9999px;
     background-color: var(--primary-blue);

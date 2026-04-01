@@ -1,0 +1,185 @@
+/* AdvisorDashboard – supplemental styles for Availability + Booking forms */
+
+/* ── Create Form ──────────────────────────────────────────────── */
+.createForm {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.formTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.formError {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(244, 33, 46, 0.08);
+  border: 1px solid rgba(244, 33, 46, 0.25);
+  border-radius: 8px;
+  color: #f4212e;
+  font-size: 13px;
+}
+
+.formRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+
+@media (max-width: 600px) {
+  .formRow { grid-template-columns: 1fr; }
+}
+
+.formField {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.formField label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.formField input,
+.formField select {
+  padding: 9px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+}
+
+.formField input:focus,
+.formField select:focus {
+  outline: none;
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 1px rgba(29, 155, 240, 0.2);
+}
+
+/* ── Preview ──────────────────────────────────────────────────── */
+.previewSection {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.previewLabel {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.previewSlots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.previewChip {
+  padding: 4px 12px;
+  border-radius: 9999px;
+  background: rgba(29, 155, 240, 0.1);
+  color: var(--primary-blue);
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid rgba(29, 155, 240, 0.2);
+}
+
+/* ── Day Groups ───────────────────────────────────────────────── */
+.dayGroups {
+  padding: 0 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.dayGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dayHeader {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+  text-transform: capitalize;
+  padding: 8px 0 6px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* ── Slots Grid ───────────────────────────────────────────────── */
+.slotsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.slotItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 9999px;
+  border: 1.5px solid;
+  font-size: 12px;
+  transition: background 0.15s;
+}
+
+.slotAvailable {
+  border-color: rgba(23, 191, 99, 0.4);
+  background: rgba(23, 191, 99, 0.06);
+}
+
+.slotBooked {
+  border-color: rgba(29, 155, 240, 0.3);
+  background: rgba(29, 155, 240, 0.06);
+}
+
+.slotTime {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.deleteBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  padding: 0;
+}
+
+.deleteBtn:hover:not(:disabled) {
+  background: rgba(244, 33, 46, 0.1);
+  color: #f4212e;
+}
+
+.deleteBtn:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}

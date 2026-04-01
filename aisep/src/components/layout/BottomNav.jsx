@@ -1,5 +1,7 @@
-import React from 'react';
-import { Home, Compass, Search, TrendingUp, Users, User, LayoutDashboard, Sparkles, FileText, Calendar, ShieldCheck, Activity } from 'lucide-react';
+import { 
+  Home, Compass, Search, TrendingUp, Users, User, LayoutDashboard, 
+  Sparkles, FileText, Calendar, ShieldCheck, Activity, MessageSquare, BarChart2 
+} from 'lucide-react';
 import styles from './BottomNav.module.css';
 
 /**
@@ -14,10 +16,11 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
     { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor'] },
   ];
 
-  // For Staff role, prioritize Dashboard at the top
+  // Role detection
   const roleStr = user?.role?.toString().toLowerCase() || '';
   const roleNum = Number(user?.role);
   const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
+  const isAdvisor = roleStr === 'advisor' || roleNum === 2;
 
   if (isStaff) {
     const staffItems = [
@@ -29,6 +32,15 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
     const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
     const homeItem = navItems.find(item => item.label === 'Home');
     navItems = [...staffItems, homeItem, ...otherItems];
+  } else if (isAdvisor) {
+    const advisorItems = [
+      { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Tổng quan', href: '#', showWhenLoggedIn: true },
+      { icon: MessageSquare, label: 'Bookings', displayLabel: 'Booking', href: '#', showWhenLoggedIn: true },
+      { icon: Calendar, label: 'Availability', displayLabel: 'Lịch rảnh', href: '#', showWhenLoggedIn: true },
+      { icon: BarChart2, label: 'Reports', displayLabel: 'Báo cáo', href: '#', showWhenLoggedIn: true },
+    ];
+    const homeItem = navItems.find(item => item.label === 'Home');
+    navItems = [...advisorItems, homeItem];
   }
 
   const handleClick = (e, label) => {
@@ -37,13 +49,19 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
       onShowHome();
     }
     if (label === 'Dashboard' && onShowDashboard) {
-      onShowDashboard('statistics');
+      onShowDashboard('overview');
     }
     if (label === 'Projects' && onShowDashboard) {
       onShowDashboard('project_management');
     }
     if (label === 'Bookings' && onShowDashboard) {
       onShowDashboard('bookings');
+    }
+    if (label === 'Availability' && onShowDashboard) {
+      onShowDashboard('availability');
+    }
+    if (label === 'Reports' && onShowDashboard) {
+      onShowDashboard('reports');
     }
     if (label === 'Approvals' && onShowDashboard) {
       onShowDashboard('approvals');

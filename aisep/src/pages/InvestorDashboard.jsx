@@ -12,6 +12,21 @@ export default function InvestorDashboard({ user }) {
     const [watchlist, setWatchlist] = useState([]);
     const [sentInterests, setSentInterests] = useState([]);
     const [activeInvestments, setActiveInvestments] = useState([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    React.useEffect(() => {
+        const fetchAllData = async () => {
+            setIsLoading(true);
+            try {
+                // Placeholder for real investor data fetching
+                // For now we simulate a network delay
+                await new Promise(r => setTimeout(r, 600));
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchAllData();
+    }, []);
 
     const dashboardData = {
         totalInvested: '$0',

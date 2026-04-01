@@ -3,9 +3,7 @@ import { createPortal } from 'react-dom';
 import { Search, MapPin, Star, Users, DollarSign, CheckCircle, Filter, TrendingUp } from 'lucide-react';
 import AdvisorFilterModal from '../components/profile/AdvisorFilterModal';
 import advisorService from '../services/advisorService';
-import { authService } from '../services/authService';
-import bookingService from '../services/bookingService';
-import AdvisorBookingModal from '../components/profile/AdvisorBookingModal';
+import BookingWizard from '../components/booking/BookingWizard';
 import styles from './AdvisorsPage.module.css';
 
 export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
@@ -20,15 +18,14 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
         maxRate: 5000000
     });
     const [searchQuery, setSearchQuery] = useState('');
-    const [connectingTo, setConnectingTo] = useState(null);
-    const [myBookings, setMyBookings] = useState([]);
-    
-    const [showBookingModal, setShowBookingModal] = useState(false);
-    const [selectedAdvisorForBooking, setSelectedAdvisorForBooking] = useState(null);
+    const [showBookingWizard, setShowBookingWizard] = useState(false);
+    const [wizardInitialAdvisorId, setWizardInitialAdvisorId] = useState(null);
 
     const roleValue = user?.role;
     const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
-    const canConnect = roleStr === 'startup' || roleStr === 'advisor' || roleValue === 0 || roleValue === 2;
+    const roleNum = Number(roleValue);
+    // Booking dành cho Investor (role 1) và Startup (role 0)
+    const canBook = roleStr === 'startup' || roleStr === 'investor' || roleNum === 0 || roleNum === 1;
 
     useEffect(() => {
         const fetchAdvisors = async () => {
@@ -46,25 +43,7 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
             }
         };
 
-        const fetchMyBookings = async () => {
-            if (!user) return;
-            const userId = user.id || user.userId || user.nameid;
-            if (!userId) return;
-            try {
-                const response = await bookingService.getMyCustomerBookings(userId);
-                const items = response?.items || response?.data?.items || response || [];
-                if (Array.isArray(items)) {
-                    setMyBookings(items);
-                } else if (items.data && Array.isArray(items.data)) {
-                    setMyBookings(items.data);
-                }
-            } catch (err) {
-                console.error('Failed to load user bookings:', err);
-            }
-        };
-
         fetchAdvisors();
-        fetchMyBookings();
     }, [user]);
 
     const handleApplyFilters = (newFilters) => {
@@ -101,20 +80,11 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
         return matchesSearch && matchesExpertise && matchesLocation && matchesRating && matchesRate;
     });
 
-    const handleConnect = (advisor) => {
-        if (!canConnect) return;
-        setSelectedAdvisorForBooking(advisor);
-        setShowBookingModal(true);
-    };
-
-    const handleBookingSuccess = (advisorId) => {
-        setMyBookings(prev => [...prev, { advisorId, status: 0 }]);
-    };
-
-    const getBookingStatus = (advisorId) => {
-        const booking = myBookings.find(b => b.advisorId === advisorId);
-        if (!booking) return null;
-        return booking.status;
+    const handleOpenBookingWizard = (advisor) => {
+        if (!user) { onShowLogin?.(); return; }
+        if (!canBook) return;
+        setWizardInitialAdvisorId(advisor.advisorId);
+        setShowBookingWizard(true);
     };
 
     return (
@@ -237,33 +207,15 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
                                     </div>
 
                                     <div className={styles.actions}>
-                                        {canConnect && (() => {
-                                            const status = getBookingStatus(advisor.advisorId);
-                                            if (status === 0 || status === 'Pending') {
-                                                return (
-                                                    <button className={styles.pendingBtn} disabled>
-                                                        Đang chờ...
-                                                    </button>
-                                                );
-                                            }
-                                            if (status === 1 || status === 'Confirmed' || status === 'Accepted') {
-                                                return (
-                                                    <button className={styles.confirmedBtn} disabled>
-                                                        Đã kết nối
-                                                    </button>
-                                                );
-                                            }
-                                            return (
-                                                <button
-                                                    className={styles.connectBtn}
-                                                    onClick={(e) => { e.stopPropagation(); handleConnect(advisor); }}
-                                                    disabled={connectingTo === advisor.advisorId}
-                                                >
-                                                    <TrendingUp size={15} />
-                                                    <span>{connectingTo === advisor.advisorId ? 'Đang gửi...' : 'Kết nối'}</span>
-                                                </button>
-                                            );
-                                        })()}
+                                        {canBook && (
+                                        <button
+                                            className={styles.connectBtn}
+                                            onClick={(e) => { e.stopPropagation(); handleOpenBookingWizard(advisor); }}
+                                        >
+                                            <TrendingUp size={15} />
+                                            <span>Đặt lịch</span>
+                                        </button>
+                                    )}
                                         <button
                                             className={styles.viewProfileBtn}
                                             onClick={(e) => { e.stopPropagation(); onSelectAdvisor?.(advisor); }}
@@ -278,14 +230,14 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
                 )}
             </div>
 
-            {showBookingModal && selectedAdvisorForBooking && (
-                <AdvisorBookingModal
-                    advisor={selectedAdvisorForBooking}
+            {showBookingWizard && (
+                <BookingWizard
+                    user={user}
+                    initialAdvisorId={wizardInitialAdvisorId}
                     onClose={() => {
-                        setShowBookingModal(false);
-                        setSelectedAdvisorForBooking(null);
+                        setShowBookingWizard(false);
+                        setWizardInitialAdvisorId(null);
                     }}
-                    onSuccess={handleBookingSuccess}
                 />
             )}
         </div>
