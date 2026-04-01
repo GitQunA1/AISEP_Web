@@ -513,7 +513,20 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
         }
     };
 
-    // Fetch data on tab change
+    // Tự động tải dữ liệu cần thiết cho Statistics và các tab chính ngay khi component khởi tập (Mounting).
+    // Giúp hiển thị số liệu thực ngay ở tab Tổng quan thay vì số 0.
+    React.useEffect(() => {
+        const loadInitialData = () => {
+            fetchPendingProjects();
+            fetchApprovedProjects();
+            fetchRejectedProjects();
+            fetchBookings();
+            fetchPendingStartups();
+        };
+        loadInitialData();
+    }, []);
+
+    // Refresh dữ liệu khi người dùng chủ động chuyển tab (nếu cần cập nhật mới nhất)
     React.useEffect(() => {
         if (activeSection === 'project_management') {
             fetchPendingProjects();

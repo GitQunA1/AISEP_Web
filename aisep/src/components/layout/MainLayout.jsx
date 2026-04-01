@@ -652,6 +652,8 @@ function MainLayout({
             activeView === 'dashboard' ? 'Dashboard' : 
             activeView === 'dashboard_project_management' ? 'Projects' :
             activeView === 'dashboard_bookings' ? 'Bookings' :
+            activeView === 'dashboard_availability' ? 'Availability' :
+            activeView === 'dashboard_reports' ? 'Reports' :
             activeView === 'dashboard_approvals' ? 'Approvals' :
             activeView === 'dashboard_activity' ? 'Activity' : 'Dashboard'
           ) : ''

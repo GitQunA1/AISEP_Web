@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { 
   ArrowLeft, MapPin, Star, DollarSign, Globe, Briefcase, 
-  Award, Mail, Phone, Calendar, CheckCircle, Clock 
+  Award, Mail, Phone, Calendar, CheckCircle, Clock, TrendingUp
 } from 'lucide-react';
 import bookingService from '../../services/bookingService';
-import AdvisorBookingModal from './AdvisorBookingModal';
+import BookingWizard from '../booking/BookingWizard';
 import styles from './AdvisorDetailView.module.css';
 import advisorService from '../../services/advisorService';
 import ProfileLoading from '../common/ProfileLoading';
@@ -20,16 +20,18 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
   const [bookingStatus, setBookingStatus] = useState(null);
   
   // Modal state
-  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showBookingWizard, setShowBookingWizard] = useState(false);
 
   // Define role check
   const roleValue = user?.role;
   const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
-  const canConnect = roleStr === 'startup' || roleStr === 'advisor' || roleValue === 0 || roleValue === 2;
+  const roleNum = Number(roleValue);
+  // Booking dành cho Investor (role 1) và Startup (role 0)
+  const canBook = roleStr === 'startup' || roleStr === 'investor' || roleNum === 0 || roleNum === 1;
 
   useEffect(() => {
     const fetchStatus = async () => {
-        if (!user || !advisor || !canConnect) return;
+        if (!user || !advisor || !canBook) return;
         const userId = user.id || user.userId || user.nameid;
         if (!userId) return;
 
@@ -37,6 +39,7 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
             const response = await bookingService.getMyCustomerBookings(userId);
             const items = response?.items || response?.data?.items || response || [];
             const bookingsList = Array.isArray(items) ? items : (items.data && Array.isArray(items.data) ? items.data : []);
+            // check booking status with advisor
             const currentBooking = bookingsList.find(b => b.advisorId === advisor.advisorId);
             
             if (currentBooking) {
@@ -47,15 +50,16 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
         }
     };
     fetchStatus();
-  }, [user, advisor, canConnect]);
+  }, [user, advisor, canBook]);
 
-  const handleConnect = () => {
-      if (!canConnect) return;
-      setShowBookingModal(true);
+  const handleOpenBooking = () => {
+      if (!canBook) return;
+      setShowBookingWizard(true);
   };
   
-  const handleBookingSuccess = (advisorId) => {
-      setBookingStatus(0); // Optimistically update to Pending
+  const handleBookingSuccess = () => {
+      // Refresh status or show success
+      setBookingStatus(0); // Optimistically set to Pending
   };
 
   if (!user) {
@@ -132,7 +136,7 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
             }
           </div>
           <div className={styles.actionButtons}>
-            {canConnect && (() => {
+            {canBook && (() => {
                 if (bookingStatus === 0 || bookingStatus === 'Pending') {
                     return (
                         <button className={styles.connectBtn} disabled style={{ opacity: 0.6, cursor: 'not-allowed', backgroundColor: 'var(--text-secondary)' }}>
@@ -149,8 +153,8 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
                 }
                 
                 return (
-                    <button className={styles.connectBtn} onClick={handleConnect}>
-                      ↗ Kết nối
+                    <button className={styles.connectBtn} onClick={handleOpenBooking}>
+                      <TrendingUp size={16} /> Đặt lịch
                     </button>
                 );
             })()}
@@ -320,11 +324,11 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
         )}
       </div>
 
-      {showBookingModal && (
-        <AdvisorBookingModal
-          advisor={advisor}
-          onClose={() => setShowBookingModal(false)}
-          onSuccess={handleBookingSuccess}
+      {showBookingWizard && (
+        <BookingWizard
+          user={user}
+          initialAdvisorId={advisor.advisorId}
+          onClose={() => setShowBookingWizard(false)}
         />
       )}
     </div>

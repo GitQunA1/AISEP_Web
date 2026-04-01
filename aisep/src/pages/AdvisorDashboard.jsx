@@ -1,425 +1,952 @@
-import React, { useState } from 'react';
-import { Users, Calendar, FileText, Star, Clock, CheckCircle, MessageSquare, PlusCircle, TrendingUp } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
+import { 
+    Users, Calendar, FileText, Star, Clock, CheckCircle, MessageSquare, 
+    PlusCircle, TrendingUp, Trash2, Edit2, X, AlertCircle, Loader, 
+    ChevronDown, ChevronUp, ChevronLeft, ChevronRight 
+} from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
+import avStyles from './AdvisorDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
+import advisorService from '../services/advisorService';
+import advisorAvailabilityService from '../services/advisorAvailabilityService';
+import bookingService from '../services/bookingService';
+import CustomSelect from '../components/common/CustomSelect';
 
 /**
- * AdvisorDashboard - Comprehensive dashboard for advisors/experts
- * Features: Overview stats, Pending requests, Appointments, Active clients, Consulting reports
+ * AdvisorDashboard – Dashboard cho Advisor
+ * Tabs: Tổng quan | Lịch Rảnh | Booking Đến | Yêu cầu tư vấn | Báo cáo | Hồ sơ
  */
-export default function AdvisorDashboard({ user }) {
-    const [activeSection, setActiveSection] = useState('overview');
-    const [consultingRequests, setConsultingRequests] = useState([]);
-    const [appointments, setAppointments] = useState([]);
-    const [consultingReports, setConsultingReports] = useState([]);
+export default function AdvisorDashboard({ user, initialSection = 'overview', onSectionChange }) {
+    const [activeSection, setActiveSection] = useState(initialSection);
+    const [advisorProfile, setAdvisorProfile] = useState(null);
+
+    // Sync internal state with prop changes from sidebar
+    useEffect(() => {
+        if (initialSection) {
+            setActiveSection(initialSection);
+        }
+    }, [initialSection]);
+
+    // Handle navigation that should also update the Sidebar
+    const handleNavigate = (section) => {
+        setActiveSection(section);
+        if (onSectionChange) {
+            onSectionChange(section);
+        }
+    };
+
+    // ── Advisor profile ────────────────────────────────────────────────────
+    useEffect(() => {
+        const loadProfile = async () => {
+            try {
+                const profile = await advisorService.getMyProfile();
+                setAdvisorProfile(profile);
+            } catch (e) {
+                console.error('Could not load advisor profile', e);
+            }
+        };
+        loadProfile();
+    }, []);
+
+    const advisorId = advisorProfile?.advisorId;
+
+    // ── Stats từ real data ─────────────────────────────────────────────────
+    const [availabilities, setAvailabilities] = useState([]);
+    const [incomingBookings, setIncomingBookings] = useState([]);
+    const [availabilitiesLoading, setAvailabilitiesLoading] = useState(false);
+    const [bookingsLoading, setBookingsLoading] = useState(false);
+
+    const loadAvailabilities = useCallback(async () => {
+        setAvailabilitiesLoading(true);
+        try {
+            const [data] = await Promise.all([
+                advisorAvailabilityService.getMyAvailabilities(),
+                new Promise(resolve => setTimeout(resolve, 1000))
+            ]);
+            setAvailabilities(data);
+        } catch (e) {
+            console.error('Failed to load availabilities', e);
+        } finally {
+            setAvailabilitiesLoading(false);
+        }
+    }, []);
+
+    const loadIncomingBookings = useCallback(async () => {
+        if (!advisorId) return;
+        setBookingsLoading(true);
+        try {
+            const [data] = await Promise.all([
+                bookingService.getAllBookings('Status==Pending', '-Id', 1, 100),
+                new Promise(resolve => setTimeout(resolve, 1000))
+            ]);
+            const items = data?.items ?? (Array.isArray(data) ? data : []);
+            setIncomingBookings(items);
+        } catch (e) {
+            console.error('Failed to load incoming bookings', e);
+        } finally {
+            setBookingsLoading(false);
+        }
+    }, [advisorId]);
+
+    useEffect(() => {
+        loadAvailabilities();
+    }, [loadAvailabilities]);
+
+    useEffect(() => {
+        if (advisorId) {
+            loadIncomingBookings();
+        }
+    }, [advisorId, loadIncomingBookings]);
+
+    const pendingBookingCount = incomingBookings.filter(b => b.status === 0 || b.status === 'Pending').length;
+    const availableSlotCount = availabilities.filter(a => a.status === 0 || a.status === 'Available').length;
 
     const dashboardData = {
-        activeClients: 0,
-        totalConsultations: 0,
-        completedReports: consultingReports.length,
-        averageRating: 0.0,
-        hourlyRate: '-',
-        upcomingAppointments: appointments.length,
-        pendingRequests: consultingRequests.filter(r => r.status === 'pending').length,
-        acceptedRequests: consultingRequests.filter(r => r.status === 'accepted').length
-    };
-
-    const handleAcceptRequest = (id) => {
-        setConsultingRequests(consultingRequests.map(req =>
-            req.id === id ? { ...req, status: 'accepted' } : req
-        ));
-    };
-
-    const handleRejectRequest = (id) => {
-        setConsultingRequests(consultingRequests.map(req =>
-            req.id === id ? { ...req, status: 'rejected' } : req
-        ));
-    };
-
-    const handleRescheduleAppointment = (id) => {
-        alert('Reschedule functionality would open a calendar picker');
-    };
-
-    const handleCancelAppointment = (id) => {
-        setAppointments(appointments.filter(appt => appt.id !== id));
+        averageRating: advisorProfile?.rating ?? 0,
+        pendingBookings: pendingBookingCount,
+        availableSlots: availableSlotCount,
     };
 
     return (
         <div className={styles.container}>
-            {/* Unified Header */}
             <FeedHeader
                 title="Bảng điều khiển Cố vấn"
-                subtitle={`Xin chào, ${user?.name || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`}
+                subtitle={`Xin chào, ${user?.name || advisorProfile?.userName || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`}
                 showFilter={false}
                 user={user}
             />
 
-            {/* Quick Stats */}
-            <div className={styles.statsGrid}>
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconPurple}`}>
-                        <Users size={20} />
-                    </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.activeClients}</div>
-                        <div className={styles.statLabel}>Khách hàng đang tư vấn</div>
-                    </div>
-                </div>
-
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconYellow}`}>
-                        <MessageSquare size={20} />
-                    </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.pendingRequests}</div>
-                        <div className={styles.statLabel}>Yêu cầu chờ xử lý</div>
-                    </div>
-                </div>
-
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconBlue}`}>
-                        <Calendar size={20} />
-                    </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.upcomingAppointments}</div>
-                        <div className={styles.statLabel}>Lịch sắp tới</div>
-                    </div>
-                </div>
-
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconRed}`}>
-                        <Star size={20} />
-                    </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.averageRating}</div>
-                        <div className={styles.statLabel}>Đánh giá trung bình</div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Navigation Tabs */}
-            <div className={styles.tabs}>
-                <button
-                    className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('overview')}
-                >
-                    Tổng quan
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'requests' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('requests')}
-                >
-                    Yêu cầu tư vấn
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'appointments' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('appointments')}
-                >
-                    Lịch hẹn
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'reports' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('reports')}
-                >
-                    Báo cáo
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'profile' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('profile')}
-                >
-                    Hồ sơ
-                </button>
-            </div>
-
-            {/* Content Sections */}
-            <div className={styles.content}>
-                {/* Overview Section */}
-                {activeSection === 'overview' && (
-                    <div className={styles.section}>
-                        <div className={styles.sectionGrid}>
-                            {/* Summary Stats */}
-                            <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
-                                <h3 className={styles.cardTitle}>Tóm tắt hoạt động</h3>
-                                <div className={styles.metricsGrid}>
-                                    <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Tổng số buổi tư vấn</div>
-                                        <div className={styles.metricValue}>{dashboardData.totalConsultations}</div>
-                                    </div>
-                                    <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Báo cáo đã hoàn thành</div>
-                                        <div className={styles.metricValue}>{dashboardData.completedReports}</div>
-                                    </div>
-                                    <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Đánh giá trung bình</div>
-                                        <div className={styles.metricValue}>
-                                            {dashboardData.averageRating} ⭐
-                                        </div>
-                                    </div>
-                                    <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Phí theo giờ</div>
-                                        <div className={styles.metricValue}>{dashboardData.hourlyRate}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Upcoming Appointments */}
-                            <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>7 Ngày Tới</h3>
-                                <div className={styles.list}>
-                                    {appointments.length === 0 ? (
-                                        <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                            <p>Chưa có lịch hẹn nào sắp tới.</p>
-                                        </div>
-                                    ) : appointments.slice(0, 3).map(appt => (
-                                        <div key={appt.id} className={styles.listItem}>
-                                            <div className={styles.dateBox} style={{ marginRight: '12px' }}>
-                                                <span className={styles.dateMonth}>Jan</span>
-                                                <span className={styles.dateDay}>{appt.date.split('-')[2]}</span>
-                                            </div>
-                                            <div className={styles.listContent}>
-                                                <h4 className={styles.listTitle}>{appt.startupName}</h4>
-                                                <div className={styles.listMeta}>{appt.time} • {appt.duration}</div>
-                                            </div>
-                                            <div className={`${styles.badge} ${styles.badgeSuccess}`}>Confirmed</div>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Recent Activity */}
-                            <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Hoạt động gần đây</h3>
-                                <div className={styles.list}>
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                        <p>Chưa có hoạt động nào.</p>
-                                    </div>
-                                </div>
-                            </div>
+            {activeSection === 'overview' && (
+                <div className={styles.statsGrid}>
+                    <div className={styles.statCard} onClick={() => handleNavigate('bookings')}>
+                        <div className={`${styles.statIcon} ${styles.iconYellow}`}><MessageSquare size={20} /></div>
+                        <div className={styles.statInfo}>
+                            <div className={styles.statValue}>{dashboardData.pendingBookings}</div>
+                            <div className={styles.statLabel}>Booking chờ duyệt</div>
                         </div>
                     </div>
+                    <div className={styles.statCard} onClick={() => handleNavigate('availability')}>
+                        <div className={`${styles.statIcon} ${styles.iconBlue}`}><Calendar size={20} /></div>
+                        <div className={styles.statInfo}>
+                            <div className={styles.statValue}>{dashboardData.availableSlots}</div>
+                            <div className={styles.statLabel}>Slot còn rảnh</div>
+                        </div>
+                    </div>
+                    <div className={styles.statCard}>
+                        <div className={`${styles.statIcon} ${styles.iconGreen}`}><CheckCircle size={20} /></div>
+                        <div className={styles.statInfo}>
+                            <div className={styles.statValue}>{availabilities.filter(a => a.status === 1 || a.status === 'Booked').length}</div>
+                            <div className={styles.statLabel}>Slot đã đặt</div>
+                        </div>
+                    </div>
+                    <div className={styles.statCard}>
+                        <div className={`${styles.statIcon} ${styles.iconRed}`}><Star size={20} /></div>
+                        <div className={styles.statInfo}>
+                            <div className={styles.statValue}>{dashboardData.averageRating > 0 ? dashboardData.averageRating.toFixed(1) : '-'}</div>
+                            <div className={styles.statLabel}>Đánh giá trung bình</div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <div className={styles.content}>
+                {activeSection === 'overview' && (
+                    <OverviewSection 
+                        availabilities={availabilities} 
+                        incomingBookings={incomingBookings} 
+                        onNavigate={handleNavigate}
+                        loadingBookings={bookingsLoading}
+                        loadingAvailabilities={availabilitiesLoading}
+                    />
                 )}
+                {activeSection === 'bookings' && <IncomingBookingsSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} />}
+                {activeSection === 'availability' && <AvailabilitySection availabilities={availabilities} loading={availabilitiesLoading} onRefresh={loadAvailabilities} />}
+                {activeSection === 'reports' && <ReportsSection />}
+                {activeSection === 'profile' && <ProfileSection user={user} advisorProfile={advisorProfile} />}
+            </div>
+        </div>
+    );
+}
 
-                {/* Requests Section */}
-                {activeSection === 'requests' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>
-                                Yêu cầu tư vấn
-                                {dashboardData.pendingRequests > 0 && (
-                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
-                                        {dashboardData.pendingRequests} Chờ xử lý
-                                    </span>
-                                )}
-                            </h3>
+function BookingSkeleton({ index = 0 }) {
+    return (
+        <div 
+            className={`${styles.listItem} ${styles.staggerEntry}`} 
+            style={{ 
+                flexDirection: 'column', 
+                alignItems: 'stretch', 
+                gap: '12px', 
+                padding: '16px',
+                animationDelay: `${index * 0.1}s` 
+            }}
+        >
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div className={`${styles.listIcon} ${styles.skeleton} ${styles.skeletonCircle}`}></div>
+                <div className={styles.skeletonContent}>
+                    <div className={`${styles.skeleton} ${styles.skeletonTitle}`} style={{ width: '40%', height: '14px', marginBottom: '4px' }}></div>
+                    <div className={`${styles.skeleton} ${styles.skeletonText}`} style={{ width: '70%', height: '10px', marginBottom: 0 }}></div>
+                </div>
+                <div className={`${styles.skeleton} ${styles.skeletonBadge}`}></div>
+            </div>
+            <div style={{ display: 'flex', gap: '8px', paddingLeft: '48px' }}>
+                <div className={`${styles.skeleton}`} style={{ width: '100px', height: '32px', borderRadius: '9999px' }}></div>
+                <div className={`${styles.skeleton}`} style={{ width: '80px', height: '32px', borderRadius: '9999px' }}></div>
+            </div>
+        </div>
+    );
+}
 
-                            <div className={styles.list}>
-                                {consultingRequests.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                        <p>Chưa có yêu cầu tư vấn nào.</p>
+function OverviewSection({ availabilities, incomingBookings, onNavigate, loadingBookings, loadingAvailabilities }) {
+    const nextSlots = [...availabilities]
+        .filter(a => a.status === 0 || a.status === 'Available')
+        .sort((a, b) => new Date(`${a.slotDate}T${a.startTime}`) - new Date(`${b.slotDate}T${b.startTime}`))
+        .slice(0, 5);
+
+    const pending = incomingBookings.filter(b => b.status === 0 || b.status === 'Pending').slice(0, 3);
+
+    return (
+        <div className={styles.section}>
+            <div className={styles.sectionGrid}>
+                <div className={styles.card}>
+                    <div className={styles.cardHeader}>
+                        <h3 className={styles.cardTitle}>Slot rảnh sắp tới</h3>
+                        <button className={styles.linkBtn} onClick={() => onNavigate('availability')}>Quản lý &rsaquo;</button>
+                    </div>
+                    <div className={styles.list}>
+                        {loadingAvailabilities ? (
+                            [1, 2, 3, 4, 5].map(i => (
+                                <div key={i} className={`${styles.listItem} ${styles.staggerEntry}`} style={{ animationDelay: `${i * 0.1}s` }}>
+                                    <div className={`${styles.listIcon} ${styles.skeleton} ${styles.skeletonCircle}`}></div>
+                                    <div className={styles.skeletonContent}>
+                                        <div className={`${styles.skeleton} ${styles.skeletonTitle}`} style={{ width: '50%', height: '14px', marginBottom: '4px' }}></div>
+                                        <div className={`${styles.skeleton} ${styles.skeletonText}`} style={{ width: '40%', height: '10px', marginBottom: 0 }}></div>
                                     </div>
-                                ) : consultingRequests.map(request => (
-                                    <div key={request.id} className={styles.listItem} style={{ alignItems: 'flex-start' }}>
+                                    <div className={`${styles.skeleton} ${styles.skeletonBadge}`}></div>
+                                </div>
+                            ))
+                        ) : nextSlots.length === 0 ? (
+                            <div className={styles.emptyState} style={{ padding: '16px' }}>
+                                <Calendar size={28} />
+                                <p style={{ margin: 0, fontSize: '13px' }}>Chưa có slot rảnh nào. Hãy tạo lịch rảnh.</p>
+                            </div>
+                        ) : nextSlots.map((s, idx) => {
+                            const date = new Date(s.slotDate).toLocaleDateString('vi-VN', { weekday: 'short', month: 'short', day: 'numeric' });
+                            return (
+                                <div 
+                                    key={s.advisorAvailabilityId} 
+                                    className={`${styles.mobileCardItem} ${styles.staggerEntry}`}
+                                    style={{ animationDelay: `${idx * 0.1}s` }}
+                                >
+                                    <div className={styles.mobileCardItemContent}>
+                                        <div className={styles.listIcon} style={{ background: 'rgba(29, 155, 240, 0.1)', color: 'var(--primary-blue)' }}>
+                                            <Calendar size={18} />
+                                        </div>
                                         <div className={styles.listContent}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                                                <h4 className={styles.listTitle}>{request.startupName}</h4>
-                                                <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>by {request.founderName}</span>
-                                            </div>
-                                            <p style={{ margin: '8px 0', fontSize: '14px', color: 'var(--text-primary)' }}>{request.inquiry}</p>
-                                            <div className={styles.listMeta} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-                                                <span className={`${styles.badge} ${styles.badgeInfo}`}>{request.budget}</span>
-                                                <span>Requested: {request.requestDate}</span>
+                                            <div className={styles.mobileCardItemTitle}>{date}</div>
+                                            <div className={styles.mobileCardItemMeta}>
+                                                <Clock size={12} style={{ marginRight: 4, verticalAlign: 'middle' }} />
+                                                {s.startTime?.slice(0, 5)} – {s.endTime?.slice(0, 5)}
                                             </div>
                                         </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', minWidth: '120px', alignItems: 'flex-end', marginLeft: '16px' }}>
-                                            <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`}>
-                                                {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
-                                            </span>
-                                            {request.status === 'pending' && (
-                                                <div style={{ display: 'flex', gap: '8px' }}>
-                                                    <button
-                                                        className={styles.primaryBtn}
-                                                        style={{ padding: '6px 12px', fontSize: '12px' }}
-                                                        onClick={() => handleAcceptRequest(request.id)}
-                                                    >
-                                                        Chấp nhận
-                                                    </button>
-                                                    <button
-                                                        className={styles.dangerBtn}
-                                                        style={{ padding: '6px 12px', fontSize: '12px' }}
-                                                        onClick={() => handleRejectRequest(request.id)}
-                                                    >
-                                                        Từ chối
-                                                    </button>
+                                        <span className={`${styles.badge} ${styles.badgeSuccess}`}>Rảnh</span>
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                <div className={styles.card}>
+                    <div className={styles.cardHeader}>
+                        <h3 className={styles.cardTitle}>Booking chờ xét duyệt</h3>
+                        <button className={styles.linkBtn} onClick={() => onNavigate('bookings')}>Xem tất cả &rsaquo;</button>
+                    </div>
+                    <div className={styles.list}>
+                        {loadingBookings ? (
+                            [1, 2, 3].map(i => (
+                                <BookingSkeleton key={i} index={i} />
+                            ))
+                        ) : pending.length === 0 ? (
+                            <div className={styles.emptyState} style={{ padding: '16px' }}>
+                                <MessageSquare size={28} />
+                                <p style={{ margin: 0, fontSize: '13px' }}>Không có booking nào đang chờ.</p>
+                            </div>
+                        ) : pending.map((b, idx) => (
+                            <div 
+                                key={b.id} 
+                                className={`${styles.mobileCardItem} ${styles.staggerEntry}`}
+                                style={{ animationDelay: `${(idx + 2) * 0.1}s` }} // Delay after slots
+                            >
+                                <div className={styles.mobileCardItemContent}>
+                                    <div className={styles.listIcon} style={{ background: 'rgba(255, 173, 31, 0.1)', color: '#d97706' }}>
+                                        <Users size={18} />
+                                    </div>
+                                    <div className={styles.listContent}>
+                                        <div className={styles.mobileCardItemTitle}>{b.projectName || 'Dự án chưa rõ'}</div>
+                                        <div className={styles.mobileCardItemMeta}>Từ: <strong>{b.customerName}</strong></div>
+                                    </div>
+                                    <span className={`${styles.badge} ${styles.badgePending}`}>Chờ</span>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function IncomingBookingsSection({ bookings, loading, onRefresh }) {
+    const [actionLoading, setActionLoading] = useState({});
+    const [actionError, setActionError] = useState({});
+    const [rejectReason, setRejectReason] = useState({});
+    const [showRejectInput, setShowRejectInput] = useState({});
+
+    const handleApprove = async (bookingId) => {
+        setActionLoading(prev => ({ ...prev, [bookingId]: 'approve' }));
+        setActionError(prev => ({ ...prev, [bookingId]: null }));
+        try {
+            await bookingService.approveBooking(bookingId);
+            onRefresh();
+        } catch (e) {
+            setActionError(prev => ({ ...prev, [bookingId]: e.message || 'Lỗi khi chấp nhận.' }));
+        } finally {
+            setActionLoading(prev => ({ ...prev, [bookingId]: null }));
+        }
+    };
+
+    const handleReject = async (bookingId) => {
+        setActionLoading(prev => ({ ...prev, [bookingId]: 'reject' }));
+        setActionError(prev => ({ ...prev, [bookingId]: null }));
+        try {
+            await bookingService.rejectBooking(bookingId, rejectReason[bookingId] || null);
+            onRefresh();
+        } catch (e) {
+            setActionError(prev => ({ ...prev, [bookingId]: e.message || 'Lỗi khi từ chối.' }));
+        } finally {
+            setActionLoading(prev => ({ ...prev, [bookingId]: null }));
+        }
+    };
+
+    const BOOKING_STATUS_LABELS = {
+        0: { label: 'Chờ xác nhận', cls: 'badgePending' },
+        Pending: { label: 'Chờ xác nhận', cls: 'badgePending' },
+        1: { label: 'Chờ thanh toán', cls: 'badgeInfo' },
+        ApprovedAwaitingPayment: { label: 'Chờ thanh toán', cls: 'badgeInfo' },
+        2: { label: 'Đã xác nhận', cls: 'badgeSuccess' },
+        Confirmed: { label: 'Đã xác nhận', cls: 'badgeSuccess' },
+        3: { label: 'Hoàn thành', cls: 'badgeSuccess' },
+        Completed: { label: 'Hoàn thành', cls: 'badgeSuccess' },
+        4: { label: 'Đã hủy', cls: 'badgeError' },
+        Cancel: { label: 'Đã hủy', cls: 'badgeError' },
+        5: { label: 'Không phản hồi', cls: 'badgeError' },
+        NoResponse: { label: 'Không phản hồi', cls: 'badgeError' },
+    };
+
+    if (loading) {
+        return (
+            <div className={styles.section}>
+                <div className={styles.card}>
+                    <div className={styles.cardHeader}>
+                        <div className={`${styles.skeleton} ${styles.skeletonTitle}`} style={{ margin: 0 }}></div>
+                    </div>
+                    <div className={styles.list}>
+                        {[1, 2, 3].map(i => (
+                            <BookingSkeleton key={i} index={i} />
+                        ))}
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className={styles.section}>
+            <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                    <h3 className={styles.cardTitle}>
+                        Booking Đến
+                        {bookings.filter(b => b.status === 0 || b.status === 'Pending').length > 0 && (
+                            <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: 12, fontSize: 11 }}>
+                                {bookings.filter(b => b.status === 0 || b.status === 'Pending').length} chờ xử lý
+                            </span>
+                        )}
+                    </h3>
+                    <button className={styles.secondaryBtn} onClick={onRefresh} style={{ padding: '6px 14px', fontSize: '12px' }}>
+                        Làm mới
+                    </button>
+                </div>
+
+                {bookings.length === 0 ? (
+                    <div className={styles.emptyState}>
+                        <MessageSquare size={40} />
+                        <p>Không có booking nào đến.</p>
+                    </div>
+                ) : (
+                    <div className={styles.list}>
+                        {bookings.map(booking => {
+                            const statusInfo = BOOKING_STATUS_LABELS[booking.status] || { label: String(booking.status), cls: 'badgeInfo' };
+                            const isPending = booking.status === 0 || booking.status === 'Pending';
+                            const isActioning = !!actionLoading[booking.id];
+                            const err = actionError[booking.id];
+
+                            return (
+                                <div key={booking.id} className={styles.listItem} style={{ flexDirection: 'column', alignItems: 'stretch', gap: '10px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div className={styles.listIcon}><Users size={16} /></div>
+                                        <div className={styles.listContent}>
+                                            <div className={styles.listTitle}>{booking.projectName || 'Dự án'}</div>
+                                            <div className={styles.listMeta}>
+                                                Người đặt: <strong>{booking.customerName}</strong>
+                                                {' · '}{booking.slotCount} slot ({booking.slotCount} giờ)
+                                                {' · '}
+                                                {new Date(booking.startTime).toLocaleDateString('vi-VN')}
+                                                {' '}
+                                                {new Date(booking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                {' – '}
+                                                {new Date(booking.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                            </div>
+                                            {booking.note && (
+                                                <div className={styles.listMeta} style={{ fontStyle: 'italic', marginTop: 2 }}>
+                                                    "{booking.note}"
                                                 </div>
                                             )}
                                         </div>
+                                        <span className={`${styles.badge} ${styles[statusInfo.cls]}`}>{statusInfo.label}</span>
                                     </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
 
-                {/* Appointments Section */}
-                {activeSection === 'appointments' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>Lịch hẹn đã đặt</h3>
-                                <button className={styles.primaryBtn}>
-                                    <PlusCircle size={18} />
-                                    Thêm khung giờ rảnh
-                                </button>
-                            </div>
+                                    {err && (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#f4212e', fontSize: 13 }}>
+                                            <AlertCircle size={14} />
+                                            <span>{err}</span>
+                                        </div>
+                                    )}
 
-                            <div className={styles.list}>
-                                {appointments.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                        <p>Chưa có lịch hẹn nào được đặt.</p>
-                                    </div>
-                                ) : appointments.map(appt => (
-                                    <div key={appt.id} className={styles.listItem}>
-                                        <div className={styles.dateBox} style={{ marginRight: '16px' }}>
-                                            <span className={styles.dateMonth}>Jan</span>
-                                            <span className={styles.dateDay}>{appt.date.split('-')[2]}</span>
-                                        </div>
-                                        <div className={styles.listContent}>
-                                            <h4 className={styles.listTitle}>{appt.startupName}</h4>
-                                            <div className={styles.listMeta} style={{ marginBottom: '4px' }}>with {appt.founderName}</div>
-                                            <div className={styles.listMeta} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                <Clock size={14} />
-                                                {appt.time} ({appt.duration})
-                                            </div>
-                                        </div>
-                                        <div className={styles.listActions}>
-                                            <button
-                                                className={styles.secondaryBtn}
-                                                onClick={() => handleRescheduleAppointment(appt.id)}
-                                            >
-                                                Reschedule
-                                            </button>
-                                            <button
-                                                className={styles.dangerBtn}
-                                                onClick={() => handleCancelAppointment(appt.id)}
-                                            >
-                                                Cancel
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Reports Section */}
-                {activeSection === 'reports' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <div className={styles.cardHeader}>
-                                <h3 className={styles.cardTitle}>Báo cáo tư vấn</h3>
-                                <button className={styles.primaryBtn}>
-                                    <PlusCircle size={18} />
-                                    Tạo báo cáo
-                                </button>
-                            </div>
-
-                            <div className={styles.list}>
-                                {consultingReports.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                        <p>Chưa có báo cáo nào.</p>
-                                    </div>
-                                ) : consultingReports.map(report => (
-                                    <div key={report.id} className={styles.listItem}>
-                                        <div className={styles.listContent}>
-                                            <h4 className={styles.listTitle}>{report.startupName}</h4>
-                                            <div className={styles.listMeta}>with {report.founderName}</div>
-                                            <div className={styles.listMeta} style={{ marginTop: '4px' }}>
-                                                Consultation: {report.consultationDate} • Report: {report.date}
-                                            </div>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                            <div style={{ textAlign: 'right' }}>
-                                                <div style={{ color: '#fbbf24', fontSize: '14px' }}>
-                                                    {'⭐'.repeat(Math.floor(report.rating))}
-                                                    {report.rating % 1 !== 0 && '✨'}
-                                                </div>
-                                                <span style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-primary)' }}>{report.rating}/5</span>
-                                            </div>
+                                    {isPending && (
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingLeft: '48px' }}>
+                                            {showRejectInput[booking.id] && (
+                                                <input
+                                                    type="text"
+                                                    placeholder="Lý do từ chối (tùy chọn)..."
+                                                    value={rejectReason[booking.id] || ''}
+                                                    onChange={e => setRejectReason(prev => ({ ...prev, [booking.id]: e.target.value }))}
+                                                    style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' }}
+                                                />
+                                            )}
                                             <div className={styles.listActions}>
-                                                <button className={styles.secondaryBtn}>View</button>
-                                                <button className={styles.secondaryBtn}>Download</button>
+                                                <button
+                                                    className={styles.primaryBtn}
+                                                    style={{ padding: '6px 16px', fontSize: '13px', minWidth: 'auto' }}
+                                                    onClick={() => handleApprove(booking.id)}
+                                                    disabled={isActioning}
+                                                >
+                                                    {isActioning === 'approve' ? <Loader size={14} /> : <CheckCircle size={14} />}
+                                                    Chấp nhận
+                                                </button>
+                                                {!showRejectInput[booking.id] ? (
+                                                    <button
+                                                        className={styles.dangerBtn}
+                                                        style={{ padding: '6px 16px', fontSize: '13px' }}
+                                                        onClick={() => setShowRejectInput(prev => ({ ...prev, [booking.id]: true }))}
+                                                        disabled={isActioning}
+                                                    >
+                                                        <X size={14} />
+                                                        Từ chối
+                                                    </button>
+                                                ) : (
+                                                    <>
+                                                        <button
+                                                            className={styles.dangerBtn}
+                                                            style={{ padding: '6px 16px', fontSize: '13px' }}
+                                                            onClick={() => handleReject(booking.id)}
+                                                            disabled={isActioning}
+                                                        >
+                                                            {isActioning === 'reject' ? <Loader size={14} /> : null}
+                                                            Xác nhận từ chối
+                                                        </button>
+                                                        <button
+                                                            className={styles.secondaryBtn}
+                                                            style={{ padding: '6px 12px', fontSize: '13px' }}
+                                                            onClick={() => setShowRejectInput(prev => ({ ...prev, [booking.id]: false }))}
+                                                        >
+                                                            Hủy
+                                                        </button>
+                                                    </>
+                                                )}
                                             </div>
                                         </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
+                                    )}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
+            </div>
+        </div>
+    );
+}
 
-                {/* Profile Section */}
-                {activeSection === 'profile' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Cài đặt hồ sơ</h3>
-                            <form className={styles.form}>
-                                <div className={styles.formRow}>
-                                    <div className={styles.formGroup}>
-                                        <label>Họ và tên</label>
-                                        <input
-                                            type="text"
-                                            placeholder="Họ và tên của bạn"
-                                            defaultValue={user?.name || ''}
-                                        />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>Email</label>
-                                        <input
-                                            type="email"
-                                            placeholder="email@example.com"
-                                            defaultValue={user?.email || ''}
-                                        />
-                                    </div>
+function AvailabilitySection({ availabilities, loading, onRefresh }) {
+    const todayStr = new Date().toISOString().split('T')[0];
+    const [selectedDate, setSelectedDate] = useState(todayStr);
+    const [currentMonth, setCurrentMonth] = useState(new Date());
+    const [showAddSlotModal, setShowAddSlotModal] = useState(false);
+    const [modalDate, setModalDate] = useState(todayStr);
+    const [modalMonth, setModalMonth] = useState(new Date());
+    const [isClosingAddSlotModal, setIsClosingAddSlotModal] = useState(false);
+    const [showMobileCalendar, setShowMobileCalendar] = useState(false);
+    const [formData, setFormData] = useState({ startTime: '08:00', endTime: '17:00' });
+    const [formError, setFormError] = useState(null);
+    const [formSubmitting, setFormSubmitting] = useState(false);
+    const [previewSlots, setPreviewSlots] = useState([]);
+    const [deletingId, setDeletingId] = useState(null);
+    const [deleteError, setDeleteError] = useState(null);
+    const [hasInitializedDate, setHasInitializedDate] = useState(false);
+    const [isClosingMobileCalendar, setIsClosingMobileCalendar] = useState(false);
+
+    const closeMobileCalendar = () => {
+        setIsClosingMobileCalendar(true);
+        setTimeout(() => {
+            setShowMobileCalendar(false);
+            setIsClosingMobileCalendar(false);
+        }, 300);
+    };
+
+    useEffect(() => {
+        if (!loading && availabilities.length > 0 && !hasInitializedDate) {
+            const todayObj = new Date();
+            todayObj.setHours(0, 0, 0, 0);
+            
+            const datesWithSlots = [...new Set(availabilities.map(s => s.slotDate?.split('T')[0]))]
+                .filter(d => !!d)
+                .map(d => ({ str: d, date: new Date(d + 'T00:00:00') }))
+                .filter(d => d.date >= todayObj)
+                .sort((a, b) => a.date - b.date);
+
+            if (datesWithSlots.length > 0) {
+                setSelectedDate(datesWithSlots[0].str);
+                setCurrentMonth(datesWithSlots[0].date);
+            }
+            setHasInitializedDate(true);
+        }
+    }, [loading, availabilities, hasInitializedDate]);
+
+    const hourOptions = Array.from({ length: 18 }, (_, i) => {
+        const h = i + 6;
+        return `${String(h).padStart(2, '0')}:00`;
+    });
+
+    const timeOptions = hourOptions.map(h => ({ value: h, label: h }));
+
+    useEffect(() => {
+        const startH = parseInt(formData.startTime.split(':')[0]);
+        const endH = parseInt(formData.endTime.split(':')[0]);
+        if (endH <= startH) { setPreviewSlots([]); return; }
+        const slots = [];
+        for (let h = startH; h < endH; h++) {
+            slots.push({ start: `${String(h).padStart(2, '0')}:00`, end: `${String(h + 1).padStart(2, '0')}:00` });
+        }
+        setPreviewSlots(slots);
+    }, [formData.startTime, formData.endTime]);
+    
+    const closeAddSlotModal = () => {
+        setIsClosingAddSlotModal(true);
+        setTimeout(() => {
+            setShowAddSlotModal(false);
+            setIsClosingAddSlotModal(false);
+            setFormError(null);
+        }, 300);
+    };
+
+    const handleOpenAddSlot = () => {
+        setModalDate(selectedDate);
+        setModalMonth(new Date(currentMonth));
+        setShowAddSlotModal(true);
+    };
+
+    const handleCreate = async () => {
+        setFormError(null);
+        if (previewSlots.length === 0) { setFormError('Thời gian kết thúc phải sau thời gian bắt đầu.'); return; }
+
+        setFormSubmitting(true);
+        try {
+            await Promise.all(
+                previewSlots.map(s =>
+                    advisorAvailabilityService.createMyAvailability({
+                        slotDate: modalDate,
+                        startTime: `${s.start}:00`,
+                        endTime: `${s.end}:00`,
+                    })
+                )
+            );
+            closeAddSlotModal();
+            onRefresh();
+        } catch (e) {
+            setFormError(e.message || 'Không thể tạo lịch rảnh.');
+        } finally {
+            setFormSubmitting(false);
+        }
+    };
+
+    const handleDelete = async (slotId, isBooked) => {
+        if (isBooked) return;
+        setDeletingId(slotId);
+        setDeleteError(null);
+        try {
+            await advisorAvailabilityService.deleteMyAvailability(slotId);
+            onRefresh();
+        } catch (e) {
+            setDeleteError(e.message || 'Không thể xóa slot.');
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const getDaysInMonth = (year, month) => new Date(year, month + 1, 0).getDate();
+    const getFirstDayOfMonth = (year, month) => new Date(year, month, 1).getDay();
+
+    const changeMonth = (offset) => {
+        const next = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + offset, 1);
+        setCurrentMonth(next);
+    };
+
+    const renderCalendar = (
+        targetMonth = currentMonth, 
+        targetSelectedDate = selectedDate, 
+        onSelectDate = setSelectedDate,
+        onCloseModal = null
+    ) => {
+        const year = targetMonth.getFullYear();
+        const month = targetMonth.getMonth();
+        const daysInMonth = getDaysInMonth(year, month);
+        const firstDay = getFirstDayOfMonth(year, month);
+        
+        const days = [];
+        for (let i = 0; i < firstDay; i++) {
+            days.push(<div key={`empty-${i}`} className={`${styles.calendarDay} ${styles.dayEmpty}`}></div>);
+        }
+        
+        for (let d = 1; d <= daysInMonth; d++) {
+            const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const isSelected = targetSelectedDate === dateStr;
+            const isToday = todayStr === dateStr;
+            const hasSlots = availabilities.some(s => s.slotDate?.split('T')[0] === dateStr);
+            
+            days.push(
+                <div 
+                    key={d} 
+                    className={`${styles.calendarDay} ${isSelected ? styles.daySelected : ''} ${isToday ? styles.dayToday : ''}`}
+                    onClick={() => {
+                        onSelectDate(dateStr);
+                        if (onCloseModal && window.innerWidth <= 850) {
+                            onCloseModal();
+                        }
+                    }}
+                >
+                    <div className={styles.dayInner}>{d}</div>
+                    {hasSlots && <div className={styles.dotIndicator}></div>}
+                </div>
+            );
+        }
+        return days;
+    };
+
+    const currentDaySlots = availabilities
+        .filter(s => s.slotDate?.split('T')[0] === selectedDate)
+        .sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+
+    const displayDateLabel = new Date(selectedDate + 'T00:00:00').toLocaleDateString('vi-VN', {
+        weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
+    });
+
+    const CalendarComponent = ({ 
+        extraClass = '', 
+        extraStyle = {}, 
+        month = currentMonth, 
+        selected = selectedDate, 
+        onSelect = setSelectedDate,
+        onMonthChange = (offset) => {
+            const next = new Date(month.getFullYear(), month.getMonth() + offset, 1);
+            setCurrentMonth(next);
+        },
+        onCloseModal = null
+    }) => (
+        <div className={`${styles.calendarContainer} ${extraClass}`} style={extraStyle}>
+            <div className={styles.calendarHeader}>
+                <div className={styles.monthLabel}>
+                    {month.toLocaleDateString('vi-VN', { month: 'long', year: 'numeric' }).replace(/^t/, 'T')}
+                </div>
+                <div className={styles.calendarNav}>
+                    <button className={styles.navBtn} onClick={(e) => { e.stopPropagation(); onMonthChange(-1); }}><ChevronLeft size={18} /></button>
+                    <button className={styles.navBtn} onClick={(e) => { e.stopPropagation(); onMonthChange(1); }}><ChevronRight size={18} /></button>
+                </div>
+            </div>
+            <div className={styles.calendarGrid}>
+                {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map(d => (
+                    <div key={d} className={styles.weekdayLabel}>{d}</div>
+                ))}
+                {renderCalendar(month, selected, onSelect, onCloseModal)}
+            </div>
+        </div>
+    );
+
+    if (loading) {
+        return (
+            <div className={styles.section}>
+                {/* Mobile-only date bar skeleton */}
+                <div className={`${styles.mobileDateSelector} ${styles.skeleton}`} style={{ border: 'none', height: '54px', marginBottom: '16px' }}></div>
+                
+                <div className={styles.availabilityLayout}>
+                    {/* Desktop Calendar Skeleton */}
+                    <div className={`${styles.calendarContainer} ${styles.desktopOnly}`} style={{ background: 'transparent', border: '1px solid var(--border-color)' }}>
+                        <div className={styles.calendarHeader} style={{ paddingBottom: '12px', borderBottom: '1px solid var(--border-color)', marginBottom: '12px' }}>
+                            <div className={`${styles.skeleton}`} style={{ width: '120px', height: '20px' }}></div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <div className={`${styles.skeleton}`} style={{ width: '28px', height: '28px', borderRadius: '8px' }}></div>
+                                <div className={`${styles.skeleton}`} style={{ width: '28px', height: '28px', borderRadius: '8px' }}></div>
+                            </div>
+                        </div>
+                        <div className={styles.calendarGrid}>
+                            {[...Array(7)].map((_, i) => (
+                                <div key={`w-${i}`} className={`${styles.skeleton}`} style={{ width: '24px', height: '10px', margin: '4px auto 12px', borderRadius: '2px' }}></div>
+                            ))}
+                            {[...Array(35)].map((_, i) => (
+                                <div key={`d-${i}`} className={`${styles.calendarDay}`}>
+                                    <div className={`${styles.skeleton}`} style={{ width: '32px', height: '32px', borderRadius: '50%' }}></div>
                                 </div>
+                            ))}
+                        </div>
+                    </div>
 
-                                <div className={styles.formGroup}>
-                                    <label>Giới thiệu chuyên môn</label>
-                                    <textarea
-                                        rows={4}
-                                        placeholder="Chia sẻ về chuyên môn và kinh nghiệm của bạn với startup"
+                    {/* Slots List Skeleton */}
+                    <div className={styles.slotsSection}>
+                        <div className={styles.slotsHeader}>
+                            <div className={`${styles.skeleton}`} style={{ width: '180px', height: '24px' }}></div>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <div className={`${styles.skeleton}`} style={{ width: '42px', height: '36px', borderRadius: '10px' }}></div>
+                                <div className={`${styles.skeleton}`} style={{ width: '130px', height: '36px', borderRadius: '10px' }}></div>
+                            </div>
+                        </div>
+                        <div className={styles.slotsList} style={{ gap: '16px', marginTop: '20px' }}>
+                            {[1, 2, 3, 4].map(i => (
+                                <div key={i} className={`${styles.slotItemStyled} ${styles.skeleton}`} style={{ height: '78px', border: 'none', background: 'var(--bg-secondary)', opacity: 1 - (i * 0.15) }}></div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className={styles.section}>
+            <div className={styles.mobileDateSelector} onClick={() => setShowMobileCalendar(true)}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <Calendar size={20} color="var(--primary-blue)" />
+                    <span style={{ fontWeight: 700 }}>{displayDateLabel}</span>
+                </div>
+                <ChevronDown size={20} />
+            </div>
+
+            {showMobileCalendar && createPortal(
+                <div className={`${styles.modalOverlay} ${isClosingMobileCalendar ? styles.fadeOutOverlay : ''}`} onClick={closeMobileCalendar}>
+                    <div className={`${styles.modalContent} ${isClosingMobileCalendar ? styles.slideDownContent : ''}`} onClick={e => e.stopPropagation()}>
+                        <div className={styles.calendarModalHeader}>
+                            <h4 className={styles.calendarModalTitle}>Chọn ngày</h4>
+                            <button className={styles.calendarModalCloseBtn} onClick={closeMobileCalendar}><X size={18} /></button>
+                        </div>
+                        <CalendarComponent 
+                            extraClass={styles.calendarInModal}
+                            extraStyle={{ '--day-size': 'calc((100vw - 40px) / 7)', '--day-font-size': '16px' }}
+                        />
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {showAddSlotModal && createPortal(
+                <div className={`${styles.modalOverlay} ${isClosingAddSlotModal ? styles.fadeOutOverlay : ''}`} onClick={closeAddSlotModal}>
+                    <div className={`${styles.modalContent} ${isClosingAddSlotModal ? styles.slideDownContent : ''}`} onClick={e => e.stopPropagation()}>
+                        <div className={styles.calendarModalHeader}>
+                            <h4 className={styles.calendarModalTitle}>Thêm lịch rảnh</h4>
+                            <button className={styles.calendarModalCloseBtn} onClick={closeAddSlotModal}><X size={18} /></button>
+                        </div>
+                        
+                        <div className={styles.addSlotBody}>
+                            <div className={styles.miniCalendarSection}>
+                                <div className={styles.miniCalendarHeader}>
+                                    <span className={styles.miniCalendarSub}>Chọn ngày và thiết lập khung giờ rảnh</span>
+                                    <span className={styles.miniCalendarDate}>
+                                        {new Date(modalDate + 'T00:00:00').toLocaleDateString('vi-VN', { weekday: 'long', month: 'long', day: 'numeric' })}
+                                    </span>
+                                </div>
+                                <CalendarComponent 
+                                    extraClass={styles.miniCalendarInModal} 
+                                    selected={modalDate}
+                                    onSelect={setModalDate}
+                                    month={modalMonth}
+                                    onMonthChange={(offset) => {
+                                        const next = new Date(modalMonth.getFullYear(), modalMonth.getMonth() + offset, 1);
+                                        setModalMonth(next);
+                                    }}
+                                />
+                            </div>
+
+                            <div className={styles.timeSelectionRow}>
+                                <div className={styles.formField}>
+                                    <label className={styles.fieldLabel}>Từ thời gian</label>
+                                    <CustomSelect 
+                                        value={formData.startTime}
+                                        onChange={e => setFormData(p => ({ ...p, startTime: e.target.value }))}
+                                        options={timeOptions.slice(0, -1)}
                                     />
                                 </div>
-
-                                <div className={styles.formRow}>
-                                    <div className={styles.formGroup}>
-                                        <label>Lĩnh vực chuyên môn chính</label>
-                                        <select>
-                                            <option>Chiến lược kinh doanh</option>
-                                            <option>Gọi vốn & Tài chính</option>
-                                            <option>Kiến trúc AI</option>
-                                            <option>Sở hữu trí tuệ & Pháp lý</option>
-                                        </select>
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label>Phí theo giờ</label>
-                                        <input type="text" placeholder="VD: 150$ - 250$" />
-                                    </div>
+                                <div className={styles.formField}>
+                                    <label className={styles.fieldLabel}>Đến thời gian</label>
+                                    <CustomSelect 
+                                        value={formData.endTime}
+                                        onChange={e => setFormData(p => ({ ...p, endTime: e.target.value }))}
+                                        options={timeOptions.slice(1)}
+                                    />
                                 </div>
+                            </div>
 
-                                <div className={styles.formGroup}>
-                                    <label>Số năm kinh nghiệm</label>
-                                    <input type="number" min="0" max="70" />
-                                </div>
+                            {formError && <div className={styles.formError} style={{ margin: '0 24px 16px' }}><AlertCircle size={14} /><span>{formError}</span></div>}
+                        </div>
 
-                                <div style={{ display: 'flex', gap: '12px', marginTop: '16px' }}>
-                                    <button type="submit" className={styles.primaryBtn}>Lưu thay đổi</button>
-                                    <button type="button" className={styles.secondaryBtn}>Hủy</button>
-                                </div>
-                            </form>
+                        <div className={styles.addSlotFooter}>
+                            <button className={styles.secondaryBtn} onClick={closeAddSlotModal} style={{ flex: 1, padding: '14px' }}>Hủy</button>
+                            <button className={styles.primaryBtn} onClick={handleCreate} disabled={formSubmitting} style={{ flex: 1.5, padding: '14px' }}>
+                                {formSubmitting ? 'Đang tạo...' : `Xác nhận tạo ${previewSlots.length} slot`}
+                            </button>
                         </div>
                     </div>
-                )}
+                </div>,
+                document.body
+            )}
+
+            <div className={styles.availabilityLayout}>
+                <div className={styles.desktopOnly}>
+                    <CalendarComponent />
+                </div>
+
+                <div className={styles.slotsSection}>
+                    <div className={styles.slotsHeader}>
+                        <div className={styles.slotsTitle}>{displayDateLabel}</div>
+                        <div style={{ display: 'flex', gap: 8 }}>
+                            <button className={styles.secondaryBtn} onClick={onRefresh} style={{ padding: '6px 12px', fontSize: '12px' }}>
+                                <Loader size={12} className={loading ? styles.spinIcon : ''} />
+                            </button>
+                            <button className={styles.primaryBtn} onClick={handleOpenAddSlot} style={{ padding: '8px 16px', fontSize: '13px', minWidth: 'auto' }}>
+                                <PlusCircle size={16} />
+                                Thêm lịch
+                            </button>
+                        </div>
+                    </div>
+
+
+                    <div className={styles.slotsList}>
+                        {currentDaySlots.length === 0 ? (
+                            <div className={styles.emptyState} style={{ gridColumn: '1 / -1', padding: '80px 20px' }}>
+                                <Calendar size={48} color="var(--text-secondary)" opacity={0.3} />
+                                <p style={{ fontSize: '15px', fontWeight: 600 }}>Không có lịch rảnh trong ngày này.</p>
+                                <button className={styles.primaryBtn} onClick={handleOpenAddSlot} style={{ marginTop: 8 }}>+ Thêm lịch rảnh</button>
+                            </div>
+                        ) : (
+                            currentDaySlots.map(slot => {
+                                const isBooked = slot.status === 1 || slot.status === 'Booked';
+                                const isDeleting = deletingId === slot.advisorAvailabilityId;
+                                return (
+                                    <div 
+                                        key={slot.advisorAvailabilityId} 
+                                        className={`${styles.slotItemStyled} ${isBooked ? styles.slotBookedStyled : styles.slotAvailableStyled}`}
+                                    >
+                                        <div className={styles.slotTimeRow}>
+                                            <span className={styles.slotTimeText}>
+                                                {slot.startTime?.slice(0, 5)} – {slot.endTime?.slice(0, 5)}
+                                            </span>
+                                            <div className={styles.slotFooter}>
+                                                <span className={`${styles.badge} ${isBooked ? styles.badgeInfo : styles.badgeSuccess}`} style={{ fontSize: 10, padding: '2px 8px', minWidth: '60px', textAlign: 'center' }}>
+                                                    {isBooked ? 'Đã đặt' : 'Rảnh'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <button 
+                                            className={styles.slotDeleteBtn} 
+                                            onClick={() => handleDelete(slot.advisorAvailabilityId, isBooked)} 
+                                            disabled={isBooked || isDeleting}
+                                            title={isBooked ? "Không thể xóa slot đã đặt" : "Xóa slot"}
+                                        >
+                                            {isDeleting ? <Loader size={14} className={styles.spinIcon} /> : <Trash2 size={16} />}
+                                        </button>
+                                    </div>
+                                );
+                            })
+                        )}
+                    </div>
+                </div>
+            </div>
+            {deleteError && <div style={{ marginTop: 12, color: '#f4212e', fontSize: 13, display: 'flex', gap: 8 }}><AlertCircle size={14} />{deleteError}</div>}
+        </div>
+    );
+}
+
+function ReportsSection() {
+    return (
+        <div className={styles.section}>
+            <div className={styles.card}>
+                <div className={styles.cardHeader}>
+                    <h3 className={styles.cardTitle}>Báo cáo tư vấn</h3>
+                    <button className={styles.primaryBtn} style={{ minWidth: 'auto', padding: '8px 16px', fontSize: '13px' }}>
+                        <PlusCircle size={16} />
+                        Tạo báo cáo
+                    </button>
+                </div>
+                <div className={styles.emptyState}>
+                    <FileText size={40} />
+                    <p>Chưa có báo cáo tư vấn nào.</p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function ProfileSection({ user, advisorProfile }) {
+    return (
+        <div className={styles.section}>
+            <div className={styles.card}>
+                <h3 className={styles.cardTitle}>Cài đặt hồ sơ</h3>
+                <form className={styles.form}>
+                    <div className={styles.formRow}>
+                        <div className={styles.formGroup}>
+                            <label>Họ và tên</label>
+                            <input type="text" defaultValue={advisorProfile?.userName || user?.name || ''} />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label>Email</label>
+                            <input type="email" defaultValue={advisorProfile?.email || user?.email || ''} />
+                        </div>
+                    </div>
+                    <div className={styles.formGroup}>
+                        <label>Giới thiệu chuyên môn</label>
+                        <textarea rows={4} defaultValue={advisorProfile?.bio || ''} placeholder="Chia sẻ về chuyên môn và kinh nghiệm của bạn..." />
+                    </div>
+                    <div className={styles.formRow}>
+                        <div className={styles.formGroup}>
+                            <label>Lĩnh vực chuyên môn</label>
+                            <input type="text" defaultValue={advisorProfile?.expertise || ''} placeholder="VD: Chiến lược kinh doanh, Gọi vốn" />
+                        </div>
+                        <div className={styles.formGroup}>
+                            <label>Phí theo giờ (VNĐ)</label>
+                            <input type="number" defaultValue={advisorProfile?.hourlyRate || ''} />
+                        </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
+                        <button type="submit" className={styles.primaryBtn}>Lưu thay đổi</button>
+                        <button type="button" className={styles.secondaryBtn}>Hủy</button>
+                    </div>
+                </form>
             </div>
         </div>
     );
