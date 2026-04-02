@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Check, AlertCircle, Loader, Calendar, Clock, User, Briefcase } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, AlertCircle, Loader, Calendar, Clock, User, Briefcase, CreditCard, Sparkles } from 'lucide-react';
 import bookingService from '../../services/bookingService';
 import advisorAvailabilityService from '../../services/advisorAvailabilityService';
 import advisorService from '../../services/advisorService';
 import SlotPicker from './SlotPicker';
+import PaymentModal from './PaymentModal';
 import styles from './BookingWizard.module.css';
 
 const STEPS = ['Chọn Dự Án', 'Chọn Cố Vấn', 'Chọn Khung Giờ', 'Xác Nhận'];
@@ -46,6 +47,7 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
   const [submitError, setSubmitError] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdBooking, setCreatedBooking] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // ── Load Projects ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -250,6 +252,16 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
 
   const adv = selectedAdvisor ? (advisorDetails[selectedAdvisor.advisorId] || {}) : {};
 
+  // ── Computed price estimate for step 3 ────────────────────────────────
+  const estimatedPrice = adv.hourlyRate ? Number(adv.hourlyRate) * selectedSlotIds.length : 0;
+  const isFreeBooking = estimatedPrice === 0;
+  const formatPrice = (p) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
+
+  const needsPayment =
+    createdBooking?.status === 'ApprovedAwaitingPayment' ||
+    createdBooking?.status === 1;
+
   // ── Success Screen ─────────────────────────────────────────────────────
   if (isSuccess) {
     return (
@@ -262,19 +274,43 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
             <h2 className={styles.successTitle}>Đặt Lịch Thành Công!</h2>
             <p className={styles.successBody}>
               Yêu cầu của bạn đã được gửi đến <strong>{selectedAdvisor?.advisorName || adv.userName}</strong>.
-              Cố vấn sẽ xem xét và phản hồi trong vòng 24 giờ.
+              {needsPayment
+                ? ' Cố vấn đã chấp nhận. Vui lòng hoàn thành thanh toán để xác nhận lịch.'
+                : ' Cố vấn sẽ xem xét và phản hồi trong vòng 1 phút.'}
             </p>
             {createdBooking && (
               <div className={styles.successDetail}>
                 <span>Mã booking: <strong>#{createdBooking.id}</strong></span>
-                <span>Trạng thái: <strong>Đang chờ xác nhận</strong></span>
+                <span>Giá: <strong>{createdBooking.price === 0 ? 'Miễn phí ✨' : formatPrice(createdBooking.price)}</strong></span>
               </div>
             )}
-            <button className={styles.primaryBtn} onClick={onClose}>
-              Đóng
-            </button>
+            {needsPayment ? (
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                <button className={styles.primaryBtn} onClick={() => setShowPaymentModal(true)}>
+                  <CreditCard size={16} />
+                  Thanh Toán Ngay
+                </button>
+                <button className={styles.secondaryBtn} onClick={onClose}>
+                  Để sau
+                </button>
+              </div>
+            ) : (
+              <button className={styles.primaryBtn} onClick={onClose}>
+                Đóng
+              </button>
+            )}
           </div>
         </div>
+        {showPaymentModal && createdBooking && (
+          <PaymentModal
+            bookingId={createdBooking.id}
+            price={createdBooking.price}
+            advisorName={selectedAdvisor?.advisorName || adv.userName || ''}
+            slotCount={selectedSlotIds.length}
+            onClose={() => setShowPaymentModal(false)}
+            onPaid={() => { setShowPaymentModal(false); onClose(); }}
+          />
+        )}
       </div>
     );
   }
@@ -514,6 +550,32 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
                         );
                       })}
                     </div>
+                  </div>
+                </div>
+
+                <div className={styles.summaryDivider} />
+
+                {/* Pricing Row */}
+                <div className={styles.summaryRow}>
+                  <CreditCard size={16} className={styles.summaryIcon} />
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div className={styles.summaryLabel}>Chi phí ước tính</div>
+                      {!isFreeBooking && adv.hourlyRate && (
+                        <div className={styles.summaryMeta}>
+                          {Number(adv.hourlyRate).toLocaleString('vi-VN')} VNĐ/giờ × {selectedSlots.length} giờ
+                        </div>
+                      )}
+                    </div>
+                    {isFreeBooking ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#22c55e', fontWeight: 700, fontSize: 15 }}>
+                        <Sparkles size={15} /> Miễn phí
+                      </span>
+                    ) : (
+                      <span style={{ color: '#60a5fa', fontWeight: 800, fontSize: 16 }}>
+                        {formatPrice(estimatedPrice)}
+                      </span>
+                    )}
                   </div>
                 </div>
 

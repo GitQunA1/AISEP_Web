@@ -22,6 +22,8 @@ import { translateAIResults } from '../utils/translateAIResults.js';
 import kanban from '../styles/OperationStaffDashboard.module.css';
 
 import StartupProfileBanner from '../components/startup/StartupProfileBanner';
+import StartupBookings from '../components/startup/StartupBookings';
+
 
 /**
  * StartupDashboard - Comprehensive dashboard for startup founders
@@ -1210,10 +1212,10 @@ export default function StartupDashboard({ user }) {
                         Yêu cầu thông tin
                     </button>
                     <button
-                        className={`${styles.tab} ${activeSection === 'advisors' ? styles.active : ''}`}
-                        onClick={() => setActiveSection('advisors')}
+                        className={`${styles.tab} ${activeSection === 'bookings' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('bookings')}
                     >
-                        Yêu cầu tư vấn
+                        Lịch tư vấn
                     </button>
 
                     {/* Animated Indicator Line */}
@@ -1701,78 +1703,9 @@ export default function StartupDashboard({ user }) {
                     </div>
                 )}
 
-                {/* Advisors Section */}
-                {activeSection === 'advisors' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>
-                                Yêu cầu tư vấn từ cố vấn
-                                {dashboardData.pendingAdvisorRequests > 0 && (
-                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
-                                        {dashboardData.pendingAdvisorRequests} Chờ xử lý
-                                    </span>
-                                )}
-                            </h3>
-
-                            <div className={styles.list}>
-                                {isLoadingInitialData ? (
-                                    <div className={styles.loadingState}>
-                                        <Loader2 className={styles.spinner} size={24} />
-                                        <span>Đang tải danh sách yêu cầu...</span>
-                                    </div>
-                                ) : advisorRequests.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                        <p>Chưa có yêu cầu tư vấn nào.</p>
-                                    </div>
-                                ) : (
-                                    advisorRequests.map(request => (
-                                        <div
-                                            key={request.id}
-                                            className={styles.listItem}
-                                            style={{ borderLeftColor: request.status === 'pending' ? '#d97706' : request.status === 'accepted' ? '#17bf63' : '#f4212e' }}
-                                        >
-                                            <div className={styles.listContent}>
-                                                <div className={styles.listItemHeader}>
-                                                    <h4 className={styles.listItemTitle}>
-                                                        {request.advisorName}
-                                                    </h4>
-                                                    <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`}>
-                                                        {request.status === 'pending' ? 'Đang chờ' : request.status === 'accepted' ? 'Đã chấp nhận' : 'Bị từ chối'}
-                                                    </span>
-                                                </div>
-                                                <div className={styles.mb8}>
-                                                    <span className={`${styles.badge} ${styles.badgeInfo}`}>
-                                                        {request.expertise}
-                                                    </span>
-                                                </div>
-                                                <p className={styles.subtitle}>{request.message}</p>
-                                                <div className={styles.listMeta}>
-                                                    Ngày yêu cầu: {request.requestDate}
-                                                    {request.appointmentDate && ` • Cuộc hẹn: ${request.appointmentDate}`}
-                                                </div>
-                                            </div>
-                                            {request.status === 'pending' && (
-                                                <div className={styles.listActions}>
-                                                    <button
-                                                        className={`${styles.primaryBtn} ${styles.smallBtn}`}
-                                                        onClick={() => handleAcceptRequest(request.id)}
-                                                    >
-                                                        Chấp nhận
-                                                    </button>
-                                                    <button
-                                                        className={`${styles.dangerBtn} ${styles.smallBtn}`}
-                                                        onClick={() => handleRejectRequest(request.id)}
-                                                    >
-                                                        Từ chối
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))
-                                )}
-                            </div>
-                        </div>
-                    </div>
+                {/* Bookings Section */}
+                {activeSection === 'bookings' && (
+                    <StartupBookings user={user} />
                 )}
             </div>
 

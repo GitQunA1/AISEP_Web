@@ -9,6 +9,7 @@ import StartupDashboard from './pages/StartupDashboard';
 import InvestorDashboard from './pages/InvestorDashboard';
 import AdvisorDashboard from './pages/AdvisorDashboard';
 import OperationStaffDashboard from './pages/OperationStaffDashboard';
+import InvestorBookings from './components/investor/InvestorBookings';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import authService from './services/authService';
 import startupProfileService from './services/startupProfileService';
@@ -233,6 +234,9 @@ function App() {
               if (roleStr === 'startup' || roleNum === 0) {
                 return <StartupDashboard user={user} />;
               } else if (roleStr === 'investor' || roleNum === 1) {
+                if (currentView === 'dashboard_bookings') {
+                  return <InvestorBookings user={user} />;
+                }
                 return <InvestorDashboard user={user} />;
               } else if (roleStr === 'advisor' || roleNum === 2) {
                 const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';

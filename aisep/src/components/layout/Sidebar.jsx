@@ -62,6 +62,15 @@ function Sidebar({
     const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
     const homeItem = navItems.find(item => item.label === 'Home');
     navItems = [...advisorItems, homeItem, ...otherItems];
+  } else if (roleStr === 'investor' || roleNum === 1) {
+    // Specialized items for Investor
+    const investorItems = [
+      { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
+      { icon: Calendar, label: 'Bookings', displayLabel: 'Lịch Tư Vấn', href: '#', showWhenLoggedIn: true },
+    ];
+    const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
+    const homeItem = navItems.find(item => item.label === 'Home');
+    navItems = [...investorItems, homeItem, ...otherItems];
   }
 
   const handleNavClick = (label) => {

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { 
     Users, Calendar, FileText, Star, Clock, CheckCircle, MessageSquare, 
     PlusCircle, TrendingUp, Trash2, Edit2, X, AlertCircle, Loader, 
-    ChevronDown, ChevronUp, ChevronLeft, ChevronRight 
+    ChevronDown, ChevronUp, ChevronLeft, ChevronRight, CreditCard 
 } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import avStyles from './AdvisorDashboard.module.css';
@@ -11,6 +11,9 @@ import FeedHeader from '../components/feed/FeedHeader';
 import advisorService from '../services/advisorService';
 import advisorAvailabilityService from '../services/advisorAvailabilityService';
 import bookingService from '../services/bookingService';
+import chatService from '../services/chatService';
+import ConsultingReportModal from '../components/booking/ConsultingReportModal';
+import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import CustomSelect from '../components/common/CustomSelect';
 
 /**
@@ -160,7 +163,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                         loadingAvailabilities={availabilitiesLoading}
                     />
                 )}
-                {activeSection === 'bookings' && <IncomingBookingsSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} />}
+                {activeSection === 'bookings' && <IncomingBookingsSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} />}
                 {activeSection === 'availability' && <AvailabilitySection availabilities={availabilities} loading={availabilitiesLoading} onRefresh={loadAvailabilities} />}
                 {activeSection === 'reports' && <ReportsSection />}
                 {activeSection === 'profile' && <ProfileSection user={user} advisorProfile={advisorProfile} />}
@@ -297,11 +300,14 @@ function OverviewSection({ availabilities, incomingBookings, onNavigate, loading
     );
 }
 
-function IncomingBookingsSection({ bookings, loading, onRefresh }) {
+function IncomingBookingsSection({ bookings, loading, onRefresh, user }) {
     const [actionLoading, setActionLoading] = useState({});
     const [actionError, setActionError] = useState({});
     const [rejectReason, setRejectReason] = useState({});
     const [showRejectInput, setShowRejectInput] = useState({});
+    const [reportModal, setReportModal] = useState(null); // { bookingId, advisorName, userRole }
+    const [chatSession, setChatSession] = useState(null); // { chatSessionId, displayName }
+    const [chatLoading, setChatLoading] = useState({});
 
     const handleApprove = async (bookingId) => {
         setActionLoading(prev => ({ ...prev, [bookingId]: 'approve' }));
@@ -310,7 +316,15 @@ function IncomingBookingsSection({ bookings, loading, onRefresh }) {
             await bookingService.approveBooking(bookingId);
             onRefresh();
         } catch (e) {
-            setActionError(prev => ({ ...prev, [bookingId]: e.message || 'Lỗi khi chấp nhận.' }));
+            const msg = e.message || 'Lỗi khi chấp nhận.';
+            const isExpired = msg.toLowerCase().includes('response window') || msg.toLowerCase().includes('expired');
+            setActionError(prev => ({
+                ...prev,
+                [bookingId]: isExpired
+                    ? 'Đã hết thời gian phản hồi. Booking tự động chuyển sang NoResponse.'
+                    : msg,
+            }));
+            if (isExpired) onRefresh();
         } finally {
             setActionLoading(prev => ({ ...prev, [bookingId]: null }));
         }
@@ -323,9 +337,34 @@ function IncomingBookingsSection({ bookings, loading, onRefresh }) {
             await bookingService.rejectBooking(bookingId, rejectReason[bookingId] || null);
             onRefresh();
         } catch (e) {
-            setActionError(prev => ({ ...prev, [bookingId]: e.message || 'Lỗi khi từ chối.' }));
+            const msg = e.message || 'Lỗi khi từ chối.';
+            const isExpired = msg.toLowerCase().includes('response window') || msg.toLowerCase().includes('expired');
+            setActionError(prev => ({
+                ...prev,
+                [bookingId]: isExpired
+                    ? 'Đã hết thời gian phản hồi. Booking tự động chuyển sang NoResponse.'
+                    : msg,
+            }));
+            if (isExpired) onRefresh();
         } finally {
             setActionLoading(prev => ({ ...prev, [bookingId]: null }));
+        }
+    };
+
+    const handleOpenChat = async (booking) => {
+        setChatLoading(prev => ({ ...prev, [booking.id]: true }));
+        try {
+            const session = await chatService.openBookingSession(booking.id);
+            setChatSession({
+                chatSessionId: session.chatSessionId,
+                displayName: booking.projectName || `Booking #${booking.id}`,
+                currentUserId: user?.userId,
+                sentTime: session.startTime || new Date().toISOString(),
+            });
+        } catch (e) {
+            console.error('Cannot open booking chat session:', e);
+        } finally {
+            setChatLoading(prev => ({ ...prev, [booking.id]: false }));
         }
     };
 
@@ -362,6 +401,7 @@ function IncomingBookingsSection({ bookings, loading, onRefresh }) {
     }
 
     return (
+        <>
         <div className={styles.section}>
             <div className={styles.card}>
                 <div className={styles.cardHeader}>
@@ -420,6 +460,29 @@ function IncomingBookingsSection({ bookings, loading, onRefresh }) {
                                         <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#f4212e', fontSize: 13 }}>
                                             <AlertCircle size={14} />
                                             <span>{err}</span>
+                                        </div>
+                                    )}
+
+                                    {/* Chat + Report buttons for Confirmed bookings */}
+                                    {(booking.status === 2 || booking.status === 'Confirmed') && (
+                                        <div style={{ display: 'flex', gap: 8, paddingLeft: '48px' }}>
+                                            <button
+                                                className={styles.primaryBtn}
+                                                style={{ padding: '6px 14px', fontSize: '13px', minWidth: 'auto' }}
+                                                onClick={() => handleOpenChat(booking)}
+                                                disabled={!!chatLoading[booking.id]}
+                                            >
+                                                {chatLoading[booking.id] ? <Loader size={14} /> : <MessageSquare size={14} />}
+                                                Chat
+                                            </button>
+                                            <button
+                                                className={styles.secondaryBtn}
+                                                style={{ padding: '6px 14px', fontSize: '13px' }}
+                                                onClick={() => setReportModal({ bookingId: booking.id, advisorName: booking.customerName, userRole: 'Advisor' })}
+                                            >
+                                                <FileText size={14} />
+                                                Nộp báo cáo
+                                            </button>
                                         </div>
                                     )}
 
@@ -484,6 +547,27 @@ function IncomingBookingsSection({ bookings, loading, onRefresh }) {
                 )}
             </div>
         </div>
+
+        {/* ConsultingReportModal */}
+        {reportModal && (
+            <ConsultingReportModal
+                bookingId={reportModal.bookingId}
+                userRole={reportModal.userRole}
+                advisorName={reportModal.advisorName}
+                onClose={() => setReportModal(null)}
+                onDone={() => { setReportModal(null); onRefresh(); }}
+            />
+        )}
+
+        {/* FloatingChatWidget for booking chat */}
+        <FloatingChatWidget
+            chatSessionId={chatSession?.chatSessionId}
+            displayName={chatSession?.displayName}
+            currentUserId={chatSession?.currentUserId}
+            sentTime={chatSession?.sentTime}
+            onClose={() => setChatSession(null)}
+        />
+        </>
     );
 }
 

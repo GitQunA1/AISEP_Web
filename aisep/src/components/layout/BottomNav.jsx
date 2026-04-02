@@ -41,6 +41,14 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
     ];
     const homeItem = navItems.find(item => item.label === 'Home');
     navItems = [...advisorItems, homeItem];
+  } else if (roleStr === 'investor' || roleNum === 1) {
+    const investorItems = [
+      { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Tổng quan', href: '#', showWhenLoggedIn: true },
+      { icon: Calendar, label: 'Bookings', displayLabel: 'Lịch tư vấn', href: '#', showWhenLoggedIn: true },
+    ];
+    const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
+    const homeItem = navItems.find(item => item.label === 'Home');
+    navItems = [...investorItems, homeItem, ...otherItems];
   }
 
   const handleClick = (e, label) => {
