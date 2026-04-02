@@ -12,6 +12,8 @@ import StartupDetail from '../feed/StartupDetail';
 import ProjectSubmissionForm from '../startup/ProjectSubmissionForm';
 import investorService from '../../services/investorService';
 import projectSubmissionService from '../../services/projectSubmissionService';
+import followerService from '../../services/followerService';
+import connectionService from '../../services/connectionService';
 import AdvisorsPage from '../../pages/AdvisorsPage';
 import advisorService from '../../services/advisorService';
 import AdvisorDetailView from '../profile/AdvisorDetailView';
@@ -148,6 +150,8 @@ function MainLayout({
   const [isScoresLoading, setIsScoresLoading] = useState(false);
   const [feedError, setFeedError] = useState(null);
   const [investorCount, setInvestorCount] = useState(0);
+  const [followedProjectIds, setFollowedProjectIds] = useState(new Set()); // Cache for quick lookup
+  const [sentConnectionIds, setSentConnectionIds] = useState(new Set()); // Cache for connection status
 
   // Helper for RightPanel labels
   const SECTOR_LABELS = [
@@ -189,6 +193,88 @@ function MainLayout({
       }
     };
     checkProfile();
+  }, [user]);
+
+  // Fetch followed projects for investors - runs once and caches the IDs
+  useEffect(() => {
+    const isInvestor = user && (
+      user.role === 'investor' || 
+      user.role === 'Investor' || 
+      user.role === 1 || 
+      String(user.role) === '1'
+    );
+
+    if (!isInvestor) {
+      setFollowedProjectIds(new Set());
+      return;
+    }
+
+    const fetchFollowedIds = async () => {
+      try {
+        const response = await followerService.getMyFollowing();
+        console.log('[MainLayout] Followed projects response:', response);
+        
+        let followedProjects = [];
+        if (response && response.data) {
+          if (response.data.items && Array.isArray(response.data.items)) {
+            followedProjects = response.data.items;
+          } else if (Array.isArray(response.data)) {
+            followedProjects = response.data;
+          }
+        }
+        
+        // Extract projectIds into a Set for O(1) lookup
+        const ids = new Set(followedProjects.map(p => p.projectId || p.id));
+        console.log('[MainLayout] Followed project IDs:', ids);
+        setFollowedProjectIds(ids);
+      } catch (error) {
+        console.error('[MainLayout] Failed to fetch followed projects:', error);
+        setFollowedProjectIds(new Set());
+      }
+    };
+
+    fetchFollowedIds();
+  }, [user]);
+
+  // Fetch sent connection requests for investors - runs once and caches the projectIds
+  useEffect(() => {
+    const isInvestor = user && (
+      user.role === 'investor' || 
+      user.role === 'Investor' || 
+      user.role === 1 || 
+      String(user.role) === '1'
+    );
+
+    if (!isInvestor) {
+      setSentConnectionIds(new Set());
+      return;
+    }
+
+    const fetchSentConnections = async () => {
+      try {
+        const response = await connectionService.getMyConnectionRequests();
+        console.log('[MainLayout] Sent connections response:', response);
+        
+        let requests = [];
+        if (response && response.data) {
+          if (response.data.items && Array.isArray(response.data.items)) {
+            requests = response.data.items;
+          } else if (Array.isArray(response.data)) {
+            requests = response.data;
+          }
+        }
+        
+        // Extract projectIds into a Set for O(1) lookup
+        const ids = new Set(requests.map(r => r.projectId));
+        console.log('[MainLayout] Sent connection project IDs:', ids);
+        setSentConnectionIds(ids);
+      } catch (error) {
+        console.error('[MainLayout] Failed to fetch sent connections:', error);
+        setSentConnectionIds(new Set());
+      }
+    };
+
+    fetchSentConnections();
   }, [user]);
 
   useEffect(() => {
@@ -556,6 +642,8 @@ function MainLayout({
                       startup={startup}
                       isPremium={isPremium}
                       user={user}
+                      followedProjectIds={followedProjectIds}
+                      sentConnectionIds={sentConnectionIds}
                       isReturning={isReturning}
                       onViewProfile={(id) => {
                         // Save scroll position

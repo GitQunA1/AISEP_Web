@@ -9,11 +9,14 @@ import BlockchainVerificationModal from '../components/common/BlockchainVerifica
 import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import FeedHeader from '../components/feed/FeedHeader';
+import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import ProjectValidationService from '../services/ProjectValidation.js';
 import BlockchainService from '../services/BlockchainService.js';
 import AIEvaluationService from '../services/AIEvaluationService.js';
 import projectSubmissionService from '../services/projectSubmissionService.js';
 import startupProfileService from '../services/startupProfileService.js';
+import connectionService from '../services/connectionService.js';
+import signalRService from '../services/signalRService.js';
 import { PROJECT_STATUS, isUserEditable, STATUS_LABELS, STATUS_COLORS, getStageLabel } from '../constants/ProjectStatus.js';
 import { translateAIResults } from '../utils/translateAIResults.js';
 import kanban from '../styles/OperationStaffDashboard.module.css';
@@ -84,12 +87,44 @@ export default function StartupDashboard({ user }) {
     const [evaluatingProjectId, setEvaluatingProjectId] = React.useState(null);
     const [showFullscreenImage, setShowFullscreenImage] = React.useState(false);
 
+    // Connection/Info Requests States (for investor inquiries)
+    const [connectionRequests, setConnectionRequests] = React.useState([]);
+    const [isLoadingRequests, setIsLoadingRequests] = React.useState(false);
+    const [isRespondingToRequest, setIsRespondingToRequest] = React.useState(null);
+
+    // Chat Widget States
+    const [activeChatConnectionId, setActiveChatConnectionId] = React.useState(null);
+    const [activeChatSession, setActiveChatSession] = React.useState(null);
+
     // Document Deletion States
     const [isDeletingDocument, setIsDeletingDocument] = React.useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
     const [documentToDelete, setDocumentToDelete] = React.useState(null);
     const [blockedFiles, setBlockedFiles] = React.useState([]); // Session-based blacklist for verified docs
     const hiddenFileInput = React.useRef(null);
+
+    // Initialize SignalR on mount
+    React.useEffect(() => {
+        const initSignalR = async () => {
+            try {
+                // Get JWT token from localStorage or auth context
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (token && user?.userId) {
+                    await signalRService.initialize(token);
+                    console.log('[StartupDashboard] SignalR initialized successfully');
+                }
+            } catch (error) {
+                console.error('[StartupDashboard] Failed to initialize SignalR:', error);
+            }
+        };
+
+        initSignalR();
+
+        // Cleanup on unmount
+        return () => {
+            signalRService.disconnect();
+        };
+    }, [user?.userId]);
 
     React.useLayoutEffect(() => {
         const updateIndicator = () => {
@@ -318,6 +353,148 @@ export default function StartupDashboard({ user }) {
         ));
     };
 
+    // Fetch connection requests for startup
+    const fetchConnectionRequests = async () => {
+        setIsLoadingRequests(true);
+        try {
+            // Fetch received connection requests from investors using original API
+            const response = await connectionService.getReceivedConnectionRequests();
+            console.log('[StartupDashboard] getReceivedConnectionRequests response:', response);
+            
+            let requests = [];
+            if (response && response.data) {
+                if (response.data.items && Array.isArray(response.data.items)) {
+                    requests = response.data.items;
+                    console.log('[StartupDashboard] Found items in response.data.items, count:', requests.length);
+                } else if (Array.isArray(response.data)) {
+                    requests = response.data;
+                    console.log('[StartupDashboard] response.data is array, count:', requests.length);
+                }
+            }
+            
+            console.log('[StartupDashboard] Raw requests:', requests);
+            
+            // Map API response to component format
+            const formattedRequests = requests.map(req => {
+                // Format date from responseDate or use today
+                let sentDateString = new Date().toLocaleString('vi-VN', { 
+                    year: 'numeric', 
+                    month: '2-digit', 
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                if (req.responseDate) {
+                    sentDateString = new Date(req.responseDate).toLocaleString('vi-VN', { 
+                        year: 'numeric', 
+                        month: '2-digit', 
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                }
+                
+                return {
+                    id: req.connectionRequestId,
+                    connectionRequestId: req.connectionRequestId,
+                    investorName: req.investorName || 'Investor',
+                    chatSessionId: req.chatSessionId,
+                    status: req.status?.toLowerCase() || 'pending',
+                    message: req.message || '',
+                    sentDate: sentDateString
+                };
+            });
+            
+            console.log('[StartupDashboard] Formatted requests:', formattedRequests);
+            setConnectionRequests(formattedRequests);
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to fetch connection requests:', error);
+            console.error('[StartupDashboard] Error details - Message:', error?.message);
+            console.error('[StartupDashboard] Error details - Status:', error?.response?.status);
+            console.error('[StartupDashboard] Error details - Data:', error?.response?.data);
+            setConnectionRequests([]);
+        } finally {
+            setIsLoadingRequests(false);
+        }
+    };
+
+    // Load connection requests on mount
+    React.useEffect(() => {
+        if (activeSection === 'connection-requests') {
+            fetchConnectionRequests();
+        }
+    }, [activeSection]);
+
+    const handleApproveConnectionRequest = async (requestId) => {
+        setIsRespondingToRequest(requestId);
+        try {
+            const response = await connectionService.respondToConnection(requestId, true);
+            console.log('[StartupDashboard] Approved request:', response);
+            
+            if (response && (response.success || response.data)) {
+                setConnectionRequests(connectionRequests.map(req =>
+                    req.connectionRequestId === requestId ? { ...req, status: 'accepted' } : req
+                ));
+                setSuccessMessage('✓ Đã chấp nhận yêu cầu. Bạn có thể bắt đầu cuộc trò chuyện');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to approve request:', error);
+            alert('Lỗi: Không thể chấp nhận yêu cầu');
+        } finally {
+            setIsRespondingToRequest(null);
+        }
+    };
+
+    const handleRejectConnectionRequest = async (requestId) => {
+        setIsRespondingToRequest(requestId);
+        try {
+            const response = await connectionService.respondToConnection(requestId, false);
+            console.log('[StartupDashboard] Rejected request:', response);
+            
+            if (response && (response.success || response.data)) {
+                setConnectionRequests(connectionRequests.map(req =>
+                    req.connectionRequestId === requestId ? { ...req, status: 'rejected' } : req
+                ));
+                setSuccessMessage('✓ Đã từ chối yêu cầu');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to reject request:', error);
+            alert('Lỗi: Không thể từ chối yêu cầu');
+        } finally {
+            setIsRespondingToRequest(null);
+        }
+    };
+
+    const handleStartChat = (connectionRequestId) => {
+        console.log('[StartupDashboard] Starting chat for connectionRequestId:', connectionRequestId);
+        
+        // Find the connection request and extract chatSessionId
+        const request = connectionRequests.find(r => r.connectionRequestId === connectionRequestId);
+        if (request && request.chatSessionId) {
+            setActiveChatSession({
+                chatSessionId: request.chatSessionId,
+                displayName: request.investorName,
+                sentTime: request.sentDate
+            });
+        } else {
+            console.warn('[StartupDashboard] Could not find chatSessionId for connectionRequestId:', connectionRequestId);
+        }
+    };
+
+    const handleCloseChatWindow = () => {
+        console.log('[StartupDashboard] Closing chat window');
+        setActiveChatSession(null);
+        setActiveChatConnectionId(null);
+        // Refresh connection requests to update status
+        fetchConnectionRequests();
+    };
+
     /**
      * translateError - Maps English backend error messages to Vietnamese
      */
@@ -409,7 +586,15 @@ export default function StartupDashboard({ user }) {
                     name: truncateName(doc.fileName || doc.documentType),
                     fullName: doc.fileName || doc.documentType, // Keep full name for title/tooltips
                     type: doc.documentType,
-                    uploadDate: new Date(doc.uploadedAt || doc.verifiedAt || new Date()).toLocaleDateString('vi-VN'),
+                    uploadDate: new Date(doc.uploadedAt || doc.verifiedAt || new Date()).toLocaleString('vi-VN', { 
+                        year: 'numeric', 
+                        month: '2-digit', 
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    }),
                     status: doc.blockchainTxHash ? 'verified' : 'unverified', // Initial hint if hash exists
                     hash: doc.fileHash,
                     txHash: doc.blockchainTxHash, // Capture transaction hash
@@ -929,6 +1114,14 @@ export default function StartupDashboard({ user }) {
                 subtitle={`Xin chào, ${user?.name || 'Người sáng lập'}! Đây là tổng quan khởi nghiệp của bạn.`}
                 showFilter={false} // No filter for dashboard
                 user={user}
+                onOpenChat={(chatSessionId) => {
+                    setActiveChatSession({
+                        chatSessionId,
+                        displayName: 'Investor',
+                        currentUserId: user?.userId,
+                        sentTime: new Date().toISOString(),
+                    });
+                }}
             />
 
             {!isLoadingInitialData && !startupProfile && (
@@ -1009,6 +1202,12 @@ export default function StartupDashboard({ user }) {
                         onClick={() => setActiveSection('my-projects')}
                     >
                         Dự án của tôi
+                    </button>
+                    <button
+                        className={`${styles.tab} ${activeSection === 'connection-requests' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('connection-requests')}
+                    >
+                        Yêu cầu thông tin
                     </button>
                     <button
                         className={`${styles.tab} ${activeSection === 'advisors' ? styles.active : ''}`}
@@ -1363,6 +1562,141 @@ export default function StartupDashboard({ user }) {
                                     })()}
                                 </div>
                             )}
+                        </div>
+                    </div>
+                )}
+
+                {/* Connection Requests Section - Investor inquiries */}
+                {activeSection === 'connection-requests' && (
+                    <div className={styles.section}>
+                        <div className={styles.card}>
+                            <h3 className={styles.cardTitle}>
+                                Yêu cầu thông tin từ nhà đầu tư
+                                {connectionRequests.filter(r => r.status === 'pending').length > 0 && (
+                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
+                                        {connectionRequests.filter(r => r.status === 'pending').length} Chờ xử lý
+                                    </span>
+                                )}
+                            </h3>
+
+                            <div className={styles.list}>
+                                {isLoadingRequests ? (
+                                    <div className={styles.loadingState}>
+                                        <Loader2 className={styles.spinner} size={24} />
+                                        <span>Đang tải danh sách yêu cầu...</span>
+                                    </div>
+                                ) : connectionRequests.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Chưa có yêu cầu thông tin nào từ nhà đầu tư.</p>
+                                    </div>
+                                ) : (
+                                    connectionRequests.map(request => (
+                                        <div
+                                            key={request.connectionRequestId}
+                                            className={styles.listItem}
+                                            style={{ 
+                                                borderLeft: 'none',
+                                                borderTop: `3px solid ${request.status === 'pending' ? '#f59e0b' : request.status === 'accepted' ? '#10b981' : '#ef4444'}`,
+                                                padding: '12px 16px'
+                                            }}
+                                        >
+                                            <div className={styles.listContent}>
+                                                {/* Header Row: Status + Investor Name + Date */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                                    <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
+                                                        {request.status === 'pending' ? '⏳ Đang chờ' : request.status === 'accepted' ? '✓ Đã chấp nhận' : '✗ Đã từ chối'}
+                                                    </span>
+                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
+                                                        NĐT: <strong>{request.investorName || 'Investor'}</strong>
+                                                    </span>
+                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
+                                                        {request.sentDate}
+                                                    </span>
+                                                </div>
+
+                                            </div>
+
+                                            {/* Actions */}
+                                            {request.status === 'pending' && (
+                                                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                                                    <button
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#10b981',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleApproveConnectionRequest(request.connectionRequestId)}
+                                                        disabled={isRespondingToRequest === request.connectionRequestId}
+                                                    >
+                                                        {isRespondingToRequest === request.connectionRequestId ? (
+                                                            <>
+                                                                <Loader2 size={12} className={styles.spinner} />
+                                                                Xử lý...
+                                                            </>
+                                                        ) : (
+                                                            <>✓ Chấp nhận</>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#ef4444',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleRejectConnectionRequest(request.connectionRequestId)}
+                                                        disabled={isRespondingToRequest === request.connectionRequestId}
+                                                    >
+                                                        {isRespondingToRequest === request.connectionRequestId ? 'Xử lý...' : '✗ Từ chối'}
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {request.status === 'accepted' && (
+                                                <div style={{ display: 'flex', marginTop: '8px' }}>
+                                                    <button
+                                                        style={{
+                                                            padding: '6px 16px',
+                                                            backgroundColor: '#7c3aed',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleStartChat(request.connectionRequestId)}
+                                                    >
+                                                        <MessageSquare size={12} />
+                                                        Bắt đầu chat
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
                         </div>
                     </div>
                 )}
@@ -1756,7 +2090,15 @@ export default function StartupDashboard({ user }) {
                                                             <span className={styles.scoreMaxLabel}>/100</span>
                                                         </div>
                                                         <span className={styles.scoreDate}>
-                                                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : 'Mới'}
+                                                            {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', { 
+                                                                year: 'numeric', 
+                                                                month: '2-digit', 
+                                                                day: '2-digit',
+                                                                hour: '2-digit',
+                                                                minute: '2-digit',
+                                                                second: '2-digit',
+                                                                hour12: false
+                                                            }) : 'Mới'}
                                                         </span>
                                                     </div>
                                                 ))
@@ -2363,6 +2705,14 @@ export default function StartupDashboard({ user }) {
             </div>
         </div>
     )}
+
+    <FloatingChatWidget
+        chatSessionId={activeChatSession?.chatSessionId}
+        displayName={activeChatSession?.displayName}
+        currentUserId={user?.userId}
+        sentTime={activeChatSession?.sentTime}
+        onClose={handleCloseChatWindow}
+    />
             </div>
     );
 }

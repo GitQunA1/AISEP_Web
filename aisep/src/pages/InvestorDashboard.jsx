@@ -2,6 +2,11 @@ import React, { useState } from 'react';
 import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
+import FloatingChatWidget from '../components/common/FloatingChatWidget';
+import followerService from '../services/followerService';
+import connectionService from '../services/connectionService';
+import chatService from '../services/chatService';
+import signalRService from '../services/signalRService';
 
 /**
  * InvestorDashboard - Comprehensive dashboard for investors
@@ -11,16 +16,130 @@ export default function InvestorDashboard({ user }) {
     const [activeSection, setActiveSection] = useState('overview');
     const [watchlist, setWatchlist] = useState([]);
     const [sentInterests, setSentInterests] = useState([]);
+    const [sentConnectionRequests, setSentConnectionRequests] = useState([]);
     const [activeInvestments, setActiveInvestments] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
+    const [activeChatConnectionId, setActiveChatConnectionId] = useState(null);
+    const [activeChatSession, setActiveChatSession] = useState(null);
+
+    // Initialize SignalR on mount
+    React.useEffect(() => {
+        const initSignalR = async () => {
+            try {
+                // Get JWT token from localStorage or auth context
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (token && user?.userId) {
+                    await signalRService.initialize(token);
+                    console.log('[InvestorDashboard] SignalR initialized successfully');
+                }
+            } catch (error) {
+                console.error('[InvestorDashboard] Failed to initialize SignalR:', error);
+            }
+        };
+
+        initSignalR();
+
+        // Cleanup on unmount
+        return () => {
+            signalRService.disconnect();
+        };
+    }, [user?.userId]);
 
     React.useEffect(() => {
         const fetchAllData = async () => {
             setIsLoading(true);
             try {
-                // Placeholder for real investor data fetching
-                // For now we simulate a network delay
-                await new Promise(r => setTimeout(r, 600));
+                // Fetch followed projects from /api/projects/my-followed
+                const followingRes = await followerService.getMyFollowing();
+                console.log('[InvestorDashboard] Followed projects response:', followingRes);
+                
+                if (followingRes && followingRes.data) {
+                    // Handle paginated response structure: data.items
+                    let followedProjects = [];
+                    
+                    if (followingRes.data.items && Array.isArray(followingRes.data.items)) {
+                        followedProjects = followingRes.data.items;
+                    } else if (Array.isArray(followingRes.data)) {
+                        followedProjects = followingRes.data;
+                    }
+                    
+                    console.log('[InvestorDashboard] Followed projects:', followedProjects);
+                    
+                    // Map response to sentInterests format
+                    // Response structure: projectId, projectName, projectImageUrl, industry, followedAt
+                    const formattedInterests = followedProjects.map(project => ({
+                        id: project.projectId,
+                        projectId: project.projectId,
+                        projectName: project.projectName,
+                        projectImageUrl: project.projectImageUrl,
+                        industry: project.industry,
+                        sentDate: new Date(project.followedAt).toLocaleString('vi-VN', { 
+                            year: 'numeric', 
+                            month: '2-digit', 
+                            day: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit',
+                            second: '2-digit',
+                            hour12: false
+                        }),
+                        followedAt: project.followedAt
+                    }));
+                    
+                    console.log('[InvestorDashboard] Formatted interests:', formattedInterests);
+                    setSentInterests(formattedInterests);
+                }
+
+                // Fetch sent connection requests
+                try {
+                    const connectRes = await connectionService.getMyConnectionRequests();
+                    console.log('[InvestorDashboard] Sent connection requests response:', connectRes);
+                    
+                    if (connectRes && connectRes.data && connectRes.data.items) {
+                        // Map response to display format
+                        // Response structure: connectionRequestId, startupName, projectId, status, message, responseDate, chatSessionId
+                        const formattedRequests = connectRes.data.items.map(request => {
+                            // Format date from responseDate (when the owner responded)
+                            let formattedDate = '';
+                            let formattedDateObj = null;
+                            
+                            if (request.responseDate) {
+                                formattedDateObj = new Date(request.responseDate);
+                                formattedDate = formattedDateObj.toLocaleString('vi-VN', { 
+                                    year: 'numeric', 
+                                    month: '2-digit', 
+                                    day: '2-digit',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    second: '2-digit',
+                                    hour12: false
+                                });
+                            }
+                            
+                            return {
+                                id: request.connectionRequestId || request.id,
+                                connectionRequestId: request.connectionRequestId,
+                                projectId: request.projectId,
+                                projectName: request.projectName || 'Unknown Project',
+                                startupName: request.startupName || 'Unknown Startup',
+                                status: request.status || 'Pending',
+                                message: request.message || '',
+                                responseDate: formattedDate,
+                                responseDateRaw: request.responseDate,
+                                chatSessionId: request.chatSessionId || null
+                            };
+                        });
+                        
+                        console.log('[InvestorDashboard] Formatted connection requests:', formattedRequests);
+                        setSentConnectionRequests(formattedRequests);
+                    }
+                } catch (connError) {
+                    console.error('[InvestorDashboard] Failed to fetch connection requests:', connError);
+                    setSentConnectionRequests([]);
+                }
+            } catch (error) {
+                console.error('[InvestorDashboard] Failed to fetch investor data:', error);
+                // Set empty array on error
+                setSentInterests([]);
             } finally {
                 setIsLoading(false);
             }
@@ -34,7 +153,7 @@ export default function InvestorDashboard({ user }) {
         portfolioValue: '$0',
         watchlistCount: watchlist.length,
         sentInterestsCount: sentInterests.length,
-        acceptedInterests: sentInterests.filter(i => i.status === 'accepted').length,
+        sentConnectionRequestsCount: sentConnectionRequests.length,
         monthlyActivity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     };
 
@@ -42,8 +161,80 @@ export default function InvestorDashboard({ user }) {
         setWatchlist(watchlist.filter(item => item.id !== id));
     };
 
-    const handleWithdrawInterest = (id) => {
-        setSentInterests(sentInterests.filter(item => item.id !== id));
+    const handleWithdrawInterest = async (id) => {
+        try {
+            const interest = sentInterests.find(i => i.id === id);
+            if (interest) {
+                console.log('[InvestorDashboard] Unfollowing project:', interest.projectId);
+                await followerService.unfollowProject(interest.projectId);
+                setSentInterests(sentInterests.filter(item => item.id !== id));
+            }
+        } catch (error) {
+            console.error('[InvestorDashboard] Failed to unfollow project:', error);
+            alert('Lỗi: Không thể bỏ theo dõi dự án');
+        }
+    };
+
+    const handleStartChat = (connectionRequestId) => {
+        console.log('[InvestorDashboard] Starting chat for connectionRequestId:', connectionRequestId);
+        
+        // Find the connection request and extract chatSessionId
+        const request = sentConnectionRequests.find(r => (r.id || r.connectionRequestId) === connectionRequestId);
+        if (request && request.chatSessionId) {
+            setActiveChatSession({
+                chatSessionId: request.chatSessionId,
+                displayName: request.startupName,
+                currentUserId: user?.userId,
+                sentTime: request.responseDateRaw || new Date().toISOString()
+            });
+        } else {
+            console.warn('[InvestorDashboard] Cannot start chat - no chatSessionId for connectionRequestId:', connectionRequestId);
+        }
+    };
+
+    const handleCloseChatWindow = () => {
+        console.log('[InvestorDashboard] Closing chat window');
+        setActiveChatSession(null);
+        setActiveChatConnectionId(null);
+        // Refresh sent requests to update status
+        const refetchRequests = async () => {
+            try {
+                const response = await connectionService.getMyConnectionRequests({ pageNumber: 1, pageSize: 10 });
+                if (response && response.data && response.data.items) {
+                    // Apply same formatting as initial load
+                    const formattedRequests = response.data.items.map(request => {
+                        let formattedDate = '';
+                        if (request.responseDate) {
+                            formattedDate = new Date(request.responseDate).toLocaleString('vi-VN', { 
+                                year: 'numeric', 
+                                month: '2-digit', 
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                            });
+                        }
+                        return {
+                            id: request.connectionRequestId || request.id,
+                            connectionRequestId: request.connectionRequestId,
+                            projectId: request.projectId,
+                            projectName: request.projectName || 'Unknown Project',
+                            startupName: request.startupName || 'Unknown Startup',
+                            status: request.status || 'Pending',
+                            message: request.message || '',
+                            responseDate: formattedDate,
+                            responseDateRaw: request.responseDate,
+                            chatSessionId: request.chatSessionId || null
+                        };
+                    });
+                    setSentConnectionRequests(formattedRequests);
+                }
+            } catch (error) {
+                console.error('[InvestorDashboard] Failed to refetch requests:', error);
+            }
+        };
+        refetchRequests();
     };
 
     return (
@@ -54,6 +245,14 @@ export default function InvestorDashboard({ user }) {
                 subtitle={`Xin chào, ${user?.name || 'Nhà đầu tư'}! Quản lý đầu tư và khám phá startup.`}
                 showFilter={false}
                 user={user}
+                onOpenChat={(chatSessionId) => {
+                    setActiveChatSession({
+                        chatSessionId,
+                        displayName: 'Startup Founder',
+                        currentUserId: user?.userId,
+                        sentTime: new Date().toISOString(),
+                    });
+                }}
             />
 
             {/* Quick Stats */}
@@ -118,6 +317,12 @@ export default function InvestorDashboard({ user }) {
                     onClick={() => setActiveSection('watchlist')}
                 >
                     Theo dõi
+                </button>
+                <button
+                    className={`${styles.tab} ${activeSection === 'connectionrequests' ? styles.active : ''}`}
+                    onClick={() => setActiveSection('connectionrequests')}
+                >
+                    Yêu cầu thông tin
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'interests' ? styles.active : ''}`}
@@ -269,39 +474,123 @@ export default function InvestorDashboard({ user }) {
                     </div>
                 )}
 
+                {/* Sent Connection Requests Section */}
+                {activeSection === 'connectionrequests' && (
+                    <div className={styles.section}>
+                        <div className={styles.card}>
+                            <h3 className={styles.cardTitle}>
+                                Yêu cầu thông tin đã gửi ({sentConnectionRequests.length})
+                            </h3>
+                            <div className={styles.list}>
+                                {sentConnectionRequests.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Bạn chưa gửi yêu cầu thông tin nào.</p>
+                                    </div>
+                                ) : sentConnectionRequests.map(request => {
+                                    const statusColor = request.status === 'Pending' ? '#f59e0b' : 
+                                                       request.status === 'Accepted' ? '#10b981' : '#ef4444';
+                                    const statusText = request.status === 'Pending' ? 'Đang chờ' :
+                                                      request.status === 'Accepted' ? 'Chấp nhận' : 'Từ chối';
+                                    const canChat = request.status === 'Accepted' && request.chatSessionId;
+                                    
+                                    return (
+                                        <div key={request.id} className={styles.listItem}>
+                                            <div className={styles.listContent}>
+                                                <h4 className={styles.listTitle}>
+                                                    {request.startupName}
+                                                    <span style={{ fontSize: '0.85rem', color: '#64748b', marginLeft: '8px', fontWeight: '400' }}>
+                                                        ({request.projectName})
+                                                    </span>
+                                                </h4>
+                                                <div className={styles.listMeta}>
+                                                    <span 
+                                                        className={`${styles.badge}`}
+                                                        style={{ 
+                                                            backgroundColor: statusColor,
+                                                            color: '#fff',
+                                                            marginRight: '8px'
+                                                        }}
+                                                    >
+                                                        {statusText}
+                                                    </span>
+                                                    {request.responseDate && (
+                                                        <span>Trả lời lúc: {request.responseDate}</span>
+                                                    )}
+                                                </div>
+                                                {request.message && (
+                                                    <p style={{ marginTop: '8px', fontSize: '0.9rem', color: '#64748b', fontStyle: 'italic' }}>
+                                                        💬 {request.message}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <div className={styles.listActions} style={{ alignItems: 'center' }}>
+                                                {canChat ? (
+                                                    <button 
+                                                        className={styles.primaryBtn}
+                                                        onClick={() => handleStartChat(request.id || request.connectionRequestId)}
+                                                    >
+                                                        Bắt đầu chat
+                                                    </button>
+                                                ) : request.status === 'Accepted' ? (
+                                                    <span style={{ color: '#9ca3af', fontSize: '0.9rem' }}>
+                                                        Chat chưa sẵn sàng
+                                                    </span>
+                                                ) : (
+                                                    <button 
+                                                        className={styles.secondaryBtn}
+                                                        onClick={() => console.log('View details:', request.id)}
+                                                    >
+                                                        Xem chi tiết
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Sent Interests Section */}
                 {activeSection === 'interests' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>
-                                Quan tâm đã gửi ({sentInterests.length})
+                                Dự án quan tâm ({sentInterests.length})
                             </h3>
                             <div className={styles.list}>
                                 {sentInterests.length === 0 ? (
                                     <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                        <p>Bạn chưa gửi quan tâm đến startup nào.</p>
+                                        <p>Bạn chưa quan tâm đến dự án nào.</p>
                                     </div>
                                 ) : sentInterests.map(interest => (
                                     <div key={interest.id} className={styles.listItem}>
                                         <div className={styles.listContent}>
-                                            <h4 className={styles.listTitle}>{interest.startupName}</h4>
+                                            <h4 className={styles.listTitle}>{interest.projectName}</h4>
                                             <div className={styles.listMeta}>
-                                                <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginRight: '8px' }}>{interest.stage}</span>
-                                                Sent: {interest.sentDate}
+                                                <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginRight: '8px' }}>{interest.industry}</span>
+                                                Quan tâm từ: {interest.sentDate}
                                             </div>
+                                            {interest.projectImageUrl && (
+                                                <img 
+                                                    src={interest.projectImageUrl} 
+                                                    alt={interest.projectName}
+                                                    style={{ marginTop: '8px', maxWidth: '200px', maxHeight: '120px', borderRadius: '4px' }}
+                                                />
+                                            )}
                                         </div>
                                         <div className={styles.listActions} style={{ alignItems: 'center' }}>
-                                            <span className={`${styles.badge} ${interest.status === 'pending' ? styles.badgePending : styles.badgeSuccess}`}>
-                                                {interest.status === 'pending' ? '⏳ Chờ xử lý' : '✓ Đã chấp nhận'}
+                                            <span className={`${styles.badge} ${styles.badgeSuccess}`}>
+                                                ♥ Đang theo dõi
                                             </span>
-                                            {interest.status === 'pending' && (
-                                                <button
-                                                    className={styles.dangerBtn}
-                                                    onClick={() => handleWithdrawInterest(interest.id)}
-                                                >
-                                                    Rút lại
-                                                </button>
-                                            )}
+                                            <button
+                                                className={styles.dangerBtn}
+                                                onClick={() => handleWithdrawInterest(interest.id)}
+                                                style={{ marginLeft: '12px' }}
+                                            >
+                                                Bỏ theo dõi
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
@@ -355,6 +644,14 @@ export default function InvestorDashboard({ user }) {
                         </div>
                     </div>
                 )}
+
+                <FloatingChatWidget
+                    chatSessionId={activeChatSession?.chatSessionId}
+                    displayName={activeChatSession?.displayName}
+                    currentUserId={user?.userId}
+                    sentTime={activeChatSession?.sentTime}
+                    onClose={handleCloseChatWindow}
+                />
             </div>
         </div>
     );

@@ -1,13 +1,95 @@
-import React from 'react';
-import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock } from 'lucide-react';
+import React, { useState } from 'react';
+import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock, Heart, MessageSquare } from 'lucide-react';
 import Badge from '../common/Badge';
 import styles from './StartupCard.module.css';
+import followerService from '../../services/followerService';
+import RequestInfoModal from '../common/RequestInfoModal';
 
 /**
  * StartupCard Component - "Visual Priority (Concept C)"
  * Clean, full-width data density
  */
-function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewProject, index = 0, isReturning = false }) {
+function StartupCard({ startup, isPremium = false, user, followedProjectIds, sentConnectionIds, onViewProfile, onViewProject, index = 0, isReturning = false }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInterested, setIsInterested] = useState(false);
+  const [interestMessage, setInterestMessage] = useState('');
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [hasRequested, setHasRequested] = useState(false);
+  
+  // Check if user is investor
+  // Backend returns role as string: "Investor", "Startup", "Advisor", "Staff", "Admin"
+  // OR as number: 1=Investor, 0=Startup, 2=Advisor, 3=Staff, 4=Admin
+  const isInvestor = user && (
+    user.role === 'investor' || 
+    user.role === 'Investor' || 
+    user.role === 1 || 
+    String(user.role) === '1'
+  );
+
+  // Initialize follow state from passed followedProjectIds (instant, no API call)
+  React.useEffect(() => {
+    if (isInvestor && startup.id && followedProjectIds) {
+      const isFollowing = followedProjectIds.has(startup.id);
+      console.log(`[StartupCard ${startup.id}] Using cached followedProjectIds. Is following: ${isFollowing}`);
+      setIsInterested(isFollowing);
+    }
+  }, [isInvestor, startup.id, followedProjectIds]);
+
+  // Initialize request state from passed sentConnectionIds (instant, no API call)
+  React.useEffect(() => {
+    if (isInvestor && startup.id && sentConnectionIds) {
+      const hasRequest = sentConnectionIds.has(startup.id);
+      console.log(`[StartupCard ${startup.id}] Using cached sentConnectionIds. Has request: ${hasRequest}`);
+      setHasRequested(hasRequest);
+    }
+  }, [isInvestor, startup.id, sentConnectionIds]);
+  
+  // Handle interest button click - toggle follow/unfollow
+  const handleInterestClick = async (e) => {
+    e.stopPropagation();
+    if (!user) return;
+    
+    console.log(`[StartupCard ${startup.id}] Interest click - current isInterested:`, isInterested);
+    
+    setIsLoading(true);
+    try {
+      if (isInterested) {
+        // Already interested - unfollow
+        console.log(`[StartupCard ${startup.id}] Unfollowing...`);
+        const response = await followerService.unfollowProject(startup.id);
+        console.log(`[StartupCard ${startup.id}] Unfollow response:`, response);
+        
+        if (response && (response.success || response.data)) {
+          setIsInterested(false);
+          setInterestMessage('✓ Đã bỏ theo dõi');
+          setTimeout(() => setInterestMessage(''), 3000);
+        } else {
+          setInterestMessage('Lỗi: ' + (response?.message || 'Không thể xử lý yêu cầu'));
+          setTimeout(() => setInterestMessage(''), 3000);
+        }
+      } else {
+        // Not interested yet - follow
+        console.log(`[StartupCard ${startup.id}] Following...`);
+        const response = await followerService.followProject(startup.id);
+        console.log(`[StartupCard ${startup.id}] Follow response:`, response);
+        
+        if (response && (response.success || response.data)) {
+          setIsInterested(true);
+          setInterestMessage('✓ Đã thêm vào danh sách quan tâm');
+          setTimeout(() => setInterestMessage(''), 3000);
+        } else {
+          setInterestMessage('Lỗi: ' + (response?.message || 'Không thể xử lý yêu cầu'));
+          setTimeout(() => setInterestMessage(''), 3000);
+        }
+      }
+    } catch (error) {
+      console.error(`[StartupCard ${startup.id}] Failed to toggle follow:`, error);
+      setInterestMessage('Lỗi: ' + (error?.message || 'Kết nối thất bại'));
+      setTimeout(() => setInterestMessage(''), 3000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   // Utility for avatar gradient based on tag/industry
   const getAvatarGradient = (mainTag) => {
     const t = (mainTag || '').toLowerCase();
@@ -52,9 +134,10 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewPr
     <article 
       key={startup.id}
       className={styles.card} 
-      onClick={() => onViewProject && onViewProject(startup.id)} 
+      // onClick={() => onViewProject && onViewProject(startup.id)} 
+      // TEMPORARILY DISABLED TO TEST REQUEST INFO BUTTON
       style={{ 
-        cursor: onViewProject ? 'pointer' : 'default',
+        cursor: 'default', // onViewProject ? 'pointer' : 'default',
         '--index': index,
         ...(isReturning ? { animation: 'none', opacity: 1, transform: 'none' } : {})
       }}
@@ -206,6 +289,122 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewPr
         <div className={styles.teamLine}>
           <strong style={{ color: 'var(--text-primary)' }}>Team:</strong>{' '}
           {startup.teamMembers !== undefined ? startup.teamMembers : <PremiumLockText />}
+        </div>
+      )}
+
+      {/* 6. Interest Button for Investors */}
+      {isInvestor && (
+        <>
+          <div style={{
+            marginTop: '16px',
+            paddingTop: '12px',
+            borderTop: '1px solid rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'center'
+          }}>
+            {/* Follow/Unfollow Button */}
+            <button
+              onClick={handleInterestClick}
+              disabled={isLoading}
+              style={{
+                flex: 1,
+                padding: '10px 16px',
+                backgroundColor: isInterested ? '#dc2626' : '#2196F3',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: isLoading ? 'wait' : 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                opacity: isLoading ? 0.7 : 1,
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                if (!isLoading) {
+                  e.target.style.backgroundColor = isInterested ? '#b91c1c' : '#1976D2';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isLoading) {
+                  e.target.style.backgroundColor = isInterested ? '#dc2626' : '#2196F3';
+                }
+              }}
+            >
+              <Heart 
+                size={16} 
+                fill={isInterested ? 'currentColor' : 'none'}
+                strokeWidth={2} 
+              />
+              {isLoading ? 'Đang xử lý...' : (isInterested ? 'Hủy quan tâm' : 'Quan tâm')}
+            </button>
+
+            {/* Request Info Button */}
+            <button
+              onClick={() => !hasRequested && setShowRequestModal(true)}
+              disabled={hasRequested}
+              style={{
+                flex: 1,
+                padding: '10px 16px',
+                backgroundColor: hasRequested ? '#10b981' : '#7c3aed',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: hasRequested ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+                opacity: hasRequested ? 0.8 : 1
+              }}
+              onMouseEnter={(e) => {
+                if (!hasRequested) {
+                  e.target.style.backgroundColor = '#6d28d9';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!hasRequested) {
+                  e.target.style.backgroundColor = '#7c3aed';
+                }
+              }}
+            >
+              <MessageSquare size={16} />
+              {hasRequested ? 'Đã yêu cầu' : 'Yêu cầu thông tin'}
+            </button>
+          </div>
+
+          {/* RequestInfoModal */}
+          <RequestInfoModal
+            isOpen={showRequestModal}
+            onClose={() => setShowRequestModal(false)}
+            projectId={startup.id}
+            projectName={startup.name}
+            onSuccess={() => {
+              setHasRequested(true);
+            }}
+          />
+        </>
+      )}
+
+      {/* Interest Message */}
+      {interestMessage && (
+        <div style={{
+          marginTop: '8px',
+          padding: '8px 12px',
+          backgroundColor: isInterested ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+          color: isInterested ? '#4caf50' : '#f44336',
+          borderRadius: '4px',
+          fontSize: '12px',
+          textAlign: 'center'
+        }}>
+          {interestMessage}
         </div>
       )}
     </article>

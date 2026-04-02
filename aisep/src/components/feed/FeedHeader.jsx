@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, Search } from 'lucide-react';
 import styles from './FeedHeader.module.css';
 import FeedFilter from './FeedFilter';
+import NotificationCenter from '../common/NotificationCenter';
 
 /**
  * FeedHeader Component - Header for the main feed
@@ -9,6 +10,7 @@ import FeedFilter from './FeedFilter';
  * @param {object} user - Current user object
  * @param {function} onFilterChange - Callback when filters change
  * @param {function} onShowProjectForm - Callback to show project submission form
+ * @param {function} onOpenChat - Callback to open chat from notification
  */
 function FeedHeader({ 
   user, 
@@ -23,7 +25,8 @@ function FeedHeader({
   industryCounts = {},
   searchTerm = "",
   onSearchChange,
-  searchPlaceholder = "Tìm kiếm dự án..."
+  searchPlaceholder = "Tìm kiếm dự án...",
+  onOpenChat
 }) {
   return (
     <div className={styles.container}>
@@ -47,6 +50,11 @@ function FeedHeader({
                     onChange={(e) => onSearchChange(e.target.value)}
                   />
                 </div>
+              )}
+
+              {/* Notification Center */}
+              {onOpenChat && (
+                <NotificationCenter onOpenChat={onOpenChat} />
               )}
 
               {/* "Đăng Dự Án" button for startups */}
