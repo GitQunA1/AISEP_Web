@@ -81,6 +81,47 @@
     gap: 4px;
 }
 
+.titleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    gap: 12px;
+}
+
+.mobileTitleAction {
+    display: none;
+    align-items: center;
+    gap: 12px;
+}
+
+.mobileNotifications {
+    display: none;
+}
+
+.desktopNotifications {
+    display: block;
+}
+
+.desktopCustomAction {
+    display: block;
+}
+
+@media (max-width: 768px) {
+    .mobileTitleAction {
+        display: flex;
+    }
+    .mobileNotifications {
+        display: block;
+    }
+    .desktopNotifications {
+        display: none;
+    }
+    .desktopCustomAction {
+        display: none;
+    }
+}
+
 .title {
     font-size: 23px;
     font-weight: 800;
@@ -88,6 +129,7 @@
     margin: 0;
     letter-spacing: -0.5px;
     transition: color var(--transition-base);
+    flex: 1;
 }
 
 .subtitle {
@@ -180,7 +222,7 @@
   }
   .headerContent {
     flex-direction: column;
-    align-items: flex-start;
+    align-items: stretch;
     gap: 16px;
   }
   .actionsSection {

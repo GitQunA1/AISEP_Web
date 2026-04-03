@@ -13,6 +13,7 @@ import InvestorBookings from './components/investor/InvestorBookings';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import authService from './services/authService';
 import startupProfileService from './services/startupProfileService';
+import AdvisorProfilePage from './pages/AdvisorProfilePage';
 import SessionExpiredModal from './components/auth/SessionExpiredModal';
 
 function App() {
@@ -188,6 +189,10 @@ function App() {
     setCurrentView('ai');
   };
 
+  const handleShowProfile = () => {
+    setCurrentView('profile');
+  };
+
   return (
     <>
       {isSessionExpired && (
@@ -209,7 +214,7 @@ function App() {
           onShowRegister={handleShowRegister}
           onBack={handleBackToMain}
         />
-      ) : (['main', 'advisors', 'investors', 'ai', 'dashboard'].includes(currentView) || currentView.startsWith('dashboard_')) ? (
+      ) : (['main', 'advisors', 'investors', 'ai', 'dashboard', 'profile'].includes(currentView) || currentView.startsWith('dashboard_')) ? (
         <MainLayout
           onShowRegister={handleShowRegister}
           onShowLogin={handleShowLogin}
@@ -218,6 +223,7 @@ function App() {
           onShowInvestors={handleShowInvestors}
           onShowDashboard={handleShowDashboard}
           onShowAI={handleShowAI}
+          onShowProfile={handleShowProfile}
           user={user}
           onLogout={handleLogout}
           showAdvisors={currentView === 'advisors'}
@@ -225,6 +231,7 @@ function App() {
           showAI={currentView === 'ai'}
           activeView={currentView}
         >
+          {currentView === 'profile' && <AdvisorProfilePage user={user} onBack={handleShowHome} />}
           {currentView.startsWith('dashboard') && (
             (() => {
               const roleStr = user?.role?.toString().toLowerCase() || '';

@@ -38,6 +38,7 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
       { icon: MessageSquare, label: 'Bookings', displayLabel: 'Booking', href: '#', showWhenLoggedIn: true },
       { icon: Calendar, label: 'Availability', displayLabel: 'Lịch rảnh', href: '#', showWhenLoggedIn: true },
       { icon: BarChart2, label: 'Reports', displayLabel: 'Báo cáo', href: '#', showWhenLoggedIn: true },
+      { icon: User, label: 'Profile', displayLabel: 'Hồ sơ', href: '#', showWhenLoggedIn: true },
     ];
     const homeItem = navItems.find(item => item.label === 'Home');
     navItems = [...advisorItems, homeItem];
@@ -82,6 +83,9 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
     }
     if (label === 'Investors' && onShowInvestors) {
       onShowInvestors();
+    }
+    if (label === 'Profile' && onShowProfile) {
+      onShowProfile();
     }
   };
 

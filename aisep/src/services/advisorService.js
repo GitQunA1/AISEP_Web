@@ -69,15 +69,23 @@ const advisorService = {
 
   /**
    * Update the current advisor's profile
-   * @param {Object} profileData - Profile data to update
+   * @param {number} id - The advisor ID
+   * @param {Object|FormData} profileData - Profile data to update (use FormData for binary files)
    * @returns {Promise<Object>}
    */
-  updateMyProfile: async (profileData) => {
+  updateMyProfile: async (id, profileData) => {
     try {
-      const response = await apiClient.put('/api/Advisor/me', profileData);
+      console.log(`[ADVISOR_SERVICE] Updating profile for ID ${id}`);
+      const isFormData = profileData instanceof FormData;
+      
+      const response = await apiClient.put(`/api/Advisor/${id}`, profileData, {
+        headers: {
+          'Content-Type': isFormData ? 'multipart/form-data' : 'application/json'
+        }
+      });
       return response?.data ?? response;
     } catch (error) {
-      console.error('Error updating advisor profile:', error);
+      console.error('[ADVISOR_SERVICE] Error updating advisor profile:', error);
       throw error;
     }
   }

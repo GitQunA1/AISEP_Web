@@ -153,12 +153,22 @@ export const projectSubmissionService = {
   },
 
   /**
-   * Get project details by ID
+   * Get project details by ID (Normal)
    * @param {string|number} projectId 
    * @returns {Promise<any>}
    */
   getProjectById: async (projectId) => {
     const response = await apiClient.get(`/api/Projects/${projectId}`);
+    return response;
+  },
+
+  /**
+   * Get project details by ID (Non-Premium)
+   * @param {string|number} projectId 
+   * @returns {Promise<any>}
+   */
+  getProjectNonPremiumById: async (projectId) => {
+    const response = await apiClient.get(`/api/Projects/non-premium/${projectId}`);
     return response;
   },
 

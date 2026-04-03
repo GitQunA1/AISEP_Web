@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2 } from 'lucide-react';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
@@ -20,6 +20,8 @@ import signalRService from '../services/signalRService.js';
 import { PROJECT_STATUS, isUserEditable, STATUS_LABELS, STATUS_COLORS, getStageLabel } from '../constants/ProjectStatus.js';
 import { translateAIResults } from '../utils/translateAIResults.js';
 import kanban from '../styles/OperationStaffDashboard.module.css';
+import bookingService from '../services/bookingService';
+import BookingWizard from '../components/booking/BookingWizard';
 
 import StartupProfileBanner from '../components/startup/StartupProfileBanner';
 import StartupBookings from '../components/startup/StartupBookings';
@@ -33,7 +35,7 @@ export default function StartupDashboard({ user }) {
     const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 1024);
     const [showLeftTabIndicator, setShowLeftTabIndicator] = React.useState(false);
     const [showRightTabIndicator, setShowRightTabIndicator] = React.useState(false);
-    
+
     // Kanban Tab Indicator States
     const [showLeftKanbanIndicator, setShowLeftKanbanIndicator] = React.useState(false);
     const [showRightKanbanIndicator, setShowRightKanbanIndicator] = React.useState(false);
@@ -42,7 +44,7 @@ export default function StartupDashboard({ user }) {
     const [activeProjectMobileTab, setActiveProjectMobileTab] = React.useState('draft');
     const [projectSearchTerm, setProjectSearchTerm] = React.useState('');
     const [showCompleteInfoForm, setShowCompleteInfoForm] = React.useState(false);
-    
+
     // Refs for scroll tracking
     const tabsRef = React.useRef(null);
     const kanbanTabsRef = React.useRef(null);
@@ -88,6 +90,13 @@ export default function StartupDashboard({ user }) {
     const [selectedHistoryResult, setSelectedHistoryResult] = React.useState(null);
     const [evaluatingProjectId, setEvaluatingProjectId] = React.useState(null);
     const [showFullscreenImage, setShowFullscreenImage] = React.useState(false);
+
+    // Booking Eligibility States
+    const [canBookDetailProject, setCanBookDetailProject] = React.useState(false);
+    const [detailProjectAdvisors, setDetailProjectAdvisors] = React.useState([]);
+    const [isCheckingBookingEligibility, setIsCheckingBookingEligibility] = React.useState(false);
+    const [showBookingWizard, setShowBookingWizard] = React.useState(false);
+    const [bookingInitialAdvisorId, setBookingInitialAdvisorId] = React.useState(null);
 
     // Connection/Info Requests States (for investor inquiries)
     const [connectionRequests, setConnectionRequests] = React.useState([]);
@@ -181,11 +190,14 @@ export default function StartupDashboard({ user }) {
     React.useEffect(() => {
         if (showDetailModal || showFullscreenImage) {
             document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
+            document.documentElement.style.overflow = 'unset';
         }
         return () => {
             document.body.style.overflow = 'unset';
+            document.documentElement.style.overflow = 'unset';
         };
     }, [showDetailModal, showFullscreenImage]);
 
@@ -362,7 +374,7 @@ export default function StartupDashboard({ user }) {
             // Fetch received connection requests from investors using original API
             const response = await connectionService.getReceivedConnectionRequests();
             console.log('[StartupDashboard] getReceivedConnectionRequests response:', response);
-            
+
             let requests = [];
             if (response && response.data) {
                 if (response.data.items && Array.isArray(response.data.items)) {
@@ -373,15 +385,15 @@ export default function StartupDashboard({ user }) {
                     console.log('[StartupDashboard] response.data is array, count:', requests.length);
                 }
             }
-            
+
             console.log('[StartupDashboard] Raw requests:', requests);
-            
+
             // Map API response to component format
             const formattedRequests = requests.map(req => {
                 // Format date from responseDate or use today
-                let sentDateString = new Date().toLocaleString('vi-VN', { 
-                    year: 'numeric', 
-                    month: '2-digit', 
+                let sentDateString = new Date().toLocaleString('vi-VN', {
+                    year: 'numeric',
+                    month: '2-digit',
                     day: '2-digit',
                     hour: '2-digit',
                     minute: '2-digit',
@@ -389,9 +401,9 @@ export default function StartupDashboard({ user }) {
                     hour12: false
                 });
                 if (req.responseDate) {
-                    sentDateString = new Date(req.responseDate).toLocaleString('vi-VN', { 
-                        year: 'numeric', 
-                        month: '2-digit', 
+                    sentDateString = new Date(req.responseDate).toLocaleString('vi-VN', {
+                        year: 'numeric',
+                        month: '2-digit',
                         day: '2-digit',
                         hour: '2-digit',
                         minute: '2-digit',
@@ -399,7 +411,7 @@ export default function StartupDashboard({ user }) {
                         hour12: false
                     });
                 }
-                
+
                 return {
                     id: req.connectionRequestId,
                     connectionRequestId: req.connectionRequestId,
@@ -410,7 +422,7 @@ export default function StartupDashboard({ user }) {
                     sentDate: sentDateString
                 };
             });
-            
+
             console.log('[StartupDashboard] Formatted requests:', formattedRequests);
             setConnectionRequests(formattedRequests);
         } catch (error) {
@@ -436,7 +448,7 @@ export default function StartupDashboard({ user }) {
         try {
             const response = await connectionService.respondToConnection(requestId, true);
             console.log('[StartupDashboard] Approved request:', response);
-            
+
             if (response && (response.success || response.data)) {
                 setConnectionRequests(connectionRequests.map(req =>
                     req.connectionRequestId === requestId ? { ...req, status: 'accepted' } : req
@@ -457,7 +469,7 @@ export default function StartupDashboard({ user }) {
         try {
             const response = await connectionService.respondToConnection(requestId, false);
             console.log('[StartupDashboard] Rejected request:', response);
-            
+
             if (response && (response.success || response.data)) {
                 setConnectionRequests(connectionRequests.map(req =>
                     req.connectionRequestId === requestId ? { ...req, status: 'rejected' } : req
@@ -475,7 +487,7 @@ export default function StartupDashboard({ user }) {
 
     const handleStartChat = (connectionRequestId) => {
         console.log('[StartupDashboard] Starting chat for connectionRequestId:', connectionRequestId);
-        
+
         // Find the connection request and extract chatSessionId
         const request = connectionRequests.find(r => r.connectionRequestId === connectionRequestId);
         if (request && request.chatSessionId) {
@@ -588,9 +600,9 @@ export default function StartupDashboard({ user }) {
                     name: truncateName(doc.fileName || doc.documentType),
                     fullName: doc.fileName || doc.documentType, // Keep full name for title/tooltips
                     type: doc.documentType,
-                    uploadDate: new Date(doc.uploadedAt || doc.verifiedAt || new Date()).toLocaleString('vi-VN', { 
-                        year: 'numeric', 
-                        month: '2-digit', 
+                    uploadDate: new Date(doc.uploadedAt || doc.verifiedAt || new Date()).toLocaleString('vi-VN', {
+                        year: 'numeric',
+                        month: '2-digit',
                         day: '2-digit',
                         hour: '2-digit',
                         minute: '2-digit',
@@ -871,6 +883,54 @@ export default function StartupDashboard({ user }) {
         } finally {
             setIsEvaluatingAI(false);
             setEvaluatingProjectId(null);
+        }
+    };
+
+    /**
+     * Check if project is eligible for booking (approved and in project-options)
+     */
+    const fetchBookingEligibility = async (projectId) => {
+        if (!projectId) return;
+        setIsCheckingBookingEligibility(true);
+        setCanBookDetailProject(false);
+        setDetailProjectAdvisors([]);
+
+        try {
+            // 1. Get project options to check if this project can be booked
+            const projectOptions = await bookingService.getProjectOptions();
+            const projectIds = Array.isArray(projectOptions) 
+                ? projectOptions.map(p => p.projectId) 
+                : (projectOptions?.items?.map(p => p.projectId) || []);
+            
+            const isEligible = projectIds.includes(Number(projectId));
+            setCanBookDetailProject(isEligible);
+
+            // 2. Regardless of eligibility list, if Approved, try to get assigned advisors
+            const advisorOptions = await bookingService.getAdvisorOptions(projectId);
+            setDetailProjectAdvisors(Array.isArray(advisorOptions) ? advisorOptions : []);
+            
+        } catch (error) {
+            console.error('Error checking booking eligibility:', error);
+        } finally {
+            setIsCheckingBookingEligibility(false);
+        }
+    };
+
+    /**
+     * Enhanced opener for project detail modal
+     */
+    const handleOpenProjectDetail = (p) => {
+        const pId = p.id || p.projectId;
+        setDetailProject(p);
+        setShowDetailModal(true);
+        fetchAnalysisHistory(pId);
+        
+        // Only fetch booking info if project is Approved
+        if (p.status === 'Approved' || p.status === PROJECT_STATUS.APPROVED) {
+            fetchBookingEligibility(pId);
+        } else {
+            setCanBookDetailProject(false);
+            setDetailProjectAdvisors([]);
         }
     };
 
@@ -1304,29 +1364,29 @@ export default function StartupDashboard({ user }) {
                     <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
                         <div className={kanban.statisticsSection} style={{ gap: 0 }}>
                             {/* Search and Header Row */}
-                            <div className={styles.cardHeader} style={{ 
-                                background: 'var(--bg-secondary)', 
-                                borderRadius: '12px', 
-                                padding: '16px 20px', 
+                            <div className={styles.cardHeader} style={{
+                                background: 'var(--bg-secondary)',
+                                borderRadius: '12px',
+                                padding: '16px 20px',
                                 border: '1px solid var(--border-color)',
                                 marginBottom: 0
                             }}>
                                 <h3 className={styles.cardTitle} style={{ marginBottom: 0 }}>Dự án của tôi</h3>
                                 <div className={styles.searchWrapper} style={{ position: 'relative', width: isMobile ? '100%' : '300px', marginTop: isMobile ? '12px' : 0 }}>
                                     <Search className={styles.searchIcon} size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                                    <input 
-                                        type="text" 
-                                        placeholder="Tìm kiếm dự án..." 
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm kiếm dự án..."
                                         className={styles.searchInput}
                                         value={projectSearchTerm}
                                         onChange={(e) => setProjectSearchTerm(e.target.value)}
-                                        style={{ 
-                                            width: '100%', 
-                                            padding: '10px 12px 10px 36px', 
-                                            borderRadius: '9999px', 
-                                            border: '1px solid rgba(29, 155, 240, 0.4)', 
-                                            background: 'var(--bg-primary)', 
-                                            fontSize: '13px', 
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px 12px 10px 36px',
+                                            borderRadius: '9999px',
+                                            border: '1px solid rgba(29, 155, 240, 0.4)',
+                                            background: 'var(--bg-primary)',
+                                            fontSize: '13px',
                                             color: 'var(--text-primary)',
                                             outline: 'none',
                                             transition: 'all 0.2s ease',
@@ -1355,7 +1415,7 @@ export default function StartupDashboard({ user }) {
                                             { id: 'approved', label: 'Đã duyệt', color: 'appr' },
                                             { id: 'rejected', label: 'Bị từ chối', color: 'rej' }
                                         ].map(tab => (
-                                            <button 
+                                            <button
                                                 key={tab.id}
                                                 className={`${kanban.mobileTab} ${activeProjectMobileTab === tab.id ? kanban.activeMobileTab : ''}`}
                                                 onClick={() => setActiveProjectMobileTab(tab.id)}
@@ -1370,7 +1430,7 @@ export default function StartupDashboard({ user }) {
                                 </div>
                             )}
 
-                             {/* Separator Line */}
+                            {/* Separator Line */}
                             {!isMobile && (
                                 <div style={{ height: '1px', background: 'var(--border-color)', margin: '20px -24px 0 -24px', opacity: 0.6 }}></div>
                             )}
@@ -1387,10 +1447,10 @@ export default function StartupDashboard({ user }) {
                                     ))}
                                 </div>
                             ) : (
-                                <div className={kanban.boardGrid} style={{ 
-                                    marginTop: 0, 
-                                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', 
-                                    width: 'auto', 
+                                <div className={kanban.boardGrid} style={{
+                                    marginTop: 0,
+                                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
+                                    width: 'auto',
                                     margin: isMobile ? 0 : '0 -24px -84px -24px',
                                     border: 'none',
                                     background: 'transparent'
@@ -1405,27 +1465,27 @@ export default function StartupDashboard({ user }) {
                                         });
 
                                         const columns = [
-                                            { 
-                                                id: 'draft', 
-                                                label: 'Bản nháp', 
+                                            {
+                                                id: 'draft',
+                                                label: 'Bản nháp',
                                                 color: 'draft',
                                                 projects: filteredProjects.filter(p => p.status === 'Draft' || p.status === 'IpProtected')
                                             },
-                                            { 
-                                                id: 'pending', 
-                                                label: 'Chờ duyệt', 
+                                            {
+                                                id: 'pending',
+                                                label: 'Chờ duyệt',
                                                 color: 'pend',
                                                 projects: filteredProjects.filter(p => p.status === 'Pending' || p.status === 'Submitted')
                                             },
-                                            { 
-                                                id: 'approved', 
-                                                label: 'Đã duyệt', 
+                                            {
+                                                id: 'approved',
+                                                label: 'Đã duyệt',
                                                 color: 'appr',
                                                 projects: filteredProjects.filter(p => p.status === 'Approved' || p.status === 'Published')
                                             },
-                                            { 
-                                                id: 'rejected', 
-                                                label: 'Bị từ chối', 
+                                            {
+                                                id: 'rejected',
+                                                label: 'Bị từ chối',
                                                 color: 'rej',
                                                 projects: filteredProjects.filter(p => p.status === 'Rejected')
                                             }
@@ -1436,13 +1496,13 @@ export default function StartupDashboard({ user }) {
                                             if (isMobile && activeProjectMobileTab !== col.id) return null;
 
                                             return (
-                                                <div 
-                                                    key={col.id} 
-                                                    className={kanban.bcol} 
-                                                    style={{ 
-                                                        borderRight: (isMobile || index === columns.length - 1) ? 'none' : '1px solid var(--border-color)', 
-                                                        borderLeft: 'none', 
-                                                        minWidth: 0 
+                                                <div
+                                                    key={col.id}
+                                                    className={kanban.bcol}
+                                                    style={{
+                                                        borderRight: (isMobile || index === columns.length - 1) ? 'none' : '1px solid var(--border-color)',
+                                                        borderLeft: 'none',
+                                                        minWidth: 0
                                                     }}
                                                 >
                                                     {!isMobile && (
@@ -1454,7 +1514,7 @@ export default function StartupDashboard({ user }) {
                                                             <div className={`${kanban.bcolN} ${kanban[col.color]}`}>{col.projects.length}</div>
                                                         </div>
                                                     )}
-                                                    
+
                                                     <div className={kanban.bcolCards}>
                                                         {col.projects.length === 0 ? (
                                                             <div className={kanban.emptyStateContainer} style={{ minHeight: '300px' }}>
@@ -1479,7 +1539,7 @@ export default function StartupDashboard({ user }) {
                                                                             </div>
                                                                         </div>
                                                                         <p className={kanban.bcardDesc}>{p.shortDescription || p.description}</p>
-                                                                        
+
                                                                         {p.status === 'Rejected' && p.rejectionReason && (
                                                                             <div style={{ padding: '10px', background: 'rgba(244, 33, 46, 0.05)', borderRadius: '10px', border: '1px solid rgba(244, 33, 46, 0.1)', marginBottom: '12px' }}>
                                                                                 <div style={{ fontSize: '12px', color: '#f4212e', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
@@ -1512,12 +1572,10 @@ export default function StartupDashboard({ user }) {
                                                                                     >
                                                                                         <Send size={16} />
                                                                                     </button>
-                                                                                    <button 
+                                                                                    <button
                                                                                         className={kanban.baBtn}
                                                                                         onClick={() => {
-                                                                                            setDetailProject(p);
-                                                                                            setShowDetailModal(true);
-                                                                                            fetchAnalysisHistory(p.id || p.projectId);
+                                                                                            handleOpenProjectDetail(p);
                                                                                         }}
                                                                                         title="Chi tiết dự án"
                                                                                     >
@@ -1539,12 +1597,10 @@ export default function StartupDashboard({ user }) {
                                                                                             <Send size={16} /> Nộp
                                                                                         </button>
                                                                                     )}
-                                                                                    <button 
+                                                                                    <button
                                                                                         className={kanban.baBtn}
                                                                                         onClick={() => {
-                                                                                            setDetailProject(p);
-                                                                                            setShowDetailModal(true);
-                                                                                            fetchAnalysisHistory(p.id || p.projectId);
+                                                                                            handleOpenProjectDetail(p);
                                                                                         }}
                                                                                         title="Chi tiết dự án"
                                                                                     >
@@ -1596,7 +1652,7 @@ export default function StartupDashboard({ user }) {
                                         <div
                                             key={request.connectionRequestId}
                                             className={styles.listItem}
-                                            style={{ 
+                                            style={{
                                                 borderLeft: 'none',
                                                 borderTop: `3px solid ${request.status === 'pending' ? '#f59e0b' : request.status === 'accepted' ? '#10b981' : '#ef4444'}`,
                                                 padding: '12px 16px'
@@ -1792,11 +1848,54 @@ export default function StartupDashboard({ user }) {
                     onClick={(e) => e.target === e.currentTarget && setShowDetailModal(false)}
                 >
                     <div className={styles.modalContent}>
-                        
+                        {/* --- Fixed Headers (Top Pinned) --- */}
+
+                        {/* Mobile Header (When NO image exists) */}
+                        {isMobile && !detailProject.projectImageUrl && (
+                            <div className={`${styles.mobileFixedHeader} ${styles.mobileOnly}`} style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                flexWrap: 'nowrap',
+                                gap: '12px'
+                            }}>
+                                <h3 className={styles.mobileFixedTitle}>{detailProject.projectName}</h3>
+                                <div className={styles.mobileHeaderRight}>
+                                    <div style={{
+                                        fontSize: '11px',
+                                        fontWeight: 800,
+                                        color: 'var(--primary-blue)',
+                                        backgroundColor: 'rgba(29, 155, 240, 0.1)',
+                                        padding: '4px 8px',
+                                        borderRadius: '6px',
+                                        whiteSpace: 'nowrap'
+                                    }}>
+                                        {getStageLabel(detailProject.developmentStage)}
+                                    </div>
+                                    <button
+                                        className={styles.modalCloseBtn}
+                                        onClick={() => setShowDetailModal(false)}
+                                        style={{
+                                            position: 'relative',
+                                            top: 'auto',
+                                            right: 'auto',
+                                            width: '36px',
+                                            height: '36px',
+                                            padding: 0,
+                                            display: 'flex'
+                                        }}
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+
                         <div className={styles.modalSplitWrapper}>
                             {/* --- LEFT SIDE: HERO POSTER (Desktop) --- */}
                             {detailProject.projectImageUrl && (
-                                <div 
+                                <div
                                     className={`${styles.modalSplitHero} ${styles.desktopOnly}`}
                                     onClick={() => setShowFullscreenImage(true)}
                                     style={{ cursor: 'zoom-in' }}
@@ -1827,9 +1926,9 @@ export default function StartupDashboard({ user }) {
                                                 {STATUS_LABELS[detailProject.status || 'Draft'] || 'Bản nháp'}
                                             </span>
                                             {detailProject.status === 'Approved' && (
-                                                <div style={{ 
-                                                    backgroundColor: 'rgba(16, 185, 129, 0.2)', 
-                                                    padding: '4px 8px', 
+                                                <div style={{
+                                                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                                    padding: '4px 8px',
                                                     borderRadius: '6px',
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -1844,7 +1943,7 @@ export default function StartupDashboard({ user }) {
                                             )}
                                         </div>
                                     </div>
-                                    <button 
+                                    <button
                                         className={styles.heroMaximizeHint}
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -1858,73 +1957,42 @@ export default function StartupDashboard({ user }) {
                             )}
 
                             {/* --- RIGHT SIDE: CONTENT AREA --- */}
+
+
                             <div className={styles.modalSplitContentArea}>
-                                {/* --- Desktop-Only Header (Restoration) --- */}
                                 {!isMobile && (
                                     <div className={styles.modalSplitDesktopHeader}>
                                         <h2 className={styles.modalSplitDesktopTitle}>{detailProject.projectName}</h2>
-                                        <div className={styles.modalSplitDesktopBadges}>
-                                            <div style={{ 
-                                                fontSize: '11px', 
-                                                fontWeight: 800, 
-                                                color: 'var(--primary-blue)', 
-                                                backgroundColor: 'rgba(29, 155, 240, 0.1)', 
-                                                padding: '4px 8px', 
-                                                borderRadius: '6px'
-                                            }}>
-                                                {getStageLabel(detailProject.developmentStage)}
-                                            </div>
-                                            <span 
-                                                style={{
-                                                    backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}25`,
-                                                    color: STATUS_COLORS[detailProject.status || 'Draft'],
-                                                    border: `1px solid ${STATUS_COLORS[detailProject.status || 'Draft']}40`,
-                                                    padding: '4px 12px',
-                                                    borderRadius: '6px',
-                                                    fontWeight: 700,
-                                                    fontSize: '12px',
-                                                }}
-                                            >
-                                                {STATUS_LABELS[detailProject.status || 'Draft'] || 'Bản nháp'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* --- Mobile Fixed Header (When NO image exists) --- */}
-                                {isMobile && !detailProject.projectImageUrl && (
-                                    <div className={`${styles.mobileFixedHeader} ${styles.mobileOnly}`} style={{ 
-                                        flexDirection: 'row', 
-                                        alignItems: 'center', 
-                                        justifyContent: 'space-between',
-                                        flexWrap: 'nowrap',
-                                        gap: '12px'
-                                    }}>
-                                        <h3 className={styles.mobileFixedTitle}>{detailProject.projectName}</h3>
-                                        <div className={styles.mobileHeaderRight}>
-                                            <div style={{ 
-                                                fontSize: '11px', 
-                                                fontWeight: 800, 
-                                                color: 'var(--primary-blue)', 
-                                                backgroundColor: 'rgba(29, 155, 240, 0.1)', 
-                                                padding: '4px 8px', 
-                                                borderRadius: '6px',
-                                                whiteSpace: 'nowrap'
-                                            }}>
-                                                {getStageLabel(detailProject.developmentStage)}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div className={styles.modalSplitDesktopBadges}>
+                                                <div style={{
+                                                    fontSize: '11px',
+                                                    fontWeight: 800,
+                                                    color: 'var(--primary-blue)',
+                                                    backgroundColor: 'rgba(29, 155, 240, 0.1)',
+                                                    padding: '4px 8px',
+                                                    borderRadius: '6px'
+                                                }}>
+                                                    {getStageLabel(detailProject.developmentStage)}
+                                                </div>
+                                                <span
+                                                    style={{
+                                                        backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}25`,
+                                                        color: STATUS_COLORS[detailProject.status || 'Draft'],
+                                                        border: `1px solid ${STATUS_COLORS[detailProject.status || 'Draft']}40`,
+                                                        padding: '4px 12px',
+                                                        borderRadius: '6px',
+                                                        fontWeight: 700,
+                                                        fontSize: '12px',
+                                                    }}
+                                                >
+                                                    {STATUS_LABELS[detailProject.status || 'Draft'] || 'Bản nháp'}
+                                                </span>
                                             </div>
                                             <button
-                                                className={styles.modalCloseBtn}
+                                                className={styles.modalCloseBtnInline}
                                                 onClick={() => setShowDetailModal(false)}
-                                                style={{ 
-                                                    position: 'relative', 
-                                                    top: 'auto', 
-                                                    right: 'auto', 
-                                                    width: '36px', 
-                                                    height: '36px', 
-                                                    padding: 0,
-                                                    display: 'flex'
-                                                }}
+                                                title="Đóng"
                                             >
                                                 <X size={18} />
                                             </button>
@@ -1932,23 +2000,14 @@ export default function StartupDashboard({ user }) {
                                     </div>
                                 )}
 
-                                {/* Close Button (Desktop Only toggle in CSS) */}
-                                <button
-                                    className={`${styles.modalCloseBtn} ${styles.desktopOnly}`}
-                                    onClick={() => setShowDetailModal(false)}
-                                    title="Đóng"
-                                >
-                                    <X size={20} />
-                                </button>
-
                                 {/* --- Mobile Hero Section (When image exists) --- */}
                                 {isMobile && detailProject.projectImageUrl && (
                                     <div className={`${styles.mobileHeroSection} ${styles.mobileOnly}`}>
                                         <div className={styles.mobileHeroWrapper} onClick={() => setShowFullscreenImage(true)}>
                                             <img src={detailProject.projectImageUrl} className={styles.mobileHeroImage} alt={detailProject.projectName} />
-                                            
+
                                             {/* Floating Glassy Close Button */}
-                                            <button 
+                                            <button
                                                 className={styles.glassyCloseBtn}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -1989,93 +2048,146 @@ export default function StartupDashboard({ user }) {
                                             gap: '20px'
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(29, 155, 240, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <Zap size={22} color="var(--primary-blue)" fill="var(--primary-blue)" />
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(29, 155, 240, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <Zap size={22} color="var(--primary-blue)" fill="var(--primary-blue)" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 900, color: 'var(--text-primary)' }}>ĐÁNH GIÁ TIỀM NĂNG</h4>
+                                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Cung cấp bởi AISEP</span>
+                                                    </div>
+                                                </div>
+                                                {detailProject.status === 'Draft' && (
+                                                    <button
+                                                        className={styles.primaryBtn}
+                                                        style={{ padding: '8px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: 700 }}
+                                                        onClick={() => handleRunAIEvaluation(detailProject.projectId || detailProject.id)}
+                                                        disabled={isEvaluatingAI && evaluatingProjectId === (detailProject.projectId || detailProject.id)}
+                                                    >
+                                                        {isEvaluatingAI && evaluatingProjectId === (detailProject.projectId || detailProject.id) ? (
+                                                            <><Loader2 className={styles.spinner} size={14} /> Đang phân tích...</>
+                                                        ) : analysisHistory.length > 0 ? 'Phân tích lại' : 'Phân tích ngay'}
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '4px 0' }}>
+                                                {isLoadingHistory ? (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                                                        <Loader2 className={styles.spinner} size={16} /> Đang cập nhật lịch sử...
+                                                    </div>
+                                                ) : analysisHistory.length > 0 ? (
+                                                    analysisHistory.map((item, idx) => (
+                                                        <div key={idx} onClick={() => { setSelectedHistoryResult({ data: item }); setShowHistoryView(true); }} className={styles.scoreCard}>
+                                                            <div className={styles.scoreHeader}>
+                                                                <span className={styles.scoreMainValue}>{item.potentialScore}</span>
+                                                                <span className={styles.scoreMaxLabel}>/100</span>
+                                                            </div>
+                                                            <span className={styles.scoreDate}>
+                                                                {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', {
+                                                                    year: 'numeric',
+                                                                    month: '2-digit',
+                                                                    day: '2-digit',
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit',
+                                                                    second: '2-digit',
+                                                                    hour12: false
+                                                                }) : 'Mới'}
+                                                            </span>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Dự án này chưa có bản phân tích tiềm năng nào.</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
+                                            <div style={{
+                                                marginTop: '16px',
+                                                padding: '20px',
+                                                backgroundColor: 'rgba(244, 33, 46, 0.05)',
+                                                borderRadius: '24px',
+                                                border: '1px solid rgba(244, 33, 46, 0.1)',
+                                                display: 'flex',
+                                                gap: '16px'
+                                            }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(244, 33, 46, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                    <AlertCircle size={22} color="#f4212e" />
                                                 </div>
                                                 <div>
-                                                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 900, color: 'var(--text-primary)' }}>ĐÁNH GIÁ TIỀM NĂNG</h4>
-                                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Cung cấp bởi AISEP</span>
+                                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 900, color: '#f4212e' }}>LÝ DO TỪ CHỐI</h4>
+                                                    <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)' }}>{detailProject.rejectionReason}</p>
                                                 </div>
                                             </div>
-                                            <button 
-                                                className={styles.primaryBtn} 
-                                                style={{ padding: '8px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: 700 }}
-                                                onClick={() => handleRunAIEvaluation(detailProject.projectId || detailProject.id)}
-                                                disabled={isEvaluatingAI && evaluatingProjectId === (detailProject.projectId || detailProject.id)}
-                                            >
-                                                {isEvaluatingAI && evaluatingProjectId === (detailProject.projectId || detailProject.id) ? (
-                                                    <><Loader2 className={styles.spinner} size={14} /> Đang phân tích...</>
-                                                ) : analysisHistory.length > 0 ? 'Phân tích lại' : 'Phân tích ngay'}
-                                            </button>
-                                        </div>
+                                        )}
 
-                                        <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '4px 0' }}>
-                                            {isLoadingHistory ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
-                                                    <Loader2 className={styles.spinner} size={16} /> Đang cập nhật lịch sử...
-                                                </div>
-                                            ) : analysisHistory.length > 0 ? (
-                                                analysisHistory.map((item, idx) => (
-                                                    <div key={idx} onClick={() => { setSelectedHistoryResult({ data: item }); setShowHistoryView(true); }} className={styles.scoreCard}>
-                                                        <div className={styles.scoreHeader}>
-                                                            <span className={styles.scoreMainValue}>{item.potentialScore}</span>
-                                                            <span className={styles.scoreMaxLabel}>/100</span>
+                                        {/* Assigned Advisor Section (Newly added for Approved projects) */}
+                                        {(detailProject.status === 'Approved' || detailProject.status === PROJECT_STATUS.APPROVED) && (
+                                            <div className={styles.advisorSection}>
+                                                <div className={styles.advisorSectionHeader}>
+                                                    <div className={styles.advisorInfoBlock}>
+                                                        <div className={styles.advisorIconWrapper}>
+                                                            <Users size={22} color="#10b981" />
                                                         </div>
-                                                        <span className={styles.scoreDate}>
-                                                            {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', { 
-                                                                year: 'numeric', 
-                                                                month: '2-digit', 
-                                                                day: '2-digit',
-                                                                hour: '2-digit',
-                                                                minute: '2-digit',
-                                                                second: '2-digit',
-                                                                hour12: false
-                                                            }) : 'Mới'}
-                                                        </span>
+                                                        <div>
+                                                            <h4 className={styles.advisorSectionTitle}>CỐ VẤN ĐƯỢC PHÂN CÔNG</h4>
+                                                            <span className={styles.advisorSectionSubtitle}>Hỗ trợ chuyên môn trực tiếp</span>
+                                                        </div>
                                                     </div>
-                                                ))
-                                            ) : (
-                                                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Dự án này chưa có bản phân tích tiềm năng nào.</p>
-                                            )}
-                                        </div>
+                                                </div>
+
+                                                <div className={styles.advisorNames}>
+                                                    {isCheckingBookingEligibility ? (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                                                            <Loader2 className={styles.spinner} size={16} /> Đang kiểm tra phân công...
+                                                        </div>
+                                                    ) : detailProjectAdvisors.length > 0 ? (
+                                                        detailProjectAdvisors.map((adv, idx) => (
+                                                            <div key={idx} className={styles.advisorChip}>
+                                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    <User size={14} color="#10b981" />
+                                                                </div>
+                                                                <span>{adv.advisorName}</span>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Dự án đang trong quá trình phân công cố vấn phù hợp.</p>
+                                                    )}
+                                                </div>
+
+                                                {canBookDetailProject && detailProjectAdvisors.length > 0 && (
+                                                    <div className={styles.advisorActionRow}>
+                                                        <button
+                                                            className={`${styles.primaryBtn} ${styles.advisorBookingBtn}`}
+                                                            onClick={() => {
+                                                                setBookingInitialAdvisorId(detailProjectAdvisors[0].advisorId);
+                                                                setShowBookingWizard(true);
+                                                            }}
+                                                        >
+                                                            <Calendar size={14} style={{ marginRight: '6px' }} />
+                                                            Đặt lịch ngay
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
-                                        <div style={{
-                                            marginTop: '16px',
-                                            padding: '20px',
-                                            backgroundColor: 'rgba(244, 33, 46, 0.05)',
-                                            borderRadius: '24px',
-                                            border: '1px solid rgba(244, 33, 46, 0.1)',
-                                            display: 'flex',
-                                            gap: '16px'
-                                        }}>
-                                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(244, 33, 46, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                <AlertCircle size={22} color="#f4212e" />
-                                            </div>
-                                            <div>
-                                                <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 900, color: '#f4212e' }}>LÝ DO TỪ CHỐI</h4>
-                                                <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)' }}>{detailProject.rejectionReason}</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Detailed Project Information Sections */}
+                                    {/* Detailed Project Information Sections */}
                                     {/* Section 1: Basic Info */}
-                                    <section>
+                                    <section className={styles.projectDetailSection}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                                             <div style={{ width: '4px', height: '24px', backgroundColor: 'var(--primary-blue)', borderRadius: '4px' }} />
                                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>1. THÔNG TIN CỐT LÕI</h3>
                                         </div>
-                                        
+
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                                             <div>
                                                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.05em' }}>Mô tả dự án</label>
                                                 <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.8 }}>{detailProject.shortDescription}</p>
                                             </div>
-                                            
+
                                             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '32px' }}>
                                                 <div>
                                                     <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.05em' }}>Giai đoạn dự án</label>
@@ -2103,7 +2215,7 @@ export default function StartupDashboard({ user }) {
                                     </section>
 
                                     {/* Section 2: Market & Finance */}
-                                    <section>
+                                    <section className={styles.projectDetailSection}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                                             <div style={{ width: '4px', height: '24px', backgroundColor: '#10b981', borderRadius: '4px' }} />
                                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>2. THỊ TRƯỜNG & TÀI CHÍNH</h3>
@@ -2135,7 +2247,7 @@ export default function StartupDashboard({ user }) {
                                     </section>
 
                                     {/* Section 3: Team */}
-                                    <section>
+                                    <section className={styles.projectDetailSection}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                                             <div style={{ width: '4px', height: '24px', backgroundColor: '#f59e0b', borderRadius: '4px' }} />
                                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>3. ĐỘI NGŨ SÁNG LẬP</h3>
@@ -2162,7 +2274,7 @@ export default function StartupDashboard({ user }) {
                                     </section>
 
                                     {/* Section 4: Competition [NEW] */}
-                                    <section>
+                                    <section className={styles.projectDetailSection}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                                             <div style={{ width: '4px', height: '24px', backgroundColor: '#f43f5e', borderRadius: '4px' }} />
                                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>4. CẠNH TRANH</h3>
@@ -2180,472 +2292,486 @@ export default function StartupDashboard({ user }) {
                                         </div>
                                     </section>
 
-                                    <section>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                                    <div style={{ width: '4px', height: '24px', backgroundColor: 'var(--primary-blue)', borderRadius: '4px' }} />
-                                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>5. TÀI LIỆU DỰ ÁN</h3>
-                                </div>
+                                    <section className={styles.projectDetailSection}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                                            <div style={{ width: '4px', height: '24px', backgroundColor: 'var(--primary-blue)', borderRadius: '4px' }} />
+                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>5. TÀI LIỆU DỰ ÁN</h3>
+                                        </div>
 
-                                {/* Upload Section */}
-                                <div
-                                    className={`${styles.dropzone} ${dragActive ? styles.dragActive : ''} ${(detailProject.status !== 'Draft') ? styles.disabledDropzone : ''}`}
-                                    onDragEnter={(e) => {
-                                        if (detailProject.status !== 'Draft') return;
-                                        e.preventDefault();
-                                        setDragActive(true);
-                                    }}
-                                    onDragLeave={(e) => {
-                                        if (detailProject.status !== 'Draft') return;
-                                        e.preventDefault();
-                                        setDragActive(false);
-                                    }}
-                                    onDragOver={(e) => {
-                                        if (detailProject.status !== 'Draft') return;
-                                        e.preventDefault();
-                                        setDragActive(true);
-                                    }}
-                                    onDrop={(e) => {
-                                        if (detailProject.status !== 'Draft') return;
-                                        e.preventDefault();
-                                        setDragActive(false);
-                                        handleDrop(e);
-                                    }}
-                                    style={{
-                                        opacity: (detailProject.status !== 'Draft') ? 0.6 : 1,
-                                        cursor: (detailProject.status !== 'Draft') ? 'not-allowed' : 'pointer',
-                                        position: 'relative'
-                                    }}
-                                    title={detailProject.status !== 'Draft' ? 'Bạn chỉ có thể tải lên tài liệu khi dự án ở trạng thái Nháp' : ''}
-                                >
-                                    {detailProject.status !== 'Draft' && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            right: 0,
-                                            bottom: 0,
-                                            zIndex: 2,
-                                            backgroundColor: 'rgba(255,255,255,0.05)'
-                                        }} />
-                                    )}
-                                    <div className={styles.uploadControls}>
-                                        <div className={styles.uploadInfo}>
-                                            <Upload size={24} className={styles.uploadIcon} />
-                                            <div>
-                                                <p className={styles.uploadTitle}>Tải lên tài liệu mới</p>
-                                                <p className={styles.uploadSubtitle}>Kéo thả hoặc click để chọn file (PDF, Docx, Image)</p>
+                                        {/* Upload Section */}
+                                        <div
+                                            className={`${styles.dropzone} ${dragActive ? styles.dragActive : ''} ${(detailProject.status !== 'Draft') ? styles.disabledDropzone : ''}`}
+                                            onDragEnter={(e) => {
+                                                if (detailProject.status !== 'Draft') return;
+                                                e.preventDefault();
+                                                setDragActive(true);
+                                            }}
+                                            onDragLeave={(e) => {
+                                                if (detailProject.status !== 'Draft') return;
+                                                e.preventDefault();
+                                                setDragActive(false);
+                                            }}
+                                            onDragOver={(e) => {
+                                                if (detailProject.status !== 'Draft') return;
+                                                e.preventDefault();
+                                                setDragActive(true);
+                                            }}
+                                            onDrop={(e) => {
+                                                if (detailProject.status !== 'Draft') return;
+                                                e.preventDefault();
+                                                setDragActive(false);
+                                                handleDrop(e);
+                                            }}
+                                            style={{
+                                                opacity: (detailProject.status !== 'Draft') ? 0.6 : 1,
+                                                cursor: (detailProject.status !== 'Draft') ? 'not-allowed' : 'pointer',
+                                                position: 'relative'
+                                            }}
+                                            title={detailProject.status !== 'Draft' ? 'Bạn chỉ có thể tải lên tài liệu khi dự án ở trạng thái Nháp' : ''}
+                                        >
+                                            {detailProject.status !== 'Draft' && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    bottom: 0,
+                                                    zIndex: 2,
+                                                    backgroundColor: 'rgba(255,255,255,0.05)'
+                                                }} />
+                                            )}
+                                            <div className={styles.uploadControls}>
+                                                <div className={styles.uploadInfo}>
+                                                    <Upload size={24} className={styles.uploadIcon} />
+                                                    <div>
+                                                        <p className={styles.uploadTitle}>Tải lên tài liệu mới</p>
+                                                        <p className={styles.uploadSubtitle}>Kéo thả hoặc click để chọn file (PDF, Docx, Image)</p>
+                                                    </div>
+                                                </div>
+                                                <div className={styles.uploadActions}>
+                                                    <select
+                                                        className={styles.selectSmall}
+                                                        value={documentType}
+                                                        onChange={(e) => setDocumentType(e.target.value)}
+                                                        disabled={detailProject.status !== 'Draft'}
+                                                    >
+                                                        <option value="PitchDeck">Pitch Deck</option>
+                                                        <option value="BusinessPlan">Kế hoạch kinh doanh</option>
+                                                        <option value="Other">Khác</option>
+                                                    </select>
+                                                    <button
+                                                        className={styles.uploadBtn}
+                                                        onClick={() => hiddenFileInput.current.click()}
+                                                        disabled={isUploading || detailProject.status !== 'Draft'}
+                                                    >
+                                                        {isUploading ? 'Đang tải...' : 'Chọn file'}
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className={styles.uploadActions}>
-                                            <select
-                                                className={styles.selectSmall}
-                                                value={documentType}
-                                                onChange={(e) => setDocumentType(e.target.value)}
+                                            <input
+                                                type="file"
+                                                ref={hiddenFileInput}
+                                                onChange={handleFileChange}
+                                                style={{ display: 'none' }}
                                                 disabled={detailProject.status !== 'Draft'}
-                                            >
-                                                <option value="PitchDeck">Pitch Deck</option>
-                                                <option value="BusinessPlan">Kế hoạch kinh doanh</option>
-                                                <option value="Other">Khác</option>
-                                            </select>
-                                            <button
-                                                className={styles.uploadBtn}
-                                                onClick={() => hiddenFileInput.current.click()}
-                                                disabled={isUploading || detailProject.status !== 'Draft'}
-                                            >
-                                                {isUploading ? 'Đang tải...' : 'Chọn file'}
-                                            </button>
+                                            />
                                         </div>
-                                    </div>
-                                    <input
-                                        type="file"
-                                        ref={hiddenFileInput}
-                                        onChange={handleFileChange}
-                                        style={{ display: 'none' }}
-                                        disabled={detailProject.status !== 'Draft'}
-                                    />
-                                </div>
 
-                                {/* Documents List */}
-                                <div className={styles.docsList} style={{ marginTop: '20px' }}>
-                                    {isLoadingDocuments ? (
-                                        <div className={styles.loadingState}>
-                                            <Loader2 className={styles.spinner} size={24} />
-                                            <span>Đang tải tài liệu...</span>
-                                        </div>
-                                    ) : documents.length === 0 ? (
-                                        <div className={styles.emptyDocs}>
-                                            <p>Chưa có tài liệu nào được tải lên cho dự án này.</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {/* Desktop Table View */}
-                                            <div className={`${styles.tableWrapper} ${styles.desktopOnly}`}>
-                                                <table className={styles.docsTable}>
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Tên tài liệu</th>
-                                                            <th>Loại</th>
-                                                            <th>Ngày tải</th>
-                                                            <th>Xác thực</th>
-                                                            <th>Thao tác</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {documents.map((doc) => (
-                                                            <tr key={doc.id}>
-                                                                <td>
-                                                                    <div className={styles.docNameCell}>
-                                                                        <FileText size={16} />
-                                                                        <span title={doc.fullName}>{doc.name}</span>
+                                        {/* Documents List */}
+                                        <div className={styles.docsList} style={{ marginTop: '20px' }}>
+                                            {isLoadingDocuments ? (
+                                                <div className={styles.loadingState}>
+                                                    <Loader2 className={styles.spinner} size={24} />
+                                                    <span>Đang tải tài liệu...</span>
+                                                </div>
+                                            ) : documents.length === 0 ? (
+                                                <div className={styles.emptyDocs}>
+                                                    <p>Chưa có tài liệu nào được tải lên cho dự án này.</p>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    {/* Desktop Table View */}
+                                                    <div className={`${styles.tableWrapper} ${styles.desktopOnly}`}>
+                                                        <table className={styles.docsTable}>
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Tên tài liệu</th>
+                                                                    <th>Loại</th>
+                                                                    <th>Ngày tải</th>
+                                                                    <th>Xác thực</th>
+                                                                    <th>Thao tác</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {documents.map((doc) => (
+                                                                    <tr key={doc.id}>
+                                                                        <td>
+                                                                            <div className={styles.docNameCell}>
+                                                                                <FileText size={16} />
+                                                                                <span title={doc.fullName}>{doc.name}</span>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td>{doc.type}</td>
+                                                                        <td>{doc.uploadDate}</td>
+                                                                        <td>
+                                                                            {(() => {
+                                                                                const verification = blockchainVerifications[doc.id];
+                                                                                const status = verification?.status || (doc.txHash ? 'verified' : 'loading');
+
+                                                                                if (status === 'loading') {
+                                                                                    return (
+                                                                                        <span className={`${styles.statusBadge} ${styles.statusBadgeLoading}`}>
+                                                                                            <Loader2 size={12} className={styles.spinner} />
+                                                                                            Xác thực...
+                                                                                        </span>
+                                                                                    );
+                                                                                }
+
+                                                                                if (status === 'verified') {
+                                                                                    return (
+                                                                                        <span className={styles.statusBadge}>
+                                                                                            <Shield size={12} />
+                                                                                            Blockchain
+                                                                                        </span>
+                                                                                    );
+                                                                                }
+
+                                                                                return (
+                                                                                    <span className={`${styles.statusBadge} ${styles.statusBadgeUnverified}`}>
+                                                                                        <Shield size={12} />
+                                                                                        Chưa nộp
+                                                                                    </span>
+                                                                                );
+                                                                            })()}
+                                                                        </td>
+                                                                        <td>
+                                                                            <div className={styles.tableActions}>
+                                                                                <button
+                                                                                    className={styles.iconBtn}
+                                                                                    title="Xem"
+                                                                                    onClick={() => window.open(doc.url, '_blank')}
+                                                                                >
+                                                                                    <ExternalLink size={16} />
+                                                                                </button>
+                                                                                <button
+                                                                                    className={styles.iconBtn}
+                                                                                    title="Xác thực"
+                                                                                    onClick={() => handleVerifyDocument(doc.id, doc.fullName, doc.txHash)}
+                                                                                    disabled={verifyingDocId !== null}
+                                                                                >
+                                                                                    {verifyingDocId === doc.id ? (
+                                                                                        <Loader2 size={16} className={styles.spinner} />
+                                                                                    ) : (
+                                                                                        <Shield size={16} />
+                                                                                    )}
+                                                                                </button>
+                                                                                <button
+                                                                                    className={styles.iconBtnDanger}
+                                                                                    title="Xóa"
+                                                                                    onClick={() => handleDeleteDocument(doc)}
+                                                                                    disabled={detailProject.status !== 'Draft' || isDeletingDocument}
+                                                                                    style={{
+                                                                                        opacity: (detailProject.status !== 'Draft' || isDeletingDocument) ? 0.5 : 1,
+                                                                                        cursor: (detailProject.status !== 'Draft' || isDeletingDocument) ? 'not-allowed' : 'pointer'
+                                                                                    }}
+                                                                                >
+                                                                                    {isDeletingDocument && documentToDelete?.id === doc.id ? (
+                                                                                        <Loader2 size={16} className={styles.spinner} />
+                                                                                    ) : (
+                                                                                        <Trash2 size={16} />
+                                                                                    )}
+                                                                                </button>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+
+                                                    {/* Mobile Card View */}
+                                                    <div className={`${styles.mobileDocsList} ${styles.mobileOnly}`}>
+                                                        {documents.map((doc) => {
+                                                            const verification = blockchainVerifications[doc.id];
+                                                            const status = verification?.status || (doc.txHash ? 'verified' : 'loading');
+
+                                                            return (
+                                                                <div key={doc.id} className={styles.docCard}>
+                                                                    <div className={styles.docCardHeader}>
+                                                                        <FileText size={18} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
+                                                                        <span className={styles.docCardTitle} title={doc.fullName}>
+                                                                            {doc.name}
+                                                                        </span>
                                                                     </div>
-                                                                </td>
-                                                                <td>{doc.type}</td>
-                                                                <td>{doc.uploadDate}</td>
-                                                                <td>
-                                                                    {(() => {
-                                                                        const verification = blockchainVerifications[doc.id];
-                                                                        const status = verification?.status || (doc.txHash ? 'verified' : 'loading');
 
-                                                                        if (status === 'loading') {
-                                                                            return (
-                                                                                <span className={`${styles.statusBadge} ${styles.statusBadgeLoading}`}>
-                                                                                    <Loader2 size={12} className={styles.spinner} />
-                                                                                    Xác thực...
-                                                                                </span>
-                                                                            );
-                                                                        }
+                                                                    <div className={styles.docCardMeta}>
+                                                                        <span className={styles.docCardBadge} style={{
+                                                                            backgroundColor: 'rgba(29, 155, 240, 0.1)',
+                                                                            color: 'var(--primary-blue)'
+                                                                        }}>
+                                                                            {doc.type}
+                                                                        </span>
 
-                                                                        if (status === 'verified') {
-                                                                            return (
-                                                                                <span className={styles.statusBadge}>
-                                                                                    <Shield size={12} />
-                                                                                    Blockchain
-                                                                                </span>
-                                                                            );
-                                                                        }
-
-                                                                        return (
-                                                                            <span className={`${styles.statusBadge} ${styles.statusBadgeUnverified}`}>
-                                                                                <Shield size={12} />
+                                                                        {status === 'loading' ? (
+                                                                            <span className={`${styles.docCardBadge} ${styles.statusBadgeLoading}`}>
+                                                                                <Loader2 size={10} className={styles.spinner} />
+                                                                                Xác thực...
+                                                                            </span>
+                                                                        ) : status === 'verified' ? (
+                                                                            <span className={`${styles.docCardBadge}`} style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+                                                                                <Shield size={10} style={{ marginRight: '4px' }} />
+                                                                                Blockchain
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className={`${styles.docCardBadge}`} style={{ backgroundColor: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e' }}>
+                                                                                <Shield size={10} style={{ marginRight: '4px' }} />
                                                                                 Chưa nộp
                                                                             </span>
-                                                                        );
-                                                                    })()}
-                                                                </td>
-                                                                <td>
-                                                                    <div className={styles.tableActions}>
+                                                                        )}
+
+                                                                        <span className={styles.docCardDate}>{doc.uploadDate}</span>
+                                                                    </div>
+
+                                                                    <div className={styles.docCardActions}>
                                                                         <button
-                                                                            className={styles.iconBtn}
-                                                                            title="Xem"
+                                                                            className={`${styles.docActionBtn} ${styles.viewBtn}`}
                                                                             onClick={() => window.open(doc.url, '_blank')}
                                                                         >
-                                                                            <ExternalLink size={16} />
+                                                                            <ExternalLink size={14} />
+                                                                            Xem
                                                                         </button>
+
                                                                         <button
-                                                                            className={styles.iconBtn}
-                                                                            title="Xác thực"
+                                                                            className={`${styles.docActionBtn} ${styles.viewBtn}`}
+                                                                            style={{ color: 'var(--text-primary)', border: '1px solid var(--border-color)', backgroundColor: 'transparent' }}
                                                                             onClick={() => handleVerifyDocument(doc.id, doc.fullName, doc.txHash)}
                                                                             disabled={verifyingDocId !== null}
                                                                         >
                                                                             {verifyingDocId === doc.id ? (
-                                                                                <Loader2 size={16} className={styles.spinner} />
+                                                                                <Loader2 size={14} className={styles.spinner} />
                                                                             ) : (
-                                                                                <Shield size={16} />
+                                                                                <Shield size={14} />
                                                                             )}
+                                                                            Xác thực
                                                                         </button>
+
                                                                         <button
-                                                                            className={styles.iconBtnDanger}
-                                                                            title="Xóa"
+                                                                            className={`${styles.docActionBtn} ${styles.deleteBtn}`}
                                                                             onClick={() => handleDeleteDocument(doc)}
                                                                             disabled={detailProject.status !== 'Draft' || isDeletingDocument}
                                                                             style={{
-                                                                                opacity: (detailProject.status !== 'Draft' || isDeletingDocument) ? 0.5 : 1,
-                                                                                cursor: (detailProject.status !== 'Draft' || isDeletingDocument) ? 'not-allowed' : 'pointer'
+                                                                                opacity: (detailProject.status !== 'Draft' || isDeletingDocument) ? 0.5 : 1
                                                                             }}
                                                                         >
                                                                             {isDeletingDocument && documentToDelete?.id === doc.id ? (
-                                                                                <Loader2 size={16} className={styles.spinner} />
+                                                                                <Loader2 size={14} className={styles.spinner} />
                                                                             ) : (
-                                                                                <Trash2 size={16} />
+                                                                                <Trash2 size={14} />
                                                                             )}
+                                                                            Xóa
                                                                         </button>
                                                                     </div>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </section>
+                                </div> {/* end of gap: 48px wrapper */}
+                            </div> {/* end of modalSplitContentArea */}
+                        </div> {/* end of modalSplitWrapper */}
 
-                                            {/* Mobile Card View */}
-                                            <div className={`${styles.mobileDocsList} ${styles.mobileOnly}`}>
-                                                {documents.map((doc) => {
-                                                    const verification = blockchainVerifications[doc.id];
-                                                    const status = verification?.status || (doc.txHash ? 'verified' : 'loading');
-
-                                                    return (
-                                                        <div key={doc.id} className={styles.docCard}>
-                                                            <div className={styles.docCardHeader}>
-                                                                <FileText size={18} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
-                                                                <span className={styles.docCardTitle} title={doc.fullName}>
-                                                                    {doc.name}
-                                                                </span>
-                                                            </div>
-
-                                                            <div className={styles.docCardMeta}>
-                                                                <span className={styles.docCardBadge} style={{ 
-                                                                    backgroundColor: 'rgba(29, 155, 240, 0.1)', 
-                                                                    color: 'var(--primary-blue)' 
-                                                                }}>
-                                                                    {doc.type}
-                                                                </span>
-
-                                                                {status === 'loading' ? (
-                                                                    <span className={`${styles.docCardBadge} ${styles.statusBadgeLoading}`}>
-                                                                        <Loader2 size={10} className={styles.spinner} />
-                                                                        Xác thực...
-                                                                    </span>
-                                                                ) : status === 'verified' ? (
-                                                                    <span className={`${styles.docCardBadge}`} style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                                                                        <Shield size={10} style={{ marginRight: '4px' }} />
-                                                                        Blockchain
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className={`${styles.docCardBadge}`} style={{ backgroundColor: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e' }}>
-                                                                        <Shield size={10} style={{ marginRight: '4px' }} />
-                                                                        Chưa nộp
-                                                                    </span>
-                                                                )}
-                                                                
-                                                                <span className={styles.docCardDate}>{doc.uploadDate}</span>
-                                                            </div>
-
-                                                            <div className={styles.docCardActions}>
-                                                                <button
-                                                                    className={`${styles.docActionBtn} ${styles.viewBtn}`}
-                                                                    onClick={() => window.open(doc.url, '_blank')}
-                                                                >
-                                                                    <ExternalLink size={14} />
-                                                                    Xem
-                                                                </button>
-                                                                
-                                                                <button
-                                                                    className={`${styles.docActionBtn} ${styles.viewBtn}`}
-                                                                    style={{ color: 'var(--text-primary)', border: '1px solid var(--border-color)', backgroundColor: 'transparent' }}
-                                                                    onClick={() => handleVerifyDocument(doc.id, doc.fullName, doc.txHash)}
-                                                                    disabled={verifyingDocId !== null}
-                                                                >
-                                                                    {verifyingDocId === doc.id ? (
-                                                                        <Loader2 size={14} className={styles.spinner} />
-                                                                    ) : (
-                                                                        <Shield size={14} />
-                                                                    )}
-                                                                    Xác thực
-                                                                </button>
-
-                                                                <button
-                                                                    className={`${styles.docActionBtn} ${styles.deleteBtn}`}
-                                                                    onClick={() => handleDeleteDocument(doc)}
-                                                                    disabled={detailProject.status !== 'Draft' || isDeletingDocument}
-                                                                    style={{
-                                                                        opacity: (detailProject.status !== 'Draft' || isDeletingDocument) ? 0.5 : 1
-                                                                    }}
-                                                                >
-                                                                    {isDeletingDocument && documentToDelete?.id === doc.id ? (
-                                                                        <Loader2 size={14} className={styles.spinner} />
-                                                                    ) : (
-                                                                        <Trash2 size={14} />
-                                                                    )}
-                                                                    Xóa
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </section>
-                        </div> {/* end of gap: 48px wrapper */}
-                    </div> {/* end of modalSplitContentArea */}
-                </div> {/* end of modalSplitWrapper */}
-
-                {/* Fixed Action Footer (Available on both Desktop & Mobile) */}
-                <div className={styles.stickyActions}>
-                    {detailProject.status === 'Draft' && (
-                        <button
-                            className={styles.primaryBtn}
-                            style={{ flex: '2', borderRadius: '9999px' }}
-                            onClick={() => {
-                                handleSubmitProject(detailProject.projectId || detailProject.id);
-                            }}
-                            disabled={isSubmittingProject}
-                        >
-                            {isSubmittingProject && submittingProjectId === (detailProject.projectId || detailProject.id) ? '...' : 'Nộp dự án'}
-                        </button>
-                    )}
-                    {(detailProject.status === 'Draft' || detailProject.status === 'Rejected') && (
-                        <button
-                            className={styles.secondaryBtn}
-                            style={{ flex: '1', borderRadius: '9999px', borderColor: 'var(--primary-blue)', color: 'var(--primary-blue)' }}
-                            onClick={() => {
-                                setShowDetailModal(false);
-                                setShowProjectForm(true);
-                            }}
-                        >
-                            Chỉnh sửa
-                        </button>
-                    )}
-                    <button
-                        className={styles.secondaryBtn}
-                        style={{ flex: '1', borderRadius: '9999px' }}
-                        onClick={() => setShowDetailModal(false)}
-                    >
-                        Đóng
-                    </button>
+                        {/* Fixed Action Footer (Available on both Desktop & Mobile) */}
+                        <div className={styles.stickyActions}>
+                            {detailProject.status === 'Draft' && (
+                                <button
+                                    className={styles.primaryBtn}
+                                    style={{ flex: '2', borderRadius: '9999px' }}
+                                    onClick={() => {
+                                        handleSubmitProject(detailProject.projectId || detailProject.id);
+                                    }}
+                                    disabled={isSubmittingProject}
+                                >
+                                    {isSubmittingProject && submittingProjectId === (detailProject.projectId || detailProject.id) ? '...' : 'Nộp dự án'}
+                                </button>
+                            )}
+                            {(detailProject.status === 'Draft' || detailProject.status === 'Rejected') && (
+                                <button
+                                    className={styles.secondaryBtn}
+                                    style={{ flex: '1', borderRadius: '9999px', borderColor: 'var(--primary-blue)', color: 'var(--primary-blue)' }}
+                                    onClick={() => {
+                                        setShowDetailModal(false);
+                                        setShowProjectForm(true);
+                                    }}
+                                >
+                                    Chỉnh sửa
+                                </button>
+                            )}
+                            <button
+                                className={styles.secondaryBtn}
+                                style={{ flex: '1', borderRadius: '9999px' }}
+                                onClick={() => setShowDetailModal(false)}
+                            >
+                                Đóng
+                            </button>
+                        </div>
+                    </div> {/* end of modalContent */}
                 </div>
-            </div> {/* end of modalContent */}
-        </div>
-    )}
+            )}
 
-    {showSuccessModal && (
-        <SuccessModal
-            onClose={() => setShowSuccessModal(false)}
-            title={successTitle || "Thông báo"}
-            message={successMessage}
-            primaryBtnText={successPrimaryBtn}
-            secondaryBtnText={successSecondaryBtn}
-            onSecondaryClick={onSuccessSecondaryClick}
-            type={successModalType}
-        />
-    )}
-
-    {showProjectForm && (
-        <ProjectSubmissionForm
-            onClose={() => setShowProjectForm(false)}
-            initialData={detailProject}
-            onSuccess={async () => {
-                // Reload projects first
-                const response = await projectSubmissionService.getMyProjects();
-                if (response.success && response.data) {
-                    setMyProjects(Array.isArray(response.data) ? response.data : (response.data.items || []));
-                }
-
-                // For create: keep form open to show success modal with dashboard button
-                // For edit: close form immediately
-                if (detailProject) {  // This means it's an edit
-                    setShowProjectForm(false);
-                    setSuccessMessage('Cập nhật dự án thành công. Dự án đã trở về trạng thái Bản nháp.');
-                    setShowSuccessModal(true);
-                }
-                // For create (detailProject is null), don't close form so success modal can show
-            }}
-            user={user}
-        />
-    )}
-
-    {showAIEvaluationModal && (
-        <AIEvaluationModal
-            isOpen={showAIEvaluationModal}
-            analysisResult={aiEvaluationResult?.analysis}
-            eligibilityResult={aiEvaluationResult?.eligibility}
-            isLoading={isEvaluatingAI}
-            error={aiEvaluationError}
-            projectName={myProjects.find(p => (p.id || p.projectId) === aiEvaluationResult?.projectId)?.projectName || 'Dự án'}
-            isEvaluationOnly={true}
-            onSubmit={handleSaveAIResults}
-            onCancel={handleCancelAIEvaluation}
-        />
-    )}
-
-    {showVerificationModal && (
-        <BlockchainVerificationModal
-            isOpen={showVerificationModal}
-            onClose={() => setShowVerificationModal(false)}
-            verificationData={verificationData}
-            documentName={verificationDocumentName}
-        />
-    )}
-
-    <ConfirmationModal
-        isOpen={showSubmitConfirmation}
-        type="info"
-        title="Nộp dự án"
-        message="Bạn có chắc chắn muốn nộp dự án này để được xem xét?"
-        primaryBtnText="Nộp"
-        secondaryBtnText="Hủy"
-        isLoading={isSubmittingProject}
-        onPrimaryClick={handleConfirmSubmit}
-        onSecondaryClick={() => {
-            setShowSubmitConfirmation(false);
-            setPendingSubmitProjectId(null);
-        }}
-    />
-
-    <ConfirmationModal
-        isOpen={showDeleteConfirm}
-        title="Xác nhận xóa tài liệu"
-        message={`Bạn có chắc chắn muốn xóa tài liệu "${documentToDelete?.name}"? Hành động này không thể hoàn tác. Bạn sẽ không thể tải lại tệp này lên hệ thống nếu tệp đã được xác thực với Blockchain.`}
-        type="warning"
-        primaryBtnText={isDeletingDocument ? "Đang xóa..." : "Xóa tài liệu"}
-        secondaryBtnText="Hủy"
-        onPrimaryClick={confirmDeleteDocument}
-        onSecondaryClick={() => {
-            setShowDeleteConfirm(false);
-            setDocumentToDelete(null);
-        }}
-        isLoading={isDeletingDocument}
-    />
-
-    {showHistoryView && selectedHistoryResult && (
-        <AIEvaluationModal
-            isOpen={showHistoryView}
-            analysisResult={selectedHistoryResult}
-            isLoading={false}
-            isHistoryMode={true}
-            projectName={detailProject?.projectName || 'Dự án'}
-            onCancel={() => {
-                setShowHistoryView(false);
-                setSelectedHistoryResult(null);
-            }}
-        />
-    )}
-
-    {showFullscreenImage && detailProject?.projectImageUrl && (
-        <div 
-            className={styles.imageLightbox}
-            onClick={() => setShowFullscreenImage(false)}
-        >
-            <div className={styles.lightboxOverlay} />
-            <button 
-                className={styles.lightboxClose}
-                onClick={() => setShowFullscreenImage(false)}
-                title="Đóng"
-            >
-                <X size={32} />
-            </button>
-            <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
-                <img 
-                    src={detailProject.projectImageUrl} 
-                    alt={detailProject.projectName} 
-                    className={styles.lightboxImage}
+            {showSuccessModal && (
+                <SuccessModal
+                    onClose={() => setShowSuccessModal(false)}
+                    title={successTitle || "Thông báo"}
+                    message={successMessage}
+                    primaryBtnText={successPrimaryBtn}
+                    secondaryBtnText={successSecondaryBtn}
+                    onSecondaryClick={onSuccessSecondaryClick}
+                    type={successModalType}
                 />
-                <div className={styles.lightboxCaption}>
-                    <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 900 }}>{detailProject.projectName}</h3>
-                    <p style={{ margin: '4px 0 0 0', opacity: 0.8, fontSize: '14px', fontWeight: 700 }}>{STATUS_LABELS[detailProject.status || 'Draft']}</p>
-                </div>
-            </div>
-        </div>
-    )}
+            )}
 
-    <FloatingChatWidget
-        chatSessionId={activeChatSession?.chatSessionId}
-        displayName={activeChatSession?.displayName}
-        currentUserId={user?.userId}
-        sentTime={activeChatSession?.sentTime}
-        onClose={handleCloseChatWindow}
-    />
-            </div>
+            {showProjectForm && (
+                <ProjectSubmissionForm
+                    onClose={() => setShowProjectForm(false)}
+                    initialData={detailProject}
+                    onSuccess={async () => {
+                        // Reload projects first
+                        const response = await projectSubmissionService.getMyProjects();
+                        if (response.success && response.data) {
+                            setMyProjects(Array.isArray(response.data) ? response.data : (response.data.items || []));
+                        }
+
+                        // For create: keep form open to show success modal with dashboard button
+                        // For edit: close form immediately
+                        if (detailProject) {  // This means it's an edit
+                            setShowProjectForm(false);
+                            setSuccessMessage('Cập nhật dự án thành công. Dự án đã trở về trạng thái Bản nháp.');
+                            setShowSuccessModal(true);
+                        }
+                        // For create (detailProject is null), don't close form so success modal can show
+                    }}
+                    user={user}
+                />
+            )}
+
+            {showAIEvaluationModal && (
+                <AIEvaluationModal
+                    isOpen={showAIEvaluationModal}
+                    analysisResult={aiEvaluationResult?.analysis}
+                    eligibilityResult={aiEvaluationResult?.eligibility}
+                    isLoading={isEvaluatingAI}
+                    error={aiEvaluationError}
+                    projectName={myProjects.find(p => (p.id || p.projectId) === aiEvaluationResult?.projectId)?.projectName || 'Dự án'}
+                    isEvaluationOnly={true}
+                    onSubmit={handleSaveAIResults}
+                    onCancel={handleCancelAIEvaluation}
+                />
+            )}
+
+            {showVerificationModal && (
+                <BlockchainVerificationModal
+                    isOpen={showVerificationModal}
+                    onClose={() => setShowVerificationModal(false)}
+                    verificationData={verificationData}
+                    documentName={verificationDocumentName}
+                />
+            )}
+            {showSubmitConfirmation && (
+                <ConfirmationModal
+                    isOpen={showSubmitConfirmation}
+                    title="Xác nhận nộp dự án"
+                    message="Dự án của bạn sẽ được gửi tới Ban quản trị để xét duyệt. Bạn sẽ không thể chỉnh sửa thông tin cho đến khi có kết quả duyệt."
+                    primaryBtnText={isSubmittingProject ? "Đang xử lý..." : "Xác nhận nộp"}
+                    secondaryBtnText="Hủy"
+                    onPrimaryClick={handleConfirmSubmit}
+                    onSecondaryClick={() => {
+                        setShowSubmitConfirmation(false);
+                        setPendingSubmitProjectId(null);
+                    }}
+                    onClose={() => setShowSubmitConfirmation(false)}
+                    type="info"
+                    isLoading={isSubmittingProject}
+                />
+            )}
+
+            {showDeleteConfirm && (
+                <ConfirmationModal
+                    isOpen={showDeleteConfirm}
+                    title="Xác nhận xóa tài liệu"
+                    message={`Bạn có chắc chắn muốn xóa tài liệu "${documentToDelete?.name}"? Hành động này không thể hoàn tác.`}
+                    primaryBtnText={isDeletingDocument ? "Đang xóa..." : "Xóa tài liệu"}
+                    secondaryBtnText="Hủy"
+                    onPrimaryClick={confirmDeleteDocument}
+                    onSecondaryClick={() => {
+                        setShowDeleteConfirm(false);
+                        setDocumentToDelete(null);
+                    }}
+                    onClose={() => setShowDeleteConfirm(false)}
+                    type="error"
+                    isLoading={isDeletingDocument}
+                />
+            )}
+
+            {showHistoryView && selectedHistoryResult && (
+                <AIEvaluationModal
+                    isOpen={showHistoryView}
+                    analysisResult={selectedHistoryResult}
+                    isLoading={false}
+                    isHistoryMode={true}
+                    projectName={detailProject?.projectName || 'Dự án'}
+                    onCancel={() => {
+                        setShowHistoryView(false);
+                        setSelectedHistoryResult(null);
+                    }}
+                />
+            )}
+
+            {showFullscreenImage && detailProject?.projectImageUrl && (
+                <div
+                    className={styles.imageLightbox}
+                    onClick={() => setShowFullscreenImage(false)}
+                >
+                    <div className={styles.lightboxOverlay} />
+                    <button
+                        className={styles.lightboxClose}
+                        onClick={() => setShowFullscreenImage(false)}
+                        title="Đóng"
+                    >
+                        <X size={32} />
+                    </button>
+                    <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
+                        <img
+                            src={detailProject.projectImageUrl}
+                            alt={detailProject.projectName}
+                            className={styles.lightboxImage}
+                        />
+                        <div className={styles.lightboxCaption}>
+                            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 900 }}>{detailProject.projectName}</h3>
+                            <p style={{ margin: '4px 0 0 0', opacity: 0.8, fontSize: '14px', fontWeight: 700 }}>{STATUS_LABELS[detailProject.status || 'Draft']}</p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <FloatingChatWidget
+                chatSessionId={activeChatSession?.chatSessionId}
+                displayName={activeChatSession?.displayName}
+                currentUserId={user?.userId}
+                sentTime={activeChatSession?.sentTime}
+                onClose={handleCloseChatWindow}
+            />
+
+            {showBookingWizard && (
+                <BookingWizard
+                    user={user}
+                    initialProjectId={detailProject?.projectId || detailProject?.id}
+                    initialAdvisorId={bookingInitialAdvisorId}
+                    onClose={() => setShowBookingWizard(false)}
+                />
+            )}
+        </div>
     );
 }

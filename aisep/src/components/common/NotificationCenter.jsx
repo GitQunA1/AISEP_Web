@@ -17,7 +17,9 @@ const NotificationCenter = ({ onOpenChat }) => {
   const loadNotifications = async () => {
     try {
       const response = await notificationService.getNotifications();
-      setNotifications(response);
+      // Safely handle paginated or object-based responses
+      const items = Array.isArray(response) ? response : (response?.items || []);
+      setNotifications(items);
     } catch (error) {
       console.error('Error loading notifications:', error);
     }

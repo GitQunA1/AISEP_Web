@@ -30,21 +30,22 @@ import SuccessModal from '../common/SuccessModal';
  * Handles strictly defined 3-column grid layout (desktop) vs single column (mobile)
  * Locks viewport width/height to prevent scrolling
  */
-function MainLayout({ 
+function MainLayout({
   children,
-  onShowRegister, 
-  onShowLogin, 
-  onShowHome, 
-  onShowAdvisors, 
-  onShowInvestors, 
-  onShowDashboard, 
-  onShowAI, 
-  user, 
-  onLogout, 
-  showAdvisors = false, 
-  showInvestors = false, 
-  showAI = false, 
-  activeView = 'main' 
+  onShowRegister,
+  onShowLogin,
+  onShowHome,
+  onShowAdvisors,
+  onShowInvestors,
+  onShowDashboard,
+  onShowAI,
+  onShowProfile,
+  user,
+  onLogout,
+  showAdvisors = false,
+  showInvestors = false,
+  showAI = false,
+  activeView = 'main'
 }) {
   const [isPremium] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -52,11 +53,10 @@ function MainLayout({
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [selectedAdvisor, setSelectedAdvisor] = useState(null);
   const [showProjectForm, setShowProjectForm] = useState(false);
-  const [hasStartupProfile, setHasStartupProfile] = useState(null); 
+  const [hasStartupProfile, setHasStartupProfile] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
-  
+
   const mainContentRef = useRef(null);
   const homeScrollPos = useRef(0);
   const prevViewRef = useRef({
@@ -70,7 +70,7 @@ function MainLayout({
   useEffect(() => {
     const main = mainContentRef.current;
     const isMobile = window.innerWidth < 1024;
-    
+
     const isDetailView = !!(selectedProjectId || selectedStartupProfileId || selectedAdvisor);
     const wasDetailView = !!(prevViewRef.current.projectId || prevViewRef.current.profileId || prevViewRef.current.advisor);
     const viewChanged = activeView !== prevViewRef.current.activeView;
@@ -104,7 +104,7 @@ function MainLayout({
       // SWITCHING MAIN TABS: Reset scroll and allow animations
       setScroll(0);
       setIsReturning(false);
-      homeScrollPos.current = 0; 
+      homeScrollPos.current = 0;
     }
 
     // Update refs for next change
@@ -144,7 +144,7 @@ function MainLayout({
   const [allStartups, setAllStartups] = useState([]);
   const [filteredStartups, setFilteredStartups] = useState([]);
   const [topRatedStartups, setTopRatedStartups] = useState([]);
-  const [trendingSectors, setTrendingSectors]   = useState([]);
+  const [trendingSectors, setTrendingSectors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isScoresLoading, setIsScoresLoading] = useState(false);
@@ -198,9 +198,9 @@ function MainLayout({
   // Fetch followed projects for investors - runs once and caches the IDs
   useEffect(() => {
     const isInvestor = user && (
-      user.role === 'investor' || 
-      user.role === 'Investor' || 
-      user.role === 1 || 
+      user.role === 'investor' ||
+      user.role === 'Investor' ||
+      user.role === 1 ||
       String(user.role) === '1'
     );
 
@@ -213,7 +213,7 @@ function MainLayout({
       try {
         const response = await followerService.getMyFollowing();
         console.log('[MainLayout] Followed projects response:', response);
-        
+
         let followedProjects = [];
         if (response && response.data) {
           if (response.data.items && Array.isArray(response.data.items)) {
@@ -222,7 +222,7 @@ function MainLayout({
             followedProjects = response.data;
           }
         }
-        
+
         // Extract projectIds into a Set for O(1) lookup
         const ids = new Set(followedProjects.map(p => p.projectId || p.id));
         console.log('[MainLayout] Followed project IDs:', ids);
@@ -239,9 +239,9 @@ function MainLayout({
   // Fetch sent connection requests for investors - runs once and caches the projectIds
   useEffect(() => {
     const isInvestor = user && (
-      user.role === 'investor' || 
-      user.role === 'Investor' || 
-      user.role === 1 || 
+      user.role === 'investor' ||
+      user.role === 'Investor' ||
+      user.role === 1 ||
       String(user.role) === '1'
     );
 
@@ -254,7 +254,7 @@ function MainLayout({
       try {
         const response = await connectionService.getMyConnectionRequests();
         console.log('[MainLayout] Sent connections response:', response);
-        
+
         let requests = [];
         if (response && response.data) {
           if (response.data.items && Array.isArray(response.data.items)) {
@@ -263,7 +263,7 @@ function MainLayout({
             requests = response.data;
           }
         }
-        
+
         // Extract projectIds into a Set for O(1) lookup
         const ids = new Set(requests.map(r => r.projectId));
         console.log('[MainLayout] Sent connection project IDs:', ids);
@@ -293,12 +293,12 @@ function MainLayout({
 
         const startupMap = {};
         const startups = startupsRes?.data?.items || startupsRes?.items || (Array.isArray(startupsRes?.data) ? startupsRes.data : []);
-        
+
         if (startups.length > 0) {
           startups.forEach(s => {
             const name = s.organizationName || s.companyName;
             if (!name) return;
-            
+
             // Map by all possible ID fields to be safe
             if (s.startupId) startupMap[s.startupId] = name;
             if (s.StartupId) startupMap[s.StartupId] = name;
@@ -315,35 +315,36 @@ function MainLayout({
               // Try every possible ID field that backend might use to link project to startup/owner
               const sid = p.startupId || p.StartupId || p.userId || p.UserId || p.ownerId || p.authorId;
               const mappedName = startupMap[sid] || p.startupName || p.organizationName || null;
-              
+
               return {
                 ...p,
                 id: p.projectId,
                 startupId: sid,
-                startupName: mappedName, 
+                startupName: mappedName,
                 name: p.projectName,
-              description: p.shortDescription,
-              stage: p.developmentStage,
-              industry: p.industry,
-              imageUrl: p.projectImageUrl,
-              tags: [], // No tags from new API
-              aiScore: undefined,
-              score: p.startupPotentialScore || undefined,
-              timestamp: new Date().toLocaleDateString('vi-VN'),
-              logo: null,
-              // Full project details
-              problemStatement: p.problemStatement,
-              solutionDescription: p.solutionDescription,
-              targetCustomers: p.targetCustomers,
-              uniqueValueProposition: p.uniqueValueProposition,
-              marketSize: p.marketSize,
-              businessModel: p.businessModel,
-              revenue: p.revenue,
-              competitors: p.competitors,
-              teamMembers: p.teamMembers,
-              teamExperience: p.teamExperience,
-              status: p.status,
-               viewCount: p.viewCount
+                description: p.shortDescription,
+                stage: p.developmentStage,
+                industry: p.industry,
+                imageUrl: p.projectImageUrl,
+                tags: [], // No tags from new API
+                aiScore: p.startupPotentialScore,
+                score: p.startupPotentialScore,
+                timestamp: p.createdAt ? new Date(p.createdAt).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'),
+                createdAt: p.createdAt,
+                logo: null,
+                // Full project details
+                problemStatement: p.problemStatement,
+                solutionDescription: p.solutionDescription,
+                targetCustomers: p.targetCustomers,
+                uniqueValueProposition: p.uniqueValueProposition,
+                marketSize: p.marketSize,
+                businessModel: p.businessModel,
+                revenue: p.revenue,
+                competitors: p.competitors,
+                teamMembers: p.teamMembers,
+                teamExperience: p.teamExperience,
+                status: p.status,
+                viewCount: p.viewCount
               };
             });
 
@@ -361,7 +362,7 @@ function MainLayout({
             }
             return acc;
           }, {});
-          
+
           const trending = Object.entries(industryCounts)
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)
@@ -370,46 +371,13 @@ function MainLayout({
               name: name,
               count: count
             }));
-            
+
           setTrendingSectors(trending);
 
-          // Fetch AI Evaluation History asynchronously to not block the UI (Skip for staff to avoid 403 errors)
-          const fetchScoresAsync = async () => {
-            const roleStr = user?.role?.toString().toLowerCase() || '';
-            const roleNum = Number(user?.role);
-            const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
-            
-            if (isStaff) {
-              console.log('Skipping AI score fetch for staff role');
-              return;
-            }
-
-            setIsScoresLoading(true);
-            const updatedProjects = await Promise.all(publishedProjects.map(async (p) => {
-              try {
-                const historyRes = await AIEvaluationService.getProjectAnalysisHistory(p.id);
-                if (historyRes.success && historyRes.data && historyRes.data.length > 0) {
-                  const finalScore = historyRes.data[0]?.potentialScore || historyRes.data[0]?.startupScore || p.score || null;
-                  return { ...p, aiScore: finalScore, score: finalScore };
-                }
-              } catch (err) {
-                console.error(`Failed to fetch AI history for project ${p.id}`, err);
-              }
-              // If no history exists or fetch failed, set scores to null
-              return { ...p, aiScore: null, score: null };
-            }));
-
-            // Update main lists with new scores
-            setAllStartups(updatedProjects);
-            setFilteredStartups(updatedProjects);
-
-            // Update Top Rated Startups based on aiScore
-            const sortedByScore = [...updatedProjects].filter(p => p.aiScore > 0).sort((a, b) => b.aiScore - a.aiScore);
-            setTopRatedStartups(sortedByScore.slice(0, 3));
-            setIsScoresLoading(false);
-          };
-
-          fetchScoresAsync();
+          // Update Top Rated Startups based on real startupPotentialScore
+          const sortedByScore = [...publishedProjects].filter(p => p.aiScore > 0).sort((a, b) => b.aiScore - a.aiScore);
+          setTopRatedStartups(sortedByScore.slice(0, 3));
+          setIsScoresLoading(false);
 
         } else {
           setFeedError(projectsRes.message || "Không thể tải danh sách dự án.");
@@ -447,7 +415,7 @@ function MainLayout({
   // Combined Filtering Logic
   useEffect(() => {
     const query = searchQuery.toLowerCase().trim();
-    
+
     let filtered = allStartups.filter(startup => {
       // 1. Core Filters (Industry, Stage, Score)
       if (activeFilters.industry && startup.industry !== activeFilters.industry) return false;
@@ -460,7 +428,7 @@ function MainLayout({
         const matchesName = (startup.name || '').toLowerCase().includes(query);
         const matchesDesc = (startup.description || '').toLowerCase().includes(query);
         const matchesTags = (startup.tags || []).some(tag => tag.toLowerCase().includes(query));
-        
+
         if (!matchesName && !matchesDesc && !matchesTags) return false;
       }
 
@@ -471,10 +439,16 @@ function MainLayout({
     if (activeFilters.sort) {
       switch (activeFilters.sort) {
         case 'newest':
-          filtered.sort((a, b) => (b.id || 0) - (a.id || 0));
+          filtered.sort((a, b) => {
+            if (a.createdAt && b.createdAt) return new Date(b.createdAt) - new Date(a.createdAt);
+            return (b.id || 0) - (a.id || 0);
+          });
           break;
         case 'oldest':
-          filtered.sort((a, b) => (a.id || 0) - (b.id || 0));
+          filtered.sort((a, b) => {
+            if (a.createdAt && b.createdAt) return new Date(a.createdAt) - new Date(b.createdAt);
+            return (a.id || 0) - (b.id || 0);
+          });
           break;
         case 'trending':
           filtered.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
@@ -510,6 +484,7 @@ function MainLayout({
           onShowInvestors={onShowInvestors}
           onShowDashboard={onShowDashboard}
           onShowAI={onShowAI}
+          onShowProfile={onShowProfile}
           onMenuItemClick={() => {
             // Reset cached scroll if user navigates via sidebar
             homeScrollPos.current = 0;
@@ -522,17 +497,17 @@ function MainLayout({
       </div>
 
       {/* 2. Main Feed (Scrollable) */}
-        {/* MOBILE HEADER (Fixed Top) */}
-        {/* TopBar visibility is controlled by CSS (display: none on desktop) */}
-        <TopBar onMenuClick={toggleMobileMenu} />
+      {/* MOBILE HEADER (Fixed Top) */}
+      {/* TopBar visibility is controlled by CSS (display: none on desktop) */}
+      <TopBar onMenuClick={toggleMobileMenu} />
 
-        <main 
-          ref={mainContentRef}
-          key={activeView}
-          className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} view-enter`}
-        >
-          {/* Feed Content or Profile Page */}
-          {children ? (
+      <main
+        ref={mainContentRef}
+        key={activeView}
+        className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} view-enter`}
+      >
+        {/* Feed Content or Profile Page */}
+        {(activeView === 'profile' || activeView.startsWith('dashboard')) && children ? (
           children
         ) : showAdvisors ? (
           selectedAdvisor ? (
@@ -543,8 +518,8 @@ function MainLayout({
               onShowLogin={onShowLogin}
             />
           ) : (
-            <AdvisorsPage 
-              user={user} 
+            <AdvisorsPage
+              user={user}
               onShowLogin={onShowLogin}
               onSelectAdvisor={(advisor) => {
                 // Save scroll position
@@ -552,7 +527,7 @@ function MainLayout({
                 const scrollPos = isMobile ? window.scrollY : (mainContentRef.current ? mainContentRef.current.scrollTop : 0);
                 homeScrollPos.current = scrollPos;
                 setSelectedAdvisor(advisor);
-              }} 
+              }}
             />
           )
         ) : showInvestors ? (
@@ -574,7 +549,7 @@ function MainLayout({
             onBack={() => {
               setSelectedProjectId(null);
               if (window.location.pathname.startsWith('/projects/')) {
-                 window.history.pushState({}, '', '/');
+                window.history.pushState({}, '', '/');
               }
             }}
           />
@@ -657,7 +632,7 @@ function MainLayout({
                         const isMobile = window.innerWidth < 1024;
                         const scrollPos = isMobile ? window.scrollY : (mainContentRef.current ? mainContentRef.current.scrollTop : 0);
                         homeScrollPos.current = scrollPos;
-                        
+
                         setSelectedProjectId(id);
                         window.history.pushState({}, '', `/projects/${id}`);
                       }}
@@ -678,9 +653,9 @@ function MainLayout({
 
       {/* 3. Right Panel (Fixed) */}
       <div className={styles.rightPanel}>
-        <RightPanel 
-          searchQuery={searchQuery} 
-          onSearchChange={(e) => setSearchQuery(e.target.value)} 
+        <RightPanel
+          searchQuery={searchQuery}
+          onSearchChange={(e) => setSearchQuery(e.target.value)}
           showSearch={activeView === 'main' && !selectedProjectId && !selectedStartupProfileId && !selectedAdvisor}
           onFilterChange={handleFilterChange}
           onShowHome={onShowHome}
@@ -705,23 +680,6 @@ function MainLayout({
         />
       )}
 
-      {/* Project Submission Success Modal */}
-      {showSuccessModal && (
-        <SuccessModal
-          onClose={() => setShowSuccessModal(false)}
-          title="Tạo Dự Án Thành Công!"
-          message={
-            <span style={{ lineHeight: '1.6' }}>
-              Dự án của bạn đã được tạo thành công. Bạn có thể tải lên các tài liệu bổ sung (Pitch Deck, Business Plan) và nộp dự án bất cứ lúc nào tại mục <strong>Quản lý dự án</strong> trong <strong>Startup Dashboard</strong>.
-            </span>
-          }
-          primaryBtnText="Đến Startup Dashboard"
-          onPrimaryClick={() => {
-            setShowSuccessModal(false);
-            onShowDashboard?.();
-          }}
-        />
-      )}
 
       {/* Mobile Bottom Navigation */}
       <BottomNav
@@ -731,20 +689,21 @@ function MainLayout({
         onShowInvestors={onShowInvestors}
         onShowDashboard={onShowDashboard}
         onShowAI={onShowAI}
+        onShowProfile={onShowProfile}
         activeTab={
-          activeView === 'main' ? 'Home' : 
-          activeView === 'advisors' ? 'Advisors' : 
-          activeView === 'investors' ? 'Investors' : 
-          activeView === 'ai' ? 'AI' : 
-          activeView.startsWith('dashboard') ? (
-            activeView === 'dashboard' ? 'Dashboard' : 
-            activeView === 'dashboard_project_management' ? 'Projects' :
-            activeView === 'dashboard_bookings' ? 'Bookings' :
-            activeView === 'dashboard_availability' ? 'Availability' :
-            activeView === 'dashboard_reports' ? 'Reports' :
-            activeView === 'dashboard_approvals' ? 'Approvals' :
-            activeView === 'dashboard_activity' ? 'Activity' : 'Dashboard'
-          ) : ''
+          activeView === 'main' ? 'Home' :
+            activeView === 'advisors' ? 'Advisors' :
+              activeView === 'investors' ? 'Investors' :
+                activeView === 'ai' ? 'AI' :
+                  activeView.startsWith('dashboard') ? (
+                    activeView === 'dashboard' ? 'Dashboard' :
+                      activeView === 'dashboard_project_management' ? 'Projects' :
+                        activeView === 'dashboard_bookings' ? 'Bookings' :
+                          activeView === 'dashboard_availability' ? 'Availability' :
+                            activeView === 'dashboard_reports' ? 'Reports' :
+                              activeView === 'dashboard_approvals' ? 'Approvals' :
+                                activeView === 'dashboard_activity' ? 'Activity' : 'Dashboard'
+                  ) : activeView === 'profile' ? 'Profile' : ''
         }
       />
 

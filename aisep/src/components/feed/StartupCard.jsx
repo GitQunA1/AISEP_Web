@@ -134,10 +134,9 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
     <article 
       key={startup.id}
       className={styles.card} 
-      // onClick={() => onViewProject && onViewProject(startup.id)} 
-      // TEMPORARILY DISABLED TO TEST REQUEST INFO BUTTON
+      onClick={() => onViewProject && onViewProject(startup.id)} 
       style={{ 
-        cursor: 'default', // onViewProject ? 'pointer' : 'default',
+        cursor: onViewProject ? 'pointer' : 'default',
         '--index': index,
         ...(isReturning ? { animation: 'none', opacity: 1, transform: 'none' } : {})
       }}

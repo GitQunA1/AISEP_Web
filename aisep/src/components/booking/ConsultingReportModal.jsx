@@ -149,13 +149,17 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.headerLeft}>
-            <FileText size={20} className={styles.headerIcon} />
+            <div className={styles.headerIcon}>
+              <FileText size={20} />
+            </div>
             <div>
               <h2 className={styles.title}>Báo Cáo Tư Vấn</h2>
               {advisorName && <p className={styles.subtitle}>{advisorName}</p>}
             </div>
           </div>
-          <button className={styles.closeBtn} onClick={onClose}><X size={20} /></button>
+          <button className={styles.closeBtn} onClick={onClose} aria-label="Đóng">
+            <X size={20} />
+          </button>
         </div>
 
         <div className={styles.body}>
@@ -164,27 +168,30 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
           {phase === 'loading' && (
             <div className={styles.centered}>
               <Loader size={32} className={styles.spinning} />
-              <p className={styles.mutedText}>Đang tải...</p>
+              <p className={styles.mutedText}>Đang tải nội dung báo cáo...</p>
             </div>
           )}
 
           {/* Error */}
           {phase === 'error' && (
             <div className={styles.centered}>
-              <AlertCircle size={40} color="#ef4444" />
-              <p className={styles.errorText}>{loadError}</p>
-              <button className={styles.secondaryBtn} onClick={onClose}>Đóng</button>
+              <AlertCircle size={40} color="#f4212e" />
+              <p className={styles.mutedText} style={{ color: '#f4212e', fontWeight: 600 }}>{loadError}</p>
+              <button className={styles.secondaryBtn} onClick={onClose} style={{ marginTop: '12px' }}>Đóng cửa sổ</button>
             </div>
           )}
 
           {/* Success */}
           {phase === 'success' && (
             <div className={styles.centered}>
-              <CheckCircle size={56} color="#22c55e" />
+              <CheckCircle size={56} color="#17bf63" />
               <h3 className={styles.successTitle}>
-                {isAdvisor ? 'Báo cáo đã được nộp!' : 'Đã xử lý thành công!'}
+                {isAdvisor ? 'Nộp báo cáo thành công!' : 'Xử lý hoàn tất!'}
               </h3>
-              <button className={styles.primaryBtn} onClick={onClose}>Đóng</button>
+              <p className={styles.mutedText}>Thông tin đã được lưu lại trên hệ thống AISEP.</p>
+              <button className={styles.primaryBtn} onClick={onClose} style={{ marginTop: '16px', maxWidth: '200px' }}>
+                Xác nhận
+              </button>
             </div>
           )}
 
@@ -192,10 +199,10 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
           {phase === 'submit-form' && (
             <div className={styles.form}>
               <div className={styles.field}>
-                <label className={styles.label}>Tiêu đề buổi tư vấn <span className={styles.required}>*</span></label>
+                <label className={styles.label}>Tiêu đề buổi tư vấn</label>
                 <input
                   className={styles.input}
-                  placeholder="VD: Chiến lược gọi vốn Series A"
+                  placeholder="VD: Định hướng chiến lược kinh doanh quý 3"
                   value={form.meetingTitle}
                   onChange={e => setForm(p => ({ ...p, meetingTitle: e.target.value }))}
                 />
@@ -214,51 +221,42 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
                   <label className={styles.label}>Địa điểm</label>
                   <input
                     className={styles.input}
-                    placeholder="VD: Online / VP HCM"
+                    placeholder="VD: Zoom / Văn phòng đại diện"
                     value={form.location}
                     onChange={e => setForm(p => ({ ...p, location: e.target.value }))}
                   />
                 </div>
               </div>
               <div className={styles.field}>
-                <label className={styles.label}>Mục đích tư vấn</label>
-                <input
-                  className={styles.input}
-                  placeholder="Tóm tắt mục tiêu buổi tư vấn..."
-                  value={form.meetingPurpose}
-                  onChange={e => setForm(p => ({ ...p, meetingPurpose: e.target.value }))}
-                />
-              </div>
-              <div className={styles.field}>
-                <label className={styles.label}>Nội dung tư vấn</label>
+                <label className={styles.label}>Nội dung thảo luận chính</label>
                 <textarea
                   className={styles.textarea}
-                  rows={4}
-                  placeholder="Mô tả chi tiết nội dung đã tư vấn..."
+                  rows={5}
+                  placeholder="Mô tả chi tiết những nội dung quan trọng đã trao đổi với Startup..."
                   value={form.content}
                   onChange={e => setForm(p => ({ ...p, content: e.target.value }))}
                 />
               </div>
               <div className={styles.field}>
-                <label className={styles.label}>Quyết định / Kết luận</label>
+                <label className={styles.label}>Quyết định & Kết luận</label>
                 <textarea
                   className={styles.textarea}
                   rows={3}
-                  placeholder="Các quyết định, hành động tiếp theo..."
+                  placeholder="Các quyết định đã thống nhất và hướng đi tiếp theo..."
                   value={form.decisionsMade}
                   onChange={e => setForm(p => ({ ...p, decisionsMade: e.target.value }))}
                 />
               </div>
               {formError && (
                 <div className={styles.errorRow}>
-                  <AlertCircle size={14} /><span>{formError}</span>
+                  <AlertCircle size={16} /><span>{formError}</span>
                 </div>
               )}
               <div className={styles.footerRow}>
-                <button className={styles.secondaryBtn} onClick={onClose} disabled={submitting}>Hủy</button>
+                <button className={styles.secondaryBtn} onClick={onClose} disabled={submitting}>Hủy bỏ</button>
                 <button className={styles.primaryBtn} onClick={handleSubmit} disabled={submitting}>
                   {submitting ? <Loader size={16} className={styles.spinning} /> : <Send size={16} />}
-                  {submitting ? 'Đang nộp...' : 'Nộp báo cáo'}
+                  {submitting ? 'Đang gửi báo cáo...' : 'Gửi báo cáo'}
                 </button>
               </div>
             </div>
@@ -269,115 +267,119 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
             <>
               {!report ? (
                 <div className={styles.centered}>
-                  <FileText size={40} opacity={0.3} />
-                  <p className={styles.mutedText}>Chưa có báo cáo tư vấn cho booking này.</p>
-                  <p className={styles.mutedText} style={{ fontSize: 13 }}>Advisor sẽ nộp báo cáo sau buổi tư vấn.</p>
+                  <FileText size={48} color="var(--text-secondary)" style={{ opacity: 0.3 }} />
+                  <p className={styles.mutedText}>Chưa có thông tin báo cáo tư vấn.</p>
+                  <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Advisor sẽ chuẩn bị và nộp báo cáo chính thức sau khi buổi tư vấn kết thúc.</p>
                 </div>
               ) : (
                 <div className={styles.reportView}>
-                  {/* Status bar */}
+                  {/* Status Info Row */}
                   <div className={styles.statusBar}>
                     <span className={`${styles.statusBadge} ${styles[`badge_${report.status}`] || styles.badge_default}`}>
                       {reportStatusLabel[report.status] || report.status}
                     </span>
                     {report.revisionCount > 0 && (
                       <span className={styles.revisionBadge}>
-                        <RotateCcw size={12} /> Lần sửa {report.revisionCount}/{MAX_REVISIONS}
-                      </span>
-                    )}
-                    {/* Countdown for startup review */}
-                    {!isAdvisor && report.startupReviewDueAt && report.status === 'Submitted' && (
-                      <span className={styles.countdownBadge}>
-                        <Clock size={12} /> {getCountdown(report.startupReviewDueAt)}
+                        <RotateCcw size={14} /> Có {report.revisionCount} lần yêu cầu sửa đổi
                       </span>
                     )}
                   </div>
 
-                  {/* Report detail fields */}
+                  {/* Details Grid */}
                   <div className={styles.detailGrid}>
-                    <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Tiêu đề</span>
-                      <span className={styles.detailValue}>{report.meetingTitle}</span>
+                    <div className={`${styles.detailItem} ${styles.fullWidth}`}>
+                      <span className={styles.detailLabel}>Tên buổi tư vấn</span>
+                      <span className={styles.detailValue} style={{ fontSize: '18px', fontWeight: '800' }}>{report.meetingTitle}</span>
                     </div>
+                    
                     <div className={styles.detailItem}>
-                      <span className={styles.detailLabel}>Thời gian tư vấn</span>
+                      <span className={styles.detailLabel}>Thời gian diễn ra</span>
                       <span className={styles.detailValue}>{formatDate(report.meetingTime)}</span>
                     </div>
-                    {report.location && (
-                      <div className={styles.detailItem}>
-                        <span className={styles.detailLabel}>Địa điểm</span>
-                        <span className={styles.detailValue}>{report.location}</span>
-                      </div>
-                    )}
-                    {report.meetingPurpose && (
-                      <div className={styles.detailItem}>
-                        <span className={styles.detailLabel}>Mục đích</span>
-                        <span className={styles.detailValue}>{report.meetingPurpose}</span>
-                      </div>
-                    )}
+
+                    <div className={styles.detailItem}>
+                      <span className={styles.detailLabel}>Địa điểm</span>
+                      <span className={styles.detailValue}>{report.location || 'Chưa xác định'}</span>
+                    </div>
+
                     {report.content && (
                       <div className={`${styles.detailItem} ${styles.fullWidth}`}>
-                        <span className={styles.detailLabel}>Nội dung tư vấn</span>
-                        <span className={styles.detailValue} style={{ whiteSpace: 'pre-wrap' }}>{report.content}</span>
+                        <span className={styles.detailLabel}>Nội dung tư vấn chi tiết</span>
+                        <div className={styles.detailValue} style={{ whiteSpace: 'pre-wrap', padding: '16px', background: 'var(--bg-secondary)', borderRadius: '12px' }}>
+                          {report.content}
+                        </div>
                       </div>
                     )}
+
                     {report.decisionsMade && (
                       <div className={`${styles.detailItem} ${styles.fullWidth}`}>
-                        <span className={styles.detailLabel}>Quyết định / Kết luận</span>
-                        <span className={styles.detailValue} style={{ whiteSpace: 'pre-wrap' }}>{report.decisionsMade}</span>
+                        <span className={styles.detailLabel}>Quyết định quan trọng & Kết luận</span>
+                        <div className={styles.detailValue} style={{ whiteSpace: 'pre-wrap', color: 'var(--primary-blue)', fontWeight: '600' }}>
+                          {report.decisionsMade}
+                        </div>
                       </div>
                     )}
+
                     {report.revisionRequestReason && (
                       <div className={`${styles.detailItem} ${styles.fullWidth}`}>
-                        <span className={styles.detailLabel} style={{ color: '#f59e0b' }}>Lý do yêu cầu sửa đổi</span>
-                        <span className={styles.detailValue} style={{ color: '#fcd34d' }}>{report.revisionRequestReason}</span>
+                        <div className={styles.escalationNotice}>
+                          <AlertCircle size={20} />
+                          <div>
+                            <p style={{ margin: 0, fontWeight: '700' }}>Yêu cầu sửa đổi (Startup)</p>
+                            <p style={{ margin: '4px 0 0', opacity: 0.85 }}>{report.revisionRequestReason}</p>
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Startup/Investor actions */}
+                  {/* Actions for Startup/Investor Review */}
                   {!isAdvisor && report.status === 'Submitted' && (
-                    <>
+                    <div className={styles.footerRow} style={{ flexDirection: 'column', gap: '16px' }}>
                       {report.revisionCount >= MAX_REVISIONS ? (
                         <div className={styles.escalationNotice}>
-                          <AlertCircle size={16} />
-                          Đã yêu cầu sửa đổi {MAX_REVISIONS} lần. Báo cáo sẽ được Staff xử lý.
+                          <AlertCircle size={18} />
+                          <span>Đã đạt giới hạn yêu cầu sửa đổi ({MAX_REVISIONS}). Báo cáo sẽ được quản trị viên AISEP trực tiếp hỗ trợ.</span>
                         </div>
                       ) : (
                         <>
                           {showRevisionInput && (
-                            <textarea
-                              className={styles.textarea}
-                              rows={3}
-                              placeholder="Nhập lý do yêu cầu sửa đổi..."
-                              value={revisionReason}
-                              onChange={e => setRevisionReason(e.target.value)}
-                              style={{ marginBottom: 0 }}
-                            />
-                          )}
-                          {actionError && (
-                            <div className={styles.errorRow}>
-                              <AlertCircle size={14} /><span>{actionError}</span>
+                            <div className={styles.field}>
+                              <label className={styles.label}>Lý do yêu cầu sửa đổi cụ thể</label>
+                              <textarea
+                                className={styles.textarea}
+                                rows={3}
+                                placeholder="Vui lòng nêu rõ các điểm cần Advisor cập nhật thêm..."
+                                value={revisionReason}
+                                onChange={e => setRevisionReason(e.target.value)}
+                              />
                             </div>
                           )}
-                          <div className={styles.footerRow}>
+                          
+                          {actionError && (
+                            <div className={styles.errorRow}>
+                              <AlertCircle size={16} /><span>{actionError}</span>
+                            </div>
+                          )}
+
+                          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
                             {!showRevisionInput ? (
                               <>
                                 <button className={styles.secondaryBtn} onClick={() => setShowRevisionInput(true)} disabled={actionLoading}>
-                                  <RotateCcw size={14} /> Yêu cầu sửa đổi
+                                  <RotateCcw size={16} /> Yêu cầu sửa lại
                                 </button>
                                 <button className={styles.approveBtn} onClick={handleApprove} disabled={actionLoading}>
-                                  {actionLoading ? <Loader size={14} className={styles.spinning} /> : <CheckCircle size={14} />}
-                                  Chấp nhận
+                                  {actionLoading ? <Loader size={16} className={styles.spinning} /> : <CheckCircle size={16} />}
+                                  Chấp nhận báo cáo
                                 </button>
                               </>
                             ) : (
                               <>
                                 <button className={styles.secondaryBtn} onClick={() => { setShowRevisionInput(false); setRevisionReason(''); setActionError(''); }} disabled={actionLoading}>
-                                  Hủy
+                                  Hủy bỏ
                                 </button>
                                 <button className={styles.revisionSubmitBtn} onClick={handleRevision} disabled={actionLoading}>
-                                  {actionLoading ? <Loader size={14} className={styles.spinning} /> : <Send size={14} />}
+                                  {actionLoading ? <Loader size={16} className={styles.spinning} /> : <Send size={16} />}
                                   Gửi yêu cầu
                                 </button>
                               </>
@@ -385,14 +387,14 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
                           </div>
                         </>
                       )}
-                    </>
+                    </div>
                   )}
 
-                  {/* Approved / Completed view */}
+                  {/* Status Indicator for Approved/Completed */}
                   {(report.status === 'Approved' || report.status === 'Completed') && (
                     <div className={styles.approvedNote}>
-                      <CheckCircle size={16} color="#22c55e" />
-                      Báo cáo đã được chấp nhận{report.startupReviewedAt ? ` lúc ${formatDate(report.startupReviewedAt)}` : ''}.
+                      <CheckCircle size={20} />
+                      <span>Báo cáo này đã được các bên chấp thuận và lưu giữ chính thức làm hồ sơ tư vấn.</span>
                     </div>
                   )}
                 </div>

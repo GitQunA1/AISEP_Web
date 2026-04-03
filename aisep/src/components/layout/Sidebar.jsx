@@ -58,6 +58,7 @@ function Sidebar({
       { icon: MessageSquare, label: 'Bookings', displayLabel: 'Booking Đến', href: '#', showWhenLoggedIn: true },
       { icon: Calendar, label: 'Availability', displayLabel: 'Lịch Rảnh', href: '#', showWhenLoggedIn: true },
       { icon: FileText, label: 'Reports', displayLabel: 'Báo cáo', href: '#', showWhenLoggedIn: true },
+      { icon: User, label: 'Profile', displayLabel: 'Hồ sơ', href: '#', showWhenLoggedIn: true },
     ];
     const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
     const homeItem = navItems.find(item => item.label === 'Home');

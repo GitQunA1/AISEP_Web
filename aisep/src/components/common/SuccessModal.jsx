@@ -11,6 +11,7 @@ export default function SuccessModal({
     title, 
     message, 
     primaryBtnText, 
+    onPrimaryClick,
     secondaryBtnText, 
     onSecondaryClick,
     type = 'success'
@@ -68,11 +69,17 @@ export default function SuccessModal({
 
                 <div className={styles.buttonGroup}>
                     {secondaryBtnText && (
-                        <button className={styles.secondaryButton} onClick={onSecondaryClick || onClose}>
+                        <button 
+                            className={styles.secondaryButton} 
+                            onClick={onSecondaryClick || onClose}
+                        >
                             {secondaryBtnText}
                         </button>
                     )}
-                    <button className={`${styles.primaryButton} ${styles[type]}`} onClick={onClose}>
+                    <button 
+                        className={`${styles.primaryButton} ${styles[type]}`} 
+                        onClick={onPrimaryClick || onClose}
+                    >
                         {primaryBtnText || 'Xong'}
                     </button>
                 </div>

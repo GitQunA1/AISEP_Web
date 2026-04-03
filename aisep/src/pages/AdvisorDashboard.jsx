@@ -18,7 +18,7 @@ import CustomSelect from '../components/common/CustomSelect';
 
 /**
  * AdvisorDashboard – Dashboard cho Advisor
- * Tabs: Tổng quan | Lịch Rảnh | Booking Đến | Yêu cầu tư vấn | Báo cáo | Hồ sơ
+ * Tabs: Tổng quan | Lịch Rảnh | Booking Đến | Yêu cầu tư vấn | Báo cáo
  */
 export default function AdvisorDashboard({ user, initialSection = 'overview', onSectionChange }) {
     const [activeSection, setActiveSection] = useState(initialSection);
@@ -166,7 +166,6 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                 {activeSection === 'bookings' && <IncomingBookingsSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} />}
                 {activeSection === 'availability' && <AvailabilitySection availabilities={availabilities} loading={availabilitiesLoading} onRefresh={loadAvailabilities} />}
                 {activeSection === 'reports' && <ReportsSection />}
-                {activeSection === 'profile' && <ProfileSection user={user} advisorProfile={advisorProfile} />}
             </div>
         </div>
     );
@@ -996,42 +995,3 @@ function ReportsSection() {
     );
 }
 
-function ProfileSection({ user, advisorProfile }) {
-    return (
-        <div className={styles.section}>
-            <div className={styles.card}>
-                <h3 className={styles.cardTitle}>Cài đặt hồ sơ</h3>
-                <form className={styles.form}>
-                    <div className={styles.formRow}>
-                        <div className={styles.formGroup}>
-                            <label>Họ và tên</label>
-                            <input type="text" defaultValue={advisorProfile?.userName || user?.name || ''} />
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label>Email</label>
-                            <input type="email" defaultValue={advisorProfile?.email || user?.email || ''} />
-                        </div>
-                    </div>
-                    <div className={styles.formGroup}>
-                        <label>Giới thiệu chuyên môn</label>
-                        <textarea rows={4} defaultValue={advisorProfile?.bio || ''} placeholder="Chia sẻ về chuyên môn và kinh nghiệm của bạn..." />
-                    </div>
-                    <div className={styles.formRow}>
-                        <div className={styles.formGroup}>
-                            <label>Lĩnh vực chuyên môn</label>
-                            <input type="text" defaultValue={advisorProfile?.expertise || ''} placeholder="VD: Chiến lược kinh doanh, Gọi vốn" />
-                        </div>
-                        <div className={styles.formGroup}>
-                            <label>Phí theo giờ (VNĐ)</label>
-                            <input type="number" defaultValue={advisorProfile?.hourlyRate || ''} />
-                        </div>
-                    </div>
-                    <div style={{ display: 'flex', gap: 12, marginTop: 16 }}>
-                        <button type="submit" className={styles.primaryBtn}>Lưu thay đổi</button>
-                        <button type="button" className={styles.secondaryBtn}>Hủy</button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
