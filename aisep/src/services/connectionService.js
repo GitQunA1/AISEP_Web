@@ -1,4 +1,4 @@
-import apiClient from './apiClient';
+import { apiClient } from './apiClient';
 
 /**
  * Connection Service - Handles investor-startup connections and interactions

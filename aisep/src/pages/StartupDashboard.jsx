@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2 } from 'lucide-react';
+import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
@@ -16,6 +17,7 @@ import AIEvaluationService from '../services/AIEvaluationService.js';
 import projectSubmissionService from '../services/projectSubmissionService.js';
 import startupProfileService from '../services/startupProfileService.js';
 import connectionService from '../services/connectionService.js';
+import dealsService from '../services/dealsService.js';
 import signalRService from '../services/signalRService.js';
 import { PROJECT_STATUS, isUserEditable, STATUS_LABELS, STATUS_COLORS, getStageLabel } from '../constants/ProjectStatus.js';
 import { translateAIResults } from '../utils/translateAIResults.js';
@@ -94,6 +96,32 @@ export default function StartupDashboard({ user }) {
     const [isLoadingRequests, setIsLoadingRequests] = React.useState(false);
     const [isRespondingToRequest, setIsRespondingToRequest] = React.useState(null);
 
+    // Deals Approval States (for investment deals from investors)
+    const [dealsToApprove, setDealsToApprove] = React.useState([]);
+    const [isLoadingDeals, setIsLoadingDeals] = React.useState(false);
+    const [isRespondingToDeal, setIsRespondingToDeal] = React.useState(null);
+
+    // Contract Preview States
+    const [showContractModal, setShowContractModal] = React.useState(false);
+    const [contractPreviewHtml, setContractPreviewHtml] = React.useState(null);
+    const [isLoadingContract, setIsLoadingContract] = React.useState(false);
+    const [contractDealData, setContractDealData] = React.useState(null);
+    const [contractStatus, setContractStatus] = React.useState(null); // Track deal status
+    const [isSigningContract, setIsSigningContract] = React.useState(false);
+    
+    // Contract signing form states
+    const [signFormData, setSignFormData] = React.useState({
+        finalAmount: 0,
+        finalEquityPercentage: 0,
+        additionalTerms: '',
+        signatureBase64: ''
+    });
+    
+    // Signature canvas ref
+    const signatureCanvasRef = React.useRef(null);
+    const signatureDataRef = React.useRef(''); // Keep latest signature value
+    const [isSignatureEmpty, setIsSignatureEmpty] = React.useState(true);
+
     // Chat Widget States
     const [activeChatConnectionId, setActiveChatConnectionId] = React.useState(null);
     const [activeChatSession, setActiveChatSession] = React.useState(null);
@@ -109,7 +137,6 @@ export default function StartupDashboard({ user }) {
     React.useEffect(() => {
         const initSignalR = async () => {
             try {
-                // Get JWT token from localStorage or auth context
                 const token = localStorage.getItem('token') || sessionStorage.getItem('token');
                 if (token && user?.userId) {
                     await signalRService.initialize(token);
@@ -120,10 +147,13 @@ export default function StartupDashboard({ user }) {
             }
         };
 
-        initSignalR();
+        // Delay SignalR init to avoid blocking dashboard load
+        const timer = setTimeout(() => {
+            initSignalR();
+        }, 1000);
 
-        // Cleanup on unmount
         return () => {
+            clearTimeout(timer);
             signalRService.disconnect();
         };
     }, [user?.userId]);
@@ -245,61 +275,59 @@ export default function StartupDashboard({ user }) {
     React.useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // 1. Fetch user's startup profile
+                // Fetch profile and projects in PARALLEL (not sequential)
+                const promises = [];
+                
+                // 1. Fetch startup profile (if user exists)
                 if (user && user.userId) {
-                    const profileData = await startupProfileService.getStartupProfileByUserId(user.userId);
-                    setStartupProfile(profileData);
-
-                    // Check for auto-setup flag in URL
-                    const params = new URLSearchParams(window.location.search);
-                    if (!profileData && params.get('setup') === 'true') {
-                        setActiveSection('complete-info');
-                        // Clean URL
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                    }
+                    promises.push(
+                        startupProfileService.getStartupProfileByUserId(user.userId)
+                            .then(data => ({ key: 'profile', data }))
+                    );
                 }
+                
+                // 2. Fetch projects - run in parallel with profile
+                promises.push(
+                    projectSubmissionService.getMyProjects()
+                        .then(data => ({ key: 'projects', data }))
+                );
 
-                // 2. Fetch projects
-                const response = await projectSubmissionService.getMyProjects();
-                if (response.success && response.data) {
-                    const projects = Array.isArray(response.data) ? response.data : (response.data.items || []);
-                    setMyProjects(projects);
+                const results = await Promise.all(promises);
 
-                    // Fetch documents for all projects to get total count
-                    if (projects.length > 0) {
-                        try {
-                            const allDocsPromises = projects.map(p =>
-                                projectSubmissionService.getDocuments(p.projectId || p.id)
-                            );
-                            const docsResponses = await Promise.all(allDocsPromises);
+                // Process results
+                for (const result of results) {
+                    if (result.key === 'profile') {
+                        const profileData = result.data;
+                        setStartupProfile(profileData);
 
-                            const allDocuments = docsResponses.reduce((acc, res) => {
-                                if (res.success && res.data) {
-                                    const docs = Array.isArray(res.data) ? res.data : (res.data.items || []);
-                                    return [...acc, ...docs];
-                                }
-                                return acc;
-                            }, []);
-
-                            setDocuments(allDocuments);
-                        } catch (docErr) {
-                            console.error("Error fetching documents for total count:", docErr);
+                        // Check for auto-setup flag in URL
+                        const params = new URLSearchParams(window.location.search);
+                        if (!profileData && params.get('setup') === 'true') {
+                            setActiveSection('complete-info');
+                            window.history.replaceState({}, document.title, window.location.pathname);
                         }
-                    }
+                    } else if (result.key === 'projects') {
+                        const response = result.data;
+                        if (response.success && response.data) {
+                            const projects = Array.isArray(response.data) ? response.data : (response.data.items || []);
+                            setMyProjects(projects);
+                            setDocuments([]);
 
-                    if (projects.length > 0) {
-                        const loadedProject = projects[0];
-                        setProject(loadedProject);
+                            if (projects.length > 0) {
+                                const loadedProject = projects[0];
+                                setProject(loadedProject);
 
-                        // Pre-fill form data for updates
-                        setProjectFormData({
-                            ...projectFormData,
-                            projectName: loadedProject.name || loadedProject.projectName || '',
-                            description: loadedProject.description || '',
-                            tagline: loadedProject.tagline || '',
-                            industry: loadedProject.industry || '',
-                            stage: loadedProject.stage || '',
-                        });
+                                // Pre-fill form data for updates
+                                setProjectFormData({
+                                    ...projectFormData,
+                                    projectName: loadedProject.name || loadedProject.projectName || '',
+                                    description: loadedProject.description || '',
+                                    tagline: loadedProject.tagline || '',
+                                    industry: loadedProject.industry || '',
+                                    stage: loadedProject.stage || '',
+                                });
+                            }
+                        }
                     }
                 }
             } catch (err) {
@@ -495,6 +523,345 @@ export default function StartupDashboard({ user }) {
         setActiveChatConnectionId(null);
         // Refresh connection requests to update status
         fetchConnectionRequests();
+    };
+
+    // --- Deals Approval Functions ---
+
+    const fetchDealsToApprove = async () => {
+        setIsLoadingDeals(true);
+        try {
+            console.log('[StartupDashboard] Fetching deals to approve...');
+            const response = await dealsService.getStartupDeals();
+            console.log('[StartupDashboard] Deals response:', response);
+
+            let deals = Array.isArray(response?.data) ? response.data : (response?.data?.items || []);
+            // Get all deals - no filtering
+            
+            setDealsToApprove(deals);
+            console.log('[StartupDashboard] Deals loaded:', deals.length);
+        } catch (error) {
+            console.error('[StartupDashboard] Error fetching deals:', error);
+            setDealsToApprove([]);
+        } finally {
+            setIsLoadingDeals(false);
+        }
+    };
+
+    // Load deals on mount when deals tab is active
+    React.useEffect(() => {
+        if (activeSection === 'deals') {
+            fetchDealsToApprove();
+        }
+    }, [activeSection]);
+
+    const handleApproveDeal = async (dealId) => {
+        setIsRespondingToDeal(dealId);
+        try {
+            console.log('[StartupDashboard] Approving deal:', dealId);
+            const response = await dealsService.respondToDeal(dealId, true);
+            console.log('[StartupDashboard] Approved deal:', response);
+
+            if (response && (response.success || response.data)) {
+                // Remove from pending list and show success
+                setDealsToApprove(dealsToApprove.filter(d => d.dealId !== dealId));
+                setSuccessMessage('✓ Đã chấp nhận đầu tư!');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to approve deal:', error);
+            setSuccessMessage('Lỗi: Không thể chấp nhận đầu tư');
+            setShowSuccessModal(true);
+        } finally {
+            setIsRespondingToDeal(null);
+        }
+    };
+
+    const handleRejectDeal = async (dealId) => {
+        setIsRespondingToDeal(dealId);
+        try {
+            console.log('[StartupDashboard] Rejecting deal:', dealId);
+            const response = await dealsService.respondToDeal(dealId, false);
+            console.log('[StartupDashboard] Rejected deal:', response);
+
+            if (response && (response.success || response.data)) {
+                setDealsToApprove(dealsToApprove.filter(d => d.dealId !== dealId));
+                setSuccessMessage('✓ Đã từ chối đầu tư');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to reject deal:', error);
+            setSuccessMessage('Lỗi: Không thể từ chối đầu tư');
+            setShowSuccessModal(true);
+        } finally {
+            setIsRespondingToDeal(null);
+        }
+    };
+
+    const handleShowContractPreview = async (deal) => {
+        console.log('[StartupDashboard] handleShowContractPreview called for deal:', deal.dealId, 'status:', deal.status);
+        console.log('[StartupDashboard] Loading contract preview for deal:', deal.dealId);
+        setIsLoadingContract(true);
+        
+        try {
+            setContractDealData(deal);
+            // Use status directly from deal object (already have it from GET /api/Deals)
+            setContractStatus(deal.status);
+            console.log('[StartupDashboard] Set contractStatus to:', deal.status, 'type:', typeof deal.status);
+            
+            setSignFormData({
+                finalAmount: deal.investmentAmount || 0,
+                finalEquityPercentage: deal.equityPercentage || 0,
+                additionalTerms: '',
+                signatureBase64: ''
+            });
+            
+            const response = await dealsService.getContractPreview(deal.dealId);
+            console.log('[StartupDashboard] Contract preview loaded:', response?.success);
+            
+            if (response && response.data) {
+                setContractPreviewHtml(response.data);
+                setShowContractModal(true);
+            } else {
+                setSuccessMessage('Lỗi: Không thể tải hợp đồng');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to load contract:', error);
+            setSuccessMessage('Lỗi: Không thể tải hợp đồng - ' + (error.message || 'Vui lòng thử lại'));
+            setShowSuccessModal(true);
+        } finally {
+            setIsLoadingContract(false);
+        }
+    };
+
+    const handleSignatureChange = () => {
+        // Called when user draws on canvas
+        if (signatureCanvasRef.current) {
+            const isEmpty = signatureCanvasRef.current.isEmpty();
+            setIsSignatureEmpty(isEmpty);
+        }
+    };
+
+    const handleClearSignature = () => {
+        console.log('[StartupDashboard] Clearing signature');
+        if (signatureCanvasRef.current) {
+            signatureCanvasRef.current.clear();
+            signatureDataRef.current = ''; // Clear ref too
+            setIsSignatureEmpty(true);
+            setSignFormData(prev => ({ ...prev, signatureBase64: '' }));
+        }
+    };
+
+    const handleSaveSignature = () => {
+        console.log('[StartupDashboard] Saving signature...');
+        if (signatureCanvasRef.current) {
+            const isEmpty = signatureCanvasRef.current.isEmpty();
+            console.log('[StartupDashboard] Canvas isEmpty:', isEmpty);
+            
+            if (!isEmpty) {
+                try {
+                    const canvasUrl = signatureCanvasRef.current.toDataURL('image/png');
+                    // Extract plain base64 from data URL (remove 'data:image/png;base64,' prefix)
+                    const base64String = canvasUrl.replace(/^data:image\/png;base64,/, '');
+                    console.log('[StartupDashboard] Signature Base64 length:', base64String.length);
+                    
+                    // Store in ref for reliable access
+                    signatureDataRef.current = base64String;
+                    
+                    // Also update state for UI
+                    setSignFormData(prev => {
+                        const updated = { ...prev, signatureBase64: base64String };
+                        console.log('[StartupDashboard] Updated signFormData with signature');
+                        return updated;
+                    });
+                } catch (err) {
+                    console.error('[StartupDashboard] Error saving signature:', err);
+                }
+            } else {
+                console.log('[StartupDashboard] Canvas is empty, cannot save');
+            }
+        } else {
+            console.log('[StartupDashboard] No canvas ref found');
+        }
+    };
+
+    const handleSignContract = async () => {
+        if (!contractDealData) return;
+        
+        console.log('[StartupDashboard] handleSignContract called');
+        console.log('[StartupDashboard] Current signFormData:', signFormData);
+        console.log('[StartupDashboard] Ref signature length:', signatureDataRef.current.length);
+        
+        // Priority: ref > state > canvas
+        let finalSignature = signatureDataRef.current || signFormData.signatureBase64;
+        
+        // If no signature in ref/state, try to get from canvas directly
+        if (!finalSignature && signatureCanvasRef.current) {
+            console.log('[StartupDashboard] Getting signature from canvas directly');
+            if (!signatureCanvasRef.current.isEmpty()) {
+                try {
+                    const canvasUrl = signatureCanvasRef.current.toDataURL('image/png');
+                    finalSignature = canvasUrl.replace(/^data:image\/png;base64,/, ''); // Extract plain base64
+                    signatureDataRef.current = finalSignature; // Store in ref
+                    console.log('[StartupDashboard] Got signature from canvas, length:', finalSignature.length);
+                } catch (err) {
+                    console.error('[StartupDashboard] Error getting signature from canvas:', err);
+                }
+            }
+        }
+        
+        // Validate form
+        if (!signFormData.finalAmount || signFormData.finalAmount === 0) {
+            setSuccessMessage('Vui lòng nhập số tiền');
+            setShowSuccessModal(true);
+            return;
+        }
+        
+        if (!signFormData.finalEquityPercentage && signFormData.finalEquityPercentage !== 0) {
+            setSuccessMessage('Vui lòng nhập phần trăm cổ phần');
+            setShowSuccessModal(true);
+            return;
+        }
+        
+        if (!finalSignature) {
+            console.log('[StartupDashboard] No signature found');
+            setSuccessMessage('Vui lòng vẽ chữ ký');
+            setShowSuccessModal(true);
+            return;
+        }
+
+        setIsSigningContract(true);
+        try {
+            console.log('[StartupDashboard] Signing contract for deal:', contractDealData.dealId);
+            
+            // Prepare data with final signature
+            const contractData = {
+                finalAmount: signFormData.finalAmount,
+                finalEquityPercentage: signFormData.finalEquityPercentage,
+                additionalTerms: signFormData.additionalTerms,
+                signatureBase64: finalSignature
+            };
+            
+            console.log('[StartupDashboard] Sending contract data (Investor signing):', {
+                dealId: contractDealData.dealId,
+                finalAmount: contractData.finalAmount,
+                finalEquityPercentage: contractData.finalEquityPercentage,
+                signatureBase64Length: contractData.signatureBase64.length
+            });
+            
+            const response = await dealsService.signContract(contractDealData.dealId, contractData);
+            console.log('[StartupDashboard] Contract signed:', response);
+            
+            if (response && (response.success || response.data)) {
+                setSuccessMessage('✓ Hợp đồng đã được ký thành công!');
+                setShowSuccessModal(true);
+                setShowContractModal(false);
+                setContractPreviewHtml(null);
+                setContractDealData(null);
+                setSignFormData({ finalAmount: 0, finalEquityPercentage: 0, additionalTerms: '', signatureBase64: '' });
+                setIsSignatureEmpty(true);
+                signatureDataRef.current = ''; // Clear ref
+                
+                // Refresh deals list
+                await fetchDealsToApprove();
+            } else {
+                setSuccessMessage('Lỗi: Không thể ký hợp đồng');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to sign contract:', error);
+            setSuccessMessage('Lỗi: Không thể ký hợp đồng - ' + (error.message || 'Vui lòng thử lại'));
+            setShowSuccessModal(true);
+        } finally {
+            setIsSigningContract(false);
+        }
+    };
+
+    const handleSignContractAsStartup = async () => {
+        if (!contractDealData) return;
+        
+        console.log('[StartupDashboard] handleSignContractAsStartup called');
+        console.log('[StartupDashboard] Ref signature length:', signatureDataRef.current.length);
+        
+        // Priority: ref > state > canvas
+        let finalSignature = signatureDataRef.current || signFormData.signatureBase64;
+        
+        // If no signature in ref/state, try to get from canvas directly
+        if (!finalSignature && signatureCanvasRef.current) {
+            console.log('[StartupDashboard] Getting signature from canvas directly');
+            if (!signatureCanvasRef.current.isEmpty()) {
+                try {
+                    const canvasUrl = signatureCanvasRef.current.toDataURL('image/png');
+                    finalSignature = canvasUrl.replace(/^data:image\/png;base64,/, ''); // Extract plain base64
+                    signatureDataRef.current = finalSignature; // Store in ref
+                    console.log('[StartupDashboard] Got signature from canvas, length:', finalSignature.length);
+                } catch (err) {
+                    console.error('[StartupDashboard] Error getting signature from canvas:', err);
+                }
+            }
+        }
+        
+        // Validate signature only
+        if (!finalSignature) {
+            console.log('[StartupDashboard] No signature found');
+            setSuccessMessage('Vui lòng vẽ chữ ký');
+            setShowSuccessModal(true);
+            return;
+        }
+
+        setIsSigningContract(true);
+        try {
+            console.log('[StartupDashboard] Signing contract as STARTUP for deal:', contractDealData.dealId);
+            
+            // Only send signature - API only requires signatureBase64
+            const contractData = {
+                signatureBase64: finalSignature
+            };
+            
+            console.log('[StartupDashboard] Sending contract data (Startup signing):', {
+                dealId: contractDealData.dealId,
+                signatureBase64Length: contractData.signatureBase64.length
+            });
+            
+            const response = await dealsService.signContractStartup(contractDealData.dealId, contractData);
+            console.log('[StartupDashboard] Contract signed by startup:', response);
+            
+            if (response && (response.success || response.data)) {
+                setSuccessMessage('✓ Startup đã ký hợp đồng thành công!');
+                setShowSuccessModal(true);
+                setShowContractModal(false);
+                setContractPreviewHtml(null);
+                setContractDealData(null);
+                setSignFormData({ finalAmount: 0, finalEquityPercentage: 0, additionalTerms: '', signatureBase64: '' });
+                setIsSignatureEmpty(true);
+                signatureDataRef.current = ''; // Clear ref
+                
+                // Refresh deals list
+                await fetchDealsToApprove();
+            } else {
+                setSuccessMessage('Lỗi: Không thể ký hợp đồng');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to sign contract as startup:', error);
+            setSuccessMessage('Lỗi: Không thể ký hợp đồng - ' + (error.message || 'Vui lòng thử lại'));
+            setShowSuccessModal(true);
+        } finally {
+            setIsSigningContract(false);
+        }
+    };
+
+    const handleCloseContractModal = () => {
+        setShowContractModal(false);
+        setContractPreviewHtml(null);
+        setContractDealData(null);
+        setContractStatus(null);
+        setSignFormData({ finalAmount: 0, finalEquityPercentage: 0, additionalTerms: '', signatureBase64: '' });
+        setIsSignatureEmpty(true);
+        signatureDataRef.current = ''; // Clear ref
+        if (signatureCanvasRef.current) {
+            signatureCanvasRef.current.clear();
+        }
     };
 
     /**
@@ -1217,6 +1584,17 @@ export default function StartupDashboard({ user }) {
                     >
                         Lịch tư vấn
                     </button>
+                    <button
+                        className={`${styles.tab} ${activeSection === 'deals' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('deals')}
+                    >
+                        Đầu tư
+                        {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length > 0 && (
+                            <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '8px', fontSize: '10px', padding: '2px 6px' }}>
+                                {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length}
+                            </span>
+                        )}
+                    </button>
 
                     {/* Animated Indicator Line */}
                     <div className={styles.tabIndicator} style={indicatorStyle} />
@@ -1706,6 +2084,235 @@ export default function StartupDashboard({ user }) {
                 {/* Bookings Section */}
                 {activeSection === 'bookings' && (
                     <StartupBookings user={user} />
+                )}
+
+                {/* Deals Approval Section */}
+                {activeSection === 'deals' && (
+                    <div className={styles.section}>
+                        <div className={styles.card}>
+                            <h3 className={styles.cardTitle}>
+                                Đầu tư từ nhà đầu tư ({dealsToApprove.length} tổng)
+                                {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length > 0 && (
+                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
+                                        {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length} Chờ xử lý
+                                    </span>
+                                )}
+                            </h3>
+
+                            <div className={styles.list}>
+                                {isLoadingDeals ? (
+                                    <div className={styles.loadingState}>
+                                        <Loader2 className={styles.spinner} size={24} />
+                                        <span>Đang tải danh sách đầu tư...</span>
+                                    </div>
+                                ) : dealsToApprove.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Không có đầu tư nào cần xử lý.</p>
+                                    </div>
+                                ) : (
+                                    dealsToApprove.map(deal => (
+                                        <div
+                                            key={deal.dealId}
+                                            className={styles.listItem}
+                                            style={{ 
+                                                borderLeft: 'none',
+                                                borderTop: `3px solid ${deal.status === 'Pending' || deal.status === 0 ? '#f59e0b' : '#10b981'}`,
+                                                padding: '12px 16px'
+                                            }}
+                                        >
+                                            <div className={styles.listContent}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
+                                                        <strong>NĐT:</strong> {deal.investorName || 'Nhà đầu tư'}
+                                                    </span>
+                                                    {deal.investmentAmount && (
+                                                        <span style={{ fontSize: '12px', color: '#10b981', backgroundColor: '#f0fdf4', padding: '4px 8px', borderRadius: '4px', fontWeight: '600' }}>
+                                                            💰 {deal.investmentAmount.toLocaleString('vi-VN')} VNĐ
+                                                        </span>
+                                                    )}
+                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
+                                                        {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('vi-VN') : 'Ngày'}
+                                                    </span>
+                                                </div>
+
+                                                {deal.projectName && (
+                                                    <div style={{ marginBottom: '8px' }}>
+                                                        <span style={{ fontSize: '12px', color: '#475569' }}>
+                                                            <strong>Dự án:</strong> {deal.projectName}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {/* Status Badge */}
+                                                {(deal.status === 'Pending' || deal.status === 0) && (
+                                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
+                                                        ⏳ Chờ xác nhận
+                                                    </span>
+                                                )}
+                                                {(deal.status === 'Confirmed' || deal.status === 1) && (
+                                                    <span className={`${styles.badge} ${styles.badgeSuccess}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
+                                                        ✓ Đã xác nhận
+                                                    </span>
+                                                )}
+                                                {(deal.status === 'Waiting_For_Startup_Signature' || deal.status === 2) && (
+                                                    <span style={{ fontSize: '11px', padding: '4px 8px', backgroundColor: '#f97316', color: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                        ⏳ Chờ ký từ Startup
+                                                    </span>
+                                                )}
+                                                {(deal.status === 'Contract_Signed' || deal.status === 3) && (
+                                                    <span style={{ fontSize: '11px', padding: '4px 8px', backgroundColor: '#667eea', color: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                        ✓ Đã ký kết
+                                                    </span>
+                                                )}
+                                                {(deal.status === 'Minted_NFT' || deal.status === 4) && (
+                                                    <span style={{ fontSize: '11px', padding: '4px 8px', backgroundColor: '#8b5cf6', color: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                        ✓ Đã mint NFT
+                                                    </span>
+                                                )}
+                                                {(deal.status === 'Rejected' || deal.status === 5) && (
+                                                    <span className={`${styles.badge} ${styles.badgeError}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
+                                                        ✗ Bị từ chối
+                                                    </span>
+                                                )}
+                                                {(deal.status === 'Failed' || deal.status === 6) && (
+                                                    <span className={`${styles.badge} ${styles.badgeError}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
+                                                        ✗ Thất bại
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                                                {(deal.status === 'Pending' || deal.status === 0) && (
+                                                    <>
+                                                        <button
+                                                            style={{
+                                                                padding: '6px 12px',
+                                                                backgroundColor: '#10b981',
+                                                                color: '#fff',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px',
+                                                                transition: 'all 0.2s'
+                                                            }}
+                                                            onClick={() => handleApproveDeal(deal.dealId)}
+                                                            disabled={isRespondingToDeal === deal.dealId}
+                                                        >
+                                                            {isRespondingToDeal === deal.dealId ? (
+                                                                <>
+                                                                    <Loader2 size={12} className={styles.spinner} />
+                                                                    Đang xử lý...
+                                                                </>
+                                                            ) : (
+                                                                <>✓ Chấp nhận</>
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            style={{
+                                                                padding: '6px 12px',
+                                                                backgroundColor: '#ef4444',
+                                                                color: '#fff',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px',
+                                                                transition: 'all 0.2s'
+                                                            }}
+                                                            onClick={() => handleRejectDeal(deal.dealId)}
+                                                            disabled={isRespondingToDeal === deal.dealId}
+                                                        >
+                                                            {isRespondingToDeal === deal.dealId ? (
+                                                                <>
+                                                                    <Loader2 size={12} className={styles.spinner} />
+                                                                    Đang xử lý...
+                                                                </>
+                                                            ) : (
+                                                                <>✗ Từ chối</>
+                                                            )}
+                                                        </button>
+                                                    </>
+                                                )}
+
+                                                {(deal.status === 'Confirmed' || deal.status === 1) && (
+                                                    <button
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#667eea',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleShowContractPreview(deal)}
+                                                    >
+                                                        📄 Ký hợp đồng
+                                                    </button>
+                                                )}
+
+                                                {(deal.status === 'Waiting_For_Startup_Signature' || deal.status === 2) && (
+                                                    <button
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#f97316',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleShowContractPreview(deal)}
+                                                    >
+                                                        ✓ Xem & Ký hợp đồng
+                                                    </button>
+                                                )}
+
+                                                {(deal.status === 'Contract_Signed' || deal.status === 3) && (
+                                                    <button
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#10b981',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleShowContractPreview(deal)}
+                                                    >
+                                                        📄 Xem hợp đồng đã ký
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
                 )}
             </div>
 
@@ -2521,6 +3128,430 @@ export default function StartupDashboard({ user }) {
         />
     )}
 
+    {/* Contract Preview Modal */}
+    {showContractModal && contractPreviewHtml && (
+        <div
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                padding: '16px',
+            }}
+            onClick={handleCloseContractModal}
+        >
+            <div
+                style={{
+                    backgroundColor: '#fff',
+                    borderRadius: '8px',
+                    width: '100%',
+                    maxWidth: '1000px',
+                    maxHeight: '90vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div
+                    style={{
+                        padding: '20px',
+                        borderBottom: '1px solid #e2e8f0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                    }}
+                >
+                    <div>
+                        <h2 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700' }}>
+                            {contractStatus === 'Contract_Signed' ? 'Xem hợp đồng đã ký' : 'Ký hợp đồng đầu tư'}
+                        </h2>
+                        {contractDealData && (
+                            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                                <strong>Nhà đầu tư:</strong> {contractDealData.investorName} • <strong>Số tiền:</strong> {contractDealData.investmentAmount?.toLocaleString('vi-VN')} VNĐ
+                            </p>
+                        )}
+                    </div>
+                    <button
+                        onClick={handleCloseContractModal}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '24px',
+                            cursor: 'pointer',
+                            color: '#64748b',
+                        }}
+                    >
+                        ×
+                    </button>
+                </div>
+
+                {/* Content: Two Column Layout or Full Width */}
+                <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                    {/* Left: Contract Preview */}
+                    <div
+                        style={{
+                            flex: 1,
+                            overflow: 'auto',
+                            padding: '20px',
+                            backgroundColor: '#f9fafb',
+                            borderRight: contractStatus === 'Contract_Signed' ? 'none' : '1px solid #e2e8f0',
+                        }}
+                    >
+                        <h3 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: '700', color: '#475569' }}>
+                            📄 Hợp đồng đầu tư
+                        </h3>
+                        {isLoadingContract ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: '#64748b' }}>
+                                    <Loader2 size={24} className={styles.spinner} />
+                                    <span>Đang tải hợp đồng...</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div
+                                style={{
+                                    backgroundColor: '#fff',
+                                    padding: '20px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #e2e8f0',
+                                    lineHeight: '1.6',
+                                    fontSize: '13px',
+                                    color: '#334155',
+                                    maxHeight: '75vh',
+                                    overflowY: 'auto',
+                                    boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.05)'
+                                }}
+                                dangerouslySetInnerHTML={{ __html: contractPreviewHtml }}
+                            />
+                        )}
+                    </div>
+
+                    {/* Right: Signing Form - Only show when NOT Contract_Signed */}
+                    {contractStatus !== 'Contract_Signed' && (
+                    <div
+                        style={{
+                            flex: 1,
+                            overflow: 'auto',
+                            padding: '20px',
+                            backgroundColor: '#fff',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '16px',
+                        }}
+                    >
+                        <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#475569' }}>
+                            ✍️ Điều khoản ký kết
+                        </h3>
+
+                        {/* Final Amount - Only for Investor */}
+                        {(!contractStatus || contractStatus < 2) && (
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                Số tiền cuối cùng (VNĐ) *
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={signFormData.finalAmount || ''}
+                                onChange={(e) => setSignFormData({ ...signFormData, finalAmount: e.target.value ? parseFloat(e.target.value) : 0 })}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    fontSize: '13px',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    boxSizing: 'border-box',
+                                    fontFamily: 'inherit',
+                                }}
+                                placeholder="Nhập số tiền"
+                            />
+                        </div>
+                        )}
+
+                        {/* Equity Percentage - Only for Investor */}
+                        {(!contractStatus || contractStatus < 2) && (
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                Phần trăm cổ phần (%) *
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={signFormData.finalEquityPercentage || ''}
+                                onChange={(e) => setSignFormData({ ...signFormData, finalEquityPercentage: e.target.value ? parseFloat(e.target.value) : 0 })}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    fontSize: '13px',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    boxSizing: 'border-box',
+                                    fontFamily: 'inherit',
+                                }}
+                                placeholder="Nhập phần trăm"
+                            />
+                        </div>
+                        )}
+
+                        {/* Additional Terms - Only for Investor */}
+                        {(!contractStatus || contractStatus < 2) && (
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                Điều khoản bổ sung
+                            </label>
+                            <textarea
+                                value={signFormData.additionalTerms}
+                                onChange={(e) => setSignFormData({ ...signFormData, additionalTerms: e.target.value })}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    fontSize: '13px',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    boxSizing: 'border-box',
+                                    fontFamily: 'inherit',
+                                    minHeight: '80px',
+                                    resize: 'vertical',
+                                }}
+                                placeholder="Nhập các điều khoản bổ sung (nếu có)"
+                            />
+                        </div>
+                        )}
+
+                        {/* Signature */}
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                Chữ ký (vẽ bên dưới) *
+                            </label>
+                            <div style={{
+                                border: '2px dashed #cbd5e1',
+                                borderRadius: '4px',
+                                backgroundColor: '#f9fafb',
+                                overflow: 'hidden',
+                                marginBottom: '8px'
+                            }}>
+                                <SignatureCanvas
+                                    ref={signatureCanvasRef}
+                                    onEnd={handleSignatureChange}
+                                    penColor="#000"
+                                    canvasProps={{
+                                        width: 400,
+                                        height: 150,
+                                        className: 'signature-canvas',
+                                        style: { 
+                                            display: 'block',
+                                            backgroundColor: '#fff',
+                                            cursor: 'crosshair',
+                                            touchAction: 'none'
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                <button
+                                    type="button"
+                                    onClick={handleClearSignature}
+                                    style={{
+                                        padding: '6px 12px',
+                                        backgroundColor: '#ef4444',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                                >
+                                    🗑️ Xóa chữ ký
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveSignature}
+                                    disabled={isSignatureEmpty}
+                                    style={{
+                                        padding: '6px 12px',
+                                        backgroundColor: isSignatureEmpty ? '#cbd5e1' : '#10b981',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        cursor: isSignatureEmpty ? 'not-allowed' : 'pointer',
+                                        transition: 'all 0.2s',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isSignatureEmpty) e.currentTarget.style.backgroundColor = '#059669';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isSignatureEmpty) e.currentTarget.style.backgroundColor = '#10b981';
+                                    }}
+                                >
+                                    ✓ Lưu chữ ký
+                                </button>
+                            </div>
+                            <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>
+                                💡 Vẽ chữ ký ở trên rồi click "Lưu chữ ký" để xác nhận
+                            </p>
+                            {signFormData.signatureBase64 && (
+                                <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#10b981', fontWeight: '600' }}>
+                                    ✓ Chữ ký đã được lưu
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                    )}
+                </div>
+
+                {/* Footer with Action Buttons */}
+                <div
+                    style={{
+                        padding: '16px 20px',
+                        borderTop: '1px solid #e2e8f0',
+                        display: 'flex',
+                        gap: '12px',
+                        justifyContent: 'flex-end',
+                        backgroundColor: '#f9fafb',
+                    }}
+                >
+                    <button
+                        onClick={handleCloseContractModal}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#f1f5f9',
+                            color: '#475569',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#e2e8f0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f1f5f9';
+                        }}
+                    >
+                        Hủy
+                    </button>
+
+                    {/* Download Button - Show when Contract_Signed */}
+                    {contractStatus === 'Contract_Signed' && contractDealData?.contractPdfUrl && (
+                        <a
+                            href={contractDealData.contractPdfUrl}
+                            download={`DEAL-${contractDealData.dealId}.pdf`}
+                            style={{
+                                padding: '8px 16px',
+                                backgroundColor: '#3b82f6',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                textDecoration: 'none',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#2563eb';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#3b82f6';
+                            }}
+                        >
+                            ⬇️ Tải hợp đồng
+                        </a>
+                    )}
+
+                    {/* View Button - Show when Contract_Signed */}
+                    {contractStatus === 'Contract_Signed' && (
+                        <button
+                            style={{
+                                padding: '8px 16px',
+                                backgroundColor: '#10b981',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#059669';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#10b981';
+                            }}
+                        >
+                            📄 Xem hợp đồng
+                        </button>
+                    )}
+
+                    {/* Sign Button - Show when NOT Contract_Signed */}
+                    {contractStatus !== 'Contract_Signed' && (
+                        <button
+                            onClick={handleSignContractAsStartup}
+                            disabled={isSigningContract}
+                            style={{
+                                padding: '8px 16px',
+                                backgroundColor: '#f59e0b',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: isSigningContract ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s',
+                                opacity: isSigningContract ? 0.7 : 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                            }}
+                            onMouseEnter={(e) => {
+                                if (!isSigningContract) {
+                                    e.currentTarget.style.backgroundColor = '#d97706';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!isSigningContract) {
+                                    e.currentTarget.style.backgroundColor = '#f59e0b';
+                                }
+                            }}
+                        >
+                            {isSigningContract ? (
+                                <>
+                                    <Loader2 size={14} className={styles.spinner} />
+                                    Đang ký...
+                                </>
+                            ) : (
+                                '✓ Ký (Startup)'
+                            )}
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
+    )}
+
     {showProjectForm && (
         <ProjectSubmissionForm
             onClose={() => setShowProjectForm(false)}
@@ -2568,35 +3599,39 @@ export default function StartupDashboard({ user }) {
         />
     )}
 
-    <ConfirmationModal
-        isOpen={showSubmitConfirmation}
-        type="info"
-        title="Nộp dự án"
-        message="Bạn có chắc chắn muốn nộp dự án này để được xem xét?"
-        primaryBtnText="Nộp"
-        secondaryBtnText="Hủy"
-        isLoading={isSubmittingProject}
-        onPrimaryClick={handleConfirmSubmit}
-        onSecondaryClick={() => {
-            setShowSubmitConfirmation(false);
-            setPendingSubmitProjectId(null);
-        }}
-    />
+    {showSubmitConfirmation && (
+        <ConfirmationModal
+            isOpen={showSubmitConfirmation}
+            type="info"
+            title="Nộp dự án"
+            message="Bạn có chắc chắn muốn nộp dự án này để được xem xét?"
+            primaryBtnText="Nộp"
+            secondaryBtnText="Hủy"
+            isLoading={isSubmittingProject}
+            onPrimaryClick={handleConfirmSubmit}
+            onSecondaryClick={() => {
+                setShowSubmitConfirmation(false);
+                setPendingSubmitProjectId(null);
+            }}
+        />
+    )}
 
-    <ConfirmationModal
-        isOpen={showDeleteConfirm}
-        title="Xác nhận xóa tài liệu"
-        message={`Bạn có chắc chắn muốn xóa tài liệu "${documentToDelete?.name}"? Hành động này không thể hoàn tác. Bạn sẽ không thể tải lại tệp này lên hệ thống nếu tệp đã được xác thực với Blockchain.`}
-        type="warning"
-        primaryBtnText={isDeletingDocument ? "Đang xóa..." : "Xóa tài liệu"}
-        secondaryBtnText="Hủy"
-        onPrimaryClick={confirmDeleteDocument}
-        onSecondaryClick={() => {
-            setShowDeleteConfirm(false);
-            setDocumentToDelete(null);
-        }}
-        isLoading={isDeletingDocument}
-    />
+    {showDeleteConfirm && (
+        <ConfirmationModal
+            isOpen={showDeleteConfirm}
+            title="Xác nhận xóa tài liệu"
+            message={`Bạn có chắc chắn muốn xóa tài liệu "${documentToDelete?.name}"? Hành động này không thể hoàn tác. Bạn sẽ không thể tải lại tệp này lên hệ thống nếu tệp đã được xác thực với Blockchain.`}
+            type="warning"
+            primaryBtnText={isDeletingDocument ? "Đang xóa..." : "Xóa tài liệu"}
+            secondaryBtnText="Hủy"
+            onPrimaryClick={confirmDeleteDocument}
+            onSecondaryClick={() => {
+                setShowDeleteConfirm(false);
+                setDocumentToDelete(null);
+            }}
+            isLoading={isDeletingDocument}
+        />
+    )}
 
     {showHistoryView && selectedHistoryResult && (
         <AIEvaluationModal
@@ -2646,6 +3681,6 @@ export default function StartupDashboard({ user }) {
         sentTime={activeChatSession?.sentTime}
         onClose={handleCloseChatWindow}
     />
-            </div>
+        </div>
     );
 }

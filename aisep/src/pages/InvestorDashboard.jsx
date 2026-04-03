@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare, TrendingUpIcon, Loader2 } from 'lucide-react';
+import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
 import FloatingChatWidget from '../components/common/FloatingChatWidget';
@@ -7,6 +8,9 @@ import followerService from '../services/followerService';
 import connectionService from '../services/connectionService';
 import chatService from '../services/chatService';
 import signalRService from '../services/signalRService';
+import dealsService from '../services/dealsService';
+import apiDebug from '../utils/apiDebug';
+import { apiClient } from '../services/apiClient';
 
 /**
  * InvestorDashboard - Comprehensive dashboard for investors
@@ -14,13 +18,34 @@ import signalRService from '../services/signalRService';
  */
 export default function InvestorDashboard({ user }) {
     const [activeSection, setActiveSection] = useState('overview');
-    const [watchlist, setWatchlist] = useState([]);
     const [sentInterests, setSentInterests] = useState([]);
     const [sentConnectionRequests, setSentConnectionRequests] = useState([]);
-    const [activeInvestments, setActiveInvestments] = useState([]);
+    const [deals, setDeals] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [activeChatConnectionId, setActiveChatConnectionId] = useState(null);
     const [activeChatSession, setActiveChatSession] = useState(null);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+    // Contract signing states
+    const [showContractModal, setShowContractModal] = useState(false);
+    const [contractPreviewHtml, setContractPreviewHtml] = useState(null);
+    const [isLoadingContract, setIsLoadingContract] = useState(false);
+    const [contractDealData, setContractDealData] = useState(null);
+    const [contractStatus, setContractStatus] = useState(null);
+    const [isSigningContract, setIsSigningContract] = useState(false);
+    
+    // Contract signing form states
+    const [signFormData, setSignFormData] = useState({
+        finalAmount: 0,
+        finalEquityPercentage: 0,
+        additionalTerms: '',
+        signatureBase64: ''
+    });
+
+    // Signature canvas ref
+    const signatureCanvasRef = useRef(null);
+    const signatureDataRef = useRef(''); // Keep latest signature value
+    const [isSignatureEmpty, setIsSignatureEmpty] = useState(true);
 
     // Initialize SignalR on mount
     React.useEffect(() => {
@@ -45,28 +70,59 @@ export default function InvestorDashboard({ user }) {
         };
     }, [user?.userId]);
 
+    // Function to refresh deals after investment
+    const refreshDeals = () => {
+        console.log('[InvestorDashboard] refreshDeals() called - triggering refetch');
+        setRefreshTrigger(prev => prev + 1);
+    };
+
+    // Listen for new deal creation events
+    React.useEffect(() => {
+        const handleDealCreated = (event) => {
+            console.log('[InvestorDashboard] New deal created event received:', event.detail);
+            refreshDeals();
+        };
+
+        window.addEventListener('deal_created', handleDealCreated);
+        
+        return () => {
+            window.removeEventListener('deal_created', handleDealCreated);
+        };
+    }, []);
+
     React.useEffect(() => {
         const fetchAllData = async () => {
             setIsLoading(true);
             try {
-                // Fetch followed projects from /api/projects/my-followed
-                const followingRes = await followerService.getMyFollowing();
-                console.log('[InvestorDashboard] Followed projects response:', followingRes);
+                console.log('[InvestorDashboard] Starting parallel fetch of all data...');
                 
+                // Fetch all 3 APIs in PARALLEL using Promise.all()
+                const [followingRes, connectRes, dealsRes] = await Promise.all([
+                    followerService.getMyFollowing().catch(err => {
+                        console.error('Failed to fetch following:', err);
+                        return null;
+                    }),
+                    connectionService.getMyConnectionRequests().catch(err => {
+                        console.error('Failed to fetch connection requests:', err);
+                        return null;
+                    }),
+                    dealsService.getInvestorDeals().catch(err => {
+                        console.error('Failed to fetch deals:', err);
+                        return null;
+                    })
+                ]);
+                
+                console.log('[InvestorDashboard] Parallel fetch completed');
+
+                // Process Followed Projects
                 if (followingRes && followingRes.data) {
-                    // Handle paginated response structure: data.items
                     let followedProjects = [];
-                    
                     if (followingRes.data.items && Array.isArray(followingRes.data.items)) {
                         followedProjects = followingRes.data.items;
                     } else if (Array.isArray(followingRes.data)) {
                         followedProjects = followingRes.data;
                     }
                     
-                    console.log('[InvestorDashboard] Followed projects:', followedProjects);
-                    
-                    // Map response to sentInterests format
-                    // Response structure: projectId, projectName, projectImageUrl, industry, followedAt
                     const formattedInterests = followedProjects.map(project => ({
                         id: project.projectId,
                         projectId: project.projectId,
@@ -84,81 +140,70 @@ export default function InvestorDashboard({ user }) {
                         }),
                         followedAt: project.followedAt
                     }));
-                    
-                    console.log('[InvestorDashboard] Formatted interests:', formattedInterests);
                     setSentInterests(formattedInterests);
+                } else {
+                    setSentInterests([]);
                 }
 
-                // Fetch sent connection requests
-                try {
-                    const connectRes = await connectionService.getMyConnectionRequests();
-                    console.log('[InvestorDashboard] Sent connection requests response:', connectRes);
-                    
-                    if (connectRes && connectRes.data && connectRes.data.items) {
-                        // Map response to display format
-                        // Response structure: connectionRequestId, startupName, projectId, status, message, responseDate, chatSessionId
-                        const formattedRequests = connectRes.data.items.map(request => {
-                            // Format date from responseDate (when the owner responded)
-                            let formattedDate = '';
-                            let formattedDateObj = null;
-                            
-                            if (request.responseDate) {
-                                formattedDateObj = new Date(request.responseDate);
-                                formattedDate = formattedDateObj.toLocaleString('vi-VN', { 
-                                    year: 'numeric', 
-                                    month: '2-digit', 
-                                    day: '2-digit',
-                                    hour: '2-digit',
-                                    minute: '2-digit',
-                                    second: '2-digit',
-                                    hour12: false
-                                });
-                            }
-                            
-                            return {
-                                id: request.connectionRequestId || request.id,
-                                connectionRequestId: request.connectionRequestId,
-                                projectId: request.projectId,
-                                projectName: request.projectName || 'Unknown Project',
-                                startupName: request.startupName || 'Unknown Startup',
-                                status: request.status || 'Pending',
-                                message: request.message || '',
-                                responseDate: formattedDate,
-                                responseDateRaw: request.responseDate,
-                                chatSessionId: request.chatSessionId || null
-                            };
-                        });
-                        
-                        console.log('[InvestorDashboard] Formatted connection requests:', formattedRequests);
-                        setSentConnectionRequests(formattedRequests);
-                    }
-                } catch (connError) {
-                    console.error('[InvestorDashboard] Failed to fetch connection requests:', connError);
+                // Process Connection Requests
+                if (connectRes && connectRes.data && connectRes.data.items) {
+                    const formattedRequests = connectRes.data.items.map(request => {
+                        let formattedDate = '';
+                        if (request.responseDate) {
+                            formattedDate = new Date(request.responseDate).toLocaleString('vi-VN', { 
+                                year: 'numeric', 
+                                month: '2-digit', 
+                                day: '2-digit',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                second: '2-digit',
+                                hour12: false
+                            });
+                        }
+                        return {
+                            id: request.connectionRequestId || request.id,
+                            connectionRequestId: request.connectionRequestId,
+                            projectId: request.projectId,
+                            projectName: request.projectName || 'Unknown Project',
+                            startupName: request.startupName || 'Unknown Startup',
+                            status: request.status || 'Pending',
+                            message: request.message || '',
+                            responseDate: formattedDate,
+                            responseDateRaw: request.responseDate,
+                            chatSessionId: request.chatSessionId || null
+                        };
+                    });
+                    setSentConnectionRequests(formattedRequests);
+                } else {
                     setSentConnectionRequests([]);
                 }
+
+                // Process Deals - SIMPLE: just get raw data
+                let dealsData = [];
+                if (dealsRes?.data?.items && Array.isArray(dealsRes.data.items)) {
+                    dealsData = dealsRes.data.items;
+                } else if (Array.isArray(dealsRes?.data)) {
+                    dealsData = dealsRes.data;
+                } else if (Array.isArray(dealsRes)) {
+                    dealsData = dealsRes;
+                }
+                console.log(`[InvestorDashboard] Found ${dealsData.length} deals`);
+                setDeals(dealsData);
             } catch (error) {
                 console.error('[InvestorDashboard] Failed to fetch investor data:', error);
-                // Set empty array on error
                 setSentInterests([]);
+                setSentConnectionRequests([]);
+                setDeals([]);
             } finally {
                 setIsLoading(false);
             }
         };
         fetchAllData();
-    }, []);
+    }, [refreshTrigger]);
 
     const dashboardData = {
-        totalInvested: '$0',
-        activeInvestments: activeInvestments.length,
-        portfolioValue: '$0',
-        watchlistCount: watchlist.length,
-        sentInterestsCount: sentInterests.length,
-        sentConnectionRequestsCount: sentConnectionRequests.length,
-        monthlyActivity: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    };
-
-    const handleRemoveFromWatchlist = (id) => {
-        setWatchlist(watchlist.filter(item => item.id !== id));
+        activeInvestments: deals.length,
+        acceptedInterests: sentConnectionRequests.filter(r => r.status === 'Accepted').length
     };
 
     const handleWithdrawInterest = async (id) => {
@@ -189,6 +234,180 @@ export default function InvestorDashboard({ user }) {
             });
         } else {
             console.warn('[InvestorDashboard] Cannot start chat - no chatSessionId for connectionRequestId:', connectionRequestId);
+        }
+    };
+
+    const handleShowContractPreview = async (deal) => {
+        console.log('[InvestorDashboard] handleShowContractPreview called for deal:', deal.dealId, 'status:', deal.status);
+        setIsLoadingContract(true);
+        
+        try {
+            setContractDealData(deal);
+            // Use status directly from deal object (already have it from GET /api/Deals)
+            setContractStatus(deal.status);
+            console.log('[InvestorDashboard] Set contractStatus to:', deal.status, 'type:', typeof deal.status);
+            
+            setSignFormData({
+                finalAmount: deal.amount || 0,
+                finalEquityPercentage: deal.equityPercentage || 0,
+                additionalTerms: '',
+                signatureBase64: ''
+            });
+            
+            const response = await dealsService.getContractPreview(deal.dealId);
+            if (response && response.data) {
+                setContractPreviewHtml(response.data);
+                setShowContractModal(true);
+            }
+        } catch (error) {
+            console.error('[InvestorDashboard] Error loading contract:', error);
+            alert('Lỗi: Không thể tải hợp đồng');
+        } finally {
+            setIsLoadingContract(false);
+        }
+    };
+
+    const handleSignatureChange = () => {
+        // Called when user draws on canvas
+        if (signatureCanvasRef.current) {
+            const isEmpty = signatureCanvasRef.current.isEmpty();
+            setIsSignatureEmpty(isEmpty);
+        }
+    };
+
+    const handleClearSignature = () => {
+        console.log('[InvestorDashboard] Clearing signature');
+        if (signatureCanvasRef.current) {
+            signatureCanvasRef.current.clear();
+            signatureDataRef.current = ''; // Clear ref too
+            setIsSignatureEmpty(true);
+            setSignFormData(prev => ({ ...prev, signatureBase64: '' }));
+        }
+    };
+
+    const handleSaveSignature = () => {
+        console.log('[InvestorDashboard] Saving signature...');
+        if (signatureCanvasRef.current) {
+            const isEmpty = signatureCanvasRef.current.isEmpty();
+            console.log('[InvestorDashboard] Canvas isEmpty:', isEmpty);
+            
+            if (!isEmpty) {
+                try {
+                    const canvasUrl = signatureCanvasRef.current.toDataURL('image/png');
+                    // Extract plain base64 from data URL (remove 'data:image/png;base64,' prefix)
+                    const base64String = canvasUrl.replace(/^data:image\/png;base64,/, '');
+                    console.log('[InvestorDashboard] Signature Base64 length:', base64String.length);
+                    
+                    // Store in ref for reliable access
+                    signatureDataRef.current = base64String;
+                    
+                    // Also update state for UI
+                    setSignFormData(prev => {
+                        const updated = { ...prev, signatureBase64: base64String };
+                        console.log('[InvestorDashboard] Updated signFormData with signature');
+                        return updated;
+                    });
+                } catch (err) {
+                    console.error('[InvestorDashboard] Error saving signature:', err);
+                }
+            } else {
+                console.log('[InvestorDashboard] Canvas is empty, cannot save');
+            }
+        } else {
+            console.log('[InvestorDashboard] No canvas ref found');
+        }
+    };
+
+    const handleSignContract = async () => {
+        if (!contractDealData) return;
+        
+        console.log('[InvestorDashboard] handleSignContract called');
+        console.log('[InvestorDashboard] Current signFormData:', signFormData);
+        console.log('[InvestorDashboard] Ref signature length:', signatureDataRef.current.length);
+        
+        // Priority: ref > state > canvas
+        let finalSignature = signatureDataRef.current || signFormData.signatureBase64;
+        
+        // If no signature in ref/state, try to get from canvas directly
+        if (!finalSignature && signatureCanvasRef.current) {
+            console.log('[InvestorDashboard] Getting signature from canvas directly');
+            if (!signatureCanvasRef.current.isEmpty()) {
+                try {
+                    const canvasUrl = signatureCanvasRef.current.toDataURL('image/png');
+                    finalSignature = canvasUrl.replace(/^data:image\/png;base64,/, ''); // Extract plain base64
+                    signatureDataRef.current = finalSignature; // Store in ref
+                    console.log('[InvestorDashboard] Got signature from canvas, length:', finalSignature.length);
+                } catch (err) {
+                    console.error('[InvestorDashboard] Error getting signature from canvas:', err);
+                }
+            }
+        }
+        
+        // Validate form
+        if (!signFormData.finalAmount || signFormData.finalAmount === 0) {
+            alert('Vui lòng nhập số tiền');
+            return;
+        }
+        
+        if (!signFormData.finalEquityPercentage && signFormData.finalEquityPercentage !== 0) {
+            alert('Vui lòng nhập phần trăm cổ phần');
+            return;
+        }
+        
+        if (!finalSignature) {
+            console.log('[InvestorDashboard] No signature found');
+            alert('Vui lòng vẽ chữ ký');
+            return;
+        }
+        
+        setIsSigningContract(true);
+        try {
+            console.log('[InvestorDashboard] Signing contract for deal:', contractDealData.dealId);
+            
+            // Prepare data with final signature
+            const contractData = {
+                finalAmount: signFormData.finalAmount,
+                finalEquityPercentage: signFormData.finalEquityPercentage,
+                additionalTerms: signFormData.additionalTerms,
+                signatureBase64: finalSignature
+            };
+            
+            console.log('[InvestorDashboard] Sending contract data:', {
+                dealId: contractDealData.dealId,
+                finalAmount: contractData.finalAmount,
+                finalEquityPercentage: contractData.finalEquityPercentage,
+                signatureBase64Length: contractData.signatureBase64.length
+            });
+            
+            const response = await dealsService.signContract(contractDealData.dealId, contractData);
+            if (response?.success) {
+                alert('✓ Hợp đồng đã được ký thành công!');
+                setShowContractModal(false);
+                setContractPreviewHtml(null);
+                setContractDealData(null);
+                setSignFormData({ finalAmount: 0, finalEquityPercentage: 0, additionalTerms: '', signatureBase64: '' });
+                setIsSignatureEmpty(true);
+                signatureDataRef.current = ''; // Clear ref
+                setRefreshTrigger(prev => prev + 1);
+            }
+        } catch (error) {
+            console.error('[InvestorDashboard] Error signing contract:', error);
+            alert('Lỗi: Không thể ký hợp đồng');
+        } finally {
+            setIsSigningContract(false);
+        }
+    };
+
+    const handleCloseContractModal = () => {
+        setShowContractModal(false);
+        setContractPreviewHtml(null);
+        setContractDealData(null);
+        setContractStatus(null);
+        setSignFormData({ finalAmount: 0, finalEquityPercentage: 0, additionalTerms: '', signatureBase64: '' });
+        setIsSignatureEmpty(true);
+        signatureDataRef.current = ''; // Clear ref
+        if (signatureCanvasRef.current) {
+            signatureCanvasRef.current.clear();
         }
     };
 
@@ -258,32 +477,12 @@ export default function InvestorDashboard({ user }) {
             {/* Quick Stats */}
             <div className={styles.statsGrid}>
                 <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconCyan}`}>
-                        <DollarSign size={20} />
-                    </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.totalInvested}</div>
-                        <div className={styles.statLabel}>Tổng đầu tư</div>
-                    </div>
-                </div>
-
-                <div className={styles.statCard}>
                     <div className={`${styles.statIcon} ${styles.iconPurple}`}>
                         <TrendingUp size={20} />
                     </div>
                     <div className={styles.statInfo}>
                         <div className={styles.statValue}>{dashboardData.activeInvestments}</div>
                         <div className={styles.statLabel}>Đang đầu tư</div>
-                    </div>
-                </div>
-
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconRed}`}>
-                        <Heart size={20} />
-                    </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.watchlistCount}</div>
-                        <div className={styles.statLabel}>Danh sách theo dõi</div>
                     </div>
                 </div>
 
@@ -311,12 +510,6 @@ export default function InvestorDashboard({ user }) {
                     onClick={() => setActiveSection('investments')}
                 >
                     Đang đầu tư
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'watchlist' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('watchlist')}
-                >
-                    Theo dõi
                 </button>
                 <button
                     className={`${styles.tab} ${activeSection === 'connectionrequests' ? styles.active : ''}`}
@@ -398,77 +591,6 @@ export default function InvestorDashboard({ user }) {
                                         <strong>0%</strong>
                                     </div>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Active Investments Section */}
-                {activeSection === 'investments' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Đầu tư đang hoạt động</h3>
-                            <div className={styles.list}>
-                                {activeInvestments.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                        <p>Chưa có khoản đầu tư nào đang hoạt động.</p>
-                                    </div>
-                                ) : activeInvestments.map(investment => (
-                                    <div key={investment.id} className={styles.listItem}>
-                                        <div className={styles.listContent}>
-                                            <h4 className={styles.listTitle}>{investment.startupName}</h4>
-                                            <div className={styles.listMeta} style={{ display: 'flex', gap: '12px' }}>
-                                                <span className={`${styles.badge} ${styles.badgeInfo}`}>{investment.stage}</span>
-                                                <span>Invested: {investment.date}</span>
-                                            </div>
-                                            <div style={{ marginTop: '8px', fontSize: '14px', color: 'var(--text-primary)' }}>
-                                                <strong>{investment.amount}</strong> for {investment.equity} Equity
-                                            </div>
-                                        </div>
-                                        <div className={styles.listActions}>
-                                            <button className={styles.secondaryBtn}>View Details</button>
-                                            <button className={styles.secondaryBtn}>Documents</button>
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* Watchlist Section */}
-                {activeSection === 'watchlist' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Danh sách theo dõi ({watchlist.length})</h3>
-                            <div className={styles.list}>
-                                {watchlist.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                        <p>Danh sách theo dõi của bạn đang trống.</p>
-                                    </div>
-                                ) : watchlist.map(item => (
-                                    <div key={item.id} className={styles.listItem}>
-                                        <div className={styles.listContent}>
-                                            <h4 className={styles.listTitle}>{item.name}</h4>
-                                            <div className={styles.listMeta} style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '4px' }}>
-                                                <span className={`${styles.badge} ${styles.badgeInfo}`}>{item.stage}</span>
-                                                <span className={`${styles.badge} ${styles.badgePending}`}>{item.industry}</span>
-                                                <span>Score: {item.score}/100</span>
-                                                <span>👥 {item.followers}</span>
-                                            </div>
-                                        </div>
-                                        <div className={styles.listActions}>
-                                            <button className={styles.secondaryBtn}>Profile</button>
-                                            <button className={styles.primaryBtn}>Send Interest</button>
-                                            <button
-                                                className={styles.dangerBtn}
-                                                onClick={() => handleRemoveFromWatchlist(item.id)}
-                                            >
-                                                Remove
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
                             </div>
                         </div>
                     </div>
@@ -599,6 +721,109 @@ export default function InvestorDashboard({ user }) {
                     </div>
                 )}
 
+                {/* Investments (Deals) Section */}
+                {activeSection === 'investments' && (
+                    <div className={styles.section}>
+                        <div className={styles.card}>
+                            <h3 className={styles.cardTitle}>
+                                Khoản đầu tư của bạn ({deals.length})
+                            </h3>
+                            <div className={styles.list}>
+                                {deals.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Bạn chưa có khoản đầu tư nào. Hãy khám phá và đầu tư vào các startup hứa hẹn.</p>
+                                    </div>
+                                ) : deals.map(deal => {
+                                    // Compute status color and label from raw deal.status
+                                    const statusMap = {
+                                        'Pending': { label: 'Chờ xác nhận', color: '#f59e0b' },
+                                        'Confirmed': { label: 'Đã xác nhận', color: '#10b981' },
+                                        'Contract_Signed': { label: 'Đã ký kết', color: '#667eea' },
+                                        'Minted_NFT': { label: 'Đã mint NFT', color: '#8b5cf6' },
+                                        'Failed': { label: 'Thất bại', color: '#ef4444' }
+                                    };
+                                    const statusInfo = statusMap[deal.status] || { label: deal.status || 'Unknown', color: '#64748b' };
+                                    const isContractSigned = !!deal.contractSignedAt;
+                                    
+                                    return (
+                                        <div key={deal.dealId} className={styles.listItem}>
+                                            <div className={styles.listContent}>
+                                                <h4 className={styles.listTitle}>
+                                                    {deal.projectName || deal.startupName || `Deal #${deal.dealId}`}
+                                                    {isContractSigned && (
+                                                        <CheckCircle size={16} style={{ marginLeft: '8px', color: '#10b981', verticalAlign: 'middle' }} />
+                                                    )}
+                                                </h4>
+                                                <div className={styles.listMeta} style={{ marginTop: '8px' }}>
+                                                    <span 
+                                                        className={`${styles.badge}`}
+                                                        style={{ 
+                                                            backgroundColor: statusInfo.color,
+                                                            color: '#fff',
+                                                            marginRight: '12px'
+                                                        }}
+                                                    >
+                                                        {statusInfo.label}
+                                                    </span>
+                                                    {deal.amount > 0 && (
+                                                        <span style={{ marginRight: '12px' }}>
+                                                            💰 {deal.amount.toLocaleString('vi-VN')} VND
+                                                        </span>
+                                                    )}
+                                                    {deal.equityPercentage !== null && deal.equityPercentage > 0 && (
+                                                        <span style={{ marginRight: '12px' }}>
+                                                            📊 {deal.equityPercentage}%
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {deal.contractSignedAt && (
+                                                    <div style={{ marginTop: '6px', fontSize: '0.9rem', color: '#64748b' }}>
+                                                        ✓ Ký kết: {new Date(deal.contractSignedAt).toLocaleString('vi-VN')}
+                                                    </div>
+                                                )}
+                                                {deal.contractPdfUrl && (
+                                                    <div style={{ marginTop: '6px' }}>
+                                                        <a href={deal.contractPdfUrl} target="_blank" rel="noopener noreferrer" style={{ color: '#667eea', textDecoration: 'none', fontSize: '0.9rem' }}>
+                                                            📄 Tải hợp đồng
+                                                        </a>
+                                                    </div>
+                                                )}
+                                            </div>
+                                            <div className={styles.listActions} style={{ alignItems: 'center', gap: '8px' }}>
+                                                <button className={styles.secondaryBtn}>Chi tiết</button>
+                                                {(deal.status === 'Confirmed' || deal.status === 1) && (
+                                                    <button
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#667eea',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleShowContractPreview(deal)}
+                                                    >
+                                                        📄 Ký hợp đồng
+                                                    </button>
+                                                )}
+                                                {deal.isContractSigned && deal.contractPdfUrl && (
+                                                    <button className={styles.secondaryBtn}>Hợp đồng</button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 {/* Preferences Section */}
                 {activeSection === 'preferences' && (
                     <div className={styles.section}>
@@ -652,6 +877,422 @@ export default function InvestorDashboard({ user }) {
                     sentTime={activeChatSession?.sentTime}
                     onClose={handleCloseChatWindow}
                 />
+
+                {/* Contract Preview Modal */}
+                {showContractModal && contractPreviewHtml && (
+                    <div
+                        style={{
+                            position: 'fixed',
+                            top: 0,
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            zIndex: 1000,
+                            padding: '16px',
+                        }}
+                        onClick={handleCloseContractModal}
+                    >
+                        <div
+                            style={{
+                                backgroundColor: '#fff',
+                                borderRadius: '8px',
+                                width: '100%',
+                                maxWidth: '1000px',
+                                maxHeight: '90vh',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div
+                                style={{
+                                    padding: '20px',
+                                    borderBottom: '1px solid #e2e8f0',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                }}
+                            >
+                                <div>
+                                    <h2 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700' }}>
+                                        Ký hợp đồng đầu tư
+                                    </h2>
+                                    {contractDealData && (
+                                        <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                                            <strong>Dự án:</strong> {contractDealData.projectName || contractDealData.startupName} • <strong>Số tiền:</strong> {contractDealData.amount?.toLocaleString('vi-VN')} VND
+                                        </p>
+                                    )}
+                                </div>
+                                <button
+                                    onClick={handleCloseContractModal}
+                                    style={{
+                                        background: 'none',
+                                        border: 'none',
+                                        fontSize: '24px',
+                                        cursor: 'pointer',
+                                        color: '#64748b',
+                                    }}
+                                >
+                                    ×
+                                </button>
+                            </div>
+
+                            {/* Content: Two Column Layout */}
+                            <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                                {/* Left: Contract Preview */}
+                                <div
+                                    style={{
+                                        flex: 1,
+                                        overflow: 'auto',
+                                        padding: '20px',
+                                        backgroundColor: '#f9fafb',
+                                        borderRight: '1px solid #e2e8f0',
+                                    }}
+                                >
+                                    <h3 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: '700', color: '#475569' }}>
+                                        📄 Hợp đồng đầu tư
+                                    </h3>
+                                    {isLoadingContract ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
+                                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: '#64748b' }}>
+                                                <Loader2 size={24} className={styles.spinner} />
+                                                <span>Đang tải hợp đồng...</span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div
+                                            style={{
+                                                backgroundColor: '#fff',
+                                                padding: '20px',
+                                                borderRadius: '6px',
+                                                border: '1px solid #e2e8f0',
+                                                lineHeight: '1.6',
+                                                fontSize: '13px',
+                                                color: '#334155',
+                                                maxHeight: '75vh',
+                                                overflowY: 'auto',
+                                                boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.05)'
+                                            }}
+                                            dangerouslySetInnerHTML={{ __html: contractPreviewHtml }}
+                                        />
+                                    )}
+                                </div>
+
+                                {/* Right: Signing Form */}
+                                <div
+                                    style={{
+                                        flex: 1,
+                                        overflow: 'auto',
+                                        padding: '20px',
+                                        backgroundColor: '#fff',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: '16px',
+                                    }}
+                                >
+                                    <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#475569' }}>
+                                        ✍️ Điều khoản ký kết
+                                    </h3>
+
+                                    {/* Final Amount */}
+                                    <div>
+                                        <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                            Số tiền cuối cùng (VND) *
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={signFormData.finalAmount || ''}
+                                            onChange={(e) => setSignFormData({ ...signFormData, finalAmount: e.target.value ? parseFloat(e.target.value) : 0 })}
+                                            style={{
+                                                width: '100%',
+                                                padding: '8px 12px',
+                                                fontSize: '13px',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '4px',
+                                                boxSizing: 'border-box',
+                                                fontFamily: 'inherit',
+                                            }}
+                                            placeholder="Nhập số tiền"
+                                        />
+                                    </div>
+
+                                    {/* Equity Percentage */}
+                                    <div>
+                                        <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                            Phần trăm cổ phần (%) *
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={signFormData.finalEquityPercentage || ''}
+                                            onChange={(e) => setSignFormData({ ...signFormData, finalEquityPercentage: e.target.value ? parseFloat(e.target.value) : 0 })}
+                                            style={{
+                                                width: '100%',
+                                                padding: '8px 12px',
+                                                fontSize: '13px',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '4px',
+                                                boxSizing: 'border-box',
+                                                fontFamily: 'inherit',
+                                            }}
+                                            placeholder="Nhập phần trăm"
+                                        />
+                                    </div>
+
+                                    {/* Additional Terms */}
+                                    <div>
+                                        <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                            Điều khoản bổ sung
+                                        </label>
+                                        <textarea
+                                            value={signFormData.additionalTerms}
+                                            onChange={(e) => setSignFormData({ ...signFormData, additionalTerms: e.target.value })}
+                                            style={{
+                                                width: '100%',
+                                                padding: '8px 12px',
+                                                fontSize: '13px',
+                                                border: '1px solid #cbd5e1',
+                                                borderRadius: '4px',
+                                                boxSizing: 'border-box',
+                                                fontFamily: 'inherit',
+                                                minHeight: '80px',
+                                                resize: 'vertical',
+                                            }}
+                                            placeholder="Nhập các điều khoản bổ sung (nếu có)"
+                                        />
+                                    </div>
+
+                                    {/* Signature */}
+                                    <div>
+                                        <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                            Chữ ký (vẽ bên dưới) *
+                                        </label>
+                                        <div style={{
+                                            border: '2px dashed #cbd5e1',
+                                            borderRadius: '4px',
+                                            backgroundColor: '#f9fafb',
+                                            overflow: 'hidden',
+                                            marginBottom: '8px'
+                                        }}>
+                                            <SignatureCanvas
+                                                ref={signatureCanvasRef}
+                                                onEnd={handleSignatureChange}
+                                                penColor="#000"
+                                                canvasProps={{
+                                                    width: 400,
+                                                    height: 150,
+                                                    className: 'signature-canvas',
+                                                    style: { 
+                                                        display: 'block',
+                                                        backgroundColor: '#fff',
+                                                        cursor: 'crosshair',
+                                                        touchAction: 'none'
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                        <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                            <button
+                                                type="button"
+                                                onClick={handleClearSignature}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    backgroundColor: '#ef4444',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '600',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.2s',
+                                                }}
+                                                onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                                                onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                                            >
+                                                🗑️ Xóa chữ ký
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleSaveSignature}
+                                                disabled={isSignatureEmpty}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    backgroundColor: isSignatureEmpty ? '#cbd5e1' : '#10b981',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    borderRadius: '4px',
+                                                    fontSize: '12px',
+                                                    fontWeight: '600',
+                                                    cursor: isSignatureEmpty ? 'not-allowed' : 'pointer',
+                                                    transition: 'all 0.2s',
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    if (!isSignatureEmpty) e.currentTarget.style.backgroundColor = '#059669';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    if (!isSignatureEmpty) e.currentTarget.style.backgroundColor = '#10b981';
+                                                }}
+                                            >
+                                                ✓ Lưu chữ ký
+                                            </button>
+                                        </div>
+                                        <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>
+                                            💡 Vẽ chữ ký ở trên rồi click "Lưu chữ ký" để xác nhận
+                                        </p>
+                                        {signFormData.signatureBase64 && (
+                                            <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#10b981', fontWeight: '600' }}>
+                                                ✓ Chữ ký đã được lưu
+                                            </p>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Footer with Action Buttons */}
+                            <div
+                                style={{
+                                    padding: '16px 20px',
+                                    borderTop: '1px solid #e2e8f0',
+                                    display: 'flex',
+                                    gap: '12px',
+                                    justifyContent: 'flex-end',
+                                    backgroundColor: '#f9fafb',
+                                }}
+                            >
+                                <button
+                                    onClick={handleCloseContractModal}
+                                    style={{
+                                        padding: '8px 16px',
+                                        backgroundColor: '#f1f5f9',
+                                        color: '#475569',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '4px',
+                                        fontSize: '13px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#e2e8f0';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        e.currentTarget.style.backgroundColor = '#f1f5f9';
+                                    }}
+                                >
+                                    Hủy
+                                </button>
+
+                                {/* Download Button - Show when Contract_Signed */}
+                                {contractStatus === 'Contract_Signed' && contractDealData?.contractPdfUrl && (
+                                    <a
+                                        href={contractDealData.contractPdfUrl}
+                                        download={`DEAL-${contractDealData.dealId}.pdf`}
+                                        style={{
+                                            padding: '8px 16px',
+                                            backgroundColor: '#3b82f6',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                            textDecoration: 'none',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#2563eb';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#3b82f6';
+                                        }}
+                                    >
+                                        ⬇️ Tải hợp đồng
+                                    </a>
+                                )}
+
+                                {/* View Button - Show when Contract_Signed */}
+                                {contractStatus === 'Contract_Signed' && (
+                                    <button
+                                        style={{
+                                            padding: '8px 16px',
+                                            backgroundColor: '#10b981',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            cursor: 'pointer',
+                                            transition: 'all 0.2s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#059669';
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            e.currentTarget.style.backgroundColor = '#10b981';
+                                        }}
+                                    >
+                                        📄 Xem hợp đồng
+                                    </button>
+                                )}
+
+                                {/* Sign Button - Show when NOT Contract_Signed */}
+                                {contractStatus !== 'Contract_Signed' && (
+                                    <button
+                                        onClick={handleSignContract}
+                                        disabled={isSigningContract}
+                                        style={{
+                                            padding: '8px 16px',
+                                            backgroundColor: '#667eea',
+                                            color: '#fff',
+                                            border: 'none',
+                                            borderRadius: '4px',
+                                            fontSize: '13px',
+                                            fontWeight: '600',
+                                            cursor: isSigningContract ? 'not-allowed' : 'pointer',
+                                            transition: 'all 0.2s',
+                                            opacity: isSigningContract ? 0.7 : 1,
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '6px',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                            if (!isSigningContract) {
+                                                e.currentTarget.style.backgroundColor = '#5568d3';
+                                            }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                            if (!isSigningContract) {
+                                                e.currentTarget.style.backgroundColor = '#667eea';
+                                            }
+                                        }}
+                                    >
+                                        {isSigningContract ? (
+                                            <>
+                                                <Loader2 size={14} className={styles.spinner} />
+                                                Đang ký...
+                                            </>
+                                        ) : (
+                                            '✓ Ký hợp đồng'
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );

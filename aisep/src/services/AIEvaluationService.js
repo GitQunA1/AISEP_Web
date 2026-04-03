@@ -3,7 +3,7 @@
  * AI-powered evaluation of startup projects
  * Implements: BR-10, BR-11, BR-12, BR-13, BR-14
  */
-import apiClient from './apiClient';
+import { apiClient } from './apiClient';
 
 const requestCache = new Map();
 

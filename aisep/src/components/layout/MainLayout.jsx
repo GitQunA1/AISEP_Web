@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { Rocket, Loader } from 'lucide-react';
 import styles from './MainLayout.module.css';
 import Sidebar from './Sidebar';
@@ -14,6 +14,7 @@ import investorService from '../../services/investorService';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import followerService from '../../services/followerService';
 import connectionService from '../../services/connectionService';
+import dealsService from '../../services/dealsService';
 import AdvisorsPage from '../../pages/AdvisorsPage';
 import advisorService from '../../services/advisorService';
 import AdvisorDetailView from '../profile/AdvisorDetailView';
@@ -152,6 +153,36 @@ function MainLayout({
   const [investorCount, setInvestorCount] = useState(0);
   const [followedProjectIds, setFollowedProjectIds] = useState(new Set()); // Cache for quick lookup
   const [sentConnectionIds, setSentConnectionIds] = useState(new Set()); // Cache for connection status
+  const [investedProjectIds, setInvestedProjectIds] = useState(new Set()); // Cache for already invested projects
+
+  // Refetch invested projects (called after successful investment)
+  const refetchInvestedProjects = useCallback(async () => {
+    const isInvestor = user && (
+      user.role === 'investor' || 
+      user.role === 'Investor' || 
+      user.role === 1 || 
+      String(user.role) === '1'
+    );
+
+    if (!isInvestor) return;
+
+    try {
+      const response = await dealsService.getInvestorDeals();
+      let deals = [];
+      if (response && response.data) {
+        if (response.data.items && Array.isArray(response.data.items)) {
+          deals = response.data.items;
+        } else if (Array.isArray(response.data)) {
+          deals = response.data;
+        }
+      }
+      const ids = new Set(deals.map(d => d.projectId));
+      setInvestedProjectIds(ids);
+      console.log('[MainLayout] Refetched invested project IDs:', ids);
+    } catch (error) {
+      console.error('[MainLayout] Failed to refetch invested projects:', error);
+    }
+  }, [user]);
 
   // Helper for RightPanel labels
   const SECTOR_LABELS = [
@@ -275,6 +306,47 @@ function MainLayout({
     };
 
     fetchSentConnections();
+  }, [user]);
+
+  // Fetch invested projects for investors - runs once and caches the projectIds
+  useEffect(() => {
+    const isInvestor = user && (
+      user.role === 'investor' || 
+      user.role === 'Investor' || 
+      user.role === 1 || 
+      String(user.role) === '1'
+    );
+
+    if (!isInvestor) {
+      setInvestedProjectIds(new Set());
+      return;
+    }
+
+    const fetchInvestedProjects = async () => {
+      try {
+        const response = await dealsService.getInvestorDeals();
+        console.log('[MainLayout] Investor deals response:', response);
+        
+        let deals = [];
+        if (response && response.data) {
+          if (response.data.items && Array.isArray(response.data.items)) {
+            deals = response.data.items;
+          } else if (Array.isArray(response.data)) {
+            deals = response.data;
+          }
+        }
+        
+        // Extract projectIds into a Set for O(1) lookup
+        const ids = new Set(deals.map(d => d.projectId));
+        console.log('[MainLayout] Invested project IDs:', ids);
+        setInvestedProjectIds(ids);
+      } catch (error) {
+        console.error('[MainLayout] Failed to fetch invested projects:', error);
+        setInvestedProjectIds(new Set());
+      }
+    };
+
+    fetchInvestedProjects();
   }, [user]);
 
   useEffect(() => {
@@ -644,6 +716,8 @@ function MainLayout({
                       user={user}
                       followedProjectIds={followedProjectIds}
                       sentConnectionIds={sentConnectionIds}
+                      investedProjectIds={investedProjectIds}
+                      onInvestmentSuccess={refetchInvestedProjects}
                       isReturning={isReturning}
                       onViewProfile={(id) => {
                         // Save scroll position
