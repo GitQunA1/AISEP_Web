@@ -1,13 +1,209 @@
-import React from 'react';
-import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock } from 'lucide-react';
+import React, { useState } from 'react';
+import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock, Heart, MessageSquare, TrendingUpIcon } from 'lucide-react';
 import Badge from '../common/Badge';
+import InvestmentModal from '../common/InvestmentModal';
 import styles from './StartupCard.module.css';
+import followerService from '../../services/followerService';
+import RequestInfoModal from '../common/RequestInfoModal';
+import dealsService from '../../services/dealsService';
 
 /**
  * StartupCard Component - "Visual Priority (Concept C)"
  * Clean, full-width data density
  */
-function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewProject, index = 0, isReturning = false }) {
+function StartupCard({ startup, isPremium = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false }) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInterested, setIsInterested] = useState(false);
+  const [interestMessage, setInterestMessage] = useState('');
+  const [showRequestModal, setShowRequestModal] = useState(false);
+  const [hasRequested, setHasRequested] = useState(false);
+  const [showInvestmentModal, setShowInvestmentModal] = useState(false);
+  const [investmentStatus, setInvestmentStatus] = useState(null); // New: track investment status
+  
+  // Check if user is investor
+  // Backend returns role as string: "Investor", "Startup", "Advisor", "Staff", "Admin"
+  // OR as number: 1=Investor, 0=Startup, 2=Advisor, 3=Staff, 4=Admin
+  const isInvestor = user && (
+    user.role === 'investor' || 
+    user.role === 'Investor' || 
+    user.role === 1 || 
+    String(user.role) === '1'
+  );
+
+  // Initialize follow state from passed followedProjectIds (instant, no API call)
+  React.useEffect(() => {
+    if (isInvestor && startup.id && followedProjectIds) {
+      const isFollowing = followedProjectIds.has(startup.id);
+      console.log(`[StartupCard ${startup.id}] Using cached followedProjectIds. Is following: ${isFollowing}`);
+      setIsInterested(isFollowing);
+    }
+  }, [isInvestor, startup.id, followedProjectIds]);
+
+  // Initialize request state from passed sentConnectionIds (instant, no API call)
+  React.useEffect(() => {
+    if (isInvestor && startup.id && sentConnectionIds) {
+      const hasRequest = sentConnectionIds.has(startup.id);
+      console.log(`[StartupCard ${startup.id}] Using cached sentConnectionIds. Has request: ${hasRequest}`);
+      setHasRequested(hasRequest);
+    }
+  }, [isInvestor, startup.id, sentConnectionIds]);
+
+  // NEW: Fetch investment status for this project
+  // DISABLED: This causes too much API spam when rendering many cards
+  // Each card was calling getInvestorDeals() separately, creating dozens of API calls
+  // TODO: Instead, fetch deals once at dashboard level and pass down as prop
+  /*
+  React.useEffect(() => {
+    if (!isInvestor || !startup.id) {
+      setInvestmentStatus(null);
+      return;
+    }
+
+    const fetchInvestmentStatus = async () => {
+      try {
+        console.log(`[StartupCard ${startup.id}] Fetching investment status for: ${startup.organizationName || 'Unknown'}`);
+        const dealsRes = await dealsService.getInvestorDeals();
+        console.log(`[StartupCard ${startup.id}] Full dealsRes:`, dealsRes);
+        
+        // Handle multiple response formats
+        let deals = [];
+        if (dealsRes?.data?.items && Array.isArray(dealsRes.data.items)) {
+          deals = dealsRes.data.items;
+          console.log(`[StartupCard ${startup.id}] Using data.items format - found ${deals.length} deals`);
+        } else if (Array.isArray(dealsRes?.data)) {
+          deals = dealsRes.data;
+          console.log(`[StartupCard ${startup.id}] Using data as array format - found ${deals.length} deals`);
+        } else if (Array.isArray(dealsRes)) {
+          deals = dealsRes;
+          console.log(`[StartupCard ${startup.id}] Using direct array format - found ${deals.length} deals`);
+        } else {
+          console.warn(`[StartupCard ${startup.id}] Unexpected response format:`, dealsRes);
+          deals = [];
+        }
+        
+        console.log(`[StartupCard ${startup.id}] All deals:`, deals.map(d => ({
+          dealId: d.dealId,
+          projectName: d.projectName,
+          projectId: d.projectId,
+          status: d.status
+        })));
+        
+        // Find if user has invested in this project by matching organizationName
+        const projectNameLower = startup.organizationName?.toLowerCase() || '';
+        console.log(`[StartupCard ${startup.id}] Looking for projectName: "${projectNameLower}"`);
+        
+        const deal = deals.find(d => {
+          const dealProjectName = d.projectName?.toLowerCase() || '';
+          const match = dealProjectName === projectNameLower;
+          console.log(`[StartupCard ${startup.id}] Compare: "${dealProjectName}" === "${projectNameLower}" → ${match}`);
+          return match;
+        });
+        
+        if (deal) {
+          console.log(`[StartupCard ${startup.id}] ✓ FOUND investment deal:`, deal);
+          setInvestmentStatus({
+            dealId: deal.dealId,
+            status: deal.status,
+            investorConfirmed: deal.investorConfirmed,
+            startupConfirmed: deal.startupConfirmed,
+            amount: deal.amount,
+            equityPercentage: deal.equityPercentage
+          });
+        } else {
+          console.log(`[StartupCard ${startup.id}] ✗ No investment found`);
+          setInvestmentStatus(null);
+        }
+      } catch (error) {
+        console.error(`[StartupCard ${startup.id}] Failed to fetch investment status:`, error);
+        setInvestmentStatus(null);
+      }
+    };
+
+    fetchInvestmentStatus();
+  }, [isInvestor, startup.id, startup.organizationName]);
+  */
+  
+  // Listen for deal_created event to refresh investment status
+  // DISABLED: Part of the investment status fetch that was causing spam
+  /*
+  React.useEffect(() => {
+    const handleDealCreated = (event) => {
+      console.log(`[StartupCard ${startup.id}] Deal created event received:`, event.detail);
+      // Re-fetch investment status when a new deal is created
+      if (isInvestor && startup.organizationName) {
+        dealsService.getInvestorDeals().then(res => {
+          const deals = res?.data?.items || [];
+          const projectName = startup.organizationName?.toLowerCase() || '';
+          const deal = deals.find(d => d.projectName?.toLowerCase() === projectName);
+          
+          if (deal) {
+            console.log(`[StartupCard ${startup.id}] Investment status updated after deal creation`);
+            setInvestmentStatus({
+              dealId: deal.dealId,
+              status: deal.status,
+              investorConfirmed: deal.investorConfirmed,
+              startupConfirmed: deal.startupConfirmed,
+              amount: deal.amount,
+              equityPercentage: deal.equityPercentage
+            });
+          }
+        }).catch(err => console.error(`[StartupCard ${startup.id}] Error updating status:`, err));
+      }
+    };
+
+    if (isInvestor) {
+      window.addEventListener('deal_created', handleDealCreated);
+      return () => window.removeEventListener('deal_created', handleDealCreated);
+    }
+  }, [isInvestor, startup.id, startup.organizationName]);
+  */
+  
+  // Handle interest button click - toggle follow/unfollow
+  const handleInterestClick = async (e) => {
+    e.stopPropagation();
+    if (!user) return;
+    
+    console.log(`[StartupCard ${startup.id}] Interest click - current isInterested:`, isInterested);
+    
+    setIsLoading(true);
+    try {
+      if (isInterested) {
+        // Already interested - unfollow
+        console.log(`[StartupCard ${startup.id}] Unfollowing...`);
+        const response = await followerService.unfollowProject(startup.id);
+        console.log(`[StartupCard ${startup.id}] Unfollow response:`, response);
+        
+        if (response && (response.success || response.data)) {
+          setIsInterested(false);
+          setInterestMessage('✓ Đã bỏ theo dõi');
+          setTimeout(() => setInterestMessage(''), 3000);
+        } else {
+          setInterestMessage('Lỗi: ' + (response?.message || 'Không thể xử lý yêu cầu'));
+          setTimeout(() => setInterestMessage(''), 3000);
+        }
+      } else {
+        // Not interested yet - follow
+        console.log(`[StartupCard ${startup.id}] Following...`);
+        const response = await followerService.followProject(startup.id);
+        console.log(`[StartupCard ${startup.id}] Follow response:`, response);
+        
+        if (response && (response.success || response.data)) {
+          setIsInterested(true);
+          setInterestMessage('✓ Đã thêm vào danh sách quan tâm');
+          setTimeout(() => setInterestMessage(''), 3000);
+        } else {
+          setInterestMessage('Lỗi: ' + (response?.message || 'Không thể xử lý yêu cầu'));
+          setTimeout(() => setInterestMessage(''), 3000);
+        }
+      }
+    } catch (error) {
+      console.error(`[StartupCard ${startup.id}] Failed to toggle follow:`, error);
+      setInterestMessage('Lỗi: ' + (error?.message || 'Kết nối thất bại'));
+      setTimeout(() => setInterestMessage(''), 3000);
+    } finally {
+      setIsLoading(false);
+    }
+  };
   // Utility for avatar gradient based on tag/industry
   const getAvatarGradient = (mainTag) => {
     const t = (mainTag || '').toLowerCase();
@@ -208,8 +404,236 @@ function StartupCard({ startup, isPremium = false, user, onViewProfile, onViewPr
           {startup.teamMembers !== undefined ? startup.teamMembers : <PremiumLockText />}
         </div>
       )}
+
+      {/* 6. Interest Button for Investors */}
+      {isInvestor && (
+        <>
+          <div style={{
+            marginTop: '16px',
+            paddingTop: '12px',
+            borderTop: '1px solid rgba(0, 0, 0, 0.05)',
+            display: 'flex',
+            gap: '12px',
+            alignItems: 'center',
+            flexWrap: 'wrap'
+          }}>
+            {/* Follow/Unfollow Button */}
+            <button
+              onClick={handleInterestClick}
+              disabled={isLoading}
+              style={{
+                flex: isInvestor ? 1 : 1,
+                minWidth: '100px',
+                padding: '10px 16px',
+                backgroundColor: isInterested ? '#dc2626' : '#2196F3',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: isLoading ? 'wait' : 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                opacity: isLoading ? 0.7 : 1,
+                transition: 'all 0.2s'
+              }}
+              onMouseEnter={(e) => {
+                if (!isLoading) {
+                  e.target.style.backgroundColor = isInterested ? '#b91c1c' : '#1976D2';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isLoading) {
+                  e.target.style.backgroundColor = isInterested ? '#dc2626' : '#2196F3';
+                }
+              }}
+            >
+              <Heart 
+                size={16} 
+                fill={isInterested ? 'currentColor' : 'none'}
+                strokeWidth={2} 
+              />
+              {isLoading ? 'Đang xử lý...' : (isInterested ? 'Hủy quan tâm' : 'Quan tâm')}
+            </button>
+
+            {/* Request Info Button */}
+            <button
+              onClick={() => !hasRequested && setShowRequestModal(true)}
+              disabled={hasRequested}
+              style={{
+                flex: 1,
+                minWidth: '100px',
+                padding: '10px 16px',
+                backgroundColor: hasRequested ? '#10b981' : '#7c3aed',
+                color: 'white',
+                border: 'none',
+                borderRadius: '6px',
+                cursor: hasRequested ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: '600',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                gap: '8px',
+                transition: 'all 0.2s',
+                opacity: hasRequested ? 0.8 : 1
+              }}
+              onMouseEnter={(e) => {
+                if (!hasRequested) {
+                  e.target.style.backgroundColor = '#6d28d9';
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!hasRequested) {
+                  e.target.style.backgroundColor = '#7c3aed';
+                }
+              }}
+            >
+              <MessageSquare size={16} />
+              {hasRequested ? 'Đã yêu cầu' : 'Yêu cầu thông tin'}
+            </button>
+
+            {/* Invest Button OR Investment Status Badge */}
+            {investmentStatus ? (
+              // Show investment status badge
+              <div
+                title={`Trạng thái: ${investmentStatus.status}\nDeal #${investmentStatus.dealId}`}
+                style={{
+                  flex: 1,
+                  minWidth: '100px',
+                  padding: '10px 16px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(200, 200, 200, 0.3)',
+                  borderRadius: '6px',
+                  color: '#888',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: 'default',
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <span>
+                  {investmentStatus.status === 'Pending' && '🟡'}
+                  {investmentStatus.status === 'Confirmed' && '🟢'}
+                  {investmentStatus.status === 'Contract_Signed' && '🟣'}
+                  {investmentStatus.status === 'Minted_NFT' && '✨'}
+                  {investmentStatus.status === 'Failed' && '🔴'}
+                </span>
+                <span>
+                  {investmentStatus.status === 'Pending' && 'Chờ xác nhận'}
+                  {investmentStatus.status === 'Confirmed' && 'Đã xác nhận'}
+                  {investmentStatus.status === 'Contract_Signed' && 'Đã ký kết'}
+                  {investmentStatus.status === 'Minted_NFT' && 'Đã mint NFT'}
+                  {investmentStatus.status === 'Failed' && 'Thất bại'}
+                </span>
+              </div>
+            ) : investedProjectIds && investedProjectIds.has(startup.id) ? (
+              // Show invested status
+              <div
+                style={{
+                  flex: 1,
+                  minWidth: '100px',
+                  padding: '10px 16px',
+                  background: '#10b981',
+                  color: 'white',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'center'
+                }}
+              >
+                <span>✅ Đã đầu tư</span>
+              </div>
+            ) : (
+              // Show invest button
+              <button
+                onClick={() => setShowInvestmentModal(true)}
+                style={{
+                  flex: 1,
+                  minWidth: '100px',
+                  padding: '10px 16px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+                  e.target.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.boxShadow = 'none';
+                  e.target.style.transform = 'translateY(0)';
+                }}
+              >
+                <TrendingUp size={16} />
+                Đầu tư
+              </button>
+            )}
+          </div>
+
+          {/* RequestInfoModal */}
+          <RequestInfoModal
+            isOpen={showRequestModal}
+            onClose={() => setShowRequestModal(false)}
+            projectId={startup.id}
+            projectName={startup.name}
+            onSuccess={() => {
+              setHasRequested(true);
+            }}
+          />
+
+          {/* InvestmentModal */}
+          <InvestmentModal
+            isOpen={showInvestmentModal}
+            projectId={startup.id}
+            projectName={startup.name}
+            startupName={startup.startupName || 'Startup'}
+            onClose={() => setShowInvestmentModal(false)}
+            onSuccess={() => {
+              console.log('[StartupCard] Investment successful!');
+              onInvestmentSuccess?.();
+            }}
+          />
+        </>
+      )}
+
+      {/* Interest Message */}
+      {interestMessage && (
+        <div style={{
+          marginTop: '8px',
+          padding: '8px 12px',
+          backgroundColor: isInterested ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
+          color: isInterested ? '#4caf50' : '#f44336',
+          borderRadius: '4px',
+          fontSize: '12px',
+          textAlign: 'center'
+        }}>
+          {interestMessage}
+        </div>
+      )}
     </article>
   );
 }
 
-export default StartupCard;
+export default React.memo(StartupCard);

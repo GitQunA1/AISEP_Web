@@ -9,9 +9,11 @@ import StartupDashboard from './pages/StartupDashboard';
 import InvestorDashboard from './pages/InvestorDashboard';
 import AdvisorDashboard from './pages/AdvisorDashboard';
 import OperationStaffDashboard from './pages/OperationStaffDashboard';
+import InvestorBookings from './components/investor/InvestorBookings';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import authService from './services/authService';
 import startupProfileService from './services/startupProfileService';
+import AdvisorProfilePage from './pages/AdvisorProfilePage';
 import SessionExpiredModal from './components/auth/SessionExpiredModal';
 
 function App() {
@@ -187,6 +189,10 @@ function App() {
     setCurrentView('ai');
   };
 
+  const handleShowProfile = () => {
+    setCurrentView('profile');
+  };
+
   return (
     <>
       {isSessionExpired && (
@@ -208,7 +214,7 @@ function App() {
           onShowRegister={handleShowRegister}
           onBack={handleBackToMain}
         />
-      ) : (['main', 'advisors', 'investors', 'ai', 'dashboard'].includes(currentView) || currentView.startsWith('dashboard_')) ? (
+      ) : (['main', 'advisors', 'investors', 'ai', 'dashboard', 'profile'].includes(currentView) || currentView.startsWith('dashboard_')) ? (
         <MainLayout
           onShowRegister={handleShowRegister}
           onShowLogin={handleShowLogin}
@@ -217,6 +223,7 @@ function App() {
           onShowInvestors={handleShowInvestors}
           onShowDashboard={handleShowDashboard}
           onShowAI={handleShowAI}
+          onShowProfile={handleShowProfile}
           user={user}
           onLogout={handleLogout}
           showAdvisors={currentView === 'advisors'}
@@ -224,6 +231,7 @@ function App() {
           showAI={currentView === 'ai'}
           activeView={currentView}
         >
+          {currentView === 'profile' && <AdvisorProfilePage user={user} onBack={handleShowHome} />}
           {currentView.startsWith('dashboard') && (
             (() => {
               const roleStr = user?.role?.toString().toLowerCase() || '';
@@ -233,6 +241,9 @@ function App() {
               if (roleStr === 'startup' || roleNum === 0) {
                 return <StartupDashboard user={user} />;
               } else if (roleStr === 'investor' || roleNum === 1) {
+                if (currentView === 'dashboard_bookings') {
+                  return <InvestorBookings user={user} />;
+                }
                 return <InvestorDashboard user={user} />;
               } else if (roleStr === 'advisor' || roleNum === 2) {
                 const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';

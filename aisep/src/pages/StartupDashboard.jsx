@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2 } from 'lucide-react';
+﻿import React, { useState, useEffect, useRef } from 'react';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User } from 'lucide-react';
+import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
@@ -9,16 +10,24 @@ import BlockchainVerificationModal from '../components/common/BlockchainVerifica
 import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import FeedHeader from '../components/feed/FeedHeader';
+import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import ProjectValidationService from '../services/ProjectValidation.js';
 import BlockchainService from '../services/BlockchainService.js';
 import AIEvaluationService from '../services/AIEvaluationService.js';
 import projectSubmissionService from '../services/projectSubmissionService.js';
 import startupProfileService from '../services/startupProfileService.js';
+import connectionService from '../services/connectionService.js';
+import dealsService from '../services/dealsService.js';
+import signalRService from '../services/signalRService.js';
 import { PROJECT_STATUS, isUserEditable, STATUS_LABELS, STATUS_COLORS, getStageLabel } from '../constants/ProjectStatus.js';
 import { translateAIResults } from '../utils/translateAIResults.js';
 import kanban from '../styles/OperationStaffDashboard.module.css';
+import bookingService from '../services/bookingService';
+import BookingWizard from '../components/booking/BookingWizard';
 
 import StartupProfileBanner from '../components/startup/StartupProfileBanner';
+import StartupBookings from '../components/startup/StartupBookings';
+
 
 /**
  * StartupDashboard - Comprehensive dashboard for startup founders
@@ -28,7 +37,7 @@ export default function StartupDashboard({ user }) {
     const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 1024);
     const [showLeftTabIndicator, setShowLeftTabIndicator] = React.useState(false);
     const [showRightTabIndicator, setShowRightTabIndicator] = React.useState(false);
-    
+
     // Kanban Tab Indicator States
     const [showLeftKanbanIndicator, setShowLeftKanbanIndicator] = React.useState(false);
     const [showRightKanbanIndicator, setShowRightKanbanIndicator] = React.useState(false);
@@ -37,7 +46,7 @@ export default function StartupDashboard({ user }) {
     const [activeProjectMobileTab, setActiveProjectMobileTab] = React.useState('draft');
     const [projectSearchTerm, setProjectSearchTerm] = React.useState('');
     const [showCompleteInfoForm, setShowCompleteInfoForm] = React.useState(false);
-    
+
     // Refs for scroll tracking
     const tabsRef = React.useRef(null);
     const kanbanTabsRef = React.useRef(null);
@@ -84,12 +93,79 @@ export default function StartupDashboard({ user }) {
     const [evaluatingProjectId, setEvaluatingProjectId] = React.useState(null);
     const [showFullscreenImage, setShowFullscreenImage] = React.useState(false);
 
+    // Booking Eligibility States
+    const [canBookDetailProject, setCanBookDetailProject] = React.useState(false);
+    const [detailProjectAdvisors, setDetailProjectAdvisors] = React.useState([]);
+    const [isCheckingBookingEligibility, setIsCheckingBookingEligibility] = React.useState(false);
+    const [showBookingWizard, setShowBookingWizard] = React.useState(false);
+    const [bookingInitialAdvisorId, setBookingInitialAdvisorId] = React.useState(null);
+
+    // Connection/Info Requests States (for investor inquiries)
+    const [connectionRequests, setConnectionRequests] = React.useState([]);
+    const [isLoadingRequests, setIsLoadingRequests] = React.useState(false);
+    const [isRespondingToRequest, setIsRespondingToRequest] = React.useState(null);
+
+    // Deals Approval States (for investment deals from investors)
+    const [dealsToApprove, setDealsToApprove] = React.useState([]);
+    const [isLoadingDeals, setIsLoadingDeals] = React.useState(false);
+    const [isRespondingToDeal, setIsRespondingToDeal] = React.useState(null);
+
+    // Contract Preview States
+    const [showContractModal, setShowContractModal] = React.useState(false);
+    const [contractPreviewHtml, setContractPreviewHtml] = React.useState(null);
+    const [isLoadingContract, setIsLoadingContract] = React.useState(false);
+    const [contractDealData, setContractDealData] = React.useState(null);
+    const [contractStatus, setContractStatus] = React.useState(null); // Track deal status
+    const [isSigningContract, setIsSigningContract] = React.useState(false);
+    
+    // Contract signing form states
+    const [signFormData, setSignFormData] = React.useState({
+        finalAmount: 0,
+        finalEquityPercentage: 0,
+        additionalTerms: '',
+        signatureBase64: ''
+    });
+    
+    // Signature canvas ref
+    const signatureCanvasRef = React.useRef(null);
+    const signatureDataRef = React.useRef(''); // Keep latest signature value
+    const [isSignatureEmpty, setIsSignatureEmpty] = React.useState(true);
+
+    // Chat Widget States
+    const [activeChatConnectionId, setActiveChatConnectionId] = React.useState(null);
+    const [activeChatSession, setActiveChatSession] = React.useState(null);
+
     // Document Deletion States
     const [isDeletingDocument, setIsDeletingDocument] = React.useState(false);
     const [showDeleteConfirm, setShowDeleteConfirm] = React.useState(false);
     const [documentToDelete, setDocumentToDelete] = React.useState(null);
     const [blockedFiles, setBlockedFiles] = React.useState([]); // Session-based blacklist for verified docs
     const hiddenFileInput = React.useRef(null);
+
+    // Initialize SignalR on mount
+    React.useEffect(() => {
+        const initSignalR = async () => {
+            try {
+                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                if (token && user?.userId) {
+                    await signalRService.initialize(token);
+                    console.log('[StartupDashboard] SignalR initialized successfully');
+                }
+            } catch (error) {
+                console.error('[StartupDashboard] Failed to initialize SignalR:', error);
+            }
+        };
+
+        // Delay SignalR init to avoid blocking dashboard load
+        const timer = setTimeout(() => {
+            initSignalR();
+        }, 1000);
+
+        return () => {
+            clearTimeout(timer);
+            signalRService.disconnect();
+        };
+    }, [user?.userId]);
 
     React.useLayoutEffect(() => {
         const updateIndicator = () => {
@@ -144,11 +220,14 @@ export default function StartupDashboard({ user }) {
     React.useEffect(() => {
         if (showDetailModal || showFullscreenImage) {
             document.body.style.overflow = 'hidden';
+            document.documentElement.style.overflow = 'hidden';
         } else {
             document.body.style.overflow = 'unset';
+            document.documentElement.style.overflow = 'unset';
         }
         return () => {
             document.body.style.overflow = 'unset';
+            document.documentElement.style.overflow = 'unset';
         };
     }, [showDetailModal, showFullscreenImage]);
 
@@ -208,61 +287,59 @@ export default function StartupDashboard({ user }) {
     React.useEffect(() => {
         const fetchDashboardData = async () => {
             try {
-                // 1. Fetch user's startup profile
+                // Fetch profile and projects in PARALLEL (not sequential)
+                const promises = [];
+                
+                // 1. Fetch startup profile (if user exists)
                 if (user && user.userId) {
-                    const profileData = await startupProfileService.getStartupProfileByUserId(user.userId);
-                    setStartupProfile(profileData);
-
-                    // Check for auto-setup flag in URL
-                    const params = new URLSearchParams(window.location.search);
-                    if (!profileData && params.get('setup') === 'true') {
-                        setActiveSection('complete-info');
-                        // Clean URL
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                    }
+                    promises.push(
+                        startupProfileService.getStartupProfileByUserId(user.userId)
+                            .then(data => ({ key: 'profile', data }))
+                    );
                 }
+                
+                // 2. Fetch projects - run in parallel with profile
+                promises.push(
+                    projectSubmissionService.getMyProjects()
+                        .then(data => ({ key: 'projects', data }))
+                );
 
-                // 2. Fetch projects
-                const response = await projectSubmissionService.getMyProjects();
-                if (response.success && response.data) {
-                    const projects = Array.isArray(response.data) ? response.data : (response.data.items || []);
-                    setMyProjects(projects);
+                const results = await Promise.all(promises);
 
-                    // Fetch documents for all projects to get total count
-                    if (projects.length > 0) {
-                        try {
-                            const allDocsPromises = projects.map(p =>
-                                projectSubmissionService.getDocuments(p.projectId || p.id)
-                            );
-                            const docsResponses = await Promise.all(allDocsPromises);
+                // Process results
+                for (const result of results) {
+                    if (result.key === 'profile') {
+                        const profileData = result.data;
+                        setStartupProfile(profileData);
 
-                            const allDocuments = docsResponses.reduce((acc, res) => {
-                                if (res.success && res.data) {
-                                    const docs = Array.isArray(res.data) ? res.data : (res.data.items || []);
-                                    return [...acc, ...docs];
-                                }
-                                return acc;
-                            }, []);
-
-                            setDocuments(allDocuments);
-                        } catch (docErr) {
-                            console.error("Error fetching documents for total count:", docErr);
+                        // Check for auto-setup flag in URL
+                        const params = new URLSearchParams(window.location.search);
+                        if (!profileData && params.get('setup') === 'true') {
+                            setActiveSection('complete-info');
+                            window.history.replaceState({}, document.title, window.location.pathname);
                         }
-                    }
+                    } else if (result.key === 'projects') {
+                        const response = result.data;
+                        if (response.success && response.data) {
+                            const projects = Array.isArray(response.data) ? response.data : (response.data.items || []);
+                            setMyProjects(projects);
+                            setDocuments([]);
 
-                    if (projects.length > 0) {
-                        const loadedProject = projects[0];
-                        setProject(loadedProject);
+                            if (projects.length > 0) {
+                                const loadedProject = projects[0];
+                                setProject(loadedProject);
 
-                        // Pre-fill form data for updates
-                        setProjectFormData({
-                            ...projectFormData,
-                            projectName: loadedProject.name || loadedProject.projectName || '',
-                            description: loadedProject.description || '',
-                            tagline: loadedProject.tagline || '',
-                            industry: loadedProject.industry || '',
-                            stage: loadedProject.stage || '',
-                        });
+                                // Pre-fill form data for updates
+                                setProjectFormData({
+                                    ...projectFormData,
+                                    projectName: loadedProject.name || loadedProject.projectName || '',
+                                    description: loadedProject.description || '',
+                                    tagline: loadedProject.tagline || '',
+                                    industry: loadedProject.industry || '',
+                                    stage: loadedProject.stage || '',
+                                });
+                            }
+                        }
                     }
                 }
             } catch (err) {
@@ -316,6 +393,487 @@ export default function StartupDashboard({ user }) {
         setAdvisorRequests(advisorRequests.map(req =>
             req.id === id ? { ...req, status: 'rejected' } : req
         ));
+    };
+
+    // Fetch connection requests for startup
+    const fetchConnectionRequests = async () => {
+        setIsLoadingRequests(true);
+        try {
+            // Fetch received connection requests from investors using original API
+            const response = await connectionService.getReceivedConnectionRequests();
+            console.log('[StartupDashboard] getReceivedConnectionRequests response:', response);
+
+            let requests = [];
+            if (response && response.data) {
+                if (response.data.items && Array.isArray(response.data.items)) {
+                    requests = response.data.items;
+                    console.log('[StartupDashboard] Found items in response.data.items, count:', requests.length);
+                } else if (Array.isArray(response.data)) {
+                    requests = response.data;
+                    console.log('[StartupDashboard] response.data is array, count:', requests.length);
+                }
+            }
+
+            console.log('[StartupDashboard] Raw requests:', requests);
+
+            // Map API response to component format
+            const formattedRequests = requests.map(req => {
+                // Format date from responseDate or use today
+                let sentDateString = new Date().toLocaleString('vi-VN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    hour12: false
+                });
+                if (req.responseDate) {
+                    sentDateString = new Date(req.responseDate).toLocaleString('vi-VN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                }
+
+                return {
+                    id: req.connectionRequestId,
+                    connectionRequestId: req.connectionRequestId,
+                    investorName: req.investorName || 'Investor',
+                    chatSessionId: req.chatSessionId,
+                    status: req.status?.toLowerCase() || 'pending',
+                    message: req.message || '',
+                    sentDate: sentDateString
+                };
+            });
+
+            console.log('[StartupDashboard] Formatted requests:', formattedRequests);
+            setConnectionRequests(formattedRequests);
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to fetch connection requests:', error);
+            console.error('[StartupDashboard] Error details - Message:', error?.message);
+            console.error('[StartupDashboard] Error details - Status:', error?.response?.status);
+            console.error('[StartupDashboard] Error details - Data:', error?.response?.data);
+            setConnectionRequests([]);
+        } finally {
+            setIsLoadingRequests(false);
+        }
+    };
+
+    // Load connection requests on mount
+    React.useEffect(() => {
+        if (activeSection === 'connection-requests') {
+            fetchConnectionRequests();
+        }
+    }, [activeSection]);
+
+    const handleApproveConnectionRequest = async (requestId) => {
+        setIsRespondingToRequest(requestId);
+        try {
+            const response = await connectionService.respondToConnection(requestId, true);
+            console.log('[StartupDashboard] Approved request:', response);
+
+            if (response && (response.success || response.data)) {
+                setConnectionRequests(connectionRequests.map(req =>
+                    req.connectionRequestId === requestId ? { ...req, status: 'accepted' } : req
+                ));
+                setSuccessMessage('✓ Đã chấp nhận yêu cầu. Bạn có thể bắt đầu cuộc trò chuyện');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to approve request:', error);
+            alert('Lỗi: Không thể chấp nhận yêu cầu');
+        } finally {
+            setIsRespondingToRequest(null);
+        }
+    };
+
+    const handleRejectConnectionRequest = async (requestId) => {
+        setIsRespondingToRequest(requestId);
+        try {
+            const response = await connectionService.respondToConnection(requestId, false);
+            console.log('[StartupDashboard] Rejected request:', response);
+
+            if (response && (response.success || response.data)) {
+                setConnectionRequests(connectionRequests.map(req =>
+                    req.connectionRequestId === requestId ? { ...req, status: 'rejected' } : req
+                ));
+                setSuccessMessage('✓ Đã từ chối yêu cầu');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to reject request:', error);
+            alert('Lỗi: Không thể từ chối yêu cầu');
+        } finally {
+            setIsRespondingToRequest(null);
+        }
+    };
+
+    const handleStartChat = (connectionRequestId) => {
+        console.log('[StartupDashboard] Starting chat for connectionRequestId:', connectionRequestId);
+
+        // Find the connection request and extract chatSessionId
+        const request = connectionRequests.find(r => r.connectionRequestId === connectionRequestId);
+        if (request && request.chatSessionId) {
+            setActiveChatSession({
+                chatSessionId: request.chatSessionId,
+                displayName: request.investorName,
+                sentTime: request.sentDate
+            });
+        } else {
+            console.warn('[StartupDashboard] Could not find chatSessionId for connectionRequestId:', connectionRequestId);
+        }
+    };
+
+    const handleCloseChatWindow = () => {
+        console.log('[StartupDashboard] Closing chat window');
+        setActiveChatSession(null);
+        setActiveChatConnectionId(null);
+        // Refresh connection requests to update status
+        fetchConnectionRequests();
+    };
+
+    // --- Deals Approval Functions ---
+
+    const fetchDealsToApprove = async () => {
+        setIsLoadingDeals(true);
+        try {
+            console.log('[StartupDashboard] Fetching deals to approve...');
+            const response = await dealsService.getStartupDeals();
+            console.log('[StartupDashboard] Deals response:', response);
+
+            let deals = Array.isArray(response?.data) ? response.data : (response?.data?.items || []);
+            // Get all deals - no filtering
+            
+            setDealsToApprove(deals);
+            console.log('[StartupDashboard] Deals loaded:', deals.length);
+        } catch (error) {
+            console.error('[StartupDashboard] Error fetching deals:', error);
+            setDealsToApprove([]);
+        } finally {
+            setIsLoadingDeals(false);
+        }
+    };
+
+    // Load deals on mount when deals tab is active
+    React.useEffect(() => {
+        if (activeSection === 'deals') {
+            fetchDealsToApprove();
+        }
+    }, [activeSection]);
+
+    const handleApproveDeal = async (dealId) => {
+        setIsRespondingToDeal(dealId);
+        try {
+            console.log('[StartupDashboard] Approving deal:', dealId);
+            const response = await dealsService.respondToDeal(dealId, true);
+            console.log('[StartupDashboard] Approved deal:', response);
+
+            if (response && (response.success || response.data)) {
+                // Remove from pending list and show success
+                setDealsToApprove(dealsToApprove.filter(d => d.dealId !== dealId));
+                setSuccessMessage('✓ Đã chấp nhận đầu tư!');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to approve deal:', error);
+            setSuccessMessage('Lỗi: Không thể chấp nhận đầu tư');
+            setShowSuccessModal(true);
+        } finally {
+            setIsRespondingToDeal(null);
+        }
+    };
+
+    const handleRejectDeal = async (dealId) => {
+        setIsRespondingToDeal(dealId);
+        try {
+            console.log('[StartupDashboard] Rejecting deal:', dealId);
+            const response = await dealsService.respondToDeal(dealId, false);
+            console.log('[StartupDashboard] Rejected deal:', response);
+
+            if (response && (response.success || response.data)) {
+                setDealsToApprove(dealsToApprove.filter(d => d.dealId !== dealId));
+                setSuccessMessage('✓ Đã từ chối đầu tư');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to reject deal:', error);
+            setSuccessMessage('Lỗi: Không thể từ chối đầu tư');
+            setShowSuccessModal(true);
+        } finally {
+            setIsRespondingToDeal(null);
+        }
+    };
+
+    const handleShowContractPreview = async (deal) => {
+        console.log('[StartupDashboard] handleShowContractPreview called for deal:', deal.dealId, 'status:', deal.status);
+        console.log('[StartupDashboard] Loading contract preview for deal:', deal.dealId);
+        setIsLoadingContract(true);
+        
+        try {
+            setContractDealData(deal);
+            // Use status directly from deal object (already have it from GET /api/Deals)
+            setContractStatus(deal.status);
+            console.log('[StartupDashboard] Set contractStatus to:', deal.status, 'type:', typeof deal.status);
+            
+            setSignFormData({
+                finalAmount: deal.investmentAmount || 0,
+                finalEquityPercentage: deal.equityPercentage || 0,
+                additionalTerms: '',
+                signatureBase64: ''
+            });
+            
+            const response = await dealsService.getContractPreview(deal.dealId);
+            console.log('[StartupDashboard] Contract preview loaded:', response?.success);
+            
+            if (response && response.data) {
+                setContractPreviewHtml(response.data);
+                setShowContractModal(true);
+            } else {
+                setSuccessMessage('Lỗi: Không thể tải hợp đồng');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to load contract:', error);
+            setSuccessMessage('Lỗi: Không thể tải hợp đồng - ' + (error.message || 'Vui lòng thử lại'));
+            setShowSuccessModal(true);
+        } finally {
+            setIsLoadingContract(false);
+        }
+    };
+
+    const handleSignatureChange = () => {
+        // Called when user draws on canvas
+        if (signatureCanvasRef.current) {
+            const isEmpty = signatureCanvasRef.current.isEmpty();
+            setIsSignatureEmpty(isEmpty);
+        }
+    };
+
+    const handleClearSignature = () => {
+        console.log('[StartupDashboard] Clearing signature');
+        if (signatureCanvasRef.current) {
+            signatureCanvasRef.current.clear();
+            signatureDataRef.current = ''; // Clear ref too
+            setIsSignatureEmpty(true);
+            setSignFormData(prev => ({ ...prev, signatureBase64: '' }));
+        }
+    };
+
+    const handleSaveSignature = () => {
+        console.log('[StartupDashboard] Saving signature...');
+        if (signatureCanvasRef.current) {
+            const isEmpty = signatureCanvasRef.current.isEmpty();
+            console.log('[StartupDashboard] Canvas isEmpty:', isEmpty);
+            
+            if (!isEmpty) {
+                try {
+                    const canvasUrl = signatureCanvasRef.current.toDataURL('image/png');
+                    // Extract plain base64 from data URL (remove 'data:image/png;base64,' prefix)
+                    const base64String = canvasUrl.replace(/^data:image\/png;base64,/, '');
+                    console.log('[StartupDashboard] Signature Base64 length:', base64String.length);
+                    
+                    // Store in ref for reliable access
+                    signatureDataRef.current = base64String;
+                    
+                    // Also update state for UI
+                    setSignFormData(prev => {
+                        const updated = { ...prev, signatureBase64: base64String };
+                        console.log('[StartupDashboard] Updated signFormData with signature');
+                        return updated;
+                    });
+                } catch (err) {
+                    console.error('[StartupDashboard] Error saving signature:', err);
+                }
+            } else {
+                console.log('[StartupDashboard] Canvas is empty, cannot save');
+            }
+        } else {
+            console.log('[StartupDashboard] No canvas ref found');
+        }
+    };
+
+    const handleSignContract = async () => {
+        if (!contractDealData) return;
+        
+        console.log('[StartupDashboard] handleSignContract called');
+        console.log('[StartupDashboard] Current signFormData:', signFormData);
+        console.log('[StartupDashboard] Ref signature length:', signatureDataRef.current.length);
+        
+        // Priority: ref > state > canvas
+        let finalSignature = signatureDataRef.current || signFormData.signatureBase64;
+        
+        // If no signature in ref/state, try to get from canvas directly
+        if (!finalSignature && signatureCanvasRef.current) {
+            console.log('[StartupDashboard] Getting signature from canvas directly');
+            if (!signatureCanvasRef.current.isEmpty()) {
+                try {
+                    const canvasUrl = signatureCanvasRef.current.toDataURL('image/png');
+                    finalSignature = canvasUrl.replace(/^data:image\/png;base64,/, ''); // Extract plain base64
+                    signatureDataRef.current = finalSignature; // Store in ref
+                    console.log('[StartupDashboard] Got signature from canvas, length:', finalSignature.length);
+                } catch (err) {
+                    console.error('[StartupDashboard] Error getting signature from canvas:', err);
+                }
+            }
+        }
+        
+        // Validate form
+        if (!signFormData.finalAmount || signFormData.finalAmount === 0) {
+            setSuccessMessage('Vui lòng nhập số tiền');
+            setShowSuccessModal(true);
+            return;
+        }
+        
+        if (!signFormData.finalEquityPercentage && signFormData.finalEquityPercentage !== 0) {
+            setSuccessMessage('Vui lòng nhập phần trăm cổ phần');
+            setShowSuccessModal(true);
+            return;
+        }
+        
+        if (!finalSignature) {
+            console.log('[StartupDashboard] No signature found');
+            setSuccessMessage('Vui lòng vẽ chữ ký');
+            setShowSuccessModal(true);
+            return;
+        }
+
+        setIsSigningContract(true);
+        try {
+            console.log('[StartupDashboard] Signing contract for deal:', contractDealData.dealId);
+            
+            // Prepare data with final signature
+            const contractData = {
+                finalAmount: signFormData.finalAmount,
+                finalEquityPercentage: signFormData.finalEquityPercentage,
+                additionalTerms: signFormData.additionalTerms,
+                signatureBase64: finalSignature
+            };
+            
+            console.log('[StartupDashboard] Sending contract data (Investor signing):', {
+                dealId: contractDealData.dealId,
+                finalAmount: contractData.finalAmount,
+                finalEquityPercentage: contractData.finalEquityPercentage,
+                signatureBase64Length: contractData.signatureBase64.length
+            });
+            
+            const response = await dealsService.signContract(contractDealData.dealId, contractData);
+            console.log('[StartupDashboard] Contract signed:', response);
+            
+            if (response && (response.success || response.data)) {
+                setSuccessMessage('✓ Hợp đồng đã được ký thành công!');
+                setShowSuccessModal(true);
+                setShowContractModal(false);
+                setContractPreviewHtml(null);
+                setContractDealData(null);
+                setSignFormData({ finalAmount: 0, finalEquityPercentage: 0, additionalTerms: '', signatureBase64: '' });
+                setIsSignatureEmpty(true);
+                signatureDataRef.current = ''; // Clear ref
+                
+                // Refresh deals list
+                await fetchDealsToApprove();
+            } else {
+                setSuccessMessage('Lỗi: Không thể ký hợp đồng');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to sign contract:', error);
+            setSuccessMessage('Lỗi: Không thể ký hợp đồng - ' + (error.message || 'Vui lòng thử lại'));
+            setShowSuccessModal(true);
+        } finally {
+            setIsSigningContract(false);
+        }
+    };
+
+    const handleSignContractAsStartup = async () => {
+        if (!contractDealData) return;
+        
+        console.log('[StartupDashboard] handleSignContractAsStartup called');
+        console.log('[StartupDashboard] Ref signature length:', signatureDataRef.current.length);
+        
+        // Priority: ref > state > canvas
+        let finalSignature = signatureDataRef.current || signFormData.signatureBase64;
+        
+        // If no signature in ref/state, try to get from canvas directly
+        if (!finalSignature && signatureCanvasRef.current) {
+            console.log('[StartupDashboard] Getting signature from canvas directly');
+            if (!signatureCanvasRef.current.isEmpty()) {
+                try {
+                    const canvasUrl = signatureCanvasRef.current.toDataURL('image/png');
+                    finalSignature = canvasUrl.replace(/^data:image\/png;base64,/, ''); // Extract plain base64
+                    signatureDataRef.current = finalSignature; // Store in ref
+                    console.log('[StartupDashboard] Got signature from canvas, length:', finalSignature.length);
+                } catch (err) {
+                    console.error('[StartupDashboard] Error getting signature from canvas:', err);
+                }
+            }
+        }
+        
+        // Validate signature only
+        if (!finalSignature) {
+            console.log('[StartupDashboard] No signature found');
+            setSuccessMessage('Vui lòng vẽ chữ ký');
+            setShowSuccessModal(true);
+            return;
+        }
+
+        setIsSigningContract(true);
+        try {
+            console.log('[StartupDashboard] Signing contract as STARTUP for deal:', contractDealData.dealId);
+            
+            // Only send signature - API only requires signatureBase64
+            const contractData = {
+                signatureBase64: finalSignature
+            };
+            
+            console.log('[StartupDashboard] Sending contract data (Startup signing):', {
+                dealId: contractDealData.dealId,
+                signatureBase64Length: contractData.signatureBase64.length
+            });
+            
+            const response = await dealsService.signContractStartup(contractDealData.dealId, contractData);
+            console.log('[StartupDashboard] Contract signed by startup:', response);
+            
+            if (response && (response.success || response.data)) {
+                setSuccessMessage('✓ Startup đã ký hợp đồng thành công!');
+                setShowSuccessModal(true);
+                setShowContractModal(false);
+                setContractPreviewHtml(null);
+                setContractDealData(null);
+                setSignFormData({ finalAmount: 0, finalEquityPercentage: 0, additionalTerms: '', signatureBase64: '' });
+                setIsSignatureEmpty(true);
+                signatureDataRef.current = ''; // Clear ref
+                
+                // Refresh deals list
+                await fetchDealsToApprove();
+            } else {
+                setSuccessMessage('Lỗi: Không thể ký hợp đồng');
+                setShowSuccessModal(true);
+            }
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to sign contract as startup:', error);
+            setSuccessMessage('Lỗi: Không thể ký hợp đồng - ' + (error.message || 'Vui lòng thử lại'));
+            setShowSuccessModal(true);
+        } finally {
+            setIsSigningContract(false);
+        }
+    };
+
+    const handleCloseContractModal = () => {
+        setShowContractModal(false);
+        setContractPreviewHtml(null);
+        setContractDealData(null);
+        setContractStatus(null);
+        setSignFormData({ finalAmount: 0, finalEquityPercentage: 0, additionalTerms: '', signatureBase64: '' });
+        setIsSignatureEmpty(true);
+        signatureDataRef.current = ''; // Clear ref
+        if (signatureCanvasRef.current) {
+            signatureCanvasRef.current.clear();
+        }
     };
 
     /**
@@ -409,7 +967,15 @@ export default function StartupDashboard({ user }) {
                     name: truncateName(doc.fileName || doc.documentType),
                     fullName: doc.fileName || doc.documentType, // Keep full name for title/tooltips
                     type: doc.documentType,
-                    uploadDate: new Date(doc.uploadedAt || doc.verifiedAt || new Date()).toLocaleDateString('vi-VN'),
+                    uploadDate: new Date(doc.uploadedAt || doc.verifiedAt || new Date()).toLocaleString('vi-VN', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    }),
                     status: doc.blockchainTxHash ? 'verified' : 'unverified', // Initial hint if hash exists
                     hash: doc.fileHash,
                     txHash: doc.blockchainTxHash, // Capture transaction hash
@@ -687,6 +1253,54 @@ export default function StartupDashboard({ user }) {
         }
     };
 
+    /**
+     * Check if project is eligible for booking (approved and in project-options)
+     */
+    const fetchBookingEligibility = async (projectId) => {
+        if (!projectId) return;
+        setIsCheckingBookingEligibility(true);
+        setCanBookDetailProject(false);
+        setDetailProjectAdvisors([]);
+
+        try {
+            // 1. Get project options to check if this project can be booked
+            const projectOptions = await bookingService.getProjectOptions();
+            const projectIds = Array.isArray(projectOptions) 
+                ? projectOptions.map(p => p.projectId) 
+                : (projectOptions?.items?.map(p => p.projectId) || []);
+            
+            const isEligible = projectIds.includes(Number(projectId));
+            setCanBookDetailProject(isEligible);
+
+            // 2. Regardless of eligibility list, if Approved, try to get assigned advisors
+            const advisorOptions = await bookingService.getAdvisorOptions(projectId);
+            setDetailProjectAdvisors(Array.isArray(advisorOptions) ? advisorOptions : []);
+            
+        } catch (error) {
+            console.error('Error checking booking eligibility:', error);
+        } finally {
+            setIsCheckingBookingEligibility(false);
+        }
+    };
+
+    /**
+     * Enhanced opener for project detail modal
+     */
+    const handleOpenProjectDetail = (p) => {
+        const pId = p.id || p.projectId;
+        setDetailProject(p);
+        setShowDetailModal(true);
+        fetchAnalysisHistory(pId);
+        
+        // Only fetch booking info if project is Approved
+        if (p.status === 'Approved' || p.status === PROJECT_STATUS.APPROVED) {
+            fetchBookingEligibility(pId);
+        } else {
+            setCanBookDetailProject(false);
+            setDetailProjectAdvisors([]);
+        }
+    };
+
     // BR-15: Submit Project for Staff Review (WITHOUT AI - Direct submission)
     const handleSubmitProject = async (projectId) => {
         if (!projectId) {
@@ -929,6 +1543,14 @@ export default function StartupDashboard({ user }) {
                 subtitle={`Xin chào, ${user?.name || 'Người sáng lập'}! Đây là tổng quan khởi nghiệp của bạn.`}
                 showFilter={false} // No filter for dashboard
                 user={user}
+                onOpenChat={(chatSessionId) => {
+                    setActiveChatSession({
+                        chatSessionId,
+                        displayName: 'Investor',
+                        currentUserId: user?.userId,
+                        sentTime: new Date().toISOString(),
+                    });
+                }}
             />
 
             {!isLoadingInitialData && !startupProfile && (
@@ -1011,10 +1633,27 @@ export default function StartupDashboard({ user }) {
                         Dự án của tôi
                     </button>
                     <button
-                        className={`${styles.tab} ${activeSection === 'advisors' ? styles.active : ''}`}
-                        onClick={() => setActiveSection('advisors')}
+                        className={`${styles.tab} ${activeSection === 'connection-requests' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('connection-requests')}
                     >
-                        Yêu cầu tư vấn
+                        Yêu cầu thông tin
+                    </button>
+                    <button
+                        className={`${styles.tab} ${activeSection === 'bookings' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('bookings')}
+                    >
+                        Lịch tư vấn
+                    </button>
+                    <button
+                        className={`${styles.tab} ${activeSection === 'deals' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('deals')}
+                    >
+                        Đầu tư
+                        {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length > 0 && (
+                            <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '8px', fontSize: '10px', padding: '2px 6px' }}>
+                                {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length}
+                            </span>
+                        )}
                     </button>
 
                     {/* Animated Indicator Line */}
@@ -1103,29 +1742,29 @@ export default function StartupDashboard({ user }) {
                     <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
                         <div className={kanban.statisticsSection} style={{ gap: 0 }}>
                             {/* Search and Header Row */}
-                            <div className={styles.cardHeader} style={{ 
-                                background: 'var(--bg-secondary)', 
-                                borderRadius: '12px', 
-                                padding: '16px 20px', 
+                            <div className={styles.cardHeader} style={{
+                                background: 'var(--bg-secondary)',
+                                borderRadius: '12px',
+                                padding: '16px 20px',
                                 border: '1px solid var(--border-color)',
                                 marginBottom: 0
                             }}>
                                 <h3 className={styles.cardTitle} style={{ marginBottom: 0 }}>Dự án của tôi</h3>
                                 <div className={styles.searchWrapper} style={{ position: 'relative', width: isMobile ? '100%' : '300px', marginTop: isMobile ? '12px' : 0 }}>
                                     <Search className={styles.searchIcon} size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
-                                    <input 
-                                        type="text" 
-                                        placeholder="Tìm kiếm dự án..." 
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm kiếm dự án..."
                                         className={styles.searchInput}
                                         value={projectSearchTerm}
                                         onChange={(e) => setProjectSearchTerm(e.target.value)}
-                                        style={{ 
-                                            width: '100%', 
-                                            padding: '10px 12px 10px 36px', 
-                                            borderRadius: '9999px', 
-                                            border: '1px solid rgba(29, 155, 240, 0.4)', 
-                                            background: 'var(--bg-primary)', 
-                                            fontSize: '13px', 
+                                        style={{
+                                            width: '100%',
+                                            padding: '10px 12px 10px 36px',
+                                            borderRadius: '9999px',
+                                            border: '1px solid rgba(29, 155, 240, 0.4)',
+                                            background: 'var(--bg-primary)',
+                                            fontSize: '13px',
                                             color: 'var(--text-primary)',
                                             outline: 'none',
                                             transition: 'all 0.2s ease',
@@ -1154,7 +1793,7 @@ export default function StartupDashboard({ user }) {
                                             { id: 'approved', label: 'Đã duyệt', color: 'appr' },
                                             { id: 'rejected', label: 'Bị từ chối', color: 'rej' }
                                         ].map(tab => (
-                                            <button 
+                                            <button
                                                 key={tab.id}
                                                 className={`${kanban.mobileTab} ${activeProjectMobileTab === tab.id ? kanban.activeMobileTab : ''}`}
                                                 onClick={() => setActiveProjectMobileTab(tab.id)}
@@ -1169,7 +1808,7 @@ export default function StartupDashboard({ user }) {
                                 </div>
                             )}
 
-                             {/* Separator Line */}
+                            {/* Separator Line */}
                             {!isMobile && (
                                 <div style={{ height: '1px', background: 'var(--border-color)', margin: '20px -24px 0 -24px', opacity: 0.6 }}></div>
                             )}
@@ -1186,10 +1825,10 @@ export default function StartupDashboard({ user }) {
                                     ))}
                                 </div>
                             ) : (
-                                <div className={kanban.boardGrid} style={{ 
-                                    marginTop: 0, 
-                                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', 
-                                    width: 'auto', 
+                                <div className={kanban.boardGrid} style={{
+                                    marginTop: 0,
+                                    gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
+                                    width: 'auto',
                                     margin: isMobile ? 0 : '0 -24px -84px -24px',
                                     border: 'none',
                                     background: 'transparent'
@@ -1204,27 +1843,27 @@ export default function StartupDashboard({ user }) {
                                         });
 
                                         const columns = [
-                                            { 
-                                                id: 'draft', 
-                                                label: 'Bản nháp', 
+                                            {
+                                                id: 'draft',
+                                                label: 'Bản nháp',
                                                 color: 'draft',
                                                 projects: filteredProjects.filter(p => p.status === 'Draft' || p.status === 'IpProtected')
                                             },
-                                            { 
-                                                id: 'pending', 
-                                                label: 'Chờ duyệt', 
+                                            {
+                                                id: 'pending',
+                                                label: 'Chờ duyệt',
                                                 color: 'pend',
                                                 projects: filteredProjects.filter(p => p.status === 'Pending' || p.status === 'Submitted')
                                             },
-                                            { 
-                                                id: 'approved', 
-                                                label: 'Đã duyệt', 
+                                            {
+                                                id: 'approved',
+                                                label: 'Đã duyệt',
                                                 color: 'appr',
                                                 projects: filteredProjects.filter(p => p.status === 'Approved' || p.status === 'Published')
                                             },
-                                            { 
-                                                id: 'rejected', 
-                                                label: 'Bị từ chối', 
+                                            {
+                                                id: 'rejected',
+                                                label: 'Bị từ chối',
                                                 color: 'rej',
                                                 projects: filteredProjects.filter(p => p.status === 'Rejected')
                                             }
@@ -1235,13 +1874,13 @@ export default function StartupDashboard({ user }) {
                                             if (isMobile && activeProjectMobileTab !== col.id) return null;
 
                                             return (
-                                                <div 
-                                                    key={col.id} 
-                                                    className={kanban.bcol} 
-                                                    style={{ 
-                                                        borderRight: (isMobile || index === columns.length - 1) ? 'none' : '1px solid var(--border-color)', 
-                                                        borderLeft: 'none', 
-                                                        minWidth: 0 
+                                                <div
+                                                    key={col.id}
+                                                    className={kanban.bcol}
+                                                    style={{
+                                                        borderRight: (isMobile || index === columns.length - 1) ? 'none' : '1px solid var(--border-color)',
+                                                        borderLeft: 'none',
+                                                        minWidth: 0
                                                     }}
                                                 >
                                                     {!isMobile && (
@@ -1253,7 +1892,7 @@ export default function StartupDashboard({ user }) {
                                                             <div className={`${kanban.bcolN} ${kanban[col.color]}`}>{col.projects.length}</div>
                                                         </div>
                                                     )}
-                                                    
+
                                                     <div className={kanban.bcolCards}>
                                                         {col.projects.length === 0 ? (
                                                             <div className={kanban.emptyStateContainer} style={{ minHeight: '300px' }}>
@@ -1278,7 +1917,7 @@ export default function StartupDashboard({ user }) {
                                                                             </div>
                                                                         </div>
                                                                         <p className={kanban.bcardDesc}>{p.shortDescription || p.description}</p>
-                                                                        
+
                                                                         {p.status === 'Rejected' && p.rejectionReason && (
                                                                             <div style={{ padding: '10px', background: 'rgba(244, 33, 46, 0.05)', borderRadius: '10px', border: '1px solid rgba(244, 33, 46, 0.1)', marginBottom: '12px' }}>
                                                                                 <div style={{ fontSize: '12px', color: '#f4212e', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '4px' }}>
@@ -1311,12 +1950,10 @@ export default function StartupDashboard({ user }) {
                                                                                     >
                                                                                         <Send size={16} />
                                                                                     </button>
-                                                                                    <button 
+                                                                                    <button
                                                                                         className={kanban.baBtn}
                                                                                         onClick={() => {
-                                                                                            setDetailProject(p);
-                                                                                            setShowDetailModal(true);
-                                                                                            fetchAnalysisHistory(p.id || p.projectId);
+                                                                                            handleOpenProjectDetail(p);
                                                                                         }}
                                                                                         title="Chi tiết dự án"
                                                                                     >
@@ -1338,12 +1975,10 @@ export default function StartupDashboard({ user }) {
                                                                                             <Send size={16} /> Nộp
                                                                                         </button>
                                                                                     )}
-                                                                                    <button 
+                                                                                    <button
                                                                                         className={kanban.baBtn}
                                                                                         onClick={() => {
-                                                                                            setDetailProject(p);
-                                                                                            setShowDetailModal(true);
-                                                                                            fetchAnalysisHistory(p.id || p.projectId);
+                                                                                            handleOpenProjectDetail(p);
                                                                                         }}
                                                                                         title="Chi tiết dự án"
                                                                                     >
@@ -1367,72 +2002,367 @@ export default function StartupDashboard({ user }) {
                     </div>
                 )}
 
-                {/* Advisors Section */}
-                {activeSection === 'advisors' && (
+                {/* Connection Requests Section - Investor inquiries */}
+                {activeSection === 'connection-requests' && (
                     <div className={styles.section}>
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>
-                                Yêu cầu tư vấn từ cố vấn
-                                {dashboardData.pendingAdvisorRequests > 0 && (
+                                Yêu cầu thông tin từ nhà đầu tư
+                                {connectionRequests.filter(r => r.status === 'pending').length > 0 && (
                                     <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
-                                        {dashboardData.pendingAdvisorRequests} Chờ xử lý
+                                        {connectionRequests.filter(r => r.status === 'pending').length} Chờ xử lý
                                     </span>
                                 )}
                             </h3>
 
                             <div className={styles.list}>
-                                {isLoadingInitialData ? (
+                                {isLoadingRequests ? (
                                     <div className={styles.loadingState}>
                                         <Loader2 className={styles.spinner} size={24} />
                                         <span>Đang tải danh sách yêu cầu...</span>
                                     </div>
-                                ) : advisorRequests.length === 0 ? (
+                                ) : connectionRequests.length === 0 ? (
                                     <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                        <p>Chưa có yêu cầu tư vấn nào.</p>
+                                        <p>Chưa có yêu cầu thông tin nào từ nhà đầu tư.</p>
                                     </div>
                                 ) : (
-                                    advisorRequests.map(request => (
+                                    connectionRequests.map(request => (
                                         <div
-                                            key={request.id}
+                                            key={request.connectionRequestId}
                                             className={styles.listItem}
-                                            style={{ borderLeftColor: request.status === 'pending' ? '#d97706' : request.status === 'accepted' ? '#17bf63' : '#f4212e' }}
+                                            style={{
+                                                borderLeft: 'none',
+                                                borderTop: `3px solid ${request.status === 'pending' ? '#f59e0b' : request.status === 'accepted' ? '#10b981' : '#ef4444'}`,
+                                                padding: '12px 16px'
+                                            }}
                                         >
                                             <div className={styles.listContent}>
-                                                <div className={styles.listItemHeader}>
-                                                    <h4 className={styles.listItemTitle}>
-                                                        {request.advisorName}
-                                                    </h4>
-                                                    <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`}>
-                                                        {request.status === 'pending' ? 'Đang chờ' : request.status === 'accepted' ? 'Đã chấp nhận' : 'Bị từ chối'}
+                                                {/* Header Row: Status + Investor Name + Date */}
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                                    <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
+                                                        {request.status === 'pending' ? '⏳ Đang chờ' : request.status === 'accepted' ? '✓ Đã chấp nhận' : '✗ Đã từ chối'}
+                                                    </span>
+                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
+                                                        NĐT: <strong>{request.investorName || 'Investor'}</strong>
+                                                    </span>
+                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
+                                                        {request.sentDate}
                                                     </span>
                                                 </div>
-                                                <div className={styles.mb8}>
-                                                    <span className={`${styles.badge} ${styles.badgeInfo}`}>
-                                                        {request.expertise}
-                                                    </span>
-                                                </div>
-                                                <p className={styles.subtitle}>{request.message}</p>
-                                                <div className={styles.listMeta}>
-                                                    Ngày yêu cầu: {request.requestDate}
-                                                    {request.appointmentDate && ` • Cuộc hẹn: ${request.appointmentDate}`}
-                                                </div>
+
                                             </div>
+
+                                            {/* Actions */}
                                             {request.status === 'pending' && (
-                                                <div className={styles.listActions}>
+                                                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
                                                     <button
-                                                        className={`${styles.primaryBtn} ${styles.smallBtn}`}
-                                                        onClick={() => handleAcceptRequest(request.id)}
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#10b981',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleApproveConnectionRequest(request.connectionRequestId)}
+                                                        disabled={isRespondingToRequest === request.connectionRequestId}
                                                     >
-                                                        Chấp nhận
+                                                        {isRespondingToRequest === request.connectionRequestId ? (
+                                                            <>
+                                                                <Loader2 size={12} className={styles.spinner} />
+                                                                Xử lý...
+                                                            </>
+                                                        ) : (
+                                                            <>✓ Chấp nhận</>
+                                                        )}
                                                     </button>
                                                     <button
-                                                        className={`${styles.dangerBtn} ${styles.smallBtn}`}
-                                                        onClick={() => handleRejectRequest(request.id)}
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#ef4444',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleRejectConnectionRequest(request.connectionRequestId)}
+                                                        disabled={isRespondingToRequest === request.connectionRequestId}
                                                     >
-                                                        Từ chối
+                                                        {isRespondingToRequest === request.connectionRequestId ? 'Xử lý...' : '✗ Từ chối'}
                                                     </button>
                                                 </div>
                                             )}
+
+                                            {request.status === 'accepted' && (
+                                                <div style={{ display: 'flex', marginTop: '8px' }}>
+                                                    <button
+                                                        style={{
+                                                            padding: '6px 16px',
+                                                            backgroundColor: '#7c3aed',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleStartChat(request.connectionRequestId)}
+                                                    >
+                                                        <MessageSquare size={12} />
+                                                        Bắt đầu chat
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Bookings Section */}
+                {activeSection === 'bookings' && (
+                    <StartupBookings user={user} />
+                )}
+
+                {/* Deals Approval Section */}
+                {activeSection === 'deals' && (
+                    <div className={styles.section}>
+                        <div className={styles.card}>
+                            <h3 className={styles.cardTitle}>
+                                Đầu tư từ nhà đầu tư ({dealsToApprove.length} tổng)
+                                {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length > 0 && (
+                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
+                                        {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length} Chờ xử lý
+                                    </span>
+                                )}
+                            </h3>
+
+                            <div className={styles.list}>
+                                {isLoadingDeals ? (
+                                    <div className={styles.loadingState}>
+                                        <Loader2 className={styles.spinner} size={24} />
+                                        <span>Đang tải danh sách đầu tư...</span>
+                                    </div>
+                                ) : dealsToApprove.length === 0 ? (
+                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
+                                        <p>Không có đầu tư nào cần xử lý.</p>
+                                    </div>
+                                ) : (
+                                    dealsToApprove.map(deal => (
+                                        <div
+                                            key={deal.dealId}
+                                            className={styles.listItem}
+                                            style={{ 
+                                                borderLeft: 'none',
+                                                borderTop: `3px solid ${deal.status === 'Pending' || deal.status === 0 ? '#f59e0b' : '#10b981'}`,
+                                                padding: '12px 16px'
+                                            }}
+                                        >
+                                            <div className={styles.listContent}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
+                                                        <strong>NĐT:</strong> {deal.investorName || 'Nhà đầu tư'}
+                                                    </span>
+                                                    {deal.investmentAmount && (
+                                                        <span style={{ fontSize: '12px', color: '#10b981', backgroundColor: '#f0fdf4', padding: '4px 8px', borderRadius: '4px', fontWeight: '600' }}>
+                                                            💰 {deal.investmentAmount.toLocaleString('vi-VN')} VNĐ
+                                                        </span>
+                                                    )}
+                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
+                                                        {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('vi-VN') : 'Ngày'}
+                                                    </span>
+                                                </div>
+
+                                                {deal.projectName && (
+                                                    <div style={{ marginBottom: '8px' }}>
+                                                        <span style={{ fontSize: '12px', color: '#475569' }}>
+                                                            <strong>Dự án:</strong> {deal.projectName}
+                                                        </span>
+                                                    </div>
+                                                )}
+
+                                                {/* Status Badge */}
+                                                {(deal.status === 'Pending' || deal.status === 0) && (
+                                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
+                                                        ⏳ Chờ xác nhận
+                                                    </span>
+                                                )}
+                                                {(deal.status === 'Confirmed' || deal.status === 1) && (
+                                                    <span className={`${styles.badge} ${styles.badgeSuccess}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
+                                                        ✓ Đã xác nhận
+                                                    </span>
+                                                )}
+                                                {(deal.status === 'Waiting_For_Startup_Signature' || deal.status === 2) && (
+                                                    <span style={{ fontSize: '11px', padding: '4px 8px', backgroundColor: '#f97316', color: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                        ⏳ Chờ ký từ Startup
+                                                    </span>
+                                                )}
+                                                {(deal.status === 'Contract_Signed' || deal.status === 3) && (
+                                                    <span style={{ fontSize: '11px', padding: '4px 8px', backgroundColor: '#667eea', color: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                        ✓ Đã ký kết
+                                                    </span>
+                                                )}
+                                                {(deal.status === 'Minted_NFT' || deal.status === 4) && (
+                                                    <span style={{ fontSize: '11px', padding: '4px 8px', backgroundColor: '#8b5cf6', color: '#fff', borderRadius: '4px', display: 'inline-block' }}>
+                                                        ✓ Đã mint NFT
+                                                    </span>
+                                                )}
+                                                {(deal.status === 'Rejected' || deal.status === 5) && (
+                                                    <span className={`${styles.badge} ${styles.badgeError}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
+                                                        ✗ Bị từ chối
+                                                    </span>
+                                                )}
+                                                {(deal.status === 'Failed' || deal.status === 6) && (
+                                                    <span className={`${styles.badge} ${styles.badgeError}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
+                                                        ✗ Thất bại
+                                                    </span>
+                                                )}
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                                                {(deal.status === 'Pending' || deal.status === 0) && (
+                                                    <>
+                                                        <button
+                                                            style={{
+                                                                padding: '6px 12px',
+                                                                backgroundColor: '#10b981',
+                                                                color: '#fff',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px',
+                                                                transition: 'all 0.2s'
+                                                            }}
+                                                            onClick={() => handleApproveDeal(deal.dealId)}
+                                                            disabled={isRespondingToDeal === deal.dealId}
+                                                        >
+                                                            {isRespondingToDeal === deal.dealId ? (
+                                                                <>
+                                                                    <Loader2 size={12} className={styles.spinner} />
+                                                                    Đang xử lý...
+                                                                </>
+                                                            ) : (
+                                                                <>✓ Chấp nhận</>
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            style={{
+                                                                padding: '6px 12px',
+                                                                backgroundColor: '#ef4444',
+                                                                color: '#fff',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px',
+                                                                transition: 'all 0.2s'
+                                                            }}
+                                                            onClick={() => handleRejectDeal(deal.dealId)}
+                                                            disabled={isRespondingToDeal === deal.dealId}
+                                                        >
+                                                            {isRespondingToDeal === deal.dealId ? (
+                                                                <>
+                                                                    <Loader2 size={12} className={styles.spinner} />
+                                                                    Đang xử lý...
+                                                                </>
+                                                            ) : (
+                                                                <>✗ Từ chối</>
+                                                            )}
+                                                        </button>
+                                                    </>
+                                                )}
+
+                                                {(deal.status === 'Confirmed' || deal.status === 1) && (
+                                                    <button
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#667eea',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleShowContractPreview(deal)}
+                                                    >
+                                                        📄 Ký hợp đồng
+                                                    </button>
+                                                )}
+
+                                                {(deal.status === 'Waiting_For_Startup_Signature' || deal.status === 2) && (
+                                                    <button
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#f97316',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleShowContractPreview(deal)}
+                                                    >
+                                                        ✓ Xem & Ký hợp đồng
+                                                    </button>
+                                                )}
+
+                                                {(deal.status === 'Contract_Signed' || deal.status === 3) && (
+                                                    <button
+                                                        style={{
+                                                            padding: '6px 12px',
+                                                            backgroundColor: '#10b981',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s'
+                                                        }}
+                                                        onClick={() => handleShowContractPreview(deal)}
+                                                    >
+                                                        📄 Xem hợp đồng đã ký
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
                                     ))
                                 )}
@@ -1525,11 +2455,54 @@ export default function StartupDashboard({ user }) {
                     onClick={(e) => e.target === e.currentTarget && setShowDetailModal(false)}
                 >
                     <div className={styles.modalContent}>
-                        
+                        {/* --- Fixed Headers (Top Pinned) --- */}
+
+                        {/* Mobile Header (When NO image exists) */}
+                        {isMobile && !detailProject.projectImageUrl && (
+                            <div className={`${styles.mobileFixedHeader} ${styles.mobileOnly}`} style={{
+                                flexDirection: 'row',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                flexWrap: 'nowrap',
+                                gap: '12px'
+                            }}>
+                                <h3 className={styles.mobileFixedTitle}>{detailProject.projectName}</h3>
+                                <div className={styles.mobileHeaderRight}>
+                                    <div style={{
+                                        fontSize: '11px',
+                                        fontWeight: 800,
+                                        color: 'var(--primary-blue)',
+                                        backgroundColor: 'rgba(29, 155, 240, 0.1)',
+                                        padding: '4px 8px',
+                                        borderRadius: '6px',
+                                        whiteSpace: 'nowrap'
+                                    }}>
+                                        {getStageLabel(detailProject.developmentStage)}
+                                    </div>
+                                    <button
+                                        className={styles.modalCloseBtn}
+                                        onClick={() => setShowDetailModal(false)}
+                                        style={{
+                                            position: 'relative',
+                                            top: 'auto',
+                                            right: 'auto',
+                                            width: '36px',
+                                            height: '36px',
+                                            padding: 0,
+                                            display: 'flex'
+                                        }}
+                                    >
+                                        <X size={18} />
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+
                         <div className={styles.modalSplitWrapper}>
                             {/* --- LEFT SIDE: HERO POSTER (Desktop) --- */}
                             {detailProject.projectImageUrl && (
-                                <div 
+                                <div
                                     className={`${styles.modalSplitHero} ${styles.desktopOnly}`}
                                     onClick={() => setShowFullscreenImage(true)}
                                     style={{ cursor: 'zoom-in' }}
@@ -1560,9 +2533,9 @@ export default function StartupDashboard({ user }) {
                                                 {STATUS_LABELS[detailProject.status || 'Draft'] || 'Bản nháp'}
                                             </span>
                                             {detailProject.status === 'Approved' && (
-                                                <div style={{ 
-                                                    backgroundColor: 'rgba(16, 185, 129, 0.2)', 
-                                                    padding: '4px 8px', 
+                                                <div style={{
+                                                    backgroundColor: 'rgba(16, 185, 129, 0.2)',
+                                                    padding: '4px 8px',
                                                     borderRadius: '6px',
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -1577,7 +2550,7 @@ export default function StartupDashboard({ user }) {
                                             )}
                                         </div>
                                     </div>
-                                    <button 
+                                    <button
                                         className={styles.heroMaximizeHint}
                                         onClick={(e) => {
                                             e.stopPropagation();
@@ -1591,73 +2564,42 @@ export default function StartupDashboard({ user }) {
                             )}
 
                             {/* --- RIGHT SIDE: CONTENT AREA --- */}
+
+
                             <div className={styles.modalSplitContentArea}>
-                                {/* --- Desktop-Only Header (Restoration) --- */}
                                 {!isMobile && (
                                     <div className={styles.modalSplitDesktopHeader}>
                                         <h2 className={styles.modalSplitDesktopTitle}>{detailProject.projectName}</h2>
-                                        <div className={styles.modalSplitDesktopBadges}>
-                                            <div style={{ 
-                                                fontSize: '11px', 
-                                                fontWeight: 800, 
-                                                color: 'var(--primary-blue)', 
-                                                backgroundColor: 'rgba(29, 155, 240, 0.1)', 
-                                                padding: '4px 8px', 
-                                                borderRadius: '6px'
-                                            }}>
-                                                {getStageLabel(detailProject.developmentStage)}
-                                            </div>
-                                            <span 
-                                                style={{
-                                                    backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}25`,
-                                                    color: STATUS_COLORS[detailProject.status || 'Draft'],
-                                                    border: `1px solid ${STATUS_COLORS[detailProject.status || 'Draft']}40`,
-                                                    padding: '4px 12px',
-                                                    borderRadius: '6px',
-                                                    fontWeight: 700,
-                                                    fontSize: '12px',
-                                                }}
-                                            >
-                                                {STATUS_LABELS[detailProject.status || 'Draft'] || 'Bản nháp'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* --- Mobile Fixed Header (When NO image exists) --- */}
-                                {isMobile && !detailProject.projectImageUrl && (
-                                    <div className={`${styles.mobileFixedHeader} ${styles.mobileOnly}`} style={{ 
-                                        flexDirection: 'row', 
-                                        alignItems: 'center', 
-                                        justifyContent: 'space-between',
-                                        flexWrap: 'nowrap',
-                                        gap: '12px'
-                                    }}>
-                                        <h3 className={styles.mobileFixedTitle}>{detailProject.projectName}</h3>
-                                        <div className={styles.mobileHeaderRight}>
-                                            <div style={{ 
-                                                fontSize: '11px', 
-                                                fontWeight: 800, 
-                                                color: 'var(--primary-blue)', 
-                                                backgroundColor: 'rgba(29, 155, 240, 0.1)', 
-                                                padding: '4px 8px', 
-                                                borderRadius: '6px',
-                                                whiteSpace: 'nowrap'
-                                            }}>
-                                                {getStageLabel(detailProject.developmentStage)}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <div className={styles.modalSplitDesktopBadges}>
+                                                <div style={{
+                                                    fontSize: '11px',
+                                                    fontWeight: 800,
+                                                    color: 'var(--primary-blue)',
+                                                    backgroundColor: 'rgba(29, 155, 240, 0.1)',
+                                                    padding: '4px 8px',
+                                                    borderRadius: '6px'
+                                                }}>
+                                                    {getStageLabel(detailProject.developmentStage)}
+                                                </div>
+                                                <span
+                                                    style={{
+                                                        backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}25`,
+                                                        color: STATUS_COLORS[detailProject.status || 'Draft'],
+                                                        border: `1px solid ${STATUS_COLORS[detailProject.status || 'Draft']}40`,
+                                                        padding: '4px 12px',
+                                                        borderRadius: '6px',
+                                                        fontWeight: 700,
+                                                        fontSize: '12px',
+                                                    }}
+                                                >
+                                                    {STATUS_LABELS[detailProject.status || 'Draft'] || 'Bản nháp'}
+                                                </span>
                                             </div>
                                             <button
-                                                className={styles.modalCloseBtn}
+                                                className={styles.modalCloseBtnInline}
                                                 onClick={() => setShowDetailModal(false)}
-                                                style={{ 
-                                                    position: 'relative', 
-                                                    top: 'auto', 
-                                                    right: 'auto', 
-                                                    width: '36px', 
-                                                    height: '36px', 
-                                                    padding: 0,
-                                                    display: 'flex'
-                                                }}
+                                                title="Đóng"
                                             >
                                                 <X size={18} />
                                             </button>
@@ -1665,23 +2607,14 @@ export default function StartupDashboard({ user }) {
                                     </div>
                                 )}
 
-                                {/* Close Button (Desktop Only toggle in CSS) */}
-                                <button
-                                    className={`${styles.modalCloseBtn} ${styles.desktopOnly}`}
-                                    onClick={() => setShowDetailModal(false)}
-                                    title="Đóng"
-                                >
-                                    <X size={20} />
-                                </button>
-
                                 {/* --- Mobile Hero Section (When image exists) --- */}
                                 {isMobile && detailProject.projectImageUrl && (
                                     <div className={`${styles.mobileHeroSection} ${styles.mobileOnly}`}>
                                         <div className={styles.mobileHeroWrapper} onClick={() => setShowFullscreenImage(true)}>
                                             <img src={detailProject.projectImageUrl} className={styles.mobileHeroImage} alt={detailProject.projectName} />
-                                            
+
                                             {/* Floating Glassy Close Button */}
-                                            <button 
+                                            <button
                                                 className={styles.glassyCloseBtn}
                                                 onClick={(e) => {
                                                     e.stopPropagation();
@@ -1722,85 +2655,146 @@ export default function StartupDashboard({ user }) {
                                             gap: '20px'
                                         }}>
                                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(29, 155, 240, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                    <Zap size={22} color="var(--primary-blue)" fill="var(--primary-blue)" />
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                    <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(29, 155, 240, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                        <Zap size={22} color="var(--primary-blue)" fill="var(--primary-blue)" />
+                                                    </div>
+                                                    <div>
+                                                        <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 900, color: 'var(--text-primary)' }}>ĐÁNH GIÁ TIỀM NĂNG</h4>
+                                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Cung cấp bởi AISEP</span>
+                                                    </div>
+                                                </div>
+                                                {detailProject.status === 'Draft' && (
+                                                    <button
+                                                        className={styles.primaryBtn}
+                                                        style={{ padding: '8px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: 700 }}
+                                                        onClick={() => handleRunAIEvaluation(detailProject.projectId || detailProject.id)}
+                                                        disabled={isEvaluatingAI && evaluatingProjectId === (detailProject.projectId || detailProject.id)}
+                                                    >
+                                                        {isEvaluatingAI && evaluatingProjectId === (detailProject.projectId || detailProject.id) ? (
+                                                            <><Loader2 className={styles.spinner} size={14} /> Đang phân tích...</>
+                                                        ) : analysisHistory.length > 0 ? 'Phân tích lại' : 'Phân tích ngay'}
+                                                    </button>
+                                                )}
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '4px 0' }}>
+                                                {isLoadingHistory ? (
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                                                        <Loader2 className={styles.spinner} size={16} /> Đang cập nhật lịch sử...
+                                                    </div>
+                                                ) : analysisHistory.length > 0 ? (
+                                                    analysisHistory.map((item, idx) => (
+                                                        <div key={idx} onClick={() => { setSelectedHistoryResult({ data: item }); setShowHistoryView(true); }} className={styles.scoreCard}>
+                                                            <div className={styles.scoreHeader}>
+                                                                <span className={styles.scoreMainValue}>{item.potentialScore}</span>
+                                                                <span className={styles.scoreMaxLabel}>/100</span>
+                                                            </div>
+                                                            <span className={styles.scoreDate}>
+                                                                {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', {
+                                                                    year: 'numeric',
+                                                                    month: '2-digit',
+                                                                    day: '2-digit',
+                                                                    hour: '2-digit',
+                                                                    minute: '2-digit',
+                                                                    second: '2-digit',
+                                                                    hour12: false
+                                                                }) : 'Mới'}
+                                                            </span>
+                                                        </div>
+                                                    ))
+                                                ) : (
+                                                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Dự án này chưa có bản phân tích tiềm năng nào.</p>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
+                                            <div style={{
+                                                marginTop: '16px',
+                                                padding: '20px',
+                                                backgroundColor: 'rgba(244, 33, 46, 0.05)',
+                                                borderRadius: '24px',
+                                                border: '1px solid rgba(244, 33, 46, 0.1)',
+                                                display: 'flex',
+                                                gap: '16px'
+                                            }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(244, 33, 46, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                    <AlertCircle size={22} color="#f4212e" />
                                                 </div>
                                                 <div>
-                                                    <h4 style={{ margin: 0, fontSize: '15px', fontWeight: 900, color: 'var(--text-primary)' }}>ĐÁNH GIÁ TIỀM NĂNG</h4>
-                                                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: 600 }}>Cung cấp bởi AISEP</span>
+                                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 900, color: '#f4212e' }}>LÝ DO TỪ CHỐI</h4>
+                                                    <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)' }}>{detailProject.rejectionReason}</p>
                                                 </div>
                                             </div>
-                                            <button 
-                                                className={styles.primaryBtn} 
-                                                style={{ padding: '8px 16px', borderRadius: '12px', fontSize: '12px', fontWeight: 700 }}
-                                                onClick={() => handleRunAIEvaluation(detailProject.projectId || detailProject.id)}
-                                                disabled={isEvaluatingAI && evaluatingProjectId === (detailProject.projectId || detailProject.id)}
-                                            >
-                                                {isEvaluatingAI && evaluatingProjectId === (detailProject.projectId || detailProject.id) ? (
-                                                    <><Loader2 className={styles.spinner} size={14} /> Đang phân tích...</>
-                                                ) : analysisHistory.length > 0 ? 'Phân tích lại' : 'Phân tích ngay'}
-                                            </button>
-                                        </div>
+                                        )}
 
-                                        <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '4px 0' }}>
-                                            {isLoadingHistory ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
-                                                    <Loader2 className={styles.spinner} size={16} /> Đang cập nhật lịch sử...
-                                                </div>
-                                            ) : analysisHistory.length > 0 ? (
-                                                analysisHistory.map((item, idx) => (
-                                                    <div key={idx} onClick={() => { setSelectedHistoryResult({ data: item }); setShowHistoryView(true); }} className={styles.scoreCard}>
-                                                        <div className={styles.scoreHeader}>
-                                                            <span className={styles.scoreMainValue}>{item.potentialScore}</span>
-                                                            <span className={styles.scoreMaxLabel}>/100</span>
+                                        {/* Assigned Advisor Section (Newly added for Approved projects) */}
+                                        {(detailProject.status === 'Approved' || detailProject.status === PROJECT_STATUS.APPROVED) && (
+                                            <div className={styles.advisorSection}>
+                                                <div className={styles.advisorSectionHeader}>
+                                                    <div className={styles.advisorInfoBlock}>
+                                                        <div className={styles.advisorIconWrapper}>
+                                                            <Users size={22} color="#10b981" />
                                                         </div>
-                                                        <span className={styles.scoreDate}>
-                                                            {item.createdAt ? new Date(item.createdAt).toLocaleDateString('vi-VN') : 'Mới'}
-                                                        </span>
+                                                        <div>
+                                                            <h4 className={styles.advisorSectionTitle}>CỐ VẤN ĐƯỢC PHÂN CÔNG</h4>
+                                                            <span className={styles.advisorSectionSubtitle}>Hỗ trợ chuyên môn trực tiếp</span>
+                                                        </div>
                                                     </div>
-                                                ))
-                                            ) : (
-                                                <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Dự án này chưa có bản phân tích tiềm năng nào.</p>
-                                            )}
-                                        </div>
+                                                </div>
+
+                                                <div className={styles.advisorNames}>
+                                                    {isCheckingBookingEligibility ? (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                                                            <Loader2 className={styles.spinner} size={16} /> Đang kiểm tra phân công...
+                                                        </div>
+                                                    ) : detailProjectAdvisors.length > 0 ? (
+                                                        detailProjectAdvisors.map((adv, idx) => (
+                                                            <div key={idx} className={styles.advisorChip}>
+                                                                <div style={{ width: '24px', height: '24px', borderRadius: '50%', backgroundColor: 'rgba(16, 185, 129, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                                    <User size={14} color="#10b981" />
+                                                                </div>
+                                                                <span>{adv.advisorName}</span>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Dự án đang trong quá trình phân công cố vấn phù hợp.</p>
+                                                    )}
+                                                </div>
+
+                                                {canBookDetailProject && detailProjectAdvisors.length > 0 && (
+                                                    <div className={styles.advisorActionRow}>
+                                                        <button
+                                                            className={`${styles.primaryBtn} ${styles.advisorBookingBtn}`}
+                                                            onClick={() => {
+                                                                setBookingInitialAdvisorId(detailProjectAdvisors[0].advisorId);
+                                                                setShowBookingWizard(true);
+                                                            }}
+                                                        >
+                                                            <Calendar size={14} style={{ marginRight: '6px' }} />
+                                                            Đặt lịch ngay
+                                                        </button>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
                                     </div>
 
-                                    {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
-                                        <div style={{
-                                            marginTop: '16px',
-                                            padding: '20px',
-                                            backgroundColor: 'rgba(244, 33, 46, 0.05)',
-                                            borderRadius: '24px',
-                                            border: '1px solid rgba(244, 33, 46, 0.1)',
-                                            display: 'flex',
-                                            gap: '16px'
-                                        }}>
-                                            <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(244, 33, 46, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                <AlertCircle size={22} color="#f4212e" />
-                                            </div>
-                                            <div>
-                                                <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 900, color: '#f4212e' }}>LÝ DO TỪ CHỐI</h4>
-                                                <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)' }}>{detailProject.rejectionReason}</p>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* Detailed Project Information Sections */}
+                                    {/* Detailed Project Information Sections */}
                                     {/* Section 1: Basic Info */}
-                                    <section>
+                                    <section className={styles.projectDetailSection}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                                             <div style={{ width: '4px', height: '24px', backgroundColor: 'var(--primary-blue)', borderRadius: '4px' }} />
                                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>1. THÔNG TIN CỐT LÕI</h3>
                                         </div>
-                                        
+
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
                                             <div>
                                                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.05em' }}>Mô tả dự án</label>
                                                 <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.8 }}>{detailProject.shortDescription}</p>
                                             </div>
-                                            
+
                                             <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: '32px' }}>
                                                 <div>
                                                     <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.05em' }}>Giai đoạn dự án</label>
@@ -1828,7 +2822,7 @@ export default function StartupDashboard({ user }) {
                                     </section>
 
                                     {/* Section 2: Market & Finance */}
-                                    <section>
+                                    <section className={styles.projectDetailSection}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                                             <div style={{ width: '4px', height: '24px', backgroundColor: '#10b981', borderRadius: '4px' }} />
                                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>2. THỊ TRƯỜNG & TÀI CHÍNH</h3>
@@ -1860,7 +2854,7 @@ export default function StartupDashboard({ user }) {
                                     </section>
 
                                     {/* Section 3: Team */}
-                                    <section>
+                                    <section className={styles.projectDetailSection}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                                             <div style={{ width: '4px', height: '24px', backgroundColor: '#f59e0b', borderRadius: '4px' }} />
                                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>3. ĐỘI NGŨ SÁNG LẬP</h3>
@@ -1887,7 +2881,7 @@ export default function StartupDashboard({ user }) {
                                     </section>
 
                                     {/* Section 4: Competition [NEW] */}
-                                    <section>
+                                    <section className={styles.projectDetailSection}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                                             <div style={{ width: '4px', height: '24px', backgroundColor: '#f43f5e', borderRadius: '4px' }} />
                                             <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>4. CẠNH TRANH</h3>
@@ -1905,345 +2899,769 @@ export default function StartupDashboard({ user }) {
                                         </div>
                                     </section>
 
-                                    <section>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                                    <div style={{ width: '4px', height: '24px', backgroundColor: 'var(--primary-blue)', borderRadius: '4px' }} />
-                                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>5. TÀI LIỆU DỰ ÁN</h3>
-                                </div>
+                                    <section className={styles.projectDetailSection}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
+                                            <div style={{ width: '4px', height: '24px', backgroundColor: 'var(--primary-blue)', borderRadius: '4px' }} />
+                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>5. TÀI LIỆU DỰ ÁN</h3>
+                                        </div>
 
-                                {/* Upload Section */}
-                                <div
-                                    className={`${styles.dropzone} ${dragActive ? styles.dragActive : ''} ${(detailProject.status !== 'Draft') ? styles.disabledDropzone : ''}`}
-                                    onDragEnter={(e) => {
-                                        if (detailProject.status !== 'Draft') return;
-                                        e.preventDefault();
-                                        setDragActive(true);
-                                    }}
-                                    onDragLeave={(e) => {
-                                        if (detailProject.status !== 'Draft') return;
-                                        e.preventDefault();
-                                        setDragActive(false);
-                                    }}
-                                    onDragOver={(e) => {
-                                        if (detailProject.status !== 'Draft') return;
-                                        e.preventDefault();
-                                        setDragActive(true);
-                                    }}
-                                    onDrop={(e) => {
-                                        if (detailProject.status !== 'Draft') return;
-                                        e.preventDefault();
-                                        setDragActive(false);
-                                        handleDrop(e);
-                                    }}
-                                    style={{
-                                        opacity: (detailProject.status !== 'Draft') ? 0.6 : 1,
-                                        cursor: (detailProject.status !== 'Draft') ? 'not-allowed' : 'pointer',
-                                        position: 'relative'
-                                    }}
-                                    title={detailProject.status !== 'Draft' ? 'Bạn chỉ có thể tải lên tài liệu khi dự án ở trạng thái Nháp' : ''}
-                                >
-                                    {detailProject.status !== 'Draft' && (
-                                        <div style={{
-                                            position: 'absolute',
-                                            top: 0,
-                                            left: 0,
-                                            right: 0,
-                                            bottom: 0,
-                                            zIndex: 2,
-                                            backgroundColor: 'rgba(255,255,255,0.05)'
-                                        }} />
-                                    )}
-                                    <div className={styles.uploadControls}>
-                                        <div className={styles.uploadInfo}>
-                                            <Upload size={24} className={styles.uploadIcon} />
-                                            <div>
-                                                <p className={styles.uploadTitle}>Tải lên tài liệu mới</p>
-                                                <p className={styles.uploadSubtitle}>Kéo thả hoặc click để chọn file (PDF, Docx, Image)</p>
+                                        {/* Upload Section */}
+                                        <div
+                                            className={`${styles.dropzone} ${dragActive ? styles.dragActive : ''} ${(detailProject.status !== 'Draft') ? styles.disabledDropzone : ''}`}
+                                            onDragEnter={(e) => {
+                                                if (detailProject.status !== 'Draft') return;
+                                                e.preventDefault();
+                                                setDragActive(true);
+                                            }}
+                                            onDragLeave={(e) => {
+                                                if (detailProject.status !== 'Draft') return;
+                                                e.preventDefault();
+                                                setDragActive(false);
+                                            }}
+                                            onDragOver={(e) => {
+                                                if (detailProject.status !== 'Draft') return;
+                                                e.preventDefault();
+                                                setDragActive(true);
+                                            }}
+                                            onDrop={(e) => {
+                                                if (detailProject.status !== 'Draft') return;
+                                                e.preventDefault();
+                                                setDragActive(false);
+                                                handleDrop(e);
+                                            }}
+                                            style={{
+                                                opacity: (detailProject.status !== 'Draft') ? 0.6 : 1,
+                                                cursor: (detailProject.status !== 'Draft') ? 'not-allowed' : 'pointer',
+                                                position: 'relative'
+                                            }}
+                                            title={detailProject.status !== 'Draft' ? 'Bạn chỉ có thể tải lên tài liệu khi dự án ở trạng thái Nháp' : ''}
+                                        >
+                                            {detailProject.status !== 'Draft' && (
+                                                <div style={{
+                                                    position: 'absolute',
+                                                    top: 0,
+                                                    left: 0,
+                                                    right: 0,
+                                                    bottom: 0,
+                                                    zIndex: 2,
+                                                    backgroundColor: 'rgba(255,255,255,0.05)'
+                                                }} />
+                                            )}
+                                            <div className={styles.uploadControls}>
+                                                <div className={styles.uploadInfo}>
+                                                    <Upload size={24} className={styles.uploadIcon} />
+                                                    <div>
+                                                        <p className={styles.uploadTitle}>Tải lên tài liệu mới</p>
+                                                        <p className={styles.uploadSubtitle}>Kéo thả hoặc click để chọn file (PDF, Docx, Image)</p>
+                                                    </div>
+                                                </div>
+                                                <div className={styles.uploadActions}>
+                                                    <select
+                                                        className={styles.selectSmall}
+                                                        value={documentType}
+                                                        onChange={(e) => setDocumentType(e.target.value)}
+                                                        disabled={detailProject.status !== 'Draft'}
+                                                    >
+                                                        <option value="PitchDeck">Pitch Deck</option>
+                                                        <option value="BusinessPlan">Kế hoạch kinh doanh</option>
+                                                        <option value="Other">Khác</option>
+                                                    </select>
+                                                    <button
+                                                        className={styles.uploadBtn}
+                                                        onClick={() => hiddenFileInput.current.click()}
+                                                        disabled={isUploading || detailProject.status !== 'Draft'}
+                                                    >
+                                                        {isUploading ? 'Đang tải...' : 'Chọn file'}
+                                                    </button>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div className={styles.uploadActions}>
-                                            <select
-                                                className={styles.selectSmall}
-                                                value={documentType}
-                                                onChange={(e) => setDocumentType(e.target.value)}
+                                            <input
+                                                type="file"
+                                                ref={hiddenFileInput}
+                                                onChange={handleFileChange}
+                                                style={{ display: 'none' }}
                                                 disabled={detailProject.status !== 'Draft'}
-                                            >
-                                                <option value="PitchDeck">Pitch Deck</option>
-                                                <option value="BusinessPlan">Kế hoạch kinh doanh</option>
-                                                <option value="Other">Khác</option>
-                                            </select>
-                                            <button
-                                                className={styles.uploadBtn}
-                                                onClick={() => hiddenFileInput.current.click()}
-                                                disabled={isUploading || detailProject.status !== 'Draft'}
-                                            >
-                                                {isUploading ? 'Đang tải...' : 'Chọn file'}
-                                            </button>
+                                            />
                                         </div>
-                                    </div>
-                                    <input
-                                        type="file"
-                                        ref={hiddenFileInput}
-                                        onChange={handleFileChange}
-                                        style={{ display: 'none' }}
-                                        disabled={detailProject.status !== 'Draft'}
-                                    />
-                                </div>
 
-                                {/* Documents List */}
-                                <div className={styles.docsList} style={{ marginTop: '20px' }}>
-                                    {isLoadingDocuments ? (
-                                        <div className={styles.loadingState}>
-                                            <Loader2 className={styles.spinner} size={24} />
-                                            <span>Đang tải tài liệu...</span>
-                                        </div>
-                                    ) : documents.length === 0 ? (
-                                        <div className={styles.emptyDocs}>
-                                            <p>Chưa có tài liệu nào được tải lên cho dự án này.</p>
-                                        </div>
-                                    ) : (
-                                        <>
-                                            {/* Desktop Table View */}
-                                            <div className={`${styles.tableWrapper} ${styles.desktopOnly}`}>
-                                                <table className={styles.docsTable}>
-                                                    <thead>
-                                                        <tr>
-                                                            <th>Tên tài liệu</th>
-                                                            <th>Loại</th>
-                                                            <th>Ngày tải</th>
-                                                            <th>Xác thực</th>
-                                                            <th>Thao tác</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {documents.map((doc) => (
-                                                            <tr key={doc.id}>
-                                                                <td>
-                                                                    <div className={styles.docNameCell}>
-                                                                        <FileText size={16} />
-                                                                        <span title={doc.fullName}>{doc.name}</span>
+                                        {/* Documents List */}
+                                        <div className={styles.docsList} style={{ marginTop: '20px' }}>
+                                            {isLoadingDocuments ? (
+                                                <div className={styles.loadingState}>
+                                                    <Loader2 className={styles.spinner} size={24} />
+                                                    <span>Đang tải tài liệu...</span>
+                                                </div>
+                                            ) : documents.length === 0 ? (
+                                                <div className={styles.emptyDocs}>
+                                                    <p>Chưa có tài liệu nào được tải lên cho dự án này.</p>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    {/* Desktop Table View */}
+                                                    <div className={`${styles.tableWrapper} ${styles.desktopOnly}`}>
+                                                        <table className={styles.docsTable}>
+                                                            <thead>
+                                                                <tr>
+                                                                    <th>Tên tài liệu</th>
+                                                                    <th>Loại</th>
+                                                                    <th>Ngày tải</th>
+                                                                    <th>Xác thực</th>
+                                                                    <th>Thao tác</th>
+                                                                </tr>
+                                                            </thead>
+                                                            <tbody>
+                                                                {documents.map((doc) => (
+                                                                    <tr key={doc.id}>
+                                                                        <td>
+                                                                            <div className={styles.docNameCell}>
+                                                                                <FileText size={16} />
+                                                                                <span title={doc.fullName}>{doc.name}</span>
+                                                                            </div>
+                                                                        </td>
+                                                                        <td>{doc.type}</td>
+                                                                        <td>{doc.uploadDate}</td>
+                                                                        <td>
+                                                                            {(() => {
+                                                                                const verification = blockchainVerifications[doc.id];
+                                                                                const status = verification?.status || (doc.txHash ? 'verified' : 'loading');
+
+                                                                                if (status === 'loading') {
+                                                                                    return (
+                                                                                        <span className={`${styles.statusBadge} ${styles.statusBadgeLoading}`}>
+                                                                                            <Loader2 size={12} className={styles.spinner} />
+                                                                                            Xác thực...
+                                                                                        </span>
+                                                                                    );
+                                                                                }
+
+                                                                                if (status === 'verified') {
+                                                                                    return (
+                                                                                        <span className={styles.statusBadge}>
+                                                                                            <Shield size={12} />
+                                                                                            Blockchain
+                                                                                        </span>
+                                                                                    );
+                                                                                }
+
+                                                                                return (
+                                                                                    <span className={`${styles.statusBadge} ${styles.statusBadgeUnverified}`}>
+                                                                                        <Shield size={12} />
+                                                                                        Chưa nộp
+                                                                                    </span>
+                                                                                );
+                                                                            })()}
+                                                                        </td>
+                                                                        <td>
+                                                                            <div className={styles.tableActions}>
+                                                                                <button
+                                                                                    className={styles.iconBtn}
+                                                                                    title="Xem"
+                                                                                    onClick={() => window.open(doc.url, '_blank')}
+                                                                                >
+                                                                                    <ExternalLink size={16} />
+                                                                                </button>
+                                                                                <button
+                                                                                    className={styles.iconBtn}
+                                                                                    title="Xác thực"
+                                                                                    onClick={() => handleVerifyDocument(doc.id, doc.fullName, doc.txHash)}
+                                                                                    disabled={verifyingDocId !== null}
+                                                                                >
+                                                                                    {verifyingDocId === doc.id ? (
+                                                                                        <Loader2 size={16} className={styles.spinner} />
+                                                                                    ) : (
+                                                                                        <Shield size={16} />
+                                                                                    )}
+                                                                                </button>
+                                                                                <button
+                                                                                    className={styles.iconBtnDanger}
+                                                                                    title="Xóa"
+                                                                                    onClick={() => handleDeleteDocument(doc)}
+                                                                                    disabled={detailProject.status !== 'Draft' || isDeletingDocument}
+                                                                                    style={{
+                                                                                        opacity: (detailProject.status !== 'Draft' || isDeletingDocument) ? 0.5 : 1,
+                                                                                        cursor: (detailProject.status !== 'Draft' || isDeletingDocument) ? 'not-allowed' : 'pointer'
+                                                                                    }}
+                                                                                >
+                                                                                    {isDeletingDocument && documentToDelete?.id === doc.id ? (
+                                                                                        <Loader2 size={16} className={styles.spinner} />
+                                                                                    ) : (
+                                                                                        <Trash2 size={16} />
+                                                                                    )}
+                                                                                </button>
+                                                                            </div>
+                                                                        </td>
+                                                                    </tr>
+                                                                ))}
+                                                            </tbody>
+                                                        </table>
+                                                    </div>
+
+                                                    {/* Mobile Card View */}
+                                                    <div className={`${styles.mobileDocsList} ${styles.mobileOnly}`}>
+                                                        {documents.map((doc) => {
+                                                            const verification = blockchainVerifications[doc.id];
+                                                            const status = verification?.status || (doc.txHash ? 'verified' : 'loading');
+
+                                                            return (
+                                                                <div key={doc.id} className={styles.docCard}>
+                                                                    <div className={styles.docCardHeader}>
+                                                                        <FileText size={18} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
+                                                                        <span className={styles.docCardTitle} title={doc.fullName}>
+                                                                            {doc.name}
+                                                                        </span>
                                                                     </div>
-                                                                </td>
-                                                                <td>{doc.type}</td>
-                                                                <td>{doc.uploadDate}</td>
-                                                                <td>
-                                                                    {(() => {
-                                                                        const verification = blockchainVerifications[doc.id];
-                                                                        const status = verification?.status || (doc.txHash ? 'verified' : 'loading');
 
-                                                                        if (status === 'loading') {
-                                                                            return (
-                                                                                <span className={`${styles.statusBadge} ${styles.statusBadgeLoading}`}>
-                                                                                    <Loader2 size={12} className={styles.spinner} />
-                                                                                    Xác thực...
-                                                                                </span>
-                                                                            );
-                                                                        }
+                                                                    <div className={styles.docCardMeta}>
+                                                                        <span className={styles.docCardBadge} style={{
+                                                                            backgroundColor: 'rgba(29, 155, 240, 0.1)',
+                                                                            color: 'var(--primary-blue)'
+                                                                        }}>
+                                                                            {doc.type}
+                                                                        </span>
 
-                                                                        if (status === 'verified') {
-                                                                            return (
-                                                                                <span className={styles.statusBadge}>
-                                                                                    <Shield size={12} />
-                                                                                    Blockchain
-                                                                                </span>
-                                                                            );
-                                                                        }
-
-                                                                        return (
-                                                                            <span className={`${styles.statusBadge} ${styles.statusBadgeUnverified}`}>
-                                                                                <Shield size={12} />
+                                                                        {status === 'loading' ? (
+                                                                            <span className={`${styles.docCardBadge} ${styles.statusBadgeLoading}`}>
+                                                                                <Loader2 size={10} className={styles.spinner} />
+                                                                                Xác thực...
+                                                                            </span>
+                                                                        ) : status === 'verified' ? (
+                                                                            <span className={`${styles.docCardBadge}`} style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
+                                                                                <Shield size={10} style={{ marginRight: '4px' }} />
+                                                                                Blockchain
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span className={`${styles.docCardBadge}`} style={{ backgroundColor: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e' }}>
+                                                                                <Shield size={10} style={{ marginRight: '4px' }} />
                                                                                 Chưa nộp
                                                                             </span>
-                                                                        );
-                                                                    })()}
-                                                                </td>
-                                                                <td>
-                                                                    <div className={styles.tableActions}>
+                                                                        )}
+
+                                                                        <span className={styles.docCardDate}>{doc.uploadDate}</span>
+                                                                    </div>
+
+                                                                    <div className={styles.docCardActions}>
                                                                         <button
-                                                                            className={styles.iconBtn}
-                                                                            title="Xem"
+                                                                            className={`${styles.docActionBtn} ${styles.viewBtn}`}
                                                                             onClick={() => window.open(doc.url, '_blank')}
                                                                         >
-                                                                            <ExternalLink size={16} />
+                                                                            <ExternalLink size={14} />
+                                                                            Xem
                                                                         </button>
+
                                                                         <button
-                                                                            className={styles.iconBtn}
-                                                                            title="Xác thực"
+                                                                            className={`${styles.docActionBtn} ${styles.viewBtn}`}
+                                                                            style={{ color: 'var(--text-primary)', border: '1px solid var(--border-color)', backgroundColor: 'transparent' }}
                                                                             onClick={() => handleVerifyDocument(doc.id, doc.fullName, doc.txHash)}
                                                                             disabled={verifyingDocId !== null}
                                                                         >
                                                                             {verifyingDocId === doc.id ? (
-                                                                                <Loader2 size={16} className={styles.spinner} />
+                                                                                <Loader2 size={14} className={styles.spinner} />
                                                                             ) : (
-                                                                                <Shield size={16} />
+                                                                                <Shield size={14} />
                                                                             )}
+                                                                            Xác thực
                                                                         </button>
+
                                                                         <button
-                                                                            className={styles.iconBtnDanger}
-                                                                            title="Xóa"
+                                                                            className={`${styles.docActionBtn} ${styles.deleteBtn}`}
                                                                             onClick={() => handleDeleteDocument(doc)}
                                                                             disabled={detailProject.status !== 'Draft' || isDeletingDocument}
                                                                             style={{
-                                                                                opacity: (detailProject.status !== 'Draft' || isDeletingDocument) ? 0.5 : 1,
-                                                                                cursor: (detailProject.status !== 'Draft' || isDeletingDocument) ? 'not-allowed' : 'pointer'
+                                                                                opacity: (detailProject.status !== 'Draft' || isDeletingDocument) ? 0.5 : 1
                                                                             }}
                                                                         >
                                                                             {isDeletingDocument && documentToDelete?.id === doc.id ? (
-                                                                                <Loader2 size={16} className={styles.spinner} />
+                                                                                <Loader2 size={14} className={styles.spinner} />
                                                                             ) : (
-                                                                                <Trash2 size={16} />
+                                                                                <Trash2 size={14} />
                                                                             )}
+                                                                            Xóa
                                                                         </button>
                                                                     </div>
-                                                                </td>
-                                                            </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </section>
+                                </div> {/* end of gap: 48px wrapper */}
+                            </div> {/* end of modalSplitContentArea */}
+                        </div> {/* end of modalSplitWrapper */}
 
-                                            {/* Mobile Card View */}
-                                            <div className={`${styles.mobileDocsList} ${styles.mobileOnly}`}>
-                                                {documents.map((doc) => {
-                                                    const verification = blockchainVerifications[doc.id];
-                                                    const status = verification?.status || (doc.txHash ? 'verified' : 'loading');
+                        {/* Fixed Action Footer (Available on both Desktop & Mobile) */}
+                        <div className={styles.stickyActions}>
+                            {detailProject.status === 'Draft' && (
+                                <button
+                                    className={styles.primaryBtn}
+                                    style={{ flex: '2', borderRadius: '9999px' }}
+                                    onClick={() => {
+                                        handleSubmitProject(detailProject.projectId || detailProject.id);
+                                    }}
+                                    disabled={isSubmittingProject}
+                                >
+                                    {isSubmittingProject && submittingProjectId === (detailProject.projectId || detailProject.id) ? '...' : 'Nộp dự án'}
+                                </button>
+                            )}
+                            {(detailProject.status === 'Draft' || detailProject.status === 'Rejected') && (
+                                <button
+                                    className={styles.secondaryBtn}
+                                    style={{ flex: '1', borderRadius: '9999px', borderColor: 'var(--primary-blue)', color: 'var(--primary-blue)' }}
+                                    onClick={() => {
+                                        setShowDetailModal(false);
+                                        setShowProjectForm(true);
+                                    }}
+                                >
+                                    Chỉnh sửa
+                                </button>
+                            )}
+                            <button
+                                className={styles.secondaryBtn}
+                                style={{ flex: '1', borderRadius: '9999px' }}
+                                onClick={() => setShowDetailModal(false)}
+                            >
+                                Đóng
+                            </button>
+                        </div>
+                    </div> {/* end of modalContent */}
+                </div>
+            )}
 
-                                                    return (
-                                                        <div key={doc.id} className={styles.docCard}>
-                                                            <div className={styles.docCardHeader}>
-                                                                <FileText size={18} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
-                                                                <span className={styles.docCardTitle} title={doc.fullName}>
-                                                                    {doc.name}
-                                                                </span>
-                                                            </div>
+            {showSuccessModal && (
+                <SuccessModal
+                    onClose={() => setShowSuccessModal(false)}
+                    title={successTitle || "Thông báo"}
+                    message={successMessage}
+                    primaryBtnText={successPrimaryBtn}
+                    secondaryBtnText={successSecondaryBtn}
+                    onSecondaryClick={onSuccessSecondaryClick}
+                    type={successModalType}
+                />
+            )}
 
-                                                            <div className={styles.docCardMeta}>
-                                                                <span className={styles.docCardBadge} style={{ 
-                                                                    backgroundColor: 'rgba(29, 155, 240, 0.1)', 
-                                                                    color: 'var(--primary-blue)' 
-                                                                }}>
-                                                                    {doc.type}
-                                                                </span>
-
-                                                                {status === 'loading' ? (
-                                                                    <span className={`${styles.docCardBadge} ${styles.statusBadgeLoading}`}>
-                                                                        <Loader2 size={10} className={styles.spinner} />
-                                                                        Xác thực...
-                                                                    </span>
-                                                                ) : status === 'verified' ? (
-                                                                    <span className={`${styles.docCardBadge}`} style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#10b981' }}>
-                                                                        <Shield size={10} style={{ marginRight: '4px' }} />
-                                                                        Blockchain
-                                                                    </span>
-                                                                ) : (
-                                                                    <span className={`${styles.docCardBadge}`} style={{ backgroundColor: 'rgba(244, 63, 94, 0.1)', color: '#f43f5e' }}>
-                                                                        <Shield size={10} style={{ marginRight: '4px' }} />
-                                                                        Chưa nộp
-                                                                    </span>
-                                                                )}
-                                                                
-                                                                <span className={styles.docCardDate}>{doc.uploadDate}</span>
-                                                            </div>
-
-                                                            <div className={styles.docCardActions}>
-                                                                <button
-                                                                    className={`${styles.docActionBtn} ${styles.viewBtn}`}
-                                                                    onClick={() => window.open(doc.url, '_blank')}
-                                                                >
-                                                                    <ExternalLink size={14} />
-                                                                    Xem
-                                                                </button>
-                                                                
-                                                                <button
-                                                                    className={`${styles.docActionBtn} ${styles.viewBtn}`}
-                                                                    style={{ color: 'var(--text-primary)', border: '1px solid var(--border-color)', backgroundColor: 'transparent' }}
-                                                                    onClick={() => handleVerifyDocument(doc.id, doc.fullName, doc.txHash)}
-                                                                    disabled={verifyingDocId !== null}
-                                                                >
-                                                                    {verifyingDocId === doc.id ? (
-                                                                        <Loader2 size={14} className={styles.spinner} />
-                                                                    ) : (
-                                                                        <Shield size={14} />
-                                                                    )}
-                                                                    Xác thực
-                                                                </button>
-
-                                                                <button
-                                                                    className={`${styles.docActionBtn} ${styles.deleteBtn}`}
-                                                                    onClick={() => handleDeleteDocument(doc)}
-                                                                    disabled={detailProject.status !== 'Draft' || isDeletingDocument}
-                                                                    style={{
-                                                                        opacity: (detailProject.status !== 'Draft' || isDeletingDocument) ? 0.5 : 1
-                                                                    }}
-                                                                >
-                                                                    {isDeletingDocument && documentToDelete?.id === doc.id ? (
-                                                                        <Loader2 size={14} className={styles.spinner} />
-                                                                    ) : (
-                                                                        <Trash2 size={14} />
-                                                                    )}
-                                                                    Xóa
-                                                                </button>
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        </>
-                                    )}
-                                </div>
-                            </section>
-                        </div> {/* end of gap: 48px wrapper */}
-                    </div> {/* end of modalSplitContentArea */}
-                </div> {/* end of modalSplitWrapper */}
-
-                {/* Fixed Action Footer (Available on both Desktop & Mobile) */}
-                <div className={styles.stickyActions}>
-                    {detailProject.status === 'Draft' && (
-                        <button
-                            className={styles.primaryBtn}
-                            style={{ flex: '2', borderRadius: '9999px' }}
-                            onClick={() => {
-                                handleSubmitProject(detailProject.projectId || detailProject.id);
-                            }}
-                            disabled={isSubmittingProject}
-                        >
-                            {isSubmittingProject && submittingProjectId === (detailProject.projectId || detailProject.id) ? '...' : 'Nộp dự án'}
-                        </button>
-                    )}
-                    {(detailProject.status === 'Draft' || detailProject.status === 'Rejected') && (
-                        <button
-                            className={styles.secondaryBtn}
-                            style={{ flex: '1', borderRadius: '9999px', borderColor: 'var(--primary-blue)', color: 'var(--primary-blue)' }}
-                            onClick={() => {
-                                setShowDetailModal(false);
-                                setShowProjectForm(true);
-                            }}
-                        >
-                            Chỉnh sửa
-                        </button>
-                    )}
+    {/* Contract Preview Modal */}
+    {showContractModal && contractPreviewHtml && (
+        <div
+            style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                zIndex: 1000,
+                padding: '16px',
+            }}
+            onClick={handleCloseContractModal}
+        >
+            <div
+                style={{
+                    backgroundColor: '#fff',
+                    borderRadius: '8px',
+                    width: '100%',
+                    maxWidth: '1000px',
+                    maxHeight: '90vh',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                }}
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div
+                    style={{
+                        padding: '20px',
+                        borderBottom: '1px solid #e2e8f0',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                    }}
+                >
+                    <div>
+                        <h2 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700' }}>
+                            {contractStatus === 'Contract_Signed' ? 'Xem hợp đồng đã ký' : 'Ký hợp đồng đầu tư'}
+                        </h2>
+                        {contractDealData && (
+                            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+                                <strong>Nhà đầu tư:</strong> {contractDealData.investorName} • <strong>Số tiền:</strong> {contractDealData.investmentAmount?.toLocaleString('vi-VN')} VNĐ
+                            </p>
+                        )}
+                    </div>
                     <button
-                        className={styles.secondaryBtn}
-                        style={{ flex: '1', borderRadius: '9999px' }}
-                        onClick={() => setShowDetailModal(false)}
+                        onClick={handleCloseContractModal}
+                        style={{
+                            background: 'none',
+                            border: 'none',
+                            fontSize: '24px',
+                            cursor: 'pointer',
+                            color: '#64748b',
+                        }}
                     >
-                        Đóng
+                        ×
                     </button>
                 </div>
-            </div> {/* end of modalContent */}
-        </div>
-    )}
 
-    {showSuccessModal && (
-        <SuccessModal
-            onClose={() => setShowSuccessModal(false)}
-            title={successTitle || "Thông báo"}
-            message={successMessage}
-            primaryBtnText={successPrimaryBtn}
-            secondaryBtnText={successSecondaryBtn}
-            onSecondaryClick={onSuccessSecondaryClick}
-            type={successModalType}
-        />
+                {/* Content: Two Column Layout or Full Width */}
+                <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+                    {/* Left: Contract Preview */}
+                    <div
+                        style={{
+                            flex: 1,
+                            overflow: 'auto',
+                            padding: '20px',
+                            backgroundColor: '#f9fafb',
+                            borderRight: contractStatus === 'Contract_Signed' ? 'none' : '1px solid #e2e8f0',
+                        }}
+                    >
+                        <h3 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: '700', color: '#475569' }}>
+                            📄 Hợp đồng đầu tư
+                        </h3>
+                        {isLoadingContract ? (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
+                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: '#64748b' }}>
+                                    <Loader2 size={24} className={styles.spinner} />
+                                    <span>Đang tải hợp đồng...</span>
+                                </div>
+                            </div>
+                        ) : (
+                            <div
+                                style={{
+                                    backgroundColor: '#fff',
+                                    padding: '20px',
+                                    borderRadius: '6px',
+                                    border: '1px solid #e2e8f0',
+                                    lineHeight: '1.6',
+                                    fontSize: '13px',
+                                    color: '#334155',
+                                    maxHeight: '75vh',
+                                    overflowY: 'auto',
+                                    boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.05)'
+                                }}
+                                dangerouslySetInnerHTML={{ __html: contractPreviewHtml }}
+                            />
+                        )}
+                    </div>
+
+                    {/* Right: Signing Form - Only show when NOT Contract_Signed */}
+                    {contractStatus !== 'Contract_Signed' && (
+                    <div
+                        style={{
+                            flex: 1,
+                            overflow: 'auto',
+                            padding: '20px',
+                            backgroundColor: '#fff',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: '16px',
+                        }}
+                    >
+                        <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#475569' }}>
+                            ✍️ Điều khoản ký kết
+                        </h3>
+
+                        {/* Final Amount - Only for Investor */}
+                        {(!contractStatus || contractStatus < 2) && (
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                Số tiền cuối cùng (VNĐ) *
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={signFormData.finalAmount || ''}
+                                onChange={(e) => setSignFormData({ ...signFormData, finalAmount: e.target.value ? parseFloat(e.target.value) : 0 })}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    fontSize: '13px',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    boxSizing: 'border-box',
+                                    fontFamily: 'inherit',
+                                }}
+                                placeholder="Nhập số tiền"
+                            />
+                        </div>
+                        )}
+
+                        {/* Equity Percentage - Only for Investor */}
+                        {(!contractStatus || contractStatus < 2) && (
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                Phần trăm cổ phần (%) *
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={signFormData.finalEquityPercentage || ''}
+                                onChange={(e) => setSignFormData({ ...signFormData, finalEquityPercentage: e.target.value ? parseFloat(e.target.value) : 0 })}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    fontSize: '13px',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    boxSizing: 'border-box',
+                                    fontFamily: 'inherit',
+                                }}
+                                placeholder="Nhập phần trăm"
+                            />
+                        </div>
+                        )}
+
+                        {/* Additional Terms - Only for Investor */}
+                        {(!contractStatus || contractStatus < 2) && (
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                Điều khoản bổ sung
+                            </label>
+                            <textarea
+                                value={signFormData.additionalTerms}
+                                onChange={(e) => setSignFormData({ ...signFormData, additionalTerms: e.target.value })}
+                                style={{
+                                    width: '100%',
+                                    padding: '8px 12px',
+                                    fontSize: '13px',
+                                    border: '1px solid #cbd5e1',
+                                    borderRadius: '4px',
+                                    boxSizing: 'border-box',
+                                    fontFamily: 'inherit',
+                                    minHeight: '80px',
+                                    resize: 'vertical',
+                                }}
+                                placeholder="Nhập các điều khoản bổ sung (nếu có)"
+                            />
+                        </div>
+                        )}
+
+                        {/* Signature */}
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
+                                Chữ ký (vẽ bên dưới) *
+                            </label>
+                            <div style={{
+                                border: '2px dashed #cbd5e1',
+                                borderRadius: '4px',
+                                backgroundColor: '#f9fafb',
+                                overflow: 'hidden',
+                                marginBottom: '8px'
+                            }}>
+                                <SignatureCanvas
+                                    ref={signatureCanvasRef}
+                                    onEnd={handleSignatureChange}
+                                    penColor="#000"
+                                    canvasProps={{
+                                        width: 400,
+                                        height: 150,
+                                        className: 'signature-canvas',
+                                        style: { 
+                                            display: 'block',
+                                            backgroundColor: '#fff',
+                                            cursor: 'crosshair',
+                                            touchAction: 'none'
+                                        }
+                                    }}
+                                />
+                            </div>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                                <button
+                                    type="button"
+                                    onClick={handleClearSignature}
+                                    style={{
+                                        padding: '6px 12px',
+                                        backgroundColor: '#ef4444',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        cursor: 'pointer',
+                                        transition: 'all 0.2s',
+                                    }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                                >
+                                    🗑️ Xóa chữ ký
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={handleSaveSignature}
+                                    disabled={isSignatureEmpty}
+                                    style={{
+                                        padding: '6px 12px',
+                                        backgroundColor: isSignatureEmpty ? '#cbd5e1' : '#10b981',
+                                        color: '#fff',
+                                        border: 'none',
+                                        borderRadius: '4px',
+                                        fontSize: '12px',
+                                        fontWeight: '600',
+                                        cursor: isSignatureEmpty ? 'not-allowed' : 'pointer',
+                                        transition: 'all 0.2s',
+                                    }}
+                                    onMouseEnter={(e) => {
+                                        if (!isSignatureEmpty) e.currentTarget.style.backgroundColor = '#059669';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                        if (!isSignatureEmpty) e.currentTarget.style.backgroundColor = '#10b981';
+                                    }}
+                                >
+                                    ✓ Lưu chữ ký
+                                </button>
+                            </div>
+                            <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>
+                                💡 Vẽ chữ ký ở trên rồi click "Lưu chữ ký" để xác nhận
+                            </p>
+                            {signFormData.signatureBase64 && (
+                                <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#10b981', fontWeight: '600' }}>
+                                    ✓ Chữ ký đã được lưu
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                    )}
+                </div>
+
+                {/* Footer with Action Buttons */}
+                <div
+                    style={{
+                        padding: '16px 20px',
+                        borderTop: '1px solid #e2e8f0',
+                        display: 'flex',
+                        gap: '12px',
+                        justifyContent: 'flex-end',
+                        backgroundColor: '#f9fafb',
+                    }}
+                >
+                    <button
+                        onClick={handleCloseContractModal}
+                        style={{
+                            padding: '8px 16px',
+                            backgroundColor: '#f1f5f9',
+                            color: '#475569',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '4px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = '#e2e8f0';
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = '#f1f5f9';
+                        }}
+                    >
+                        Hủy
+                    </button>
+
+                    {/* Download Button - Show when Contract_Signed */}
+                    {contractStatus === 'Contract_Signed' && contractDealData?.contractPdfUrl && (
+                        <a
+                            href={contractDealData.contractPdfUrl}
+                            download={`DEAL-${contractDealData.dealId}.pdf`}
+                            style={{
+                                padding: '8px 16px',
+                                backgroundColor: '#3b82f6',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                                textDecoration: 'none',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#2563eb';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#3b82f6';
+                            }}
+                        >
+                            ⬇️ Tải hợp đồng
+                        </a>
+                    )}
+
+                    {/* View Button - Show when Contract_Signed */}
+                    {contractStatus === 'Contract_Signed' && (
+                        <button
+                            style={{
+                                padding: '8px 16px',
+                                backgroundColor: '#10b981',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                            }}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.backgroundColor = '#059669';
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.backgroundColor = '#10b981';
+                            }}
+                        >
+                            📄 Xem hợp đồng
+                        </button>
+                    )}
+
+                    {/* Sign Button - Show when NOT Contract_Signed */}
+                    {contractStatus !== 'Contract_Signed' && (
+                        <button
+                            onClick={handleSignContractAsStartup}
+                            disabled={isSigningContract}
+                            style={{
+                                padding: '8px 16px',
+                                backgroundColor: '#f59e0b',
+                                color: '#fff',
+                                border: 'none',
+                                borderRadius: '4px',
+                                fontSize: '13px',
+                                fontWeight: '600',
+                                cursor: isSigningContract ? 'not-allowed' : 'pointer',
+                                transition: 'all 0.2s',
+                                opacity: isSigningContract ? 0.7 : 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '6px',
+                            }}
+                            onMouseEnter={(e) => {
+                                if (!isSigningContract) {
+                                    e.currentTarget.style.backgroundColor = '#d97706';
+                                }
+                            }}
+                            onMouseLeave={(e) => {
+                                if (!isSigningContract) {
+                                    e.currentTarget.style.backgroundColor = '#f59e0b';
+                                }
+                            }}
+                        >
+                            {isSigningContract ? (
+                                <>
+                                    <Loader2 size={14} className={styles.spinner} />
+                                    Đang ký...
+                                </>
+                            ) : (
+                                '✓ Ký (Startup)'
+                            )}
+                        </button>
+                    )}
+                </div>
+            </div>
+        </div>
     )}
 
     {showProjectForm && (
@@ -2293,35 +3711,39 @@ export default function StartupDashboard({ user }) {
         />
     )}
 
-    <ConfirmationModal
-        isOpen={showSubmitConfirmation}
-        type="info"
-        title="Nộp dự án"
-        message="Bạn có chắc chắn muốn nộp dự án này để được xem xét?"
-        primaryBtnText="Nộp"
-        secondaryBtnText="Hủy"
-        isLoading={isSubmittingProject}
-        onPrimaryClick={handleConfirmSubmit}
-        onSecondaryClick={() => {
-            setShowSubmitConfirmation(false);
-            setPendingSubmitProjectId(null);
-        }}
-    />
+    {showSubmitConfirmation && (
+        <ConfirmationModal
+            isOpen={showSubmitConfirmation}
+            type="info"
+            title="Nộp dự án"
+            message="Bạn có chắc chắn muốn nộp dự án này để được xem xét?"
+            primaryBtnText="Nộp"
+            secondaryBtnText="Hủy"
+            isLoading={isSubmittingProject}
+            onPrimaryClick={handleConfirmSubmit}
+            onSecondaryClick={() => {
+                setShowSubmitConfirmation(false);
+                setPendingSubmitProjectId(null);
+            }}
+        />
+    )}
 
-    <ConfirmationModal
-        isOpen={showDeleteConfirm}
-        title="Xác nhận xóa tài liệu"
-        message={`Bạn có chắc chắn muốn xóa tài liệu "${documentToDelete?.name}"? Hành động này không thể hoàn tác. Bạn sẽ không thể tải lại tệp này lên hệ thống nếu tệp đã được xác thực với Blockchain.`}
-        type="warning"
-        primaryBtnText={isDeletingDocument ? "Đang xóa..." : "Xóa tài liệu"}
-        secondaryBtnText="Hủy"
-        onPrimaryClick={confirmDeleteDocument}
-        onSecondaryClick={() => {
-            setShowDeleteConfirm(false);
-            setDocumentToDelete(null);
-        }}
-        isLoading={isDeletingDocument}
-    />
+    {showDeleteConfirm && (
+        <ConfirmationModal
+            isOpen={showDeleteConfirm}
+            title="Xác nhận xóa tài liệu"
+            message={`Bạn có chắc chắn muốn xóa tài liệu "${documentToDelete?.name}"? Hành động này không thể hoàn tác. Bạn sẽ không thể tải lại tệp này lên hệ thống nếu tệp đã được xác thực với Blockchain.`}
+            type="warning"
+            primaryBtnText={isDeletingDocument ? "Đang xóa..." : "Xóa tài liệu"}
+            secondaryBtnText="Hủy"
+            onPrimaryClick={confirmDeleteDocument}
+            onSecondaryClick={() => {
+                setShowDeleteConfirm(false);
+                setDocumentToDelete(null);
+            }}
+            isLoading={isDeletingDocument}
+        />
+    )}
 
     {showHistoryView && selectedHistoryResult && (
         <AIEvaluationModal
@@ -2338,12 +3760,12 @@ export default function StartupDashboard({ user }) {
     )}
 
     {showFullscreenImage && detailProject?.projectImageUrl && (
-        <div 
+        <div
             className={styles.imageLightbox}
             onClick={() => setShowFullscreenImage(false)}
         >
             <div className={styles.lightboxOverlay} />
-            <button 
+            <button
                 className={styles.lightboxClose}
                 onClick={() => setShowFullscreenImage(false)}
                 title="Đóng"
@@ -2351,9 +3773,9 @@ export default function StartupDashboard({ user }) {
                 <X size={32} />
             </button>
             <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
-                <img 
-                    src={detailProject.projectImageUrl} 
-                    alt={detailProject.projectName} 
+                <img
+                    src={detailProject.projectImageUrl}
+                    alt={detailProject.projectName}
                     className={styles.lightboxImage}
                 />
                 <div className={styles.lightboxCaption}>
@@ -2363,6 +3785,23 @@ export default function StartupDashboard({ user }) {
             </div>
         </div>
     )}
-            </div>
+
+            <FloatingChatWidget
+                chatSessionId={activeChatSession?.chatSessionId}
+                displayName={activeChatSession?.displayName}
+                currentUserId={user?.userId}
+                sentTime={activeChatSession?.sentTime}
+                onClose={handleCloseChatWindow}
+            />
+
+            {showBookingWizard && (
+                <BookingWizard
+                    user={user}
+                    initialProjectId={detailProject?.projectId || detailProject?.id}
+                    initialAdvisorId={bookingInitialAdvisorId}
+                    onClose={() => setShowBookingWizard(false)}
+                />
+            )}
+        </div>
     );
 }

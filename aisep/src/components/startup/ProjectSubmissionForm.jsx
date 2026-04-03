@@ -4,6 +4,7 @@ import styles from './ProjectSubmissionForm.module.css';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import { getStageNumericValue } from '../../constants/ProjectStatus';
 import CustomSelect from '../common/CustomSelect';
+import SuccessModal from '../common/SuccessModal';
 
 /**
  * List of available industries matching API structure
@@ -303,64 +304,22 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     <>
       {/* Success Modal - Show when submission is successful */}
       {isSuccessModalOpen && (
-        <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
-          <div className={styles.modalContent} style={{ maxWidth: '500px' }}>
-            <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-              <CheckCircle size={64} style={{ color: '#4caf50', margin: '0 auto 20px' }} />
-              <h2 style={{ fontSize: '24px', fontWeight: 'bold', marginBottom: '16px', color: '#333' }}>
-                Dự án được tạo thành công!
-              </h2>
-              <p style={{ fontSize: '14px', color: '#666', lineHeight: '1.6', marginBottom: '24px' }}>
-                Dự án của bạn đã được tạo thành công. Bạn có thể tải lên các tài liệu bổ sung (Pitch Deck, Business Plan) và nộp dự án bất cứ lúc nào tại mục <strong>Quản lý dự án</strong> trong <strong>Startup Dashboard</strong>.
-              </p>
-
-              <div style={{ display: 'flex', gap: '12px', justifyContent: 'center' }}>
-                <button
-                  onClick={onClose}
-                  style={{
-                    padding: '10px 24px',
-                    backgroundColor: '#f0f0f0',
-                    color: '#333',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    transition: 'background-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#e0e0e0'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#f0f0f0'}
-                >
-                  Đóng
-                </button>
-                <button
-                  onClick={() => {
-                    setIsSuccessModalOpen(false);
-                    setTimeout(() => {
-                      onClose();
-                      onSuccess?.(formData);
-                    }, 300);
-                  }}
-                  style={{
-                    padding: '10px 24px',
-                    backgroundColor: '#2196F3',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    cursor: 'pointer',
-                    fontSize: '14px',
-                    fontWeight: '500',
-                    transition: 'background-color 0.2s'
-                  }}
-                  onMouseEnter={(e) => e.target.style.backgroundColor = '#1976D2'}
-                  onMouseLeave={(e) => e.target.style.backgroundColor = '#2196F3'}
-                >
-                  Đến Startup Dashboard
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
+        <SuccessModal
+          onClose={onClose}
+          type="success"
+          title="Dự án được tạo thành công!"
+          message="Dự án của bạn đã được tạo thành công. Bạn có thể tải lên các tài liệu bổ sung (Pitch Deck, Business Plan) và nộp dự án bất cứ lúc nào tại mục Quản lý dự án trong Startup Dashboard."
+          secondaryBtnText="Đóng"
+          onSecondaryClick={onClose}
+          primaryBtnText="Đến Startup Dashboard"
+          onPrimaryClick={() => {
+            setIsSuccessModalOpen(false);
+            setTimeout(() => {
+              onClose();
+              onSuccess?.(formData);
+            }, 300);
+          }}
+        />
       )}
 
       {/* Form Modal - Show when not submitted successfully yet */}

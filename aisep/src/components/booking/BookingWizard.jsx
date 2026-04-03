@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Check, AlertCircle, Loader, Calendar, Clock, User, Briefcase } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Check, AlertCircle, Loader, Calendar, Clock, User, Briefcase, CreditCard, Sparkles } from 'lucide-react';
 import bookingService from '../../services/bookingService';
 import advisorAvailabilityService from '../../services/advisorAvailabilityService';
 import advisorService from '../../services/advisorService';
 import SlotPicker from './SlotPicker';
+import PaymentModal from './PaymentModal';
 import styles from './BookingWizard.module.css';
 
 const STEPS = ['Chọn Dự Án', 'Chọn Cố Vấn', 'Chọn Khung Giờ', 'Xác Nhận'];
@@ -16,7 +17,7 @@ const STEPS = ['Chọn Dự Án', 'Chọn Cố Vấn', 'Chọn Khung Giờ', 'X�
  *   initialAdvisorId   – (optional) pre-select advisor, skip step 2
  *   sourceBookingId    – (optional) dùng khi rebooking từ NoResponse/Cancel
  */
-export default function BookingWizard({ onClose, user, initialAdvisorId = null, sourceBookingId = null }) {
+export default function BookingWizard({ onClose, user, initialAdvisorId = null, initialProjectId = null, sourceBookingId = null }) {
   const [step, setStep] = useState(0);
 
   // Step 1 – Project
@@ -46,6 +47,14 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
   const [submitError, setSubmitError] = useState(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdBooking, setCreatedBooking] = useState(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  // Auto-advance if initial data is provided
+  useEffect(() => {
+    if (initialProjectId && step === 0 && selectedProject) {
+      setStep(1); // Jump to Advisor selection (Step 2)
+    }
+  }, [initialProjectId, selectedProject, step]);
 
   // ── Load Projects ──────────────────────────────────────────────────────
   useEffect(() => {
@@ -54,8 +63,46 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
       setProjectsLoading(true);
       setProjectsError(null);
       try {
-        const data = await bookingService.getProjectOptions();
-        setProjects(Array.isArray(data) ? data : []);
+        const rawData = await bookingService.getProjectOptions();
+        const projectList = Array.isArray(rawData) ? rawData : [];
+
+        // Nếu rỗng thì set ngay
+        if (projectList.length === 0) {
+          setProjects([]);
+          return;
+        }
+
+        // Kiểm tra assignment của tất cả project
+        const assignedProjectIds = [];
+        await Promise.allSettled(
+          projectList.map(async (p) => {
+            try {
+              const options = await bookingService.getAdvisorOptions(p.projectId);
+              if (Array.isArray(options) && options.length > 0) {
+                 if (initialAdvisorId) {
+                    if (options.some(o => o.advisorId === initialAdvisorId)) {
+                       assignedProjectIds.push(p.projectId);
+                    }
+                 } else {
+                    assignedProjectIds.push(p.projectId);
+                 }
+              }
+            } catch {
+              // ignore errors, just don't add
+            }
+          })
+        );
+
+        const filteredProjects = projectList.filter(p => assignedProjectIds.includes(p.projectId));
+        setProjects(filteredProjects);
+
+        // Pre-select project if initialProjectId is provided
+        if (initialProjectId) {
+          const found = filteredProjects.find(p => p.projectId === initialProjectId);
+          if (found) {
+            setSelectedProject(found);
+          }
+        }
       } catch (e) {
         setProjectsError(e.message || 'Không thể tải danh sách dự án.');
       } finally {
@@ -63,11 +110,11 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
       }
     };
     load();
-  }, [step]);
+  }, [step, initialAdvisorId, initialProjectId]);
 
   // ── Load Advisors khi project được chọn ────────────────────────────────
   useEffect(() => {
-    if (step !== 1 || !selectedProject) return;
+    if ((step !== 1 && !(initialProjectId && step === 0)) || !selectedProject) return;
     const load = async () => {
       setAdvisorsLoading(true);
       setAdvisorsError(null);
@@ -76,18 +123,18 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
         const list = Array.isArray(options) ? options : [];
         setProjectAdvisorsCount(list.length);
 
-        // Merge initial advisor if missing
+        // Load raw options without artificially merging initialAdvisorId
+        // because backend REQUIRES strict assignment mapping.
         let finalOptions = [...list];
-        if (initialAdvisorId && !list.some(o => o.advisorId === initialAdvisorId)) {
-          try {
-            const full = await advisorService.getAdvisorById(initialAdvisorId);
-            finalOptions.push({ advisorId: initialAdvisorId, advisorName: full?.userName || full?.name || '' });
-            setAdvisorDetails(prev => ({ ...prev, [initialAdvisorId]: full }));
-          } catch (e) {
-            console.warn('Cannot fetch initial advisor details:', e);
+        setAdvisorOptions(finalOptions);
+
+        // Pre-select advisor if initialAdvisorId is provided
+        if (initialAdvisorId) {
+          const found = finalOptions.find(opt => opt.advisorId === initialAdvisorId);
+          if (found) {
+            setSelectedAdvisor(found);
           }
         }
-        setAdvisorOptions(finalOptions);
 
         // Fetch full advisor profile cho các advisor còn lại (trừ cái đã có detail)
         const detailMap = { ...advisorDetails };
@@ -110,7 +157,7 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
       }
     };
     load();
-  }, [step, selectedProject]);
+  }, [step, selectedProject, initialProjectId, initialAdvisorId]);
 
   // ── Pre-select advisor nếu có initialAdvisorId ─────────────────────────
   useEffect(() => {
@@ -250,6 +297,16 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
 
   const adv = selectedAdvisor ? (advisorDetails[selectedAdvisor.advisorId] || {}) : {};
 
+  // ── Computed price estimate for step 3 ────────────────────────────────
+  const estimatedPrice = adv.hourlyRate ? Number(adv.hourlyRate) * selectedSlotIds.length : 0;
+  const isFreeBooking = estimatedPrice === 0;
+  const formatPrice = (p) =>
+    new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
+
+  const needsPayment =
+    createdBooking?.status === 'ApprovedAwaitingPayment' ||
+    createdBooking?.status === 1;
+
   // ── Success Screen ─────────────────────────────────────────────────────
   if (isSuccess) {
     return (
@@ -262,19 +319,43 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
             <h2 className={styles.successTitle}>Đặt Lịch Thành Công!</h2>
             <p className={styles.successBody}>
               Yêu cầu của bạn đã được gửi đến <strong>{selectedAdvisor?.advisorName || adv.userName}</strong>.
-              Cố vấn sẽ xem xét và phản hồi trong vòng 24 giờ.
+              {needsPayment
+                ? ' Cố vấn đã chấp nhận. Vui lòng hoàn thành thanh toán để xác nhận lịch.'
+                : ' Cố vấn sẽ xem xét và phản hồi trong vòng 1 phút.'}
             </p>
             {createdBooking && (
               <div className={styles.successDetail}>
                 <span>Mã booking: <strong>#{createdBooking.id}</strong></span>
-                <span>Trạng thái: <strong>Đang chờ xác nhận</strong></span>
+                <span>Giá: <strong>{createdBooking.price === 0 ? 'Miễn phí ✨' : formatPrice(createdBooking.price)}</strong></span>
               </div>
             )}
-            <button className={styles.primaryBtn} onClick={onClose}>
-              Đóng
-            </button>
+            {needsPayment ? (
+              <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', justifyContent: 'center' }}>
+                <button className={styles.primaryBtn} onClick={() => setShowPaymentModal(true)}>
+                  <CreditCard size={16} />
+                  Thanh Toán Ngay
+                </button>
+                <button className={styles.secondaryBtn} onClick={onClose}>
+                  Để sau
+                </button>
+              </div>
+            ) : (
+              <button className={styles.primaryBtn} onClick={onClose}>
+                Đóng
+              </button>
+            )}
           </div>
         </div>
+        {showPaymentModal && createdBooking && (
+          <PaymentModal
+            bookingId={createdBooking.id}
+            price={createdBooking.price}
+            advisorName={selectedAdvisor?.advisorName || adv.userName || ''}
+            slotCount={selectedSlotIds.length}
+            onClose={() => setShowPaymentModal(false)}
+            onPaid={() => { setShowPaymentModal(false); onClose(); }}
+          />
+        )}
       </div>
     );
   }
@@ -333,7 +414,8 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
               {!projectsLoading && !projectsError && projects.length === 0 && (
                 <div className={styles.emptyState}>
                   <Briefcase size={40} />
-                  <p>Không có dự án phù hợp để đặt lịch tư vấn.</p>
+                  <p>Không có dự án nào đang được phân công {initialAdvisorId ? 'cho Cố vấn này' : 'hiện tại'}. 
+                  <br/> Vắng dự án, không thể tiến hành đặt lịch.</p>
                 </div>
               )}
               <div className={styles.cardGrid}>
@@ -514,6 +596,32 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
                         );
                       })}
                     </div>
+                  </div>
+                </div>
+
+                <div className={styles.summaryDivider} />
+
+                {/* Pricing Row */}
+                <div className={styles.summaryRow}>
+                  <CreditCard size={16} className={styles.summaryIcon} />
+                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <div className={styles.summaryLabel}>Chi phí ước tính</div>
+                      {!isFreeBooking && adv.hourlyRate && (
+                        <div className={styles.summaryMeta}>
+                          {Number(adv.hourlyRate).toLocaleString('vi-VN')} VNĐ/giờ × {selectedSlots.length} giờ
+                        </div>
+                      )}
+                    </div>
+                    {isFreeBooking ? (
+                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#22c55e', fontWeight: 700, fontSize: 15 }}>
+                        <Sparkles size={15} /> Miễn phí
+                      </span>
+                    ) : (
+                      <span style={{ color: '#60a5fa', fontWeight: 800, fontSize: 16 }}>
+                        {formatPrice(estimatedPrice)}
+                      </span>
+                    )}
                   </div>
                 </div>
 

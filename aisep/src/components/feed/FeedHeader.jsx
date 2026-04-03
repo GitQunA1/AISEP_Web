@@ -2,6 +2,7 @@ import React from 'react';
 import { Plus, Search } from 'lucide-react';
 import styles from './FeedHeader.module.css';
 import FeedFilter from './FeedFilter';
+import NotificationCenter from '../common/NotificationCenter';
 
 /**
  * FeedHeader Component - Header for the main feed
@@ -9,6 +10,7 @@ import FeedFilter from './FeedFilter';
  * @param {object} user - Current user object
  * @param {function} onFilterChange - Callback when filters change
  * @param {function} onShowProjectForm - Callback to show project submission form
+ * @param {function} onOpenChat - Callback to open chat from notification
  */
 function FeedHeader({ 
   user, 
@@ -23,7 +25,9 @@ function FeedHeader({
   industryCounts = {},
   searchTerm = "",
   onSearchChange,
-  searchPlaceholder = "Tìm kiếm dự án..."
+  searchPlaceholder = "Tìm kiếm dự án...",
+  onOpenChat,
+  customAction = null
 }) {
   return (
     <div className={styles.container}>
@@ -31,7 +35,18 @@ function FeedHeader({
         <div className={styles.headerInner}>
           <div className={styles.headerContent}>
             <div className={styles.titleSection}>
-              <h1 className={styles.title}>{title}</h1>
+              <div className={styles.titleRow}>
+                <h1 className={styles.title}>{title}</h1>
+                {/* On mobile, we might want the custom action right next to the title */}
+                <div className={styles.mobileTitleAction}>
+                  {customAction}
+                  {onOpenChat && (
+                    <div className={styles.mobileNotifications}>
+                      <NotificationCenter onOpenChat={onOpenChat} />
+                    </div>
+                  )}
+                </div>
+              </div>
               <p className={styles.subtitle}>{subtitle}</p>
             </div>
 
@@ -48,6 +63,18 @@ function FeedHeader({
                   />
                 </div>
               )}
+
+              {/* Notification Center */}
+              {onOpenChat && (
+                <div className={styles.desktopNotifications}>
+                  <NotificationCenter onOpenChat={onOpenChat} />
+                </div>
+              )}
+
+              {/* Custom Action Button (e.g. Refresh) - Hidden on mobile if rendered in titleRow */}
+              <div className={styles.desktopCustomAction}>
+                {customAction}
+              </div>
 
               {/* "Đăng Dự Án" button for startups */}
               {((user?.role?.toString().toLowerCase() === 'startup') || user?.role === 0 || user?.role === '0') && onShowProjectForm && (

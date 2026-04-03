@@ -33,17 +33,17 @@ export default function ConfirmationModal({
     if (!isOpen) return null;
 
     const getIcon = () => {
-        const iconSize = 48; // Larger icon for the 80px container
+        const iconSize = 56; 
         switch(type) {
             case 'success':
-                return <CheckCircle size={iconSize} style={{ color: '#17bf63' }} />;
+                return <CheckCircle size={iconSize} className={styles.successIcon} color="#00ba7c" />;
             case 'error':
-                return <XCircle size={iconSize} style={{ color: '#dc2626' }} />;
+                return <XCircle size={iconSize} className={styles.errorIcon} color="#f4212e" />;
             case 'warning':
-                return <AlertCircle size={iconSize} style={{ color: '#d97706' }} />;
+                return <AlertCircle size={iconSize} className={styles.warningIcon} color="#ffd400" />;
             case 'info':
             default:
-                return <AlertCircle size={iconSize} style={{ color: '#1d9bf0' }} />;
+                return <AlertCircle size={iconSize} className={styles.infoIcon} color="#1d9bf0" />;
         }
     };
 

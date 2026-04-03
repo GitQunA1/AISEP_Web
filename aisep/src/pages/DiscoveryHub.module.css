@@ -256,6 +256,94 @@
     border-color: var(--text-secondary);
 }
 
+.investBtn {
+    padding: 8px 20px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.investBtn:hover {
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    transform: translateY(-1px);
+}
+
+.investedBtn {
+    padding: 8px 20px;
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: white;
+    border: none;
+    border-radius: 9999px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: not-allowed;
+    transition: all 0.2s;
+    opacity: 0.8;
+}
+
+.investedBtn:hover {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: none;
+    transform: none;
+}
+
+.investmentStatusBadge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(200, 200, 200, 0.3);
+    border-radius: 9999px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: default;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.investmentStatusBadge:hover {
+    background: rgba(255, 255, 255, 0.15);
+    border-color: rgba(200, 200, 200, 0.5);
+}
+
+.statusIndicator {
+    display: inline-block;
+    font-size: 14px;
+    min-width: 16px;
+}
+
+.statusText {
+    display: inline-block;
+    color: var(--text-secondary);
+}
+
+.status_pending {
+    color: #f59e0b;
+}
+
+.status_confirmed {
+    color: #10b981;
+}
+
+.status_contract_signed {
+    color: #8b5cf6;
+}
+
+.status_minted_nft {
+    color: #06b6d4;
+}
+
+.status_failed {
+    color: #ef4444;
+}
+
 .emptyState {
     display: flex;
     flex-direction: column;

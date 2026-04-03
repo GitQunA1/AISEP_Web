@@ -38,9 +38,18 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
       { icon: MessageSquare, label: 'Bookings', displayLabel: 'Booking', href: '#', showWhenLoggedIn: true },
       { icon: Calendar, label: 'Availability', displayLabel: 'Lịch rảnh', href: '#', showWhenLoggedIn: true },
       { icon: BarChart2, label: 'Reports', displayLabel: 'Báo cáo', href: '#', showWhenLoggedIn: true },
+      { icon: User, label: 'Profile', displayLabel: 'Hồ sơ', href: '#', showWhenLoggedIn: true },
     ];
     const homeItem = navItems.find(item => item.label === 'Home');
     navItems = [...advisorItems, homeItem];
+  } else if (roleStr === 'investor' || roleNum === 1) {
+    const investorItems = [
+      { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Tổng quan', href: '#', showWhenLoggedIn: true },
+      { icon: Calendar, label: 'Bookings', displayLabel: 'Lịch tư vấn', href: '#', showWhenLoggedIn: true },
+    ];
+    const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
+    const homeItem = navItems.find(item => item.label === 'Home');
+    navItems = [...investorItems, homeItem, ...otherItems];
   }
 
   const handleClick = (e, label) => {
@@ -74,6 +83,9 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
     }
     if (label === 'Investors' && onShowInvestors) {
       onShowInvestors();
+    }
+    if (label === 'Profile' && onShowProfile) {
+      onShowProfile();
     }
   };
 

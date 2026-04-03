@@ -1,231 +1,191 @@
-/* Overlay */
+/* SuccessModal Redesign - High Fidelity X/Twitter Design Language */
+
+/* Overlay with blur effect */
 .overlay {
     position: fixed;
     top: 0;
     left: 0;
     right: 0;
     bottom: 0;
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: 50000 !important;
+    background-color: rgba(0, 0, 0, 0.65);
+    z-index: 50000;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
-    backdrop-filter: blur(8px);
-    animation: fadeIn 0.3s ease-out;
+    backdrop-filter: blur(12px) saturate(180%);
+    animation: fadeIn 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-
-    to {
-        opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
-/* Modal */
+/* Modal Frame */
 .modal {
-    background-color: var(--bg-primary);
-    border: 1px solid var(--border-color);
+    background-color: #000; /* Deep black for true X look */
+    border: 1px solid #2f3336; /* Crisp dark border */
     border-radius: 16px;
     width: 100%;
     max-width: 480px;
-    padding: 40px 32px 32px 32px;
+    padding: 48px 32px 32px 32px;
     position: relative;
     text-align: center;
-    animation: slideUp 0.3s ease-out;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    animation: zoomIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
 }
 
-@keyframes slideUp {
+@keyframes zoomIn {
     from {
-        transform: translateY(30px);
+        transform: scale(0.9);
         opacity: 0;
     }
-
     to {
-        transform: translateY(0);
+        transform: scale(1);
         opacity: 1;
     }
 }
 
-/* Close Button */
+/* Close Button (Minimalist) */
 .closeButton {
     position: absolute;
-    top: 16px;
-    right: 16px;
-    background: none;
+    top: 12px;
+    right: 12px;
+    background: transparent;
     border: none;
-    color: var(--text-secondary);
+    color: #71767b;
     cursor: pointer;
     padding: 8px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    transition: all 0.2s;
+    transition: all 0.2s ease;
 }
 
 .closeButton:hover {
-    background-color: var(--bg-hover);
-    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
 }
 
-/* Icon */
+/* Icon Section */
 .iconContainer {
-    margin-bottom: 24px;
+    margin-bottom: 28px;
+    display: flex;
+    justify-content: center;
 }
 
 .successIcon {
-    color: #10b981;
-    animation: scaleIn 0.4s ease-out 0.2s both;
+    color: #00ba7c; /* Official X success green */
+    stroke-width: 1.5px;
+    animation: pulseIcon 1.5s infinite ease-in-out;
 }
 
-.errorIcon {
-    color: #dc2626;
-    animation: scaleIn 0.4s ease-out 0.2s both;
+.errorIcon { color: #f4212e; }
+.warningIcon { color: #ffd400; }
+.infoIcon { color: #1d9bf0; }
+
+@keyframes pulseIcon {
+    0% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(0, 186, 124, 0)); }
+    50% { transform: scale(1.05); filter: drop-shadow(0 0 8px rgba(0, 186, 124, 0.3)); }
+    100% { transform: scale(1); filter: drop-shadow(0 0 0 rgba(0, 186, 124, 0)); }
 }
 
-.warningIcon {
-    color: #d97706;
-    animation: scaleIn 0.4s ease-out 0.2s both;
-}
-
-.infoIcon {
-    color: #667eea;
-    animation: scaleIn 0.4s ease-out 0.2s both;
-}
-
-@keyframes scaleIn {
-    from {
-        transform: scale(0);
-    }
-
-    to {
-        transform: scale(1);
-    }
-}
-
-/* Title */
+/* Typography */
 .title {
-    font-size: 24px;
-    font-weight: 800;
-    color: var(--text-primary);
+    font-size: 26px;
+    font-weight: 950; /* Extra heavy for that impact look */
+    color: white;
     margin: 0 0 16px 0;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
 }
 
-/* Message */
 .message {
     font-size: 15px;
-    color: var(--text-secondary);
-    line-height: 1.6;
-    margin: 0 0 32px 0;
+    color: #71767b;
+    line-height: 1.5;
+    margin: 0 0 40px 0;
     max-width: 400px;
     margin-left: auto;
     margin-right: auto;
+    font-weight: 500;
 }
 
-/* Button Group */
+/* Button Group (Horizontal Alignment) */
 .buttonGroup {
     display: flex;
-    flex-direction: column;
     gap: 12px;
+    justify-content: center;
 }
 
-/* Primary Button */
-.primaryButton {
-    width: 100%;
-    padding: 14px 24px;
-    background-color: var(--primary-blue);
-    color: white;
-    border: none;
+/* Base Pill Style (Universal for X UI) */
+.primaryButton, .secondaryButton {
+    flex: 1;
+    height: 52px; /* standard large X button height */
     border-radius: 9999px;
     font-size: 16px;
-    font-weight: 700;
+    font-weight: 800;
+    letter-spacing: 0.01em;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    white-space: nowrap;
+}
+
+/* Primary Color Logic */
+.primaryButton {
+    background-color: #1d9bf0; /* X signature blue */
+    color: white;
 }
 
 .primaryButton:hover {
     background-color: #1a8cd8;
-    transform: translateY(-2px);
+    transform: translateY(-1px);
 }
 
-/* Button type variants */
-.primaryButton.success {
-    background-color: #10b981;
+.primaryButton.success { background-color: #1d9bf0; } /* Keep brand blue for main actions */
+.primaryButton.error { background-color: #f4212e; }
+.primaryButton.warning { 
+    background-color: #ffd400; 
+    color: black; 
 }
+.primaryButton.info { background-color: white; color: black; }
 
-.primaryButton.success:hover {
-    background-color: #059669;
-}
-
-.primaryButton.error {
-    background-color: #dc2626;
-}
-
-.primaryButton.error:hover {
-    background-color: #b91c1c;
-}
-
-.primaryButton.warning {
-    background-color: #d97706;
-}
-
-.primaryButton.warning:hover {
-    background-color: #b45309;
-}
-
-.primaryButton.info {
-    background-color: #667eea;
-}
-
-.primaryButton.info:hover {
-    background-color: #5568d3;
-}
-
-/* Secondary Button */
+/* Secondary Button Style */
 .secondaryButton {
-    width: 100%;
-    padding: 14px 24px;
-    background-color: transparent;
-    color: var(--text-primary);
-    border: 1px solid var(--border-color);
-    border-radius: 9999px;
-    font-size: 16px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
+    background-color: #eff3f4; /* standard X neutral light button */
+    color: #0f1419; /* deep black for contrast */
 }
 
 .secondaryButton:hover {
-    background-color: var(--bg-hover);
-    border-color: var(--text-secondary);
+    background-color: #d7dbdc;
 }
 
-/* Mobile Responsive */
-@media (max-width: 767px) {
+/* Responsive adjustment */
+@media (max-width: 600px) {
     .modal {
-        padding: 32px 24px 24px 24px;
-        max-width: 100%;
+        padding: 40px 24px 24px 24px;
+        border-radius: 20px;
+        width: 100%;
+        max-width: calc(100vw - 32px);
+    }
+    
+    .buttonGroup {
+        flex-direction: column;
+    }
+    
+    .primaryButton, .secondaryButton {
+        height: 48px;
+        flex: none;
+        width: 100%;
     }
 
     .title {
-        font-size: 20px;
-    }
-
-    .message {
-        font-size: 14px;
-    }
-
-    .buttonGroup {
-        gap: 10px;
-    }
-
-    .primaryButton, .secondaryButton {
-        padding: 12px 20px;
-        font-size: 15px;
+        font-size: 22px;
     }
 }

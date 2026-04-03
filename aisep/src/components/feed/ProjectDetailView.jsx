@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, ArrowLeft, ClipboardList, TrendingUp, Sword, FolderOpen, Users, DollarSign, BarChart3, Zap, User } from 'lucide-react';
+import { Loader2, ArrowLeft, ClipboardList, TrendingUp, Sword, FolderOpen, Users, DollarSign, BarChart3, Zap, User, Lock, Star, BadgeCheck, Calendar } from 'lucide-react';
+import BookingWizard from '../booking/BookingWizard';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import AIEvaluationService from '../../services/AIEvaluationService';
 import bookingService from '../../services/bookingService';
@@ -190,6 +191,7 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 850);
+  const [showBookingWizard, setShowBookingWizard] = useState(false);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 850);
@@ -201,10 +203,10 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
     if (!projectId || !user) return;
     setLoading(true); setError(null);
     Promise.all([
-      projectSubmissionService.getProjectById(projectId),
+      projectSubmissionService.getProjectNonPremiumById(projectId),
       projectSubmissionService.getDocuments(projectId).catch(() => null),
       AIEvaluationService.getProjectAnalysisHistory(projectId).catch(() => null),
-      bookingService.getAllBookings(`ProjectId==${projectId}`, '-Id', 1, 20).catch(() => null),
+      bookingService.getAllBookings('', '-Id', 1, 1000).catch(() => null),
     ]).then(([pRes, dRes, aRes, bRes]) => {
       if (pRes?.success && pRes?.data) {
         const d = pRes.data;
@@ -235,9 +237,14 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
         url: doc.fileUrl,
       })));
       setAiHistory(aRes?.data || []);
-      // Bookings: extract list from paged result
-      const bList = bRes?.items ?? (Array.isArray(bRes) ? bRes : []);
-      setAdvisorBookings(bList);
+      
+      // Bookings: Filter by current projectId since backend filter might not be reliable
+      const bItems = bRes?.data?.items || bRes?.items || (Array.isArray(bRes) ? bRes : []);
+      const filteredBookings = bItems.filter(b => 
+        String(b.projectId) === String(projectId) || 
+        (b.projectId === projectId)
+      );
+      setAdvisorBookings(filteredBookings);
     }).catch(err => {
       console.error("ProjectDetailView Fetch Error:", err);
       const is401 = err?.message?.includes('401') || err?.response?.status === 401;
@@ -282,7 +289,26 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
   const approved = ['approved', 'Approved'].includes(project.status);
   const latestAI = aiHistory.length > 0
     ? (aiHistory[0].potentialScore ?? aiHistory[0].startupScore ?? null)
-    : null;
+    : (project.startupPotentialScore ?? null);
+
+  const PremiumBadge = ({ inline }) => (
+    <div style={{ 
+      display: inline ? 'inline-flex' : 'flex', 
+      alignItems: 'center', 
+      gap: 6, 
+      fontSize: 12, 
+      fontWeight: 700, 
+      color: '#ffad1f', 
+      background: 'rgba(255, 173, 31, 0.12)', 
+      padding: '4px 10px', 
+      borderRadius: 6,
+      border: '1px solid rgba(255, 173, 31, 0.2)',
+      marginTop: inline ? 0 : 4,
+      width: inline ? 'auto' : 'fit-content'
+    }}>
+      <Lock size={13} strokeWidth={2.5} /> Premium
+    </div>
+  );
 
   return (
     <div className="project-detail-view" style={{
@@ -451,9 +477,9 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
           paddingTop: 16,
         }}>
           {[
-            { icon: <DollarSign size={20} color={T.blue} strokeWidth={2.5} />, val: project.revenue ? Number(project.revenue).toLocaleString('vi-VN') + ' VND' : '—', lbl: 'Doanh thu', color: T.blue },
-            { icon: <BarChart3 size={20} color={T.green} strokeWidth={2.5} />, val: project.marketSize ? Number(project.marketSize).toLocaleString('vi-VN') + ' VND' : '—', lbl: 'Quy mô thị trường', color: T.green },
-            { icon: <Zap size={20} color={latestAI != null ? T.amber : T.textDim} strokeWidth={2.5} />, val: latestAI != null ? String(latestAI) : 'Chưa có', lbl: 'Điểm AI', color: latestAI != null ? T.amber : T.textDim },
+            { icon: <DollarSign size={20} color={T.blue} strokeWidth={2.5} />, val: project.revenue ? Number(project.revenue).toLocaleString('vi-VN') + ' VND' : (project.revenue === undefined ? <PremiumBadge inline /> : '—'), lbl: 'Doanh thu', color: T.blue },
+            { icon: <BarChart3 size={20} color={T.green} strokeWidth={2.5} />, val: project.marketSize ? Number(project.marketSize).toLocaleString('vi-VN') + ' VND' : (project.marketSize === undefined ? <PremiumBadge inline /> : '—'), lbl: 'Quy m\u00f4 th\u1ecb tr\u01b0\u1eddng', color: T.green },
+            { icon: <Zap size={20} color={latestAI != null ? T.amber : T.textDim} strokeWidth={2.5} />, val: latestAI != null ? String(latestAI) : 'Ch\u01b0a c\u00f3', lbl: '\u0110i\u1ec3m AI', color: latestAI != null ? T.amber : T.textDim },
           ].map((k, i, arr) => (
             <div key={i} style={{
               textAlign: 'center',
@@ -536,8 +562,10 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column' }}>
-                {project.teamMembers
-                  ? project.teamMembers.split(',').map((m, i, arr) => {
+                {project.teamMembers === undefined ? (
+                  <PremiumBadge />
+                ) : project.teamMembers ? (
+                  project.teamMembers.split(',').map((m, i, arr) => {
                     const parts = m.split('-');
                     const name = parts[0]?.trim() || 'Thành viên';
                     const role = parts.slice(1).join('-').trim() || 'Thành viên cốt lõi';
@@ -562,19 +590,27 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
                       </div>
                     );
                   })
-                  : (
-                    <div style={{ fontSize: 13.5, color: T.textMuted, padding: '8px 0' }}>
-                      Đang cập nhật
-                    </div>
-                  )
-                }
+                ) : (
+                  <div style={{ fontSize: 13.5, color: T.textMuted, padding: '8px 0' }}>
+                    Đang cập nhật
+                  </div>
+                )}
               </div>
 
-              {project.keySkills && (
+              {project.keySkills !== undefined ? (
+                project.keySkills && (
+                  <>
+                    <Divider />
+                    <Field label="Kỹ năng cốt lõi" style={{ marginTop: 10 }}>
+                      {project.keySkills}
+                    </Field>
+                  </>
+                )
+              ) : (
                 <>
                   <Divider />
                   <Field label="Kỹ năng cốt lõi" style={{ marginTop: 10 }}>
-                    {DISP(project.keySkills)}
+                    <PremiumBadge />
                   </Field>
                 </>
               )}
@@ -607,63 +643,109 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
             )}
           </div>
 
-          {/* Advisor Card */}
-          {advisorBookings.length > 0 && (
-            <SectionCard>
-              <SectionHeader><User size={14} style={{ color: T.blue }} /> Cố Vấn Được Phân Công</SectionHeader>
-              <SectionBody>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {/* Deduplicate by advisorId */}
-                  {[...new Map(advisorBookings.map(b => [b.advisorId, b])).values()].map((b, i) => {
-                    const statusMap = {
-                      0: { label: 'Chờ xác nhận', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-                      'Pending': { label: 'Chờ xác nhận', color: '#f59e0b', bg: 'rgba(245,158,11,0.1)' },
-                      1: { label: 'Chờ thanh toán', color: T.blue, bg: T.blueDim },
-                      'ApprovedAwaitingPayment': { label: 'Chờ thanh toán', color: T.blue, bg: T.blueDim },
-                      2: { label: 'Đã xác nhận', color: T.green, bg: T.greenDim },
-                      'Confirmed': { label: 'Đã xác nhận', color: T.green, bg: T.greenDim },
-                      3: { label: 'Hoàn thành', color: T.green, bg: T.greenDim },
-                      'Completed': { label: 'Hoàn thành', color: T.green, bg: T.greenDim },
-                      4: { label: 'Đã hủy', color: T.red, bg: 'rgba(244,33,46,0.1)' },
-                      'Cancel': { label: 'Đã hủy', color: T.red, bg: 'rgba(244,33,46,0.1)' },
-                      5: { label: 'Không phản hồi', color: T.red, bg: 'rgba(244,33,46,0.1)' },
-                      'NoResponse': { label: 'Không phản hồi', color: T.red, bg: 'rgba(244,33,46,0.1)' },
-                    };
-                    const s = statusMap[b.status] || { label: String(b.status), color: T.textMuted, bg: T.surface3 };
-                    const initial = (b.advisorName || 'A').charAt(0).toUpperCase();
-                    return (
-                      <div key={i} style={{
-                        display: 'flex', alignItems: 'center', gap: 12,
-                        padding: '10px 0',
-                        borderBottom: i < advisorBookings.length - 1 ? `1px solid ${T.border}` : 'none',
-                      }}>
-                        <div style={{
-                          width: 36, height: 36, borderRadius: '50%',
-                          background: 'linear-gradient(135deg, #1d9bf0, #7c3aed)',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontWeight: 800, fontSize: 14, color: '#fff', flexShrink: 0,
-                        }}>
-                          {initial}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 13.5, fontWeight: 700, color: T.text }}>{b.advisorName}</div>
-                          <div style={{ fontSize: 12, color: T.textMuted, marginTop: 2 }}>
-                            {new Date(b.startTime).toLocaleDateString('vi-VN')} • {b.slotCount} slot
+          {/* Assigned Advisor Section (Always visible) */}
+          <SectionCard style={{ 
+            border: (project.assignedAdvisorId || project.assignedAdvisorName) ? `1px solid ${T.blue}` : `1px solid ${T.border}`, 
+            background: (project.assignedAdvisorId || project.assignedAdvisorName) ? T.surface3 : T.card 
+          }}>
+            <SectionHeader>
+              <BadgeCheck size={14} style={{ color: T.blue }} /> Cố Vấn Chính Thức
+            </SectionHeader>
+            <SectionBody style={{ padding: 0 }}>
+              {(project.assignedAdvisorId || project.assignedAdvisorName) ? (
+                <div style={{ display: 'flex', flexDirection: 'column' }}>
+                  {/* Top: Profile Info */}
+                  <div style={{ display: 'flex', gap: 14, alignItems: 'center', padding: '16px 16px 18px' }}>
+                    <div style={{
+                      width: 52, height: 52, borderRadius: 12,
+                      background: `linear-gradient(135deg, ${T.blue}, #7c3aed)`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: '#fff', fontSize: 20, fontWeight: 800, flexShrink: 0,
+                      boxShadow: '0 4px 12px rgba(29, 155, 240, 0.2)'
+                    }}>
+                      {(project.assignedAdvisorName || 'A').charAt(0)}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <h4 style={{ margin: 0, fontSize: 15, fontWeight: 700, color: T.text }}>
+                          {project.assignedAdvisorName}
+                        </h4>
+                        {project.assignedAdvisorRating && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 12, color: T.amber, fontWeight: 700 }}>
+                            <Star size={12} fill={T.amber} /> {project.assignedAdvisorRating}
                           </div>
-                        </div>
-                        <span style={{
-                          padding: '3px 10px', borderRadius: 9999,
-                          fontSize: 11, fontWeight: 700,
-                          background: s.bg, color: s.color,
-                          whiteSpace: 'nowrap', flexShrink: 0,
-                        }}>{s.label}</span>
+                        )}
                       </div>
-                    );
-                  })}
+                      <div style={{ fontSize: 12.5, color: T.textMuted, marginTop: 2 }}>
+                        Chuyên gia • {project.assignedAdvisorHourlyRate ? Number(project.assignedAdvisorHourlyRate).toLocaleString('vi-VN') + ' VND/h' : 'Rate linh hoạt'}
+                      </div>
+                      {project.assignedAdvisorIndustries?.length > 0 && (
+                        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+                          {project.assignedAdvisorIndustries.slice(0, 2).map((ind, idx) => (
+                            <span key={idx} style={{ fontSize: 11, background: T.blueDim, color: T.blue, padding: '2px 8px', borderRadius: 4, fontWeight: 600 }}>
+                              {ind}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Bottom: Action Footer (Investor Only) */}
+                  {(user.role?.toLowerCase() === 'investor' || user.role === 1) && (
+                    <div style={{ 
+                      padding: '14px 16px',
+                      background: 'rgba(255,255,255,0.015)',
+                      borderTop: `1px solid ${T.border}`,
+                      display: 'flex',
+                      justifyContent: 'flex-end'
+                    }}>
+                      <button 
+                        onClick={() => setShowBookingWizard(true)}
+                        style={{
+                          display: 'flex', alignItems: 'center', gap: 10,
+                          padding: '11px 24px', borderRadius: 12,
+                          background: T.blue, color: '#fff',
+                          border: 'none', fontWeight: 700, fontSize: 13.5,
+                          cursor: 'pointer', boxShadow: '0 4px 12px rgba(29, 155, 240, 0.25)',
+                          transition: 'all 0.25s cubic-bezier(0.4, 0, 0.2, 1)',
+                          width: isMobile ? '100%' : 'auto',
+                          justifyContent: 'center'
+                        }}
+                        onMouseEnter={e => { 
+                          e.currentTarget.style.transform = 'translateY(-2px)'; 
+                          e.currentTarget.style.boxShadow = '0 8px 18px rgba(29, 155, 240, 0.3)';
+                          e.currentTarget.style.filter = 'brightness(1.05)';
+                        }}
+                        onMouseLeave={e => { 
+                          e.currentTarget.style.transform = 'translateY(0)'; 
+                          e.currentTarget.style.boxShadow = '0 4px 12px rgba(29, 155, 240, 0.25)';
+                          e.currentTarget.style.filter = 'none';
+                        }}
+                      >
+                        <Calendar size={16} /> Đặt lịch tư vấn ngay
+                      </button>
+                    </div>
+                  )}
                 </div>
-              </SectionBody>
-            </SectionCard>
-          )}
+              ) : (
+                <div style={{
+                  fontSize: 13,
+                  color: T.textMuted,
+                  textAlign: 'center',
+                  padding: '24px 16px',
+                  lineHeight: 1.6,
+                  fontStyle: 'italic',
+                  background: 'rgba(255,255,255,0.012)',
+                  borderRadius: 10,
+                  margin: '12px 16px 16px',
+                  border: `1px dashed ${T.border}`
+                }}>
+                  Dự án đang trong quá trình phân công cố vấn phù hợp.
+                </div>
+              )}
+            </SectionBody>
+          </SectionCard>
 
         </div>{/* /left col */}
 
@@ -700,7 +782,7 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
                   {FMT(project.revenue)}
                 </Field>
                 <Field label="Mô hình kinh doanh" full>
-                  {DISP(project.businessModel)}
+                  {project.businessModel === undefined ? <PremiumBadge /> : DISP(project.businessModel)}
                 </Field>
               </FieldGrid>
             </SectionBody>
@@ -711,11 +793,11 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
             <SectionHeader><Sword size={14} style={{ color: '#ff4b2b' }} /> Cạnh tranh</SectionHeader>
             <SectionBody>
               <FieldGrid>
-                <Field label="Kinh nghiệm đội ngũ">
-                  {DISP(project.teamExperience)}
+                <Field label="Kinh nghiệp đội ngũ">
+                  {project.teamExperience === undefined ? <PremiumBadge /> : DISP(project.teamExperience)}
                 </Field>
                 <Field label="Đối thủ cạnh tranh">
-                  {DISP(project.competitors)}
+                  {project.competitors === undefined ? <PremiumBadge /> : DISP(project.competitors)}
                 </Field>
               </FieldGrid>
             </SectionBody>
@@ -827,6 +909,15 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
       </div>{/* /grid */}
 
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
+      
+      {showBookingWizard && (
+        <BookingWizard 
+          onClose={() => setShowBookingWizard(false)}
+          user={user}
+          initialProjectId={projectId}
+          initialAdvisorId={project.assignedAdvisorId}
+        />
+      )}
     </div>
   );
 }
