@@ -1,20 +1,24 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock, Heart, MessageSquare } from 'lucide-react';
+import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock, Heart, MessageSquare, TrendingUpIcon } from 'lucide-react';
 import Badge from '../common/Badge';
+import InvestmentModal from '../common/InvestmentModal';
 import styles from './StartupCard.module.css';
 import followerService from '../../services/followerService';
 import RequestInfoModal from '../common/RequestInfoModal';
+import dealsService from '../../services/dealsService';
 
 /**
  * StartupCard Component - "Visual Priority (Concept C)"
  * Clean, full-width data density
  */
-function StartupCard({ startup, isPremium = false, user, followedProjectIds, sentConnectionIds, onViewProfile, onViewProject, index = 0, isReturning = false }) {
+function StartupCard({ startup, isPremium = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
   const [interestMessage, setInterestMessage] = useState('');
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
+  const [showInvestmentModal, setShowInvestmentModal] = useState(false);
+  const [investmentStatus, setInvestmentStatus] = useState(null); // New: track investment status
   
   // Check if user is investor
   // Backend returns role as string: "Investor", "Startup", "Advisor", "Staff", "Admin"
@@ -43,6 +47,116 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
       setHasRequested(hasRequest);
     }
   }, [isInvestor, startup.id, sentConnectionIds]);
+
+  // NEW: Fetch investment status for this project
+  // DISABLED: This causes too much API spam when rendering many cards
+  // Each card was calling getInvestorDeals() separately, creating dozens of API calls
+  // TODO: Instead, fetch deals once at dashboard level and pass down as prop
+  /*
+  React.useEffect(() => {
+    if (!isInvestor || !startup.id) {
+      setInvestmentStatus(null);
+      return;
+    }
+
+    const fetchInvestmentStatus = async () => {
+      try {
+        console.log(`[StartupCard ${startup.id}] Fetching investment status for: ${startup.organizationName || 'Unknown'}`);
+        const dealsRes = await dealsService.getInvestorDeals();
+        console.log(`[StartupCard ${startup.id}] Full dealsRes:`, dealsRes);
+        
+        // Handle multiple response formats
+        let deals = [];
+        if (dealsRes?.data?.items && Array.isArray(dealsRes.data.items)) {
+          deals = dealsRes.data.items;
+          console.log(`[StartupCard ${startup.id}] Using data.items format - found ${deals.length} deals`);
+        } else if (Array.isArray(dealsRes?.data)) {
+          deals = dealsRes.data;
+          console.log(`[StartupCard ${startup.id}] Using data as array format - found ${deals.length} deals`);
+        } else if (Array.isArray(dealsRes)) {
+          deals = dealsRes;
+          console.log(`[StartupCard ${startup.id}] Using direct array format - found ${deals.length} deals`);
+        } else {
+          console.warn(`[StartupCard ${startup.id}] Unexpected response format:`, dealsRes);
+          deals = [];
+        }
+        
+        console.log(`[StartupCard ${startup.id}] All deals:`, deals.map(d => ({
+          dealId: d.dealId,
+          projectName: d.projectName,
+          projectId: d.projectId,
+          status: d.status
+        })));
+        
+        // Find if user has invested in this project by matching organizationName
+        const projectNameLower = startup.organizationName?.toLowerCase() || '';
+        console.log(`[StartupCard ${startup.id}] Looking for projectName: "${projectNameLower}"`);
+        
+        const deal = deals.find(d => {
+          const dealProjectName = d.projectName?.toLowerCase() || '';
+          const match = dealProjectName === projectNameLower;
+          console.log(`[StartupCard ${startup.id}] Compare: "${dealProjectName}" === "${projectNameLower}" → ${match}`);
+          return match;
+        });
+        
+        if (deal) {
+          console.log(`[StartupCard ${startup.id}] ✓ FOUND investment deal:`, deal);
+          setInvestmentStatus({
+            dealId: deal.dealId,
+            status: deal.status,
+            investorConfirmed: deal.investorConfirmed,
+            startupConfirmed: deal.startupConfirmed,
+            amount: deal.amount,
+            equityPercentage: deal.equityPercentage
+          });
+        } else {
+          console.log(`[StartupCard ${startup.id}] ✗ No investment found`);
+          setInvestmentStatus(null);
+        }
+      } catch (error) {
+        console.error(`[StartupCard ${startup.id}] Failed to fetch investment status:`, error);
+        setInvestmentStatus(null);
+      }
+    };
+
+    fetchInvestmentStatus();
+  }, [isInvestor, startup.id, startup.organizationName]);
+  */
+  
+  // Listen for deal_created event to refresh investment status
+  // DISABLED: Part of the investment status fetch that was causing spam
+  /*
+  React.useEffect(() => {
+    const handleDealCreated = (event) => {
+      console.log(`[StartupCard ${startup.id}] Deal created event received:`, event.detail);
+      // Re-fetch investment status when a new deal is created
+      if (isInvestor && startup.organizationName) {
+        dealsService.getInvestorDeals().then(res => {
+          const deals = res?.data?.items || [];
+          const projectName = startup.organizationName?.toLowerCase() || '';
+          const deal = deals.find(d => d.projectName?.toLowerCase() === projectName);
+          
+          if (deal) {
+            console.log(`[StartupCard ${startup.id}] Investment status updated after deal creation`);
+            setInvestmentStatus({
+              dealId: deal.dealId,
+              status: deal.status,
+              investorConfirmed: deal.investorConfirmed,
+              startupConfirmed: deal.startupConfirmed,
+              amount: deal.amount,
+              equityPercentage: deal.equityPercentage
+            });
+          }
+        }).catch(err => console.error(`[StartupCard ${startup.id}] Error updating status:`, err));
+      }
+    };
+
+    if (isInvestor) {
+      window.addEventListener('deal_created', handleDealCreated);
+      return () => window.removeEventListener('deal_created', handleDealCreated);
+    }
+  }, [isInvestor, startup.id, startup.organizationName]);
+  */
   
   // Handle interest button click - toggle follow/unfollow
   const handleInterestClick = async (e) => {
@@ -300,14 +414,16 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
             borderTop: '1px solid rgba(0, 0, 0, 0.05)',
             display: 'flex',
             gap: '12px',
-            alignItems: 'center'
+            alignItems: 'center',
+            flexWrap: 'wrap'
           }}>
             {/* Follow/Unfollow Button */}
             <button
               onClick={handleInterestClick}
               disabled={isLoading}
               style={{
-                flex: 1,
+                flex: isInvestor ? 1 : 1,
+                minWidth: '100px',
                 padding: '10px 16px',
                 backgroundColor: isInterested ? '#dc2626' : '#2196F3',
                 color: 'white',
@@ -348,6 +464,7 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
               disabled={hasRequested}
               style={{
                 flex: 1,
+                minWidth: '100px',
                 padding: '10px 16px',
                 backgroundColor: hasRequested ? '#10b981' : '#7c3aed',
                 color: 'white',
@@ -377,6 +494,102 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
               <MessageSquare size={16} />
               {hasRequested ? 'Đã yêu cầu' : 'Yêu cầu thông tin'}
             </button>
+
+            {/* Invest Button OR Investment Status Badge */}
+            {investmentStatus ? (
+              // Show investment status badge
+              <div
+                title={`Trạng thái: ${investmentStatus.status}\nDeal #${investmentStatus.dealId}`}
+                style={{
+                  flex: 1,
+                  minWidth: '100px',
+                  padding: '10px 16px',
+                  background: 'rgba(255, 255, 255, 0.1)',
+                  border: '1px solid rgba(200, 200, 200, 0.3)',
+                  borderRadius: '6px',
+                  color: '#888',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  cursor: 'default',
+                  transition: 'all 0.2s',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <span>
+                  {investmentStatus.status === 'Pending' && '🟡'}
+                  {investmentStatus.status === 'Confirmed' && '🟢'}
+                  {investmentStatus.status === 'Contract_Signed' && '🟣'}
+                  {investmentStatus.status === 'Minted_NFT' && '✨'}
+                  {investmentStatus.status === 'Failed' && '🔴'}
+                </span>
+                <span>
+                  {investmentStatus.status === 'Pending' && 'Chờ xác nhận'}
+                  {investmentStatus.status === 'Confirmed' && 'Đã xác nhận'}
+                  {investmentStatus.status === 'Contract_Signed' && 'Đã ký kết'}
+                  {investmentStatus.status === 'Minted_NFT' && 'Đã mint NFT'}
+                  {investmentStatus.status === 'Failed' && 'Thất bại'}
+                </span>
+              </div>
+            ) : investedProjectIds && investedProjectIds.has(startup.id) ? (
+              // Show invested status
+              <div
+                style={{
+                  flex: 1,
+                  minWidth: '100px',
+                  padding: '10px 16px',
+                  background: '#10b981',
+                  color: 'white',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  whiteSpace: 'nowrap',
+                  textAlign: 'center'
+                }}
+              >
+                <span>✅ Đã đầu tư</span>
+              </div>
+            ) : (
+              // Show invest button
+              <button
+                onClick={() => setShowInvestmentModal(true)}
+                style={{
+                  flex: 1,
+                  minWidth: '100px',
+                  padding: '10px 16px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+                  e.target.style.transform = 'translateY(-1px)';
+                }}
+                onMouseLeave={(e) => {
+                  e.target.style.boxShadow = 'none';
+                  e.target.style.transform = 'translateY(0)';
+                }}
+              >
+                <TrendingUp size={16} />
+                Đầu tư
+              </button>
+            )}
           </div>
 
           {/* RequestInfoModal */}
@@ -387,6 +600,19 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
             projectName={startup.name}
             onSuccess={() => {
               setHasRequested(true);
+            }}
+          />
+
+          {/* InvestmentModal */}
+          <InvestmentModal
+            isOpen={showInvestmentModal}
+            projectId={startup.id}
+            projectName={startup.name}
+            startupName={startup.startupName || 'Startup'}
+            onClose={() => setShowInvestmentModal(false)}
+            onSuccess={() => {
+              console.log('[StartupCard] Investment successful!');
+              onInvestmentSuccess?.();
             }}
           />
         </>
@@ -410,4 +636,4 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
   );
 }
 
-export default StartupCard;
+export default React.memo(StartupCard);

@@ -1,4 +1,4 @@
-import apiClient from './apiClient';
+import { apiClient } from './apiClient';
 
 /**
  * Chat Service - Handles chat messaging and session operations
