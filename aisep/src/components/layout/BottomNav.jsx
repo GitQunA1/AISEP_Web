@@ -1,6 +1,6 @@
 import { 
   Home, Compass, Search, TrendingUp, Users, User, LayoutDashboard, 
-  Sparkles, FileText, Calendar, ShieldCheck, Activity, MessageSquare, BarChart2 
+  Sparkles, FileText, Calendar, ShieldCheck, Activity, MessageSquare, BarChart2, UserCheck
 } from 'lucide-react';
 import styles from './BottomNav.module.css';
 
@@ -27,7 +27,8 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
       { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Tổng quan', href: '#', showWhenLoggedIn: true },
       { icon: FileText, label: 'Projects', displayLabel: 'Dự án', href: '#', showWhenLoggedIn: true },
       { icon: Calendar, label: 'Bookings', displayLabel: 'Booking', href: '#', showWhenLoggedIn: true },
-      { icon: ShieldCheck, label: 'Approvals', displayLabel: 'Phê duyệt', href: '#', showWhenLoggedIn: true },
+      { icon: UserCheck, label: 'AdvisorApproval', displayLabel: 'Duyệt CV', href: '#', showWhenLoggedIn: true },
+      { icon: ShieldCheck, label: 'Approvals', displayLabel: 'Startup', href: '#', showWhenLoggedIn: true },
     ];
     const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
     const homeItem = navItems.find(item => item.label === 'Home');
@@ -75,8 +76,8 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
     if (label === 'Approvals' && onShowDashboard) {
       onShowDashboard('approvals');
     }
-    if (label === 'Activity' && onShowDashboard) {
-      onShowDashboard('activity');
+    if (label === 'AdvisorApproval' && onShowDashboard) {
+      onShowDashboard('advisor_approval');
     }
     if (label === 'Advisors' && onShowAdvisors) {
       onShowAdvisors();

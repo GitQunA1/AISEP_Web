@@ -1549,6 +1549,64 @@ btnReject {
     width: 100%;
 }
 
+/* --- Staff Modal Header (Unique Refinement) --- */
+.staffModalHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 24px 28px;
+    border-bottom: 2px solid var(--border-color);
+    background-color: var(--bg-secondary);
+    min-height: 84px;
+    box-sizing: border-box;
+}
+
+.staffModalTitleGrp {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.staffModalTitleText {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+    line-height: 1.2;
+    letter-spacing: -0.3px;
+}
+
+.staffModalCloseBtn {
+    background: rgba(255, 255, 255, 0.05);
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-left: 16px;
+}
+
+.staffModalCloseBtn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    transform: rotate(90deg);
+}
+
+@media (max-width: 768px) {
+    .staffModalHeader {
+        padding: 16px 20px;
+        min-height: 72px;
+    }
+    .staffModalTitleText {
+        font-size: 18px;
+    }
+}
+
 .emptyStateIcon {
     opacity: 0.5;
     margin-bottom: 8px;
@@ -1608,4 +1666,9 @@ btnReject {
     background: rgba(244, 33, 46, 0.1) !important;
     color: #f4212e !important;
     border-color: rgba(244, 33, 46, 0.2) !important;
+}
+.btnDisabled {
+    opacity: 0.5 !important;
+    pointer-events: none !important;
+    cursor: not-allowed !important;
 }

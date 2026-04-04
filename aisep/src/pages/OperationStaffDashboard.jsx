@@ -12,6 +12,7 @@ import bookingService from '../services/bookingService';
 import startupProfileService from '../services/startupProfileService';
 import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/ProjectStatus';
+import AdvisorApprovalPage from '../components/advisor/AdvisorApprovalPage';
 
 /**
  * ProjectKanbanCard - Single card for the Kanban board
@@ -84,7 +85,7 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
                     {status === 'pend' && (
                         <>
                             <button
-                                className={`${local.baBtn} ${local.rej}`}
+                                className={`${local.baBtn} ${local.rej} ${processingProjectId !== null ? local.btnDisabled : ''}`}
                                 onClick={onReject}
                                 disabled={processingProjectId !== null}
                                 title="Từ chối"
@@ -97,7 +98,7 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
                                 Từ chối
                             </button>
                             <button
-                                className={`${local.baBtn} ${local.apr}`}
+                                className={`${local.baBtn} ${local.apr} ${processingProjectId !== null ? local.btnDisabled : ''}`}
                                 onClick={onApprove}
                                 disabled={processingProjectId !== null}
                                 title="Phê duyệt"
@@ -1516,18 +1517,18 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                         </div>
                                         <div className={styles.listActions}>
                                             <button
-                                                className={styles.primaryBtn}
+                                                className={`${styles.primaryBtn} ${processingProjectId !== null ? local.btnDisabled : ''}`}
                                                 style={{ borderRadius: '99px', padding: '6px 16px', fontSize: '13px' }}
                                                 onClick={() => handleApproveStartup(startup?.id)}
-                                                disabled={processingProjectId === startup?.id}
+                                                disabled={processingProjectId !== null}
                                             >
                                                 Phê duyệt
                                             </button>
                                             <button
-                                                className={styles.secondaryBtn}
+                                                className={`${styles.secondaryBtn} ${processingProjectId !== null ? local.btnDisabled : ''}`}
                                                 style={{ borderRadius: '99px', padding: '6px 16px', fontSize: '13px', color: 'var(--staff-danger)' }}
                                                 onClick={() => handleRejectStartup(startup?.id, null)}
-                                                disabled={processingProjectId === startup?.id}
+                                                disabled={processingProjectId !== null}
                                             >
                                                 Từ chối
                                             </button>
@@ -1536,6 +1537,13 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                 ))}
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {/* Advisor Approvals Section */}
+                {activeSection === 'advisor_approval' && (
+                    <div className={styles.section} style={{ padding: 0, gap: 0, background: 'transparent', boxShadow: 'none' }}>
+                        <AdvisorApprovalPage />
                     </div>
                 )}
 
@@ -1612,16 +1620,17 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                     onClick={(e) => e.target === e.currentTarget && setShowDetailModal(false)}
                 >
                     <div className={styles.modalContent} style={{ maxWidth: '820px', width: '92%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-                        {/* Modal Header */}
-                        <div className={styles.modalHeader}>
-                            <div>
-                                <h2 className={styles.headerTitle} style={{ margin: '0 0 8px 0' }}>{detailProject.projectName}</h2>
+                        {/* Modal Header (Unique & Standardized) */}
+                        <div className={local.staffModalHeader}>
+                            <div className={local.staffModalTitleGrp}>
+                                <h2 className={local.staffModalTitleText}>{detailProject.projectName}</h2>
                                 <span
                                     className={styles.badge}
                                     style={{
                                         backgroundColor: `${STATUS_COLORS[detailProject.status || 'Pending']}25`,
                                         color: STATUS_COLORS[detailProject.status || 'Pending'],
-                                        border: `1px solid ${STATUS_COLORS[detailProject.status || 'Pending']}40`
+                                        border: `1px solid ${STATUS_COLORS[detailProject.status || 'Pending']}40`,
+                                        width: 'fit-content'
                                     }}
                                 >
                                     {STATUS_LABELS[detailProject.status || 'Pending'] || 'Đang chờ duyệt'}
@@ -1629,7 +1638,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                             </div>
                             <button
                                 onClick={() => setShowDetailModal(false)}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}
+                                className={local.staffModalCloseBtn}
                             >
                                 <X size={24} />
                             </button>
@@ -1889,7 +1898,8 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                             setShowDetailModal(false);
                                             handleRejectProject(detailProject.projectId);
                                         }}
-                                        className={styles.dangerBtn}
+                                        className={`${styles.dangerBtn} ${processingProjectId !== null ? local.btnDisabled : ''}`}
+                                        disabled={processingProjectId !== null}
                                     >
                                         Từ chối
                                     </button>
@@ -1898,7 +1908,8 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                             setShowDetailModal(false);
                                             handleApproveProject(detailProject.projectId);
                                         }}
-                                        className={styles.primaryBtn}
+                                        className={`${styles.primaryBtn} ${processingProjectId !== null ? local.btnDisabled : ''}`}
+                                        disabled={processingProjectId !== null}
                                     >
                                         Phê duyệt
                                     </button>
@@ -1916,10 +1927,10 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                     onClick={(e) => e.target === e.currentTarget && setShowBookingModal(false)}
                 >
                     <div className={styles.modalContent} style={{ maxWidth: '800px', width: '95%' }}>
-                        {/* Modal Header */}
-                        <div className={styles.modalHeader}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <h2 className={styles.headerTitle} style={{ margin: 0 }}>
+                        {/* Modal Header (Unique & Standardized) */}
+                        <div className={local.staffModalHeader}>
+                            <div className={local.staffModalTitleGrp}>
+                                <h2 className={local.staffModalTitleText}>
                                     Booking #{selectedBooking.id}
                                 </h2>
                                 <span
@@ -1928,7 +1939,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                             selectedBooking.status === 'Completed' ? local.bookingBadgeCompleted :
                                                 local.bookingBadgeCancelled
                                         }`}
-                                    style={{ marginTop: '0' }}
+                                    style={{ marginTop: '0', width: 'fit-content' }}
                                 >
                                     {selectedBooking.status === 'Pending' ? 'Chờ xác nhận' :
                                         selectedBooking.status === 'Confirmed' ? 'Đã xác nhận' :
@@ -1937,7 +1948,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                             </div>
                             <button
                                 onClick={() => setShowBookingModal(false)}
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-secondary)', padding: '4px' }}
+                                className={local.staffModalCloseBtn}
                             >
                                 <X size={24} />
                             </button>

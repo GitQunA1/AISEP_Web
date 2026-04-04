@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare } from 'lucide-react';
+import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
@@ -46,6 +46,7 @@ function Sidebar({
       { icon: FileText, label: 'Projects', displayLabel: 'Quản lý dự án', href: '#', showWhenLoggedIn: true },
       { icon: Calendar, label: 'Bookings', displayLabel: 'Quản lý Booking', href: '#', showWhenLoggedIn: true },
       { icon: ShieldCheck, label: 'Approvals', displayLabel: 'Phê duyệt Startup', href: '#', showWhenLoggedIn: true },
+      { icon: Award, label: 'AdvisorApproval', displayLabel: 'Duyệt Cố vấn', href: '#', showWhenLoggedIn: true },
       { icon: Activity, label: 'Activity', displayLabel: 'Giám sát hoạt động', href: '#', showWhenLoggedIn: true },
     ];
     const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
@@ -87,6 +88,9 @@ function Sidebar({
     }
     if (label === 'Approvals' && onShowDashboard) {
       onShowDashboard('approvals');
+    }
+    if (label === 'AdvisorApproval' && onShowDashboard) {
+      onShowDashboard('advisor_approval');
     }
     if (label === 'Activity' && onShowDashboard) {
       onShowDashboard('activity');
@@ -195,6 +199,7 @@ function Sidebar({
                   if (activeView === 'dashboard_project_management') return 'Projects';
                   if (activeView === 'dashboard_bookings') return 'Bookings';
                   if (activeView === 'dashboard_approvals') return 'Approvals';
+                  if (activeView === 'dashboard_advisor_approval') return 'AdvisorApproval';
                   if (activeView === 'dashboard_activity') return 'Activity';
                   if (activeView === 'dashboard_availability') return 'Availability';
                   if (activeView === 'dashboard_reports') return 'Reports';

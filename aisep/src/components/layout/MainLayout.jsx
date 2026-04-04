@@ -108,6 +108,12 @@ function MainLayout({
       homeScrollPos.current = 0;
     }
 
+    // Update body class for fixed views
+    if (typeof document !== 'undefined') {
+      const shouldLock = showAI;
+      document.body.classList.toggle('noScroll', shouldLock);
+    }
+
     // Update refs for next change
     prevViewRef.current = {
       projectId: selectedProjectId,
@@ -115,7 +121,7 @@ function MainLayout({
       advisor: selectedAdvisor,
       activeView: activeView
     };
-  }, [selectedProjectId, selectedStartupProfileId, selectedAdvisor, activeView]);
+  }, [selectedProjectId, selectedStartupProfileId, selectedAdvisor, activeView, showAI]);
 
   // Handle Browser Back/Forward and URL sync
   useEffect(() => {
@@ -773,10 +779,11 @@ function MainLayout({
                     activeView === 'dashboard' ? 'Dashboard' :
                       activeView === 'dashboard_project_management' ? 'Projects' :
                         activeView === 'dashboard_bookings' ? 'Bookings' :
-                          activeView === 'dashboard_availability' ? 'Availability' :
-                            activeView === 'dashboard_reports' ? 'Reports' :
-                              activeView === 'dashboard_approvals' ? 'Approvals' :
-                                activeView === 'dashboard_activity' ? 'Activity' : 'Dashboard'
+                          activeView === 'dashboard_advisor_approval' ? 'AdvisorApproval' :
+                            activeView === 'dashboard_availability' ? 'Availability' :
+                              activeView === 'dashboard_reports' ? 'Reports' :
+                                activeView === 'dashboard_approvals' ? 'Approvals' :
+                                  activeView === 'dashboard_activity' ? 'Activity' : 'Dashboard'
                   ) : activeView === 'profile' ? 'Profile' : ''
         }
       />
