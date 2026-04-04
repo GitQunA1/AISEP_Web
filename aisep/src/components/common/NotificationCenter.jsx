@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { Bell, X, Trash2, Mail, Users, AlertTriangle, Info, CheckCheck } from 'lucide-react';
 import styles from './NotificationCenter.module.css';
 import notificationService from '../../services/notificationService';
 import chatService from '../../services/chatService';
 
 const NotificationCenter = ({ onOpenChat }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [isClosing, setIsClosing] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
@@ -17,7 +19,6 @@ const NotificationCenter = ({ onOpenChat }) => {
   const loadNotifications = async () => {
     try {
       const response = await notificationService.getNotifications();
-      // Safely handle paginated or object-based responses
       const items = Array.isArray(response) ? response : (response?.items || []);
       setNotifications(items);
     } catch (error) {
@@ -34,6 +35,18 @@ const NotificationCenter = ({ onOpenChat }) => {
     }
   };
 
+  const togglePanel = () => {
+    if (isOpen) {
+      setIsClosing(true);
+      setTimeout(() => {
+        setIsOpen(false);
+        setIsClosing(false);
+      }, 250);
+    } else {
+      setIsOpen(true);
+    }
+  };
+
   const formatTime = (dateString) => {
     const date = new Date(dateString);
     const now = new Date();
@@ -42,46 +55,41 @@ const NotificationCenter = ({ onOpenChat }) => {
     const diffHours = Math.floor(diffMs / 3600000);
     const diffDays = Math.floor(diffMs / 86400000);
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
+    if (diffMins < 1) return 'Vừa xong';
+    if (diffMins < 60) return `${diffMins} phút trước`;
+    if (diffHours < 24) return `${diffHours} giờ trước`;
+    if (diffDays < 7) return `${diffDays} ngày trước`;
+    return date.toLocaleDateString('vi-VN');
   };
 
   const handleNotificationClick = async (notification) => {
-    // Mark as read
     try {
-      await notificationService.markAsRead(notification.notificationId);
-      setNotifications(prev =>
-        prev.map(n =>
-          n.notificationId === notification.notificationId
-            ? { ...n, isRead: true }
-            : n
-        )
-      );
-      setUnreadCount(Math.max(0, unreadCount - 1));
+      if (!notification.isRead) {
+        await notificationService.markAsRead(notification.notificationId);
+        setNotifications(prev =>
+          prev.map(n =>
+            n.notificationId === notification.notificationId
+              ? { ...n, isRead: true }
+              : n
+          )
+        );
+        setUnreadCount(Math.max(0, unreadCount - 1));
+      }
     } catch (error) {
       console.error('Error marking as read:', error);
     }
 
-    // Deep-link logic based on referenceType
-    if (!notification.referenceId) {
-      console.warn('Notification has no referenceId, cannot deep-link');
-      return;
-    }
+    if (!notification.referenceId) return;
 
     try {
       if (notification.referenceType === 'ChatSession') {
-        // Direct: Open chat with this session ID
         onOpenChat?.(notification.referenceId, notification);
+        togglePanel();
       } else if (notification.referenceType === 'ConnectionRequest') {
-        // Indirect: Get session from connection request
         const session = await chatService.getChatSessionFromConnectionRequest(notification.referenceId);
         if (session && session.chatSessionId) {
           onOpenChat?.(session.chatSessionId, notification);
-        } else {
-          console.warn('Could not get session from connection request');
+          togglePanel();
         }
       }
     } catch (error) {
@@ -93,8 +101,8 @@ const NotificationCenter = ({ onOpenChat }) => {
     e.stopPropagation();
     try {
       await notificationService.deleteNotification(notificationId);
-      setNotifications(prev => prev.filter(n => n.notificationId !== notificationId));
       const deletedNotif = notifications.find(n => n.notificationId === notificationId);
+      setNotifications(prev => prev.filter(n => n.notificationId !== notificationId));
       if (deletedNotif && !deletedNotif.isRead) {
         setUnreadCount(Math.max(0, unreadCount - 1));
       }
@@ -114,15 +122,15 @@ const NotificationCenter = ({ onOpenChat }) => {
   };
 
   const getNotificationIcon = (type) => {
-    switch (type) {
+    switch (type?.toLowerCase()) {
       case 'message':
-        return '💬';
+        return <Mail size={18} style={{ color: '#0ea5e9' }} />;
       case 'connection':
-        return '🤝';
+        return <Users size={18} style={{ color: '#8b5cf6' }} />;
       case 'alert':
-        return '⚠️';
+        return <AlertTriangle size={18} style={{ color: '#f59e0b' }} />;
       default:
-        return 'ℹ️';
+        return <Info size={18} style={{ color: '#64748b' }} />;
     }
   };
 
@@ -130,26 +138,28 @@ const NotificationCenter = ({ onOpenChat }) => {
     <div className={styles.notificationCenter}>
       <button
         className={styles.bellButton}
-        onClick={() => setIsOpen(!isOpen)}
-        title={`${unreadCount} unread notifications`}
+        onClick={togglePanel}
+        title={`${unreadCount} thông báo chưa đọc`}
       >
-        <span style={{ fontSize: '20px' }}>🔔</span>
-        {unreadCount > 0 && <span className={styles.badge}>{unreadCount}</span>}
+        <Bell size={22} fill={unreadCount > 0 ? "currentColor" : "none"} />
+        {unreadCount > 0 && <span className={styles.badge}>{unreadCount > 99 ? '99+' : unreadCount}</span>}
       </button>
 
-      {isOpen && (
-        <div className={styles.notificationPanel}>
+      {(isOpen || isClosing) && (
+        <div className={`${styles.notificationPanel} ${isClosing ? styles.closing : ''}`}>
           <div className={styles.panelHeader}>
-            <h3>Notifications</h3>
-            <button className={styles.closeBtn} onClick={() => setIsOpen(false)}>
-              ✕
+            <h3>Thông báo</h3>
+            <button className={styles.closeBtn} onClick={togglePanel}>
+              <X size={18} />
             </button>
           </div>
 
           {notifications.length === 0 ? (
             <div className={styles.emptyState}>
-              <span style={{ fontSize: '32px' }}>📭</span>
-              <p>No notifications</p>
+              <div className={styles.emptyIcon}>
+                <Mail size={48} opacity={0.2} />
+              </div>
+              <p>Không có thông báo nào</p>
             </div>
           ) : (
             <div className={styles.notificationList}>
@@ -170,9 +180,9 @@ const NotificationCenter = ({ onOpenChat }) => {
                   <button
                     className={styles.deleteBtn}
                     onClick={(e) => handleDeleteNotification(e, notification.notificationId)}
-                    title="Delete"
+                    title="Xóa thông báo"
                   >
-                    ×
+                    <Trash2 size={14} />
                   </button>
                 </div>
               ))}
@@ -180,19 +190,10 @@ const NotificationCenter = ({ onOpenChat }) => {
           )}
 
           {notifications.length > 0 && (
-            <div style={{ padding: '12px', borderTop: '1px solid #e5e7eb', textAlign: 'center' }}>
-              <button
-                onClick={handleClearAll}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  color: '#667eea',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  fontWeight: '500',
-                }}
-              >
-                Mark all as read
+            <div className={styles.clearAllContainer}>
+              <button onClick={handleClearAll} className={styles.clearAllBtn}>
+                <CheckCheck size={14} style={{ marginRight: '6px', verticalAlign: 'middle' }} />
+                Đánh dấu tất cả đã đọc
               </button>
             </div>
           )}
@@ -203,3 +204,4 @@ const NotificationCenter = ({ onOpenChat }) => {
 };
 
 export default NotificationCenter;
+

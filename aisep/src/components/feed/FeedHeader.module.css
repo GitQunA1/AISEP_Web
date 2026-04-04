@@ -78,48 +78,21 @@
 .titleSection {
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 2px;
 }
 
-.titleRow {
+.mainHeaderInfo {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    gap: 20px;
+}
+
+.headerRightActions {
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    width: 100%;
     gap: 12px;
-}
-
-.mobileTitleAction {
-    display: none;
-    align-items: center;
-    gap: 12px;
-}
-
-.mobileNotifications {
-    display: none;
-}
-
-.desktopNotifications {
-    display: block;
-}
-
-.desktopCustomAction {
-    display: block;
-}
-
-@media (max-width: 768px) {
-    .mobileTitleAction {
-        display: flex;
-    }
-    .mobileNotifications {
-        display: block;
-    }
-    .desktopNotifications {
-        display: none;
-    }
-    .desktopCustomAction {
-        display: none;
-    }
 }
 
 .title {
@@ -129,16 +102,16 @@
     margin: 0;
     letter-spacing: -0.5px;
     transition: color var(--transition-base);
-    flex: 1;
 }
 
 .subtitle {
     font-size: 14.5px;
     color: var(--text-secondary);
-    margin: -4px 0 0 0;
+    margin: 0;
     transition: color var(--transition-base);
     opacity: 0.8;
 }
+
 
 .primaryBtn {
   display: inline-flex;
@@ -220,11 +193,18 @@
   .headerInner {
     padding: 0 14px 12px 14px;
   }
-  .headerContent {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 16px;
+  .mainHeaderInfo {
+    gap: 12px;
   }
+  
+  .title {
+    font-size: 20px;
+  }
+  
+  .subtitle {
+    font-size: 13px;
+  }
+
   .actionsSection {
     width: 100%;
     justify-content: space-between;
