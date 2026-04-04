@@ -146,6 +146,12 @@
     }
 }
 
+.disabledOpacity {
+    opacity: 0.5;
+    pointer-events: none;
+    filter: grayscale(0.3);
+}
+
 .statCard {
     background-color: var(--bg-secondary);
     border: 1px solid transparent;

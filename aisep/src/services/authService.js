@@ -11,13 +11,14 @@ export const authService = {
    * @returns {Promise<any>} Response from the backend
    */
   register: async (data) => {
-    // Backend RegisterRequest fields: Name, Email, Password, ConfirmPassword, Role
+    // Backend RegisterRequest fields: Name (Username), FullName, Email, Password, ConfirmPassword, Role
     const payload = {
-      name: data.fullName || data.name || '',
+      fullName: data.fullName || '',
+      name: data.username || data.name || (data.fullName ? data.fullName.replace(/\s+/g, '').toLowerCase() : ''), 
       email: data.email,
       password: data.password,
       confirmPassword: data.confirmPassword,
-      role: data.role ?? 0,  // UserRole enum: 0=Startup, 1=Investor, 2=Advisor, 3=Staff, 4=Admin
+      role: data.role ?? 0, // UserRole enum: 0=Startup, 1=Investor, 2=Advisor, 3=Staff, 4=Admin
     };
 
     const response = await apiClient.post('/api/Auth/register', payload);

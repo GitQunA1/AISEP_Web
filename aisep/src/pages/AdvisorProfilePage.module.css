@@ -213,19 +213,30 @@
     color: var(--text-muted);
 }
 
+.currencyIcon {
+    position: absolute;
+    left: 14px;
+    color: var(--text-muted);
+    font-size: 18px;
+    font-weight: 700;
+    line-height: 1;
+}
+
 .inputWrapper input,
 .inputWrapper .select,
 .formGroup textarea,
 .select {
     width: 100%;
-    padding: 10px 12px;
-    padding-left: 36px;
+    padding: 12px;
+    padding-left: 38px;
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
     border-radius: 12px;
     color: var(--text-primary);
-    font-size: 14px;
+    font-size: 15px;
     transition: all 0.2s ease;
+    box-sizing: border-box;
+    height: 46px; /* Explicit height to match CustomSelect */
 }
 
 :global(.light-mode) .inputWrapper input,
@@ -237,6 +248,8 @@
 
 .formGroup textarea {
     padding-left: 12px;
+    height: auto;
+    min-height: 100px;
 }
 
 .inputWrapper input:focus,
