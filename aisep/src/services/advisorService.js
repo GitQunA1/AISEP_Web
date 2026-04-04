@@ -111,6 +111,54 @@ const advisorService = {
       console.error('[ADVISOR_SERVICE] Error creating advisor profile:', error);
       throw error;
     }
+  },
+
+  /**
+   * Approve an advisor profile (Staff only)
+   * @param {number} id - The advisor ID
+   * @returns {Promise<Object>}
+   */
+  approveAdvisor: async (id) => {
+    try {
+      const response = await apiClient.patch(`/api/Advisor/${id}/approve`);
+      return response?.data ?? response;
+    } catch (error) {
+      console.error(`[ADVISOR_SERVICE] Error approving advisor ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reject an advisor profile with a reason (Staff only)
+   * @param {number} id - The advisor ID
+   * @param {string} reason - The rejection reason
+   * @returns {Promise<Object>}
+   */
+  rejectAdvisor: async (id, reason) => {
+    try {
+      const response = await apiClient.patch(`/api/Advisor/${id}/reject`, { reason });
+      return response?.data ?? response;
+    } catch (error) {
+      console.error(`[ADVISOR_SERVICE] Error rejecting advisor ${id}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Fetch advisors by status (Staff only)
+   * @param {string} status - Pending, Approved, or Rejected
+   * @returns {Promise<Object>}
+   */
+  getAdvisorsByStatus: async (status) => {
+    try {
+      const response = await apiClient.get('/api/Advisor', {
+        params: { filters: `ApprovalStatus==${status}` }
+      });
+      return response?.data ?? response;
+    } catch (error) {
+      console.error(`[ADVISOR_SERVICE] Error fetching advisors with status ${status}:`, error);
+      throw error;
+    }
   }
 };
 
