@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, Clock, User, Briefcase, CreditCard, ChevronRight, MessageSquare, RefreshCcw, AlertCircle } from 'lucide-react';
+import { X, Calendar, Clock, User, Briefcase, CreditCard, ChevronRight, MessageSquare, RefreshCcw, AlertCircle, FileText } from 'lucide-react';
 import styles from './BookingDetailModal.module.css';
 
 const STATUS_CONFIG = {
@@ -25,7 +25,7 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
   const endTime = new Date(booking.endTime);
   const formattedDate = startTime.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeRange = `${startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} – ${endTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
-  
+
   const price = booking.price || booking.estimatedPrice || 0;
   const formatPrice = (p) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
@@ -70,20 +70,20 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
             <h4 className={styles.sectionTitle}>2. Thời gian tư vấn</h4>
             <div className={styles.profileCard} style={{ background: 'transparent' }}>
-               <div className={styles.metaGrid}>
-                  <div className={styles.metaItem}>
-                    <span className={styles.label}>Ngày tư vấn</span>
-                    <span className={styles.value}><Calendar size={16} color="#1d9bf0" /> {formattedDate}</span>
-                  </div>
-                  <div className={styles.metaItem}>
-                    <span className={styles.label}>Khung giờ chi tiết</span>
-                    <span className={styles.value}><Clock size={16} color="#1d9bf0" /> {timeRange}</span>
-                  </div>
-                  <div className={styles.metaItem}>
-                    <span className={styles.label}>Thời lượng</span>
-                    <span className={styles.value}>{booking.slotCount || 1} giờ tư vấn trực tuyến</span>
-                  </div>
-               </div>
+              <div className={styles.metaGrid}>
+                <div className={styles.metaItem}>
+                  <span className={styles.label}>Ngày tư vấn</span>
+                  <span className={styles.value}><Calendar size={16} color="#1d9bf0" /> {formattedDate}</span>
+                </div>
+                <div className={styles.metaItem}>
+                  <span className={styles.label}>Khung giờ chi tiết</span>
+                  <span className={styles.value}><Clock size={16} color="#1d9bf0" /> {timeRange}</span>
+                </div>
+                <div className={styles.metaItem}>
+                  <span className={styles.label}>Thời lượng</span>
+                  <span className={styles.value}>{booking.slotCount || 1} giờ tư vấn trực tuyến</span>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -123,7 +123,7 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
           <button onClick={onClose} className={styles.secondaryBtn}>
             Đóng
           </button>
-          
+
           {userRole === 'Startup' && (booking.status === 1 || booking.status === 'ApprovedAwaitingPayment') && (
             <button className={`${styles.primaryBtn} ${styles.successBtn}`} onClick={() => { onAction('pay', booking); onClose(); }}>
               <CreditCard size={16} /> Thanh toán phí
@@ -140,17 +140,46 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
             </button>
           )}
 
+          {userRole === 'Startup' && [2, 3, 'Confirmed', 'Completed'].includes(booking.status) && (
+            <button
+              className={`${styles.secondaryBtn} ${styles.dangerBtn}`}
+              onClick={() => { onAction('complain', booking); onClose(); }}
+            >
+              <AlertCircle size={16} /> Khiếu nại
+            </button>
+          )}
+
+          {userRole === 'Advisor' && booking.projectId && [1, 2, 3, 'ApprovedAwaitingPayment', 'Confirmed', 'Completed'].includes(booking.status) && (
+            <button
+              className={styles.primaryBtn}
+              onClick={() => { onAction('viewProject', booking); onClose(); }}
+              style={{ background: '#10b981' }}
+            >
+              <Briefcase size={16} /> Xem dự án
+            </button>
+          )}
+
+          {userRole === 'Advisor' && (booking.status === 2 || booking.status === 'Confirmed') && (
+            <button
+              className={styles.primaryBtn}
+              onClick={() => { onAction('report', booking); onClose(); }}
+              style={{ background: '#1d9bf0' }}
+            >
+              <FileText size={16} /> Viết báo cáo
+            </button>
+          )}
+
           {userRole === 'Advisor' && (booking.status === 0 || booking.status === 'Pending') && (
             <>
-              <button 
-                className={`${styles.secondaryBtn} ${styles.dangerBtn}`} 
+              <button
+                className={`${styles.secondaryBtn} ${styles.dangerBtn}`}
                 onClick={() => { onAction('reject', booking); onClose(); }}
                 style={{ color: '#f4212e', borderColor: 'rgba(244, 33, 46, 0.2)' }}
               >
                 Từ chối
               </button>
-              <button 
-                className={styles.primaryBtn} 
+              <button
+                className={styles.primaryBtn}
                 onClick={() => { onAction('approve', booking); onClose(); }}
                 style={{ background: '#1d9bf0' }}
               >

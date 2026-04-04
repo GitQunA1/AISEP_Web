@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MessageCircle, X } from 'lucide-react';
 import styles from './FloatingChatWidget.module.css';
 import ChatWindow from './ChatWindow';
@@ -15,26 +15,37 @@ import ChatWindow from './ChatWindow';
 export default function FloatingChatWidget({ 
   chatSessionId,
   displayName = 'Chat',
+  handle,
   currentUserId,
   sentTime,
   onClose
 }) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(true);
+  const [isClosing, setIsClosing] = useState(false);
+
+  // Sync state: if a new sessionId is provided, make sure it's open
+  useEffect(() => {
+    if (chatSessionId) {
+      setIsOpen(true);
+      setIsClosing(false);
+    }
+  }, [chatSessionId]);
 
   // Only show if chatSessionId is provided
   if (!chatSessionId) {
     return null;
   }
 
-  const handleToggle = () => {
-    setIsOpen(!isOpen);
-  };
-
   const handleClose = () => {
-    setIsOpen(false);
-    if (onClose) {
-      onClose();
-    }
+    setIsClosing(true);
+    // Wait for animation (200ms matches CSS)
+    setTimeout(() => {
+      setIsOpen(false);
+      setIsClosing(false);
+      if (onClose) {
+        onClose();
+      }
+    }, 200);
   };
 
   const handleCloseClick = (e) => {
@@ -45,53 +56,18 @@ export default function FloatingChatWidget({
 
   return (
     <>
-      {/* Floating Chat Button */}
-      {!isOpen && (
-        <button
-          className={styles.floatingButton}
-          onClick={handleToggle}
-          title="Mở chat"
-        >
-          <MessageCircle size={24} />
-          <span className={styles.badge}>💬</span>
-        </button>
-      )}
-
-      {/* Chat Widget */}
+      {/* Chat Widget is now shown outright when chatSessionId is present */}
       {isOpen && (
-        <>
-          {/* Chat Header Preview */}
-          <div className={styles.chatContainer}>
-            <div className={styles.chatHeader}>
-              <div className={styles.headerTitle}>
-                <MessageCircle size={18} style={{ color: '#667eea' }} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                  <span>{displayName || 'Chat'}</span>
-                </div>
-              </div>
-              <button
-                className={styles.closeButton}
-                onClick={handleCloseClick}
-                title="Đóng chat"
-              >
-                <X size={20} />
-              </button>
-            </div>
-            
-            <div className={styles.chatContent}>
-              <ChatWindow
-                chatSessionId={chatSessionId}
-                displayName={displayName}
-                currentUserId={currentUserId}
-                sentTime={sentTime}
-                onClose={handleClose}
-              />
-            </div>
-          </div>
-
-          {/* Backdrop */}
-          <div className={styles.backdrop} onClick={handleCloseClick} />
-        </>
+        <div className={`${styles.chatContainer} ${isClosing ? styles.closing : ''}`}>
+          <ChatWindow
+            chatSessionId={chatSessionId}
+            displayName={displayName}
+            handle={handle}
+            currentUserId={currentUserId}
+            sentTime={sentTime}
+            onClose={handleClose}
+          />
+        </div>
       )}
     </>
   );

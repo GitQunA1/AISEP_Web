@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MessageSquare, FileText, CheckCircle, Clock, AlertCircle, X, CreditCard, ChevronRight, Loader, Calendar, Search, RefreshCcw } from 'lucide-react';
+import { MessageSquare, FileText, CheckCircle, Clock, AlertCircle, X, CreditCard, ChevronRight, Loader, Loader2, Calendar, Search, RefreshCcw } from 'lucide-react';
 import styles from '../../styles/SharedDashboard.module.css';
 import bookingService from '../../services/bookingService';
 import chatService from '../../services/chatService';
@@ -8,6 +8,7 @@ import FloatingChatWidget from '../common/FloatingChatWidget';
 import PaymentModal from '../booking/PaymentModal';
 import BookingWizard from '../booking/BookingWizard';
 import BookingDetailModal from '../booking/BookingDetailModal';
+import UserReportModal from '../booking/UserReportModal';
 import FeedHeader from '../feed/FeedHeader';
 
 const BOOKING_STATUS_LABELS = {
@@ -28,22 +29,23 @@ const BOOKING_STATUS_LABELS = {
 export default function StartupBookings({ user }) {
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
-    
+
     // Filter & Search State
     const [filterStatus, setFilterStatus] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
-    
+
     // UI state
     const [reportModal, setReportModal] = useState(null);
     const [chatSession, setChatSession] = useState(null);
     const [chatLoading, setChatLoading] = useState({});
     const [paymentBooking, setPaymentBooking] = useState(null);
     const [detailBooking, setDetailBooking] = useState(null);
-    
+    const [complainBooking, setComplainBooking] = useState(null);
+
     // Booking Wizard State (for re-booking)
     const [showBookingWizard, setShowBookingWizard] = useState(false);
     const [rebookData, setRebookData] = useState({ projectId: null, advisorId: null, sourceBookingId: null });
-    
+
     const loadBookings = useCallback(async () => {
         setLoading(true);
         try {
@@ -65,11 +67,13 @@ export default function StartupBookings({ user }) {
         setChatLoading(prev => ({ ...prev, [booking.id]: true }));
         try {
             const result = await chatService.createOrGetBookingChat(booking.id);
+            const chatData = result?.data || result || {};
             setChatSession({
-                chatSessionId: result.chatSessionId,
-                displayName: result.advisorName || 'Cố vấn',
+                chatSessionId: chatData.chatSessionId || result.chatSessionId,
+                displayName: chatData.advisorFullName || chatData.advisorName || result.advisorName || 'Cố vấn',
+                handle: chatData.advisorName || result.advisorName,
                 currentUserId: user?.userId,
-                sentTime: new Date().toISOString()
+                sentTime: chatData.startTime || result.startTime || new Date().toISOString()
             });
         } catch (error) {
             console.error('Failed to access chat', error);
@@ -100,6 +104,8 @@ export default function StartupBookings({ user }) {
         if (action === 'pay') setPaymentBooking(booking);
         if (action === 'chat') handleOpenChat(booking);
         if (action === 'rebook') handleRebookReplacement(booking);
+        if (action === 'complain') setComplainBooking(booking);
+        if (action === 'report') setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Startup' });
     };
 
     // Calculate Stats
@@ -112,17 +118,17 @@ export default function StartupBookings({ user }) {
 
     // Derived filtered bookings
     const filteredBookings = bookings.filter(b => {
-        const matchesStatus = filterStatus === 'all' || 
+        const matchesStatus = filterStatus === 'all' ||
             (filterStatus === 'completed' && (b.status === 3 || b.status === 'Completed')) ||
             (filterStatus === 'confirmed' && (b.status === 2 || b.status === 'Confirmed')) ||
             (filterStatus === 'canceled' && [4, 5, 'Cancel', 'NoResponse'].includes(b.status));
-        
+
         const displayProjectName = (b.projectName || b.project?.projectName || '').toLowerCase();
         const displayAdvisorName = (b.advisorName || '').toLowerCase();
-        const matchesSearch = searchTerm === '' || 
-            displayProjectName.includes(searchTerm.toLowerCase()) || 
+        const matchesSearch = searchTerm === '' ||
+            displayProjectName.includes(searchTerm.toLowerCase()) ||
             displayAdvisorName.includes(searchTerm.toLowerCase());
-            
+
         return matchesStatus && matchesSearch;
     });
 
@@ -196,7 +202,7 @@ export default function StartupBookings({ user }) {
                             const displayAdvisorName = booking.advisorName || 'Cố vấn chuyên môn';
                             const startTime = new Date(booking.startTime);
                             const endTime = new Date(booking.endTime);
-                            
+
                             return (
                                 <div key={booking.id || booking.bookingId} className={styles.xItem} style={{ borderRadius: '12px', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
                                     <div className={styles.xAvatar}>{displayProjectName.charAt(0).toUpperCase()}</div>
@@ -214,8 +220,8 @@ export default function StartupBookings({ user }) {
                                             <div className={styles.xMetaItem}>{booking.slotCount} giờ</div>
                                         </div>
                                         <div className={styles.xActions}>
-                                            <button 
-                                                className={styles.xActionButton} 
+                                            <button
+                                                className={styles.xActionButton}
                                                 onClick={() => setDetailBooking(booking)}
                                             >
                                                 Chi tiết <ChevronRight size={14} />
@@ -227,13 +233,28 @@ export default function StartupBookings({ user }) {
                                                 </button>
                                             )}
                                             {(booking.status === 2 || booking.status === 'Confirmed') && (
-                                                <button className={`${styles.xActionButton} ${styles.xActionPrimary}`} onClick={() => handleOpenChat(booking)} disabled={!!chatLoading[booking.id]}>
-                                                    <MessageSquare size={14} /> Chat
+                                                <button
+                                                    className={`${styles.xActionButton} ${styles.xActionPrimary} ${chatLoading[booking.id] ? styles.xBtnDisabled : ''}`}
+                                                    onClick={() => handleOpenChat(booking)}
+                                                    disabled={!!chatLoading[booking.id]}
+                                                    style={{ minWidth: '85px', justifyContent: 'center' }}
+                                                >
+                                                    {chatLoading[booking.id] ? (
+                                                        <Loader2 size={16} className={styles.spinner} />
+                                                    ) : (
+                                                        <><MessageSquare size={14} /> Chat</>
+                                                    )}
                                                 </button>
                                             )}
-                                            {booking.status === 3 || booking.status === 'Completed' && (
+                                            {(booking.status === 2 || booking.status === 'Confirmed' || booking.status === 3 || booking.status === 'Completed') && (
                                                 <button className={styles.xActionButton} onClick={() => setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Startup' })}>
                                                     <FileText size={14} /> Báo cáo
+                                                </button>
+                                            )}
+
+                                            {(booking.status === 2 || booking.status === 'Confirmed' || booking.status === 3 || booking.status === 'Completed') && (
+                                                <button className={`${styles.xActionButton} ${styles.xActionDanger}`} onClick={() => setComplainBooking(booking)} style={{ color: '#f4212e' }}>
+                                                    <AlertCircle size={14} /> Khiếu nại
                                                 </button>
                                             )}
 
@@ -258,22 +279,31 @@ export default function StartupBookings({ user }) {
                 {paymentBooking && (
                     <PaymentModal bookingId={paymentBooking.id} advisorName={paymentBooking.advisorName} slotCount={paymentBooking.slotCount} onClose={() => setPaymentBooking(null)} onPaid={() => { setPaymentBooking(null); loadBookings(); }} />
                 )}
+                {complainBooking && (
+                    <UserReportModal 
+                        bookingId={complainBooking.id} 
+                        targetUserId={complainBooking.advisorId} 
+                        targetUserName={complainBooking.advisorName} 
+                        onClose={() => setComplainBooking(null)} 
+                        onDone={() => setComplainBooking(null)} 
+                    />
+                )}
                 {detailBooking && (
-                    <BookingDetailModal 
-                        booking={detailBooking} 
-                        userRole="Startup" 
-                        onClose={() => setDetailBooking(null)} 
+                    <BookingDetailModal
+                        booking={detailBooking}
+                        userRole="Startup"
+                        onClose={() => setDetailBooking(null)}
                         onAction={handleDetailAction}
                     />
                 )}
                 {showBookingWizard && (
-                    <BookingWizard 
-                        initialProjectId={rebookData.projectId} 
-                        initialAdvisorId={rebookData.advisorId} 
+                    <BookingWizard
+                        initialProjectId={rebookData.projectId}
+                        initialAdvisorId={rebookData.advisorId}
                         sourceBookingId={rebookData.sourceBookingId}
-                        user={user} 
-                        onClose={() => setShowBookingWizard(false)} 
-                        onSuccess={() => { setShowBookingWizard(false); loadBookings(); }} 
+                        user={user}
+                        onClose={() => setShowBookingWizard(false)}
+                        onSuccess={() => { setShowBookingWizard(false); loadBookings(); }}
                     />
                 )}
             </div>

@@ -142,27 +142,23 @@ export default function StartupDashboard({ user }) {
     const [blockedFiles, setBlockedFiles] = React.useState([]); // Session-based blacklist for verified docs
     const hiddenFileInput = React.useRef(null);
 
-    // Initialize SignalR on mount
     React.useEffect(() => {
         const initSignalR = async () => {
             try {
-                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                const token = localStorage.getItem('aisep_token');
                 if (token && user?.userId) {
                     await signalRService.initialize(token);
-                    console.log('[StartupDashboard] SignalR initialized successfully');
                 }
             } catch (error) {
                 console.error('[StartupDashboard] Failed to initialize SignalR:', error);
             }
         };
 
-        // Delay SignalR init to avoid blocking dashboard load
-        const timer = setTimeout(() => {
+        if (user?.userId) {
             initSignalR();
-        }, 1000);
+        }
 
         return () => {
-            clearTimeout(timer);
             signalRService.disconnect();
         };
     }, [user?.userId]);

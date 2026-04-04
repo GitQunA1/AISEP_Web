@@ -12,6 +12,12 @@ export default defineConfig({
         target: 'https://api.aisep.tech',
         changeOrigin: true,
         secure: false,
+      },
+      '/hubs': {
+        target: 'https://api.aisep.tech',
+        changeOrigin: true,
+        secure: false,
+        ws: true,
       }
     }
   },

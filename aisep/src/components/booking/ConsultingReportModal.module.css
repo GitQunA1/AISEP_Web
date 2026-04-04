@@ -197,8 +197,8 @@
 }
 
 .badge_Submitted { background: rgba(29, 155, 240, 0.1); color: var(--primary-blue); }
-.badge_Approved, .badge_Completed { background: rgba(23, 191, 99, 0.1); color: #17bf63; }
-.badge_RevisionRequested { background: rgba(255, 173, 31, 0.1); color: #ffad1f; }
+.badge_Approved, .badge_Completed, .badge_ApprovedByStartup { background: rgba(23, 191, 99, 0.1); color: #17bf63; }
+.badge_RevisionRequested, .badge_EscalatedToStaff { background: rgba(255, 173, 31, 0.1); color: #ffad1f; }
 
 .revisionBadge {
   display: flex;
@@ -345,14 +345,91 @@
   border: 1px solid rgba(255, 173, 31, 0.1);
 }
 
+.approvedNote, .escalationNote {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.5;
+  margin-top: 0px;
+}
+
 .approvedNote {
   background: var(--pd-green-dim, rgba(0, 186, 124, 0.08));
   color: var(--pd-green, #00ba7c);
   border: 1px solid rgba(0, 186, 124, 0.1);
 }
 
-.escalationNotice {
+.escalationNote {
   background: rgba(255, 173, 31, 0.08);
   color: #ffad1f;
   border: 1px solid rgba(255, 173, 31, 0.1);
+}
+
+.revisionAlert {
+  background: rgba(255, 173, 31, 0.08);
+  border: 1px solid rgba(255, 173, 31, 0.2);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.raHeader {
+  background: rgba(255, 173, 31, 0.1);
+  padding: 10px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 173, 31, 0.1);
+}
+
+.raTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 800;
+  color: #f59e0b;
+  font-size: 14px;
+}
+
+.raCount {
+  font-size: 12px;
+  font-weight: 700;
+  background: #f59e0b;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 99px;
+}
+
+.raBody {
+  padding: 14px 16px;
+}
+
+.raLabel {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.raReason {
+  margin: 0 0 12px;
+  font-size: 15px;
+  color: var(--text-primary);
+  line-height: 1.5;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.raDeadline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #f4212e;
+  font-weight: 600;
 }

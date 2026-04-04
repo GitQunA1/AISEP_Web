@@ -10,6 +10,7 @@ import projectSubmissionService from '../services/projectSubmissionService';
 import AIEvaluationService from '../services/AIEvaluationService';
 import bookingService from '../services/bookingService';
 import startupProfileService from '../services/startupProfileService';
+import userReportService from '../services/userReportService';
 import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/ProjectStatus';
 import AdvisorApprovalPage from '../components/advisor/AdvisorApprovalPage';
@@ -313,6 +314,11 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
     const [bookingsError, setBookingsError] = useState(null);
     const [projectsError, setProjectsError] = useState(null);
 
+    // User Reports state
+    const [userReports, setUserReports] = useState([]);
+    const [isLoadingUserReports, setIsLoadingUserReports] = useState(false);
+    const [userReportsError, setUserReportsError] = useState(null);
+
     // Mobile States
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
     const [activeMobileTab, setActiveMobileTab] = useState('pend'); // 'pend', 'appr', 'rej'
@@ -523,6 +529,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             fetchRejectedProjects();
             fetchBookings();
             fetchPendingStartups();
+            fetchUserReports();
         };
         loadInitialData();
     }, []);
@@ -537,6 +544,8 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             fetchBookings();
         } else if (activeSection === 'approvals') {
             fetchPendingStartups();
+        } else if (activeSection === 'user_reports') {
+            fetchUserReports();
         }
     }, [activeSection]);
 
@@ -728,6 +737,43 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
         }
     };
 
+    const fetchUserReports = async () => {
+        setIsLoadingUserReports(true);
+        setUserReportsError(null);
+        try {
+            const response = await userReportService.getAllReports();
+            setUserReports(response || []);
+        } catch (error) {
+            console.error('Error fetching user reports:', error);
+            setUserReportsError('Không thể tải danh sách báo cáo vi phạm.');
+        } finally {
+            setIsLoadingUserReports(false);
+        }
+    };
+
+    const handleResolveReport = async (reportId, isValid) => {
+        if (processingProjectId === reportId) return;
+        setProcessingProjectId(reportId);
+        try {
+            if (isValid) {
+                await userReportService.resolveValid(reportId);
+            } else {
+                await userReportService.resolveFalse(reportId);
+            }
+            setModalType('success');
+            setModalMessage(isValid ? '✓ Đã xác nhận báo cáo hợp lệ!' : '✓ Đã xác nhận báo cáo sai lệch!');
+            setShowModal(true);
+            fetchUserReports();
+        } catch (error) {
+            console.error('Error resolving report:', error);
+            setModalType('error');
+            setModalMessage('❌ Lỗi: ' + (error?.message || 'Không thể xử lý báo cáo'));
+            setShowModal(true);
+        } finally {
+            setProcessingProjectId(null);
+        }
+    };
+
     const filterProjects = (projects) => {
         if (!searchTerm || !searchTerm.trim()) return projects || [];
         const lowerSearch = searchTerm.toLowerCase();
@@ -757,7 +803,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             />
 
             {/* Quick Stats - Only show in main statistics/analytics dashboard views */}
-            {['statistics', 'analytics'].includes(activeSection) && (
+            {['statistics', 'analytics', 'activity'].includes(activeSection) && (
                 <>
                     <h3 className={styles.cardTitle} style={{ margin: '20px 24px 8px', fontSize: '14px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                         Hoạt động hôm nay
@@ -786,8 +832,8 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                 </>
             )}
 
-            {/* Navigation Tabs (Only for main statistics/analytics) */}
-            {['statistics', 'analytics'].includes(activeSection) && (
+            {/* Navigation Tabs (Only for main statistics/analytics/activity) */}
+            {['statistics', 'analytics', 'activity'].includes(activeSection) && (
                 <div className={styles.tabs}>
                     <button
                         className={`${styles.tab} ${activeSection === 'statistics' ? styles.active : ''}`}
@@ -800,6 +846,12 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                         onClick={() => setActiveSection('analytics')}
                     >
                         Phân tích
+                    </button>
+                    <button
+                        className={`${styles.tab} ${activeSection === 'activity' ? styles.active : ''}`}
+                        onClick={() => setActiveSection('activity')}
+                    >
+                        Giám sát hoạt động
                     </button>
                 </div>
             )}
@@ -1536,6 +1588,100 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                     </div>
                                 ))}
                             </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* User Reports Section */}
+                {activeSection === 'user_reports' && (
+                    <div className={styles.section}>
+                        <div className={styles.card}>
+                            <h3 className={styles.cardTitle}>
+                                Quản lý báo cáo vi phạm
+                                {userReports.filter(r => r.status === 'Pending').length > 0 && (
+                                    <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginLeft: '12px' }}>
+                                        {userReports.filter(r => r.status === 'Pending').length} Chờ xử lý
+                                    </span>
+                                )}
+                            </h3>
+
+                            {isLoadingUserReports ? (
+                                <div style={{ padding: '40px', textAlign: 'center' }}>
+                                    <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 16px', color: 'var(--primary-blue)' }} />
+                                    <p style={{ color: 'var(--text-secondary)' }}>Đang tải danh sách báo cáo...</p>
+                                </div>
+                            ) : userReportsError ? (
+                                <EmptyState icon={AlertCircle} title="Lỗi" message={userReportsError} onRetry={fetchUserReports} isError />
+                            ) : userReports.length === 0 ? (
+                                <EmptyState icon={Shield} title="Trống" message="Hiện không có báo cáo vi phạm nào cần xử lý." />
+                            ) : (
+                                <div className={styles.list}>
+                                    {userReports.map(report => (
+                                        <div key={report.userReportId} className={styles.listItem} style={{ flexDirection: 'column', alignItems: 'flex-start', padding: '24px', gap: '16px' }}>
+                                            <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                <div style={{ display: 'flex', gap: '12px' }}>
+                                                    <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(244, 33, 46, 0.1)', color: '#f4212e' }}>
+                                                        <AlertCircle size={24} />
+                                                    </div>
+                                                    <div>
+                                                        <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)' }}>{report.category}</div>
+                                                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
+                                                            Người báo cáo: <strong>{report.reporterName}</strong> | 
+                                                            {report.targetUserName && <> Đối tượng: <strong>{report.targetUserName}</strong> |</>}
+                                                            Ngày: {new Date(report.createdAt).toLocaleDateString('vi-VN')}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className={`${styles.badge} ${report.status === 'Pending' ? styles.badgeInfo : report.status === 'Valid' ? styles.badgeSuccess : styles.badgeError}`}>
+                                                    {report.status === 'Pending' ? 'Đang chờ' : report.status === 'Valid' ? 'Hợp lệ' : 'Sai lệch'}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ width: '100%', background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                                                <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Mô tả chi tiết</div>
+                                                <div style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-primary)' }}>{report.description}</div>
+                                            </div>
+
+                                            {(report.evidenceImages?.length > 0 || report.videoEvidenceUrl) && (
+                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', width: '100%' }}>
+                                                    {report.evidenceImages?.split(',').map((img, i) => (
+                                                        <a key={i} href={img.trim()} target="_blank" rel="noopener noreferrer" style={{ width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                                                            <img src={img.trim()} alt="Evidence" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        </a>
+                                                    ))}
+                                                    {report.videoEvidenceUrl && (
+                                                        <a href={report.videoEvidenceUrl} target="_blank" rel="noopener noreferrer" className={styles.baBtn} style={{ height: '100px', width: '100px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '8px', background: 'rgba(29, 155, 240, 0.1)', color: 'var(--primary-blue)', border: '1px dashed var(--primary-blue)' }}>
+                                                            <ExternalLink size={20} />
+                                                            <span style={{ fontSize: '11px', fontWeight: '700' }}>Xem Video</span>
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            )}
+
+                                            {report.status === 'Pending' && (
+                                                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
+                                                    <button 
+                                                        className={`${styles.baBtn} ${styles.apr}`} 
+                                                        onClick={() => handleResolveReport(report.userReportId, true)}
+                                                        disabled={processingProjectId === report.userReportId}
+                                                    >
+                                                        {processingProjectId === report.userReportId ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                                                        Báo cáo hợp lệ
+                                                    </button>
+                                                    <button 
+                                                        className={`${styles.baBtn} ${styles.rej}`} 
+                                                        onClick={() => handleResolveReport(report.userReportId, false)}
+                                                        disabled={processingProjectId === report.userReportId}
+                                                    >
+                                                        {processingProjectId === report.userReportId ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
+                                                        Báo cáo sai lệch
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}

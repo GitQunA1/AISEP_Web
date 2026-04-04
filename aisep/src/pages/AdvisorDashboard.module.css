@@ -1,4 +1,4 @@
-/* ── BASE DASHBOARD STYLES ──────────────────────────────────── */
+/* â”€â”€ BASE DASHBOARD STYLES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .section {
     padding: 0;
     margin-bottom: 32px;
@@ -95,16 +95,17 @@
 .badgeInfo { background: rgba(29, 155, 240, 0.15); color: #1d9bf0; }
 .badgeError { background: rgba(244, 33, 46, 0.15); color: #f4212e; }
 
-/* ── ONBOARDING BANNER ────────────────────────────────────────── */
+/* â”€â”€ ONBOARDING BANNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .onboardingBanner {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 40px;
-    background: linear-gradient(135deg, rgba(29, 155, 240, 0.12) 0%, rgba(29, 155, 240, 0.04) 100%);
-    border: 1px solid rgba(29, 155, 240, 0.2);
-    border-radius: 28px;
-    margin-bottom: 40px;
+    gap: 16px;
+    padding: 12px 24px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    border-left: 3px solid var(--primary-blue);
+    margin-bottom: 24px;
     position: relative;
     overflow: hidden;
 }
@@ -112,11 +113,8 @@
 .onboardingBanner::before {
     content: '';
     position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 300px;
-    height: 300px;
-    background: radial-gradient(circle, rgba(29, 155, 240, 0.1) 0%, transparent 70%);
+    inset: 0;
+    background: linear-gradient(90deg, rgba(29, 155, 240, 0.06) 0%, transparent 60%);
     pointer-events: none;
 }
 
@@ -124,12 +122,12 @@
     .onboardingBanner {
         flex-direction: column;
         align-items: flex-start;
-        padding: 24px;
-        gap: 20px;
+        padding: 14px 16px;
+        gap: 12px;
     }
 }
 
-/* ── KANBAN BOARD STYLES ──────────────────────────────────────── */
+/* â”€â”€ KANBAN BOARD STYLES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .boardGrid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
@@ -230,7 +228,7 @@
     width: 0;
 }
 
-/* ── KANBAN CARD ────────────────────────────────────────────── */
+/* â”€â”€ KANBAN CARD â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .bcard {
     padding: 14px 16px;
     cursor: default;
@@ -334,20 +332,15 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 0 8px;
+    flex: 1;
+    min-width: 0;
     height: 34px;
     border-radius: 10px;
-    font-size: 13px;
     color: var(--text-primary);
     cursor: pointer;
     transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
     border: 1px solid var(--border-color);
     background: rgba(var(--bg-primary-rgb), 0.08);
-    font-weight: 600;
-    white-space: nowrap;
-    flex: 1;
-    min-width: 0;
 }
 
 .baBtn svg {
@@ -406,7 +399,7 @@
     to { opacity: 1; transform: translateY(0); }
 }
 
-/* ── MOBILE TAB SWITCHER ──────────────────────────────────────── */
+/* â”€â”€ MOBILE TAB SWITCHER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .tabSwitcherWrapper {
     position: relative;
     margin: 4px 0 16px 0;
@@ -532,7 +525,7 @@
 .activeMobileTab[data-status='comp']::after { background: #10b981; }
 .activeMobileTab[data-status='rej']::after { background: #f4212e; }
 
-/* ── LOADING & EMPTY STATES ────────────────────────────────────── */
+/* â”€â”€ LOADING & EMPTY STATES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .skeletonCard {
     background: var(--bg-secondary);
     border-radius: 14px;
@@ -570,3 +563,73 @@
 }
 
 .emptyStateIcon { opacity: 0.3; margin-bottom: 12px; }
+
+/* ── APPROVAL ITEM (RESPONSIVE LIST) ──────────────────────────── */
+.approvalItem {
+    background: var(--bg-secondary);
+    border-radius: 16px;
+    border: 1px solid var(--border-color);
+    padding: 16px 24px;
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    margin: 0;
+    transition: all 0.2s ease;
+}
+
+.approvalInfo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1 1 auto;
+    min-width: 250px;
+}
+
+.approvalMetrics {
+    display: flex;
+    align-items: center;
+    gap: 32px;
+    flex: 1 1 auto;
+}
+
+.approvalActions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+@media (max-width: 768px) {
+    .approvalItem {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 16px;
+        gap: 16px;
+    }
+
+    .approvalInfo {
+        width: 100%;
+        min-width: 0;
+    }
+
+    .approvalMetrics {
+        width: 100%;
+        justify-content: space-between;
+        gap: 16px;
+        background: var(--bg-primary);
+        padding: 12px;
+        border-radius: 12px;
+        border: 1px solid var(--border-color);
+    }
+
+    .approvalActions {
+        width: 100%;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+    }
+    
+    .approvalActions button {
+        flex: 1;
+    }
+}
+

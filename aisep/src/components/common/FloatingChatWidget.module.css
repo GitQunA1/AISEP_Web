@@ -1,3 +1,5 @@
+/* FloatingChatWidget.module.css - X (Twitter) DM Style */
+
 .floatingButton {
   position: fixed;
   bottom: 24px;
@@ -5,22 +7,22 @@
   width: 56px;
   height: 56px;
   border-radius: 50%;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background-color: var(--primary-blue);
+  color: #ffffff;
   border: none;
-  color: white;
-  cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-  transition: all 0.3s ease;
-  z-index: 999;
-  font-size: 24px;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(29, 155, 240, 0.4);
+  transition: all var(--transition-fast);
+  z-index: 1000;
+  overflow: visible;
 }
 
 .floatingButton:hover {
   transform: scale(1.1);
-  box-shadow: 0 6px 16px rgba(102, 126, 234, 0.6);
+  box-shadow: 0 6px 16px rgba(29, 155, 240, 0.5);
 }
 
 .floatingButton:active {
@@ -29,98 +31,110 @@
 
 .badge {
   position: absolute;
-  bottom: -4px;
+  top: -4px;
   right: -4px;
-  width: 24px;
-  height: 24px;
-  background: #ef4444;
+  background: #f4212e;
+  border: 2px solid var(--bg-primary);
   border-radius: 50%;
+  width: 18px;
+  height: 18px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
-  border: 2px solid white;
-  animation: pulse 2s infinite;
+  font-size: 10px;
+  color: white;
 }
 
-@keyframes pulse {
-  0%, 100% {
-    transform: scale(1);
-  }
-  50% {
-    transform: scale(1.1);
-  }
-}
-
+/* Chat Container */
 .chatContainer {
   position: fixed;
-  bottom: 100px;
+  bottom: 24px;
   right: 24px;
-  width: 420px;
-  max-height: 600px;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  width: 400px;
+  height: 600px;
+  max-width: calc(100vw - 48px);
+  max-height: calc(100vh - 48px);
+  background-color: var(--bg-primary);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  z-index: 1000;
-  animation: slideUp 0.3s ease;
   overflow: hidden;
+  z-index: 1001;
+  border: 1px solid var(--border-color);
+  animation: fadeInFast 0.2s ease-out forwards;
+  transform-origin: bottom right;
 }
 
-@keyframes slideUp {
-  from {
-    transform: translateY(20px);
+/* Close state animation */
+.closing {
+  animation: slideDown 0.2s ease-in forwards;
+}
+
+@keyframes fadeInFast {
+  0% {
     opacity: 0;
+    transform: translateY(10px) scale(0.98);
   }
-  to {
-    transform: translateY(0);
+  100% {
     opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes slideDown {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
   }
 }
 
 .chatHeader {
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
   padding: 12px 16px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border-bottom: 1px solid #e5e7eb;
-  flex-shrink: 0;
+  background-color: var(--bg-primary);
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(12px);
+  z-index: 10;
 }
 
 .headerTitle {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  margin: 0;
+  gap: 12px;
+  color: var(--text-primary);
+  font-weight: 700;
+  font-size: 18px;
 }
 
 .closeButton {
   background: transparent;
   border: none;
-  color: white;
+  color: var(--text-primary);
   cursor: pointer;
-  padding: 4px;
+  padding: 8px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
-  transition: background-color 0.2s;
-  flex-shrink: 0;
+  transition: background var(--transition-fast);
 }
 
 .closeButton:hover {
-  background-color: rgba(255, 255, 255, 0.2);
+  background-color: var(--bg-hover);
 }
 
 .chatContent {
   flex: 1;
-  overflow: hidden;
   display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .backdrop {
@@ -129,46 +143,40 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: transparent;
-  z-index: 998;
-  animation: fadeIn 0.2s ease;
+  background-color: rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  animation: fadeInBackdrop 0.3s ease-out forwards;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
+.backdrop.closing {
+    animation: fadeOutBackdrop 0.25s ease-in forwards;
 }
 
-/* Responsive Design */
+@keyframes fadeInBackdrop {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes fadeOutBackdrop {
+    from { opacity: 1; }
+    to { opacity: 0; }
+}
+
 @media (max-width: 768px) {
   .chatContainer {
-    width: calc(100% - 48px);
-    max-height: calc(100vh - 120px);
-    left: 24px;
-    right: 24px;
-  }
-
-  .floatingButton {
-    width: 48px;
-    height: 48px;
-  }
-}
-
-@media (max-width: 480px) {
-  .chatContainer {
-    width: calc(100% - 32px);
-    max-height: calc(100vh - 100px);
-    left: 16px;
-    right: 16px;
-    bottom: 80px;
-  }
-
-  .floatingButton {
-    bottom: 16px;
-    right: 16px;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    right: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh;
+    max-width: 100vw;
+    max-height: 100vh;
+    max-height: 100dvh;
+    border-radius: 0;
+    border: none;
+    box-shadow: none;
+    transform-origin: center;
   }
 }
