@@ -33,8 +33,8 @@
 
 /* Modal Frame */
 .modal {
-    background-color: #000; /* Deep black for true X look */
-    border: 1px solid #2f3336; /* Crisp dark border */
+    background-color: var(--bg-primary); /* Adaptation to theme */
+    border: 1px solid var(--border-color);
     border-radius: 16px;
     width: 100%;
     max-width: 480px;
@@ -81,7 +81,7 @@
     right: 12px;
     background: transparent;
     border: none;
-    color: #71767b;
+    color: var(--text-secondary);
     cursor: pointer;
     padding: 8px;
     border-radius: 50%;
@@ -123,7 +123,7 @@
 .title {
     font-size: 26px;
     font-weight: 950; /* Extra heavy for that impact look */
-    color: white;
+    color: var(--text-primary);
     margin: 0 0 16px 0;
     line-height: 1.1;
     letter-spacing: -0.01em;
@@ -131,7 +131,7 @@
 
 .message {
     font-size: 15px;
-    color: #71767b;
+    color: var(--text-secondary);
     line-height: 1.5;
     margin: 0 0 40px 0;
     max-width: 400px;
@@ -185,8 +185,8 @@
 
 /* Secondary Button Style */
 .secondaryButton {
-    background-color: #eff3f4; /* standard X neutral light button */
-    color: #0f1419; /* deep black for contrast */
+    background-color: var(--bg-hover); 
+    color: var(--text-primary);
 }
 
 .secondaryButton:hover {
