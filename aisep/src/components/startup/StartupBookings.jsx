@@ -45,7 +45,7 @@ export default function StartupBookings({ user }) {
     const loadBookings = useCallback(async () => {
         setLoading(true);
         try {
-            const response = await bookingService.getAllBookings('', '-Id', 1, 100);
+            const response = await bookingService.getMyCustomerBookings('', '-Id', 1, 100);
             const items = response?.items ?? (Array.isArray(response) ? response : []);
             setBookings(items);
         } catch (error) {
