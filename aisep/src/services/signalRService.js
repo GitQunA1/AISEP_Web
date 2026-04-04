@@ -4,9 +4,21 @@ import * as signalR from '@microsoft/signalr';
 const API_URL = import.meta.env.VITE_API_URL || '';
 
 /**
- * SignalR Service - Real-time communication with backend hubs
- * Handles NotificationHub (notifications) and ChatHub (chat messages)
+ * Helper to determine correctly formatted Hub URL based on environment.
+ * In development, we use relative paths to route through Vite proxy (handles WebSockets and CORS).
+ * In production (Vercel), we use absolute URLs as the proxy no longer exists.
+ * @param {string} path - Relative hub path (e.g., '/hubs/chat')
+ * @returns {string} - The final URL to use
  */
+const getHubUrl = (path) => {
+  if (import.meta.env.DEV) {
+    return path; // Use Vite proxy (must be configured in vite.config.js)
+  }
+  // Remove possible trailing slash from API_URL and ensure path starts with /
+  const sanitizedBase = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+  const sanitizedPath = path.startsWith('/') ? path : `/${path}`;
+  return `${sanitizedBase}${sanitizedPath}`;
+};
 
 class SignalRService {
   constructor() {
@@ -49,9 +61,8 @@ class SignalRService {
     }
 
     this.notificationConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_URL}/notificationHub?access_token=${this.accessToken}`, {
-        skipNegotiation: true,
-        transport: signalR.HttpTransportType.WebSockets
+      .withUrl(getHubUrl('/hubs/notifications'), {
+        accessTokenFactory: () => this.accessToken
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .withHubProtocol(new signalR.JsonHubProtocol())
@@ -74,7 +85,12 @@ class SignalRService {
       console.log('[SignalRService] NotificationHub disconnected');
     });
 
-    await this.notificationConnection.start();
+    try {
+      await this.notificationConnection.start();
+      console.log('[SignalRService] NotificationHub connection started');
+    } catch (err) {
+      console.error('[SignalRService] NotificationHub start failed:', err);
+    }
   }
 
   /**
@@ -86,9 +102,8 @@ class SignalRService {
     }
 
     this.chatConnection = new signalR.HubConnectionBuilder()
-      .withUrl(`${API_URL}/chatHub?access_token=${this.accessToken}`, {
-        skipNegotiation: true,
-        transport: signalR.HttpTransportType.WebSockets
+      .withUrl(getHubUrl('/hubs/chat'), {
+        accessTokenFactory: () => this.accessToken
       })
       .withAutomaticReconnect([0, 2000, 5000, 10000])
       .withHubProtocol(new signalR.JsonHubProtocol())
@@ -106,17 +121,45 @@ class SignalRService {
 
     this.chatConnection.onreconnected(() => {
       console.log('[SignalRService] ChatHub reconnected');
+      this.chatStateChanged?.('Connected');
     });
 
     this.chatConnection.onreconnecting(() => {
       console.log('[SignalRService] ChatHub reconnecting...');
+      this.chatStateChanged?.('Reconnecting');
     });
 
-    this.chatConnection.on('disconnect', () => {
-      console.log('[SignalRService] ChatHub disconnected');
+    this.chatConnection.onclose(() => {
+      console.log('[SignalRService] ChatHub connection closed');
+      this.chatStateChanged?.('Disconnected');
     });
 
-    await this.chatConnection.start();
+    try {
+      await this.chatConnection.start();
+      console.log('[SignalRService] ChatHub connection started');
+      this.chatStateChanged?.('Connected');
+    } catch (err) {
+      console.error('[SignalRService] ChatHub start failed:', err);
+      this.chatStateChanged?.('Disconnected');
+    }
+  }
+
+  /**
+   * Register chat connection state changed callback
+   */
+  onChatStateChanged(callback) {
+    this.chatStateChanged = callback;
+    // Call immediately with current state
+    if (this.chatConnection) {
+      const stateMap = {
+        [signalR.HubConnectionState.Connected]: 'Connected',
+        [signalR.HubConnectionState.Connecting]: 'Reconnecting',
+        [signalR.HubConnectionState.Reconnecting]: 'Reconnecting',
+        [signalR.HubConnectionState.Disconnected]: 'Disconnected',
+        [signalR.HubConnectionState.Disconnecting]: 'Disconnected'
+      };
+      callback(stateMap[this.chatConnection.state] || 'Disconnected');
+    }
   }
 
   /**
@@ -141,16 +184,36 @@ class SignalRService {
   }
 
   /**
+   * Wait for ChatHub to be connected
+   */
+  async waitForChatConnection(maxRetries = 20) {
+    let retries = 0;
+    while (retries < maxRetries) {
+      if (this.chatConnection?.state === signalR.HubConnectionState.Connected) {
+        return true;
+      }
+      console.log(`[SignalRService] Waiting for ChatHub connection... (attempt ${retries + 1})`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      retries++;
+    }
+    return false;
+  }
+
+  /**
    * Send JOIN to specific chat room
    */
   async joinChatSession(sessionId) {
-    if (this.chatConnection?.state === signalR.HubConnectionState.Connected) {
+    const isConnected = await this.waitForChatConnection();
+    if (isConnected) {
       try {
-        await this.chatConnection.invoke('JoinChatSession', sessionId);
+        // BACKEND SYNC: Method is 'JoinSession', not 'JoinChatSession'
+        await this.chatConnection.invoke('JoinSession', sessionId);
         console.log('[SignalRService] Joined chat session:', sessionId);
       } catch (error) {
         console.error('[SignalRService] Failed to join chat session:', error);
       }
+    } else {
+      console.error('[SignalRService] Could not join session: ChatHub not connected after retries');
     }
   }
 
@@ -160,7 +223,8 @@ class SignalRService {
   async leaveChatSession(sessionId) {
     if (this.chatConnection?.state === signalR.HubConnectionState.Connected) {
       try {
-        await this.chatConnection.invoke('LeaveChatSession', sessionId);
+        // BACKEND SYNC: Method is 'LeaveSession', not 'LeaveChatSession'
+        await this.chatConnection.invoke('LeaveSession', sessionId);
         console.log('[SignalRService] Left chat session:', sessionId);
       } catch (error) {
         console.error('[SignalRService] Failed to leave chat session:', error);

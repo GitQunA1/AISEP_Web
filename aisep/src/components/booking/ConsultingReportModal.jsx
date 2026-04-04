@@ -51,7 +51,20 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
         const r = await consultingReportService.getReportByBookingId(bookingId);
         setReport(r);
         if (r) {
-          setPhase('view-report');
+          if (isAdvisor && r.status === 'RevisionRequested') {
+            // Pre-fill form for advisor to edit
+            setForm({
+              meetingTitle: r.meetingTitle || '',
+              location: r.location || '',
+              meetingTime: r.meetingTime ? r.meetingTime.slice(0, 16) : new Date().toISOString().slice(0, 16),
+              meetingPurpose: r.meetingPurpose || '',
+              content: r.content || '',
+              decisionsMade: r.decisionsMade || '',
+            });
+            setPhase('submit-form');
+          } else {
+            setPhase('view-report');
+          }
         } else {
           setPhase(isAdvisor ? 'submit-form' : 'view-report');
         }
@@ -139,8 +152,10 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
   const reportStatusLabel = {
     'Submitted': 'Đã nộp – Chờ xem xét',
     'Approved': 'Đã chấp nhận',
+    'ApprovedByStartup': 'Đã được Startup chấp thuận',
     'RevisionRequested': 'Yêu cầu sửa đổi',
     'Completed': 'Hoàn thành',
+    'EscalatedToStaff': 'Đã khiếu nại lên Staff',
   };
 
   const content = (
@@ -198,6 +213,29 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
           {/* Advisor Submit Form */}
           {phase === 'submit-form' && (
             <div className={styles.form}>
+              {/* Revision Alert for Advisor */}
+              {report?.status === 'RevisionRequested' && (
+                <div className={styles.revisionAlert}>
+                  <div className={styles.raHeader}>
+                    <div className={styles.raTitle}>
+                      <RotateCcw size={18} />
+                      <span>Yêu cầu sửa đổi báo cáo</span>
+                    </div>
+                    <span className={styles.raCount}>Lần {report.revisionCount}</span>
+                  </div>
+                  <div className={styles.raBody}>
+                    <p className={styles.raLabel}>Lý do từ Startup:</p>
+                    <p className={styles.raReason}>"{report.revisionRequestReason}"</p>
+                    {report.advisorRevisionDueAt && (
+                      <div className={styles.raDeadline}>
+                        <Clock size={14} />
+                        <span>Hạn nộp lại: {formatDate(report.advisorRevisionDueAt)}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
               <div className={styles.field}>
                 <label className={styles.label}>Tiêu đề buổi tư vấn</label>
                 <input
@@ -336,65 +374,74 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
                   {/* Actions for Startup/Investor Review */}
                   {!isAdvisor && report.status === 'Submitted' && (
                     <div className={styles.footerRow} style={{ flexDirection: 'column', gap: '16px' }}>
-                      {report.revisionCount >= MAX_REVISIONS ? (
-                        <div className={styles.escalationNotice}>
-                          <AlertCircle size={18} />
-                          <span>Đã đạt giới hạn yêu cầu sửa đổi ({MAX_REVISIONS}). Báo cáo sẽ được quản trị viên AISEP trực tiếp hỗ trợ.</span>
+                      {showRevisionInput && (
+                        <div className={styles.field}>
+                          <label className={styles.label}>Lý do yêu cầu sửa đổi cụ thể</label>
+                          <textarea
+                            className={styles.textarea}
+                            rows={3}
+                            placeholder="Vui lòng nêu rõ các điểm cần Advisor cập nhật thêm..."
+                            value={revisionReason}
+                            onChange={e => setRevisionReason(e.target.value)}
+                          />
                         </div>
-                      ) : (
-                        <>
-                          {showRevisionInput && (
-                            <div className={styles.field}>
-                              <label className={styles.label}>Lý do yêu cầu sửa đổi cụ thể</label>
-                              <textarea
-                                className={styles.textarea}
-                                rows={3}
-                                placeholder="Vui lòng nêu rõ các điểm cần Advisor cập nhật thêm..."
-                                value={revisionReason}
-                                onChange={e => setRevisionReason(e.target.value)}
-                              />
-                            </div>
-                          )}
-                          
-                          {actionError && (
-                            <div className={styles.errorRow}>
-                              <AlertCircle size={16} /><span>{actionError}</span>
-                            </div>
-                          )}
-
-                          <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-                            {!showRevisionInput ? (
-                              <>
-                                <button className={styles.secondaryBtn} onClick={() => setShowRevisionInput(true)} disabled={actionLoading}>
-                                  <RotateCcw size={16} /> Yêu cầu sửa lại
-                                </button>
-                                <button className={styles.approveBtn} onClick={handleApprove} disabled={actionLoading}>
-                                  {actionLoading ? <Loader size={16} className={styles.spinning} /> : <CheckCircle size={16} />}
-                                  Chấp nhận báo cáo
-                                </button>
-                              </>
-                            ) : (
-                              <>
-                                <button className={styles.secondaryBtn} onClick={() => { setShowRevisionInput(false); setRevisionReason(''); setActionError(''); }} disabled={actionLoading}>
-                                  Hủy bỏ
-                                </button>
-                                <button className={styles.revisionSubmitBtn} onClick={handleRevision} disabled={actionLoading}>
-                                  {actionLoading ? <Loader size={16} className={styles.spinning} /> : <Send size={16} />}
-                                  Gửi yêu cầu
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </>
                       )}
+                      
+                      {actionError && (
+                        <div className={styles.errorRow}>
+                          <AlertCircle size={16} /><span>{actionError}</span>
+                        </div>
+                      )}
+
+                      <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                        {!showRevisionInput ? (
+                          <>
+                            <button className={styles.secondaryBtn} onClick={() => setShowRevisionInput(true)} disabled={actionLoading}>
+                              <RotateCcw size={16} /> Yêu cầu sửa lại
+                            </button>
+                            <button className={styles.approveBtn} onClick={handleApprove} disabled={actionLoading}>
+                              {actionLoading ? <Loader size={16} className={styles.spinning} /> : <CheckCircle size={16} />}
+                              Chấp nhận báo cáo
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button className={styles.secondaryBtn} onClick={() => { setShowRevisionInput(false); setRevisionReason(''); setActionError(''); }} disabled={actionLoading}>
+                              Hủy bỏ
+                            </button>
+                            <button className={styles.revisionSubmitBtn} onClick={handleRevision} disabled={actionLoading}>
+                              {actionLoading ? <Loader size={16} className={styles.spinning} /> : <Send size={16} />}
+                              Gửi yêu cầu
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   )}
 
-                  {/* Status Indicator for Approved/Completed */}
-                  {(report.status === 'Approved' || report.status === 'Completed') && (
+                  {/* Status Indicator for Approved/Completed/ApprovedByStartup */}
+                  {(report.status === 'Approved' || report.status === 'Completed' || report.status === 'ApprovedByStartup') && (
                     <div className={styles.approvedNote}>
                       <CheckCircle size={20} />
                       <span>Báo cáo này đã được các bên chấp thuận và lưu giữ chính thức làm hồ sơ tư vấn.</span>
+                    </div>
+                  )}
+
+                  {/* Status Indicator for EscalatedToStaff */}
+                  {report.status === 'EscalatedToStaff' && (
+                    <div className={styles.escalationNote}>
+                      <AlertCircle size={20} />
+                      {isAdvisor ? (
+                        <span>
+                          Do khách hàng đã yêu cầu sửa đổi quá 3 lần, báo cáo đã được chuyển sang trạng thái xử lý khiếu nại. 
+                          Vui lòng đợi quản trị viên AISEP trực tiếp hỗ trợ giải quyết.
+                        </span>
+                      ) : (
+                        <span>
+                          Báo cáo này đã đạt giới hạn yêu cầu sửa đổi (3). 
+                          Vui lòng nhấn nút <strong>Khiếu nại</strong> ở cửa sổ chi tiết Booking để gửi yêu cầu hỗ trợ trực tiếp đến quản trị viên AISEP.
+                        </span>
+                      )}
                     </div>
                   )}
                 </div>

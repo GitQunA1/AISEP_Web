@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { 
-    Users, Calendar, FileText, Star, Clock, CheckCircle, MessageSquare, 
-    PlusCircle, TrendingUp, Trash2, Edit2, X, AlertCircle, Loader, 
+import {
+    Users, Calendar, FileText, Star, Clock, CheckCircle, MessageSquare,
+    PlusCircle, TrendingUp, Trash2, Edit2, X, AlertCircle, Loader, Loader2,
     ChevronDown, ChevronUp, ChevronLeft, ChevronRight, CreditCard,
     Eye, Check, ShieldCheck
 } from 'lucide-react';
@@ -14,17 +14,46 @@ import advisorAvailabilityService from '../services/advisorAvailabilityService';
 import bookingService from '../services/bookingService';
 import chatService from '../services/chatService';
 import ConsultingReportModal from '../components/booking/ConsultingReportModal';
+import signalRService from '../services/signalRService';
 import BookingDetailModal from '../components/booking/BookingDetailModal';
 import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import CustomSelect from '../components/common/CustomSelect';
+import ProjectDetailView from '../components/feed/ProjectDetailView';
 
 /**
  * AdvisorDashboard – Dashboard cho Advisor
- * Tabs: Tổng quan | Lịch Rảnh | Booking Đến | Yêu cầu tư vấn | Báo cáo
  */
 export default function AdvisorDashboard({ user, initialSection = 'overview', onSectionChange, onShowProfile }) {
     const [activeSection, setActiveSection] = useState(initialSection);
     const [advisorProfile, setAdvisorProfile] = useState(null);
+    const [activeChatSession, setActiveChatSession] = useState(null);
+
+    const handleOpenChat = (sessionId) => {
+        console.log('[AdvisorDashboard] Opening chat session:', sessionId);
+        setActiveChatSession(sessionId);
+    };
+
+    // Initialize SignalR on mount
+    useEffect(() => {
+        const initSignalR = async () => {
+            try {
+                const token = localStorage.getItem('aisep_token');
+                if (token && user?.userId) {
+                    await signalRService.initialize(token);
+                }
+            } catch (error) {
+                console.error('[AdvisorDashboard] Failed to initialize SignalR:', error);
+            }
+        };
+
+        if (user?.userId) {
+            initSignalR();
+        }
+
+        return () => {
+            signalRService.disconnect();
+        };
+    }, [user?.userId]);
 
     // Sync internal state with prop changes from sidebar
     useEffect(() => {
@@ -39,7 +68,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
             onShowProfile();
             return;
         }
-        
+
         setActiveSection(section);
         if (onSectionChange) {
             onSectionChange(section);
@@ -122,32 +151,45 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
 
     return (
         <div className={styles.container}>
-            <FeedHeader
-                title="Bảng điều khiển Cố vấn"
-                subtitle={isNewAdvisor 
-                    ? `Chào mừng ${user?.fullName || user?.name || ''}, hãy bắt đầu bằng việc thiết lập hồ sơ của bạn.` 
-                    : `Xin chào, ${advisorProfile?.userName || user?.name || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`
-                }
-                showFilter={false}
-                user={user}
-            />
+            {!activeSection.startsWith('project_') && (
+                <FeedHeader
+                    title="Bảng điều khiển Cố vấn"
+                    subtitle={isNewAdvisor
+                        ? `Chào mừng ${user?.fullName || user?.name || ''}, hãy bắt đầu bằng việc thiết lập hồ sơ của bạn.`
+                        : `Xin chào, ${user?.fullName || user?.name || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`
+                    }
+                    stats={!isNewAdvisor && activeSection === 'overview' ? dashboardData : null}
+                    onNavigate={handleNavigate}
+                    activeSection={activeSection}
+                    onOpenChat={handleOpenChat}
+                    showFilter={false}
+                    user={user}
+                />
+            )}
 
             {isNewAdvisor && activeSection !== 'profile' && (
                 <div className={avStyles.onboardingBanner}>
-                    <div className={avStyles.onboardingIcon}>
-                        <AlertCircle size={24} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
+                        <div style={{
+                            width: 32, height: 32, borderRadius: '8px', flexShrink: 0,
+                            background: 'rgba(29,155,240,0.12)', color: 'var(--primary-blue)',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center'
+                        }}>
+                            <AlertCircle size={16} />
+                        </div>
+                        <div style={{ minWidth: 0 }}>
+                            <span style={{ fontWeight: 800, fontSize: '14px', color: 'var(--text-primary)', display: 'block' }}>Hoàn tất hồ sơ chuyên gia</span>
+                            <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                Bạn cần khởi tạo hồ sơ trong tab <strong>Hồ sơ</strong> để đăng ký lịch rảnh và nhận yêu cầu tư vấn từ Startup.
+                            </span>
+                        </div>
                     </div>
-                    <div className={avStyles.onboardingText}>
-                        <h4>Hoàn tất hồ sơ chuyên gia</h4>
-                        <p>Bạn cần khởi tạo hồ sơ chuyên gia trong tab <strong>Hồ sơ</strong> để có thể đăng ký lịch rảnh và bắt đầu nhận yêu cầu tư vấn từ Startup.</p>
-                    </div>
-                    <button 
-                        className={styles.primaryBtn} 
+                    <button
+                        className={styles.primaryBtn}
                         onClick={() => handleNavigate('profile')}
-                        style={{ whiteSpace: 'nowrap', gap: '8px' }}
+                        style={{ whiteSpace: 'nowrap', flexShrink: 0, borderRadius: '9999px', padding: '8px 18px', fontSize: '13px' }}
                     >
-                        Thiết lập hồ sơ ngay
-                        <ChevronRight size={16} />
+                        Thiết lập hồ sơ ngay <ChevronRight size={14} />
                     </button>
                 </div>
             )}
@@ -185,7 +227,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                 </div>
             )}
 
-            <div className={styles.content}>
+            <div className={styles.content} style={activeSection.startsWith('project_') ? { padding: 0 } : {}}>
                 {activeSection === 'overview' && (
                     isNewAdvisor ? (
                         <div className={styles.emptyState} style={{ padding: '40px', background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px dashed var(--border-color)' }}>
@@ -196,9 +238,9 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                             </p>
                         </div>
                     ) : (
-                        <OverviewSection 
-                            availabilities={availabilities} 
-                            incomingBookings={incomingBookings} 
+                        <OverviewSection
+                            availabilities={availabilities}
+                            incomingBookings={incomingBookings}
                             onNavigate={handleNavigate}
                             loadingBookings={bookingsLoading}
                             loadingAvailabilities={availabilitiesLoading}
@@ -212,7 +254,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                             <p>Bạn cần hoàn tất hồ sơ trước khi xét duyệt các yêu cầu.</p>
                         </div>
                     ) : (
-                        <BookingApprovalSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} />
+                        <BookingApprovalSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} onNavigate={handleNavigate} />
                     )
                 )}
                 {activeSection === 'bookings' && (
@@ -222,7 +264,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                             <p>Bạn cần hoàn tất hồ sơ trước khi xem danh sách Booking.</p>
                         </div>
                     ) : (
-                        <IncomingBookingsSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} activeSection={activeSection} />
+                        <IncomingBookingsSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} activeSection={activeSection} onNavigate={handleNavigate} />
                     )
                 )}
                 {activeSection === 'availability' && (
@@ -245,6 +287,21 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                         <ReportsSection />
                     )
                 )}
+                {activeSection.startsWith('project_') && (
+                    <ProjectDetailView 
+                        projectId={activeSection.split('_')[1]} 
+                        onBack={() => handleNavigate('bookings')} 
+                        user={user} 
+                        isFullView={true}
+                    />
+                )}
+            {activeChatSession && (
+                <FloatingChatWidget 
+                    sessionId={activeChatSession} 
+                    onClose={() => setActiveChatSession(null)} 
+                    user={user}
+                />
+            )}
             </div>
         </div>
     );
@@ -252,14 +309,14 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
 
 function BookingSkeleton({ index = 0 }) {
     return (
-        <div 
-            className={`${styles.listItem} ${styles.staggerEntry}`} 
-            style={{ 
-                flexDirection: 'column', 
-                alignItems: 'stretch', 
-                gap: '12px', 
+        <div
+            className={`${styles.listItem} ${styles.staggerEntry}`}
+            style={{
+                flexDirection: 'column',
+                alignItems: 'stretch',
+                gap: '12px',
                 padding: '16px',
-                animationDelay: `${index * 0.1}s` 
+                animationDelay: `${index * 0.1}s`
             }}
         >
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -314,8 +371,8 @@ function OverviewSection({ availabilities, incomingBookings, onNavigate, loading
                         ) : nextSlots.map((s, idx) => {
                             const date = new Date(s.slotDate).toLocaleDateString('vi-VN', { weekday: 'short', month: 'short', day: 'numeric' });
                             return (
-                                <div 
-                                    key={s.advisorAvailabilityId} 
+                                <div
+                                    key={s.advisorAvailabilityId}
                                     className={`${styles.mobileCardItem} ${styles.staggerEntry}`}
                                     style={{ animationDelay: `${idx * 0.1}s` }}
                                 >
@@ -354,8 +411,8 @@ function OverviewSection({ availabilities, incomingBookings, onNavigate, loading
                                 <p style={{ margin: 0, fontSize: '13px' }}>Không có booking nào đang chờ.</p>
                             </div>
                         ) : pending.map((b, idx) => (
-                            <div 
-                                key={b.id} 
+                            <div
+                                key={b.id}
                                 className={`${styles.mobileCardItem} ${styles.staggerEntry}`}
                                 style={{ animationDelay: `${(idx + 2) * 0.1}s` }} // Delay after slots
                             >
@@ -381,7 +438,7 @@ function OverviewSection({ availabilities, incomingBookings, onNavigate, loading
 /**
  * AdvisorBookingKanbanCard - Single card for the Advisor Kanban board
  */
-const AdvisorBookingKanbanCard = ({ booking, onDetail, onApprove, onReject, onChat, onReport, isActioning }) => {
+const AdvisorBookingKanbanCard = ({ booking, onDetail, onApprove, onReject, onChat, onReport, isActioning, isChatLoading }) => {
     const status = booking.status;
     let statusLabel = 'Chờ duyệt';
     let localStatus = 'pend';
@@ -457,31 +514,35 @@ const AdvisorBookingKanbanCard = ({ booking, onDetail, onApprove, onReject, onCh
                 </div>
 
                 <div className={avStyles.bcardActions}>
-                    <button className={avStyles.baBtn} onClick={onDetail}>
-                        <Eye size={14} />
-                        Chi tiết
+                    <button className={avStyles.baBtn} onClick={onDetail} title="Chi tiết">
+                        <Eye size={16} />
                     </button>
                     {(status === 0 || status === 'Pending') && (
                         <>
-                            <button className={`${avStyles.baBtn} ${avStyles.rej}`} onClick={onReject} disabled={!!isActioning}>
-                                {isActioning === 'reject' ? <Loader size={14} className={styles.spinner} /> : <X size={14} />}
-                                Từ chối
+                            <button className={`${avStyles.baBtn} ${avStyles.rej}`} onClick={onReject} disabled={!!isActioning} title="Từ chối">
+                                {isActioning === 'reject' ? <Loader size={16} className={styles.spinner} /> : <X size={16} />}
                             </button>
-                            <button className={`${avStyles.baBtn} ${avStyles.apr}`} onClick={onApprove} disabled={!!isActioning}>
-                                {isActioning === 'approve' ? <Loader size={14} className={styles.spinner} /> : <Check size={14} />}
-                                Chấp nhận
+                            <button className={`${avStyles.baBtn} ${avStyles.apr}`} onClick={onApprove} disabled={!!isActioning} title="Chấp nhận">
+                                {isActioning === 'approve' ? <Loader size={16} className={styles.spinner} /> : <Check size={16} />}
                             </button>
                         </>
                     )}
                     {(status === 2 || status === 'Confirmed') && (
                         <>
-                            <button className={avStyles.baBtn} onClick={onChat}>
-                                <MessageSquare size={14} />
-                                Chat
+                            <button
+                                className={`${avStyles.baBtn} ${avStyles.chat} ${isChatLoading ? avStyles.btnDisabled : ''}`}
+                                onClick={onChat}
+                                disabled={isChatLoading}
+                                title="Chat với khách hàng"
+                            >
+                                {isChatLoading ? (
+                                    <Loader2 size={16} className={styles.spinner} />
+                                ) : (
+                                    <MessageSquare size={16} />
+                                )}
                             </button>
-                            <button className={avStyles.baBtn} onClick={onReport}>
-                                <FileText size={14} />
-                                Báo cáo
+                            <button className={avStyles.baBtn} onClick={onReport} title="Báo cáo công việc">
+                                <FileText size={16} />
                             </button>
                         </>
                     )}
@@ -516,7 +577,7 @@ const EmptyState = ({ icon: Icon, title, message }) => (
 /**
  * BookingApprovalSection - Dedicated section for approving NEW bookings (status 0)
  */
-function BookingApprovalSection({ bookings, loading, onRefresh, user }) {
+function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate }) {
     const [actionLoading, setActionLoading] = useState({});
     const [selectedBooking, setSelectedBooking] = useState(null);
     const pendingBookings = bookings.filter(b => b.status === 0 || b.status === 'Pending');
@@ -553,58 +614,119 @@ function BookingApprovalSection({ bookings, loading, onRefresh, user }) {
             </div>
 
             {loading ? (
-                <div className={avStyles.boardGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
-                    <KanbanSkeleton count={6} />
+                <div className={styles.card}>
+                    <div className={styles.list}>
+                        {[1, 2, 3].map(i => <BookingSkeleton key={i} index={i} />)}
+                    </div>
                 </div>
             ) : pendingBookings.length === 0 ? (
                 <div style={{ marginTop: '40px' }}>
-                    <EmptyState 
-                        icon={ShieldCheck} 
-                        title="Tất cả đã xong!" 
-                        message="Hiện tại không có yêu cầu nào đang chờ bạn phê duyệt." 
+                    <EmptyState
+                        icon={ShieldCheck}
+                        title="Tất cả đã xong!"
+                        message="Hiện tại không có yêu cầu nào đang chờ bạn phê duyệt."
                     />
                 </div>
             ) : (
-                <div className={avStyles.boardGrid} style={{ 
-                    display: 'grid', 
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
-                    gap: '20px',
-                    padding: '0 0 40px 0'
-                }}>
-                    {pendingBookings.map(b => (
-                        <AdvisorBookingKanbanCard 
-                            key={b.id} 
-                            booking={b}
-                            isActioning={actionLoading[b.id]}
-                            onDetail={() => setSelectedBooking(b)}
-                            onApprove={() => handleApprove(b.id)}
-                            onReject={() => handleReject(b.id)}
-                        />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '40px' }}>
+                    {pendingBookings.map((b, idx) => (
+                        <div 
+                          key={b.id} 
+                          className={`${styles.listItem} ${styles.staggerEntry} ${avStyles.approvalItem}`} 
+                          style={{ animationDelay: `${idx * 0.05}s` }}
+                        >
+                            {/* Left: Info */}
+                            <div className={avStyles.approvalInfo}>
+                                <div style={{ width: '48px', height: '48px', borderRadius: '14px', background: 'rgba(29, 155, 240, 0.1)', color: 'var(--primary-blue)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                    <Users size={24} />
+                                </div>
+                                <div style={{ minWidth: 0 }}>
+                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {b.projectName || 'Dự án mới'}
+                                    </h4>
+                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>
+                                        Khách: <strong style={{ color: 'var(--text-primary)' }}>{b.customerName}</strong>
+                                    </div>
+                                </div>
+                                <span className={`${styles.badge} ${styles.badgePending}`} style={{ padding: '6px 12px', fontSize: '12px', marginLeft: 'auto', whiteSpace: 'nowrap' }}>Chờ duyệt</span>
+                            </div>
+
+                            {/* Middle: Metrics - Inline compact */}
+                            <div className={avStyles.approvalMetrics}>
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>Thời gian</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                        <Calendar size={14} style={{ color: 'var(--primary-blue)' }} />
+                                        {new Date(b.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(b.startTime).toLocaleDateString('vi-VN')}
+                                    </div>
+                                </div>
+                                
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>Chi phí</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', fontWeight: '800', color: '#f59e0b' }}>
+                                        {Number(b.price || 0).toLocaleString('vi-VN')} <span style={{ fontSize: '11px', fontWeight: '600' }}>VND</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Right: Actions */}
+                            <div className={avStyles.approvalActions}>
+                                <button 
+                                    onClick={() => setSelectedBooking(b)} 
+                                    style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0 }}
+                                    title="Xem chi tiết"
+                                    onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
+                                    onMouseOut={(e) => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = 'var(--text-secondary)'; }}
+                                >
+                                    <Eye size={18} />
+                                </button>
+                                <button 
+                                    onClick={() => handleReject(b.id)} 
+                                    disabled={!!actionLoading[b.id]}
+                                    style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(244, 33, 46, 0.1)', border: 'none', color: '#f4212e', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0 }}
+                                    title="Từ chối"
+                                    onMouseOver={(e) => e.currentTarget.style.background = 'rgba(244, 33, 46, 0.2)'}
+                                    onMouseOut={(e) => e.currentTarget.style.background = 'rgba(244, 33, 46, 0.1)'}
+                                >
+                                    {actionLoading[b.id] === 'reject' ? <Loader size={18} className={styles.spinner} /> : <X size={18} />}
+                                </button>
+                                <button 
+                                    className={styles.primaryBtn} 
+                                    onClick={() => handleApprove(b.id)} 
+                                    disabled={!!actionLoading[b.id]}
+                                    style={{ borderRadius: '10px', height: '40px', padding: '0 20px', fontSize: '14px', fontWeight: '700' }}
+                                >
+                                    {actionLoading[b.id] === 'approve' ? <Loader size={16} className={styles.spinner} /> : 'Chấp nhận'}
+                                </button>
+                            </div>
+                        </div>
                     ))}
                 </div>
             )}
 
-            {selectedBooking && (
-                <BookingDetailModal 
+            {selectedBooking && createPortal(
+                <BookingDetailModal
                     booking={selectedBooking}
                     onClose={() => setSelectedBooking(null)}
                     userRole="Advisor"
                     onAction={(act, b) => {
                         if (act === 'Approve') handleApprove(b.id);
                         if (act === 'Reject') handleReject(b.id);
+                        if (act === 'viewProject') onNavigate('project_' + b.projectId);
                         setSelectedBooking(null);
                     }}
-                />
+                />,
+                document.body
             )}
         </div>
     );
 }
 
-function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSection }) {
+function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSection, onNavigate }) {
     const [actionLoading, setActionLoading] = useState({});
     const [actionError, setActionError] = useState({});
-    const [reportModal, setReportModal] = useState(null); 
-    const [chatSession, setChatSession] = useState(null); 
+    const [reportModal, setReportModal] = useState(null);
+    const [chatSession, setChatSession] = useState(null);
     const [chatLoading, setChatLoading] = useState({});
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [activeMobileTab, setActiveMobileTab] = useState('pend'); // pend, conf, comp, canc
@@ -673,11 +795,17 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSec
         setChatLoading(prev => ({ ...prev, [booking.id]: true }));
         try {
             const session = await chatService.openBookingSession(booking.id);
+            const chatData = session?.data || session || {};
+            // For Advisor, the other party is the customer
+            const otherPartyTitle = chatData.customerFullName || chatData.customerName || chatData.startupName || chatData.investorName || booking.projectName || `Booking #${booking.id}`;
+            const otherPartyHandle = chatData.customerName || chatData.startupName || chatData.investorName;
+
             setChatSession({
-                chatSessionId: session.chatSessionId,
-                displayName: booking.projectName || `Booking #${booking.id}`,
+                chatSessionId: chatData.chatSessionId || session.chatSessionId,
+                displayName: otherPartyTitle,
+                handle: otherPartyHandle,
                 currentUserId: user?.userId,
-                sentTime: session.startTime || new Date().toISOString(),
+                sentTime: chatData.startTime || session.startTime || new Date().toISOString(),
             });
         } catch (e) {
             console.error('Cannot open booking chat session:', e);
@@ -706,14 +834,15 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSec
                         <EmptyState icon={FileText} title="Trống" message={`Không có booking nào ở trạng thái ${title.toLowerCase()}`} />
                     ) : (
                         items.map(b => (
-                            <AdvisorBookingKanbanCard 
-                                key={b.id} 
+                            <AdvisorBookingKanbanCard
+                                key={b.id}
                                 booking={b}
                                 isActioning={actionLoading[b.id]}
                                 onDetail={() => setSelectedBooking(b)}
                                 onApprove={() => handleApprove(b.id)}
                                 onReject={() => handleReject(b.id)}
                                 onChat={() => handleOpenChat(b)}
+                                isChatLoading={!!chatLoading[b.id]}
                                 onReport={() => setReportModal({ bookingId: b.id, advisorName: b.customerName, userRole: 'Advisor' })}
                             />
                         ))
@@ -725,80 +854,82 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSec
 
     return (
         <>
-        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
-            {/* Mobile Tab Switcher */}
-            {isMobile && (
-                <div className={avStyles.tabSwitcherWrapper}>
-                    {showLeftTabIndicator && <div className={`${avStyles.scrollIndicator} ${avStyles.scrollIndicatorLeft}`} style={{ opacity: 1 }} />}
-                    <div 
-                        className={avStyles.mobileTabSwitcher} 
-                        data-tabs="4"
-                        ref={tabSwitcherRef}
-                        onScroll={checkTabScroll}
-                    >
-                        <button className={`${avStyles.mobileTab} ${activeMobileTab === 'pend' ? avStyles.activeMobileTab : ''}`} onClick={() => setActiveMobileTab('pend')} data-status="pend">
-                            <div className={`${avStyles.bctDot} ${avStyles.pend}`}></div>
-                            <span>Chờ thanh toán</span>
-                            <span className={avStyles.mobileTabCount}>{groupPending.length}</span>
-                        </button>
-                        <button className={`${avStyles.mobileTab} ${activeMobileTab === 'conf' ? avStyles.activeMobileTab : ''}`} onClick={() => setActiveMobileTab('conf')} data-status="conf">
-                            <div className={`${avStyles.bctDot} ${avStyles.conf}`}></div>
-                            <span>Đã xác nhận</span>
-                            <span className={avStyles.mobileTabCount}>{groupConfirmed.length}</span>
-                        </button>
-                        <button className={`${avStyles.mobileTab} ${activeMobileTab === 'comp' ? avStyles.activeMobileTab : ''}`} onClick={() => setActiveMobileTab('comp')} data-status="comp">
-                            <div className={`${avStyles.bctDot} ${avStyles.comp}`}></div>
-                            <span>Hoàn thành</span>
-                            <span className={avStyles.mobileTabCount}>{groupCompleted.length}</span>
-                        </button>
-                        <button className={`${avStyles.mobileTab} ${activeMobileTab === 'canc' ? avStyles.activeMobileTab : ''}`} onClick={() => setActiveMobileTab('canc')} data-status="rej">
-                            <div className={`${avStyles.bctDot} ${avStyles.rej}`}></div>
-                            <span>Đã hủy</span>
-                            <span className={avStyles.mobileTabCount}>{groupCancelled.length}</span>
-                        </button>
+            <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+                {/* Mobile Tab Switcher */}
+                {isMobile && (
+                    <div className={avStyles.tabSwitcherWrapper}>
+                        {showLeftTabIndicator && <div className={`${avStyles.scrollIndicator} ${avStyles.scrollIndicatorLeft}`} style={{ opacity: 1 }} />}
+                        <div
+                            className={avStyles.mobileTabSwitcher}
+                            data-tabs="4"
+                            ref={tabSwitcherRef}
+                            onScroll={checkTabScroll}
+                        >
+                            <button className={`${avStyles.mobileTab} ${activeMobileTab === 'pend' ? avStyles.activeMobileTab : ''}`} onClick={() => setActiveMobileTab('pend')} data-status="pend">
+                                <div className={`${avStyles.bctDot} ${avStyles.pend}`}></div>
+                                <span>Chờ thanh toán</span>
+                                <span className={avStyles.mobileTabCount}>{groupPending.length}</span>
+                            </button>
+                            <button className={`${avStyles.mobileTab} ${activeMobileTab === 'conf' ? avStyles.activeMobileTab : ''}`} onClick={() => setActiveMobileTab('conf')} data-status="conf">
+                                <div className={`${avStyles.bctDot} ${avStyles.conf}`}></div>
+                                <span>Đã xác nhận</span>
+                                <span className={avStyles.mobileTabCount}>{groupConfirmed.length}</span>
+                            </button>
+                            <button className={`${avStyles.mobileTab} ${activeMobileTab === 'comp' ? avStyles.activeMobileTab : ''}`} onClick={() => setActiveMobileTab('comp')} data-status="comp">
+                                <div className={`${avStyles.bctDot} ${avStyles.comp}`}></div>
+                                <span>Hoàn thành</span>
+                                <span className={avStyles.mobileTabCount}>{groupCompleted.length}</span>
+                            </button>
+                            <button className={`${avStyles.mobileTab} ${activeMobileTab === 'canc' ? avStyles.activeMobileTab : ''}`} onClick={() => setActiveMobileTab('canc')} data-status="rej">
+                                <div className={`${avStyles.bctDot} ${avStyles.rej}`}></div>
+                                <span>Đã hủy</span>
+                                <span className={avStyles.mobileTabCount}>{groupCancelled.length}</span>
+                            </button>
+                        </div>
+                        {showRightTabIndicator && <div className={`${avStyles.scrollIndicator} ${avStyles.scrollIndicatorRight}`} style={{ opacity: 1 }} />}
                     </div>
-                    {showRightTabIndicator && <div className={`${avStyles.scrollIndicator} ${avStyles.scrollIndicatorRight}`} style={{ opacity: 1 }} />}
+                )}
+
+                <div className={avStyles.boardGrid}>
+                    {renderColumn('Chờ thanh toán', groupPending, 'pend')}
+                    {renderColumn('Đã xác nhận', groupConfirmed, 'conf')}
+                    {renderColumn('Hoàn thành', groupCompleted, 'comp')}
+                    {renderColumn('Đã hủy', groupCancelled, 'rej')}
                 </div>
+            </div>
+
+            {selectedBooking && (
+                <BookingDetailModal
+                    booking={selectedBooking}
+                    onClose={() => setSelectedBooking(null)}
+                    userRole="Advisor"
+                    onAction={(act, b) => {
+                        if (act === 'approve') handleApprove(b.id);
+                        if (act === 'reject') handleReject(b.id);
+                        if (act === 'chat') handleOpenChat(b);
+                        if (act === 'report') setReportModal({ bookingId: b.id, advisorName: b.customerName, userRole: 'Advisor' });
+                        if (act === 'viewProject') onNavigate('project_' + b.projectId);
+                    }}
+                />
             )}
 
-            <div className={avStyles.boardGrid}>
-                {renderColumn('Chờ thanh toán', groupPending, 'pend')}
-                {renderColumn('Đã xác nhận', groupConfirmed, 'conf')}
-                {renderColumn('Hoàn thành', groupCompleted, 'comp')}
-                {renderColumn('Đã hủy', groupCancelled, 'rej')}
-            </div>
-        </div>
+            {reportModal && (
+                <ConsultingReportModal
+                    bookingId={reportModal.bookingId}
+                    userRole={reportModal.userRole}
+                    advisorName={reportModal.advisorName}
+                    onClose={() => setReportModal(null)}
+                    onDone={() => { setReportModal(null); onRefresh(); }}
+                />
+            )}
 
-        {selectedBooking && (
-            <BookingDetailModal 
-                booking={selectedBooking}
-                onClose={() => setSelectedBooking(null)}
-                userRole="Advisor"
-                onAction={(act, b) => {
-                    if (act === 'approve') handleApprove(b.id);
-                    if (act === 'reject') handleReject(b.id);
-                    if (act === 'chat') handleOpenChat(b);
-                }}
+            <FloatingChatWidget
+                chatSessionId={chatSession?.chatSessionId}
+                displayName={chatSession?.displayName}
+                currentUserId={chatSession?.currentUserId}
+                sentTime={chatSession?.sentTime}
+                onClose={() => setChatSession(null)}
             />
-        )}
-
-        {reportModal && (
-            <ConsultingReportModal
-                bookingId={reportModal.bookingId}
-                userRole={reportModal.userRole}
-                advisorName={reportModal.advisorName}
-                onClose={() => setReportModal(null)}
-                onDone={() => { setReportModal(null); onRefresh(); }}
-            />
-        )}
-
-        <FloatingChatWidget
-            chatSessionId={chatSession?.chatSessionId}
-            displayName={chatSession?.displayName}
-            currentUserId={chatSession?.currentUserId}
-            sentTime={chatSession?.sentTime}
-            onClose={() => setChatSession(null)}
-        />
         </>
     );
 }
@@ -833,7 +964,7 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
         if (!loading && availabilities.length > 0 && !hasInitializedDate) {
             const todayObj = new Date();
             todayObj.setHours(0, 0, 0, 0);
-            
+
             const datesWithSlots = [...new Set(availabilities.map(s => s.slotDate?.split('T')[0]))]
                 .filter(d => !!d)
                 .map(d => ({ str: d, date: new Date(d + 'T00:00:00') }))
@@ -865,7 +996,7 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
         }
         setPreviewSlots(slots);
     }, [formData.startTime, formData.endTime]);
-    
+
     const closeAddSlotModal = () => {
         setIsClosingAddSlotModal(true);
         setTimeout(() => {
@@ -928,8 +1059,8 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
     };
 
     const renderCalendar = (
-        targetMonth = currentMonth, 
-        targetSelectedDate = selectedDate, 
+        targetMonth = currentMonth,
+        targetSelectedDate = selectedDate,
         onSelectDate = setSelectedDate,
         onCloseModal = null
     ) => {
@@ -937,21 +1068,21 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
         const month = targetMonth.getMonth();
         const daysInMonth = getDaysInMonth(year, month);
         const firstDay = getFirstDayOfMonth(year, month);
-        
+
         const days = [];
         for (let i = 0; i < firstDay; i++) {
             days.push(<div key={`empty-${i}`} className={`${styles.calendarDay} ${styles.dayEmpty}`}></div>);
         }
-        
+
         for (let d = 1; d <= daysInMonth; d++) {
             const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
             const isSelected = targetSelectedDate === dateStr;
             const isToday = todayStr === dateStr;
             const hasSlots = availabilities.some(s => s.slotDate?.split('T')[0] === dateStr);
-            
+
             days.push(
-                <div 
-                    key={d} 
+                <div
+                    key={d}
                     className={`${styles.calendarDay} ${isSelected ? styles.daySelected : ''} ${isToday ? styles.dayToday : ''}`}
                     onClick={() => {
                         onSelectDate(dateStr);
@@ -976,11 +1107,11 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
         weekday: 'long', year: 'numeric', month: 'long', day: 'numeric'
     });
 
-    const CalendarComponent = ({ 
-        extraClass = '', 
-        extraStyle = {}, 
-        month = currentMonth, 
-        selected = selectedDate, 
+    const CalendarComponent = ({
+        extraClass = '',
+        extraStyle = {},
+        month = currentMonth,
+        selected = selectedDate,
         onSelect = setSelectedDate,
         onMonthChange = (offset) => {
             const next = new Date(month.getFullYear(), month.getMonth() + offset, 1);
@@ -1012,7 +1143,7 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
             <div className={styles.section}>
                 {/* Mobile-only date bar skeleton */}
                 <div className={`${styles.mobileDateSelector} ${styles.skeleton}`} style={{ border: 'none', height: '54px', marginBottom: '16px' }}></div>
-                
+
                 <div className={styles.availabilityLayout}>
                     {/* Desktop Calendar Skeleton */}
                     <div className={`${styles.calendarContainer} ${styles.desktopOnly}`} style={{ background: 'transparent', border: '1px solid var(--border-color)' }}>
@@ -1072,7 +1203,7 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
                             <h4 className={styles.calendarModalTitle}>Chọn ngày</h4>
                             <button className={styles.calendarModalCloseBtn} onClick={closeMobileCalendar}><X size={18} /></button>
                         </div>
-                        <CalendarComponent 
+                        <CalendarComponent
                             extraClass={styles.calendarInModal}
                             extraStyle={{ '--day-size': 'calc((100vw - 40px) / 7)', '--day-font-size': '16px' }}
                         />
@@ -1088,7 +1219,7 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
                             <h4 className={styles.calendarModalTitle}>Thêm lịch rảnh</h4>
                             <button className={styles.calendarModalCloseBtn} onClick={closeAddSlotModal}><X size={18} /></button>
                         </div>
-                        
+
                         <div className={styles.addSlotBody}>
                             <div className={styles.miniCalendarSection}>
                                 <div className={styles.miniCalendarHeader}>
@@ -1097,8 +1228,8 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
                                         {new Date(modalDate + 'T00:00:00').toLocaleDateString('vi-VN', { weekday: 'long', month: 'long', day: 'numeric' })}
                                     </span>
                                 </div>
-                                <CalendarComponent 
-                                    extraClass={styles.miniCalendarInModal} 
+                                <CalendarComponent
+                                    extraClass={styles.miniCalendarInModal}
                                     selected={modalDate}
                                     onSelect={setModalDate}
                                     month={modalMonth}
@@ -1112,7 +1243,7 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
                             <div className={styles.timeSelectionRow}>
                                 <div className={styles.formField}>
                                     <label className={styles.fieldLabel}>Từ thời gian</label>
-                                    <CustomSelect 
+                                    <CustomSelect
                                         value={formData.startTime}
                                         onChange={e => setFormData(p => ({ ...p, startTime: e.target.value }))}
                                         options={timeOptions.slice(0, -1)}
@@ -1120,7 +1251,7 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
                                 </div>
                                 <div className={styles.formField}>
                                     <label className={styles.fieldLabel}>Đến thời gian</label>
-                                    <CustomSelect 
+                                    <CustomSelect
                                         value={formData.endTime}
                                         onChange={e => setFormData(p => ({ ...p, endTime: e.target.value }))}
                                         options={timeOptions.slice(1)}
@@ -1174,8 +1305,8 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
                                 const isBooked = slot.status === 1 || slot.status === 'Booked';
                                 const isDeleting = deletingId === slot.advisorAvailabilityId;
                                 return (
-                                    <div 
-                                        key={slot.advisorAvailabilityId} 
+                                    <div
+                                        key={slot.advisorAvailabilityId}
                                         className={`${styles.slotItemStyled} ${isBooked ? styles.slotBookedStyled : styles.slotAvailableStyled}`}
                                     >
                                         <div className={styles.slotTimeRow}>
@@ -1188,9 +1319,9 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
                                                 </span>
                                             </div>
                                         </div>
-                                        <button 
-                                            className={styles.slotDeleteBtn} 
-                                            onClick={() => handleDelete(slot.advisorAvailabilityId, isBooked)} 
+                                        <button
+                                            className={styles.slotDeleteBtn}
+                                            onClick={() => handleDelete(slot.advisorAvailabilityId, isBooked)}
                                             disabled={isBooked || isDeleting}
                                             title={isBooked ? "Không thể xóa slot đã đặt" : "Xóa slot"}
                                         >

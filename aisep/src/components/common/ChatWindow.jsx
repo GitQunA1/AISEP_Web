@@ -1,21 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Send, Loader2 } from 'lucide-react';
+import { X, Send, Loader2, ChevronDown } from 'lucide-react';
 import styles from './ChatWindow.module.css';
 import chatService from '../../services/chatService';
 import signalRService from '../../services/signalRService';
 
 /**
- * ChatWindow Component - Display chat interface for startup-investor communication
- * Props:
- *   - chatSessionId: ID of chat session (required)
- *   - displayName: Name to display in header (required)
- *   - currentUserId: Current user ID for role detection (required)
- *   - sentTime: (optional) Time request was sent
- *   - onClose: Callback when closing chat
+ * ChatWindow Component - Redesigned with X (Twitter) DM style
  */
-export default function ChatWindow({ 
+export default function ChatWindow({
   chatSessionId,
   displayName = 'Chat',
+  handle,
   currentUserId,
   sentTime,
   onClose
@@ -25,77 +20,56 @@ export default function ChatWindow({
   const [messages, setMessages] = useState([]);
   const [inputMessage, setInputMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [connectionStatus, setConnectionStatus] = useState('Disconnected');
+  const [isSessionOpen, setIsSessionOpen] = useState(true);
   const messagesEndRef = useRef(null);
   const signalRSubscribed = useRef(false);
 
-  // Load messages on mount and setup SignalR listeners
+  // Load messages and setup SignalR
   useEffect(() => {
     const loadMessages = async () => {
       try {
         if (!chatSessionId) {
-          console.error('[ChatWindow] No chatSessionId provided');
           setError('ID phiên chat không hợp lệ.');
           setIsLoading(false);
           return;
         }
 
-        console.log('[ChatWindow] Loading messages for sessionId:', chatSessionId);
-        const response = await chatService.getChatMessages(chatSessionId);
-        console.log('[ChatWindow] Messages response:', response);
-        
-        let messagesList = [];
-        if (Array.isArray(response?.data)) {
-          messagesList = response.data;
-        } else if (response?.data?.items && Array.isArray(response.data.items)) {
-          messagesList = response.data.items;
-        }
-        
-        console.log('[ChatWindow] Loaded', messagesList.length, 'messages, currentUserId:', currentUserId);
-        
-        // Transform messages: determine if current user sent them
-        const transformedMessages = messagesList.map(msg => {
-          const isSender = String(msg.senderId) === String(currentUserId);
-          console.log('[ChatWindow] Message:', { 
-            senderId: msg.senderId,
-            senderId_type: typeof msg.senderId,
-            currentUserId: currentUserId,
-            currentUserId_type: typeof currentUserId,
-            isSender,
-            senderName: msg.senderName,
-            content: msg.content
-          });
-          return {
-            ...msg,
-            id: msg.chatMessageId,
-            text: msg.content,
-            sender: isSender ? 'user' : 'other',
-            timestamp: msg.sentAt
-          };
-        });
-        
+        const sessionData = await chatService.getSession(chatSessionId);
+        setIsSessionOpen(sessionData.isOpen);
+
+        const messagesList = Array.isArray(sessionData.messages) ? sessionData.messages : [];
+
+        const transformedMessages = messagesList.map(msg => ({
+          ...msg,
+          id: msg.chatMessageId,
+          text: msg.content,
+          sender: String(msg.senderId) === String(currentUserId) ? 'user' : 'other',
+          timestamp: msg.sentAt
+        }));
+
         setMessages(transformedMessages);
         setError(null);
       } catch (err) {
-        console.error('[ChatWindow] Failed to load messages:', err);
+        console.error('[ChatWindow] Load failed:', err);
         setError('Không thể tải tin nhắn. Vui lòng thử lại.');
       } finally {
         setIsLoading(false);
       }
     };
 
-    // Load messages initially
     loadMessages();
 
-    // Setup SignalR event listeners for real-time messages
-    if (!signalRSubscribed.current) {
-      signalRSubscribed.current = true;
-
-      // Subscribe to new chat messages
+    if (chatSessionId && currentUserId) {
+      // Set up listeners
       signalRService.onChatMessageReceived((newMessage) => {
-        console.log('[ChatWindow] Real-time message received:', newMessage);
-        
+        // FILTER: Only process messages for this specific chat session
+        if (String(newMessage.chatSessionId) !== String(chatSessionId)) {
+          return;
+        }
+
         const isSender = String(newMessage.senderId) === String(currentUserId);
-        
+
         // Transform message
         const transformedMessage = {
           ...newMessage,
@@ -105,99 +79,86 @@ export default function ChatWindow({
           timestamp: newMessage.sentAt
         };
 
-        // Add to messages list
-        setMessages(prev => [...prev, transformedMessage]);
+        // Add to messages list, avoiding duplicates if already added optimistically
+        setMessages(prev => {
+          const exists = prev.some(m => m.id === transformedMessage.id);
+          if (exists) return prev;
+          // Also filter out any optimistic message with same text if it's very recent
+          const withoutOptimistic = prev.filter(m => !(m.isOptimistic && m.text === transformedMessage.text));
+          return [...withoutOptimistic, transformedMessage];
+        });
       });
 
-      // Subscribe to session closed event
       signalRService.onChatSessionClosed((sessionId) => {
-        if (sessionId === chatSessionId) {
-          console.log('[ChatWindow] Chat session closed by server');
-          setError('Cuộc hội thoại đã đóng.');
-        }
+        if (String(sessionId) === String(chatSessionId)) setIsSessionOpen(false);
       });
 
-      // Join chat room
+      // Subscribe to SignalR connection state changes
+      signalRService.onChatStateChanged((status) => {
+        setConnectionStatus(status);
+      });
+
+      // Join the specific session room on server
       signalRService.joinChatSession(chatSessionId);
     }
 
-    // Cleanup
     return () => {
-      // Leave chat room when unmounting
+      // Potentially clear listeners here if the service supported multiple, 
+      // but for now we just leave the session
       signalRService.leaveChatSession(chatSessionId);
     };
   }, [chatSessionId, currentUserId]);
 
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
   const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!inputMessage.trim() || !chatSessionId) return;
+    if (e) e.preventDefault();
+    if (!inputMessage.trim() || !chatSessionId || isSending) return;
 
+    const content = inputMessage;
+    const tempId = `temp-${Date.now()}`;
+
+    // OPTIMISTIC UPDATE: Add message to UI immediately
+    const optimisticMsg = {
+      id: tempId,
+      text: content,
+      sender: 'user',
+      timestamp: new Date().toISOString(),
+      isOptimistic: true
+    };
+
+    setMessages(prev => [...prev, optimisticMsg]);
+    setInputMessage('');
     setIsSending(true);
+
     try {
-      const messageContent = inputMessage;
-      setInputMessage('');
-      
-      console.log('[ChatWindow] Sending message to sessionId:', chatSessionId);
-      const sendResponse = await chatService.sendChatMessage(chatSessionId, messageContent);
-      console.log('[ChatWindow] Message sent response:', sendResponse);
-      
-      // Fetch updated messages list
-      const messagesResponse = await chatService.getChatMessages(chatSessionId);
-      console.log('[ChatWindow] Updated messages:', messagesResponse);
-      
-      let messagesList = [];
-      if (Array.isArray(messagesResponse?.data)) {
-        messagesList = messagesResponse.data;
-      } else if (messagesResponse?.data?.items && Array.isArray(messagesResponse.data.items)) {
-        messagesList = messagesResponse.data.items;
-      }
-      
-      // Transform messages with role detection
-      const transformedMessages = messagesList.map(msg => ({
-        ...msg,
-        id: msg.chatMessageId,
-        text: msg.content,
-        sender: String(msg.senderId) === String(currentUserId) ? 'user' : 'other',
-        timestamp: msg.sentAt
-      }));
-      
-      setMessages(transformedMessages);
+      await chatService.sendChatMessage(chatSessionId, content);
+      // The real message will arrive via SignalR and replace the optimistic one
     } catch (error) {
-      console.error('[ChatWindow] Failed to send message:', error);
-      setInputMessage(inputMessage);
-      setError('Không thể gửi tin nhắn. Vui lòng thử lại.');
+      console.error('[ChatWindow] Send failed:', error);
+      // Remove optimistic message on failure and restore input
+      setMessages(prev => prev.filter(m => m.id !== tempId));
+      setInputMessage(content);
+      setError('Không thể gửi tin nhắn.');
     } finally {
-      setIsSending(false);
+      setIsSending(true); // Keep sending state briefly to avoid double clicks
+      setTimeout(() => setIsSending(false), 500);
     }
   };
 
   const handleCloseChat = (e) => {
-    if (e) {
-      e.preventDefault();
-      e.stopPropagation();
-    }
-    if (onClose) {
-      onClose();
-    }
+    if (e) e.stopPropagation();
+    if (onClose) onClose();
   };
 
   if (isLoading) {
     return (
       <div className={styles.chatWindow}>
-        <div className={styles.header}>
-          <div className={styles.title}>Đang tải cuộc chat...</div>
-          <button className={styles.closeBtn} onClick={onClose}>
-            <X size={20} />
-          </button>
-        </div>
         <div className={styles.loadingContainer}>
           <Loader2 size={32} className={styles.spinner} />
-          <p>Khởi tạo phiên chat...</p>
+          <p>Mở cuộc hội thoại...</p>
         </div>
       </div>
     );
@@ -207,16 +168,14 @@ export default function ChatWindow({
     return (
       <div className={styles.chatWindow}>
         <div className={styles.header}>
-          <div className={styles.title}>Lỗi</div>
-          <button className={styles.closeBtn} onClick={onClose}>
+          <div className={styles.headerInfo}><div className={styles.title}>Thông báo</div></div>
+          <button className={styles.closeBtn} onClick={handleCloseChat} title="Đóng">
             <X size={20} />
           </button>
         </div>
         <div className={styles.errorContainer}>
           <p>{error}</p>
-          <button onClick={onClose} style={{ marginTop: '16px' }}>
-            Đóng
-          </button>
+          <button className={styles.viewProfileBtn} onClick={handleCloseChat}>Quay lại</button>
         </div>
       </div>
     );
@@ -224,78 +183,92 @@ export default function ChatWindow({
 
   return (
     <div className={styles.chatWindow}>
-      {/* Header */}
+      {/* X Style Header */}
       <div className={styles.header}>
         <div className={styles.headerInfo}>
-          <div className={styles.title}>
-            {displayName || 'Chat'}
-          </div>
-          {sentTime && (
-            <div style={{ fontSize: '11px', opacity: 0.7, marginTop: '2px' }}>
-              Gửi: {sentTime}
-            </div>
-          )}
+          <div className={styles.title}>{displayName}</div>
         </div>
-        <button className={styles.closeBtn} onClick={handleCloseChat} title="Đóng">
-          <X size={20} />
-        </button>
+        <div className={styles.headerActions}>
+          <div
+            className={`${styles.statusIndicator} ${styles[connectionStatus?.toLowerCase() || 'disconnected']}`}
+            title={`Trạng thái: ${connectionStatus}`}
+          />
+          <button className={styles.closeBtn} onClick={handleCloseChat} title="Đóng">
+            <X size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Messages Container */}
       <div className={styles.messagesContainer}>
-        {messages.length === 0 ? (
-          <div className={styles.emptyState}>
-            <p>Bắt đầu cuộc hội thoại</p>
-            <small>Nhắn tin đầu tiên của bạn</small>
+        {/* Welcome State (X style) */}
+        <div className={styles.welcomeContainer}>
+          <div className={styles.welcomeAvatar}>
+            {displayName.charAt(0).toUpperCase()}
           </div>
-        ) : (
-          messages.map((msg, index) => (
+          <h3 className={styles.welcomeName}>{displayName}</h3>
+        </div>
+
+        {messages.map((msg, index) => {
+          const showTime = index === messages.length - 1 ||
+            messages[index + 1]?.sender !== msg.sender ||
+            new Date(messages[index + 1]?.timestamp) - new Date(msg.timestamp) > 300000;
+
+          return (
             <div
               key={msg.id || index}
               className={`${styles.messageItem} ${msg.sender === 'user' ? styles.userMessage : styles.otherMessage}`}
-              data-sender={msg.sender}
             >
-              <div className={styles.msgContent}>
-                <div className={styles.senderNameLabel}>
-                  {msg.senderName}
-                </div>
-                <div className={styles.messageBubble}>
-                  {msg.text || msg.message || msg.content}
-                </div>
+              <div className={styles.messageBubble}>
+                {msg.text || msg.message || msg.content}
               </div>
-              <div className={styles.messageTime}>
-                {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}
-              </div>
+              {showTime && (
+                <div className={styles.messageTime}>
+                  {msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : ''}
+                </div>
+              )}
             </div>
-          ))
-        )}
+          );
+        })}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Footer */}
-      <form className={styles.inputContainer} onSubmit={handleSendMessage}>
-        <input
-          type="text"
-          className={styles.input}
-          placeholder="Nhập tin nhắn..."
-          value={inputMessage}
-          onChange={(e) => setInputMessage(e.target.value)}
-          disabled={isSending}
-          autoFocus
-        />
-        <button
-          type="submit"
-          className={styles.sendBtn}
-          disabled={!inputMessage.trim() || isSending}
-          title="Gửi"
-        >
-          {isSending ? (
-            <Loader2 size={18} className={styles.spinner} />
-          ) : (
-            <Send size={18} />
-          )}
-        </button>
-      </form>
+      {/* X Style Input Footer */}
+      <div className={styles.inputContainer}>
+        {isSessionOpen ? (
+          <>
+            <form className={styles.inputWrapper} onSubmit={handleSendMessage}>
+              <input
+                type="text"
+                className={styles.input}
+                placeholder="Bắt đầu tin nhắn mới"
+                value={inputMessage}
+                onChange={(e) => setInputMessage(e.target.value)}
+                disabled={isSending}
+                autoFocus
+              />
+            </form>
+
+            <button
+              type="button"
+              className={styles.sendBtn}
+              onClick={handleSendMessage}
+              disabled={!inputMessage.trim() || isSending}
+              title="Gửi"
+            >
+              {isSending ? (
+                <Loader2 size={20} className={styles.spinner} />
+              ) : (
+                <Send size={20} fill={inputMessage.trim() ? "currentColor" : "none"} />
+              )}
+            </button>
+          </>
+        ) : (
+          <div className={styles.closedSessionBanner}>
+            <span>Phiên tư vấn này đã kết thúc. Bạn chỉ có thể xem lại lịch sử tin nhắn.</span>
+          </div>
+        )}
+      </div>
     </div>
   );
 }

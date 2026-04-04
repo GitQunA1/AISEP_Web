@@ -51,6 +51,13 @@ const chatService = {
   },
 
   /**
+   * Alias for openBookingSession used by the UI components.
+   */
+  createOrGetBookingChat: async (bookingId) => {
+    return await chatService.openBookingSession(bookingId);
+  },
+
+  /**
    * Lấy thông tin session và messages.
    * GET /api/ChatSession/{sessionId}
    * @param {number} sessionId

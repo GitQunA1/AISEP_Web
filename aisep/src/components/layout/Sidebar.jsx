@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award } from 'lucide-react';
+import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
@@ -45,9 +45,9 @@ function Sidebar({
       { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
       { icon: FileText, label: 'Projects', displayLabel: 'Quản lý dự án', href: '#', showWhenLoggedIn: true },
       { icon: Calendar, label: 'Bookings', displayLabel: 'Quản lý Booking', href: '#', showWhenLoggedIn: true },
+      { icon: AlertCircle, label: 'UserReports', displayLabel: 'Báo cáo vi phạm', href: '#', showWhenLoggedIn: true },
       { icon: ShieldCheck, label: 'Approvals', displayLabel: 'Phê duyệt Startup', href: '#', showWhenLoggedIn: true },
       { icon: Award, label: 'AdvisorApproval', displayLabel: 'Duyệt Cố vấn', href: '#', showWhenLoggedIn: true },
-      { icon: Activity, label: 'Activity', displayLabel: 'Giám sát hoạt động', href: '#', showWhenLoggedIn: true },
     ];
     const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
     const homeItem = navItems.find(item => item.label === 'Home');
@@ -93,9 +93,6 @@ function Sidebar({
     if (label === 'AdvisorApproval' && onShowDashboard) {
       onShowDashboard('advisor_approval');
     }
-    if (label === 'Activity' && onShowDashboard) {
-      onShowDashboard('activity');
-    }
     if (label === 'Availability' && onShowDashboard) {
       onShowDashboard('availability');
     }
@@ -104,6 +101,9 @@ function Sidebar({
     }
     if (label === 'Reports' && onShowDashboard) {
       onShowDashboard('reports');
+    }
+    if (label === 'UserReports' && onShowDashboard) {
+      onShowDashboard('user_reports');
     }
 
     // Navigate to home when clicking Home
@@ -204,10 +204,10 @@ function Sidebar({
                   if (activeView === 'dashboard_bookings') return 'Bookings';
                   if (activeView === 'dashboard_approvals') return 'Approvals';
                   if (activeView === 'dashboard_advisor_approval') return 'AdvisorApproval';
-                  if (activeView === 'dashboard_activity') return 'Activity';
                   if (activeView === 'dashboard_availability') return 'Availability';
                   if (activeView === 'dashboard_approve_bookings') return 'ApproveBookings';
                   if (activeView === 'dashboard_reports') return 'Reports';
+                  if (activeView === 'dashboard_user_reports') return 'UserReports';
                   if (activeView === 'profile') return 'Profile';
                   if (activeView === 'advisors') return 'Advisors';
                   if (activeView === 'investors') return 'Investors';

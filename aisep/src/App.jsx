@@ -133,7 +133,7 @@ function App() {
     localStorage.removeItem('aisep_token');
     localStorage.removeItem('aisep_refresh_token');
     setUser(null);
-    // Stay on main page, don't redirect to login
+    setCurrentView('main');
   };
 
   const handleShowRegister = () => {

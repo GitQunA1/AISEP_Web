@@ -81,7 +81,7 @@ function FeedHeader({
             activeFilters={activeFilters}
             onFilterChange={onFilterChange} 
             industryCounts={industryCounts}
-            totalCount={stats.approvedCount}
+            totalCount={stats?.approvedCount ?? 0}
           />
         )}
 

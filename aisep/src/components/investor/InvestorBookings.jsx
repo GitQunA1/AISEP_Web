@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { MessageSquare, FileText, CheckCircle, Clock, AlertCircle, X, CreditCard, ChevronRight, Loader, Calendar, Search, RefreshCcw } from 'lucide-react';
+import { MessageSquare, FileText, CheckCircle, Clock, AlertCircle, X, CreditCard, ChevronRight, Loader, Loader2, Calendar, Search, RefreshCcw } from 'lucide-react';
 import styles from '../../styles/SharedDashboard.module.css';
 import bookingService from '../../services/bookingService';
 import chatService from '../../services/chatService';
@@ -28,22 +28,22 @@ const BOOKING_STATUS_LABELS = {
 export default function InvestorBookings({ user }) {
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
-    
+
     // Filter & Search State
     const [filterStatus, setFilterStatus] = useState('all');
     const [searchTerm, setSearchTerm] = useState('');
-    
+
     // UI state
     const [reportModal, setReportModal] = useState(null);
     const [chatSession, setChatSession] = useState(null);
     const [chatLoading, setChatLoading] = useState({});
     const [paymentBooking, setPaymentBooking] = useState(null);
     const [detailBooking, setDetailBooking] = useState(null);
-    
+
     // Booking Wizard State (for re-booking)
     const [showBookingWizard, setShowBookingWizard] = useState(false);
     const [rebookData, setRebookData] = useState({ projectId: null, advisorId: null, sourceBookingId: null });
-    
+
     const loadBookings = useCallback(async () => {
         setLoading(true);
         try {
@@ -65,11 +65,13 @@ export default function InvestorBookings({ user }) {
         setChatLoading(prev => ({ ...prev, [booking.id]: true }));
         try {
             const result = await chatService.createOrGetBookingChat(booking.id);
+            const chatData = result?.data || result || {};
             setChatSession({
-                chatSessionId: result.chatSessionId,
-                displayName: result.advisorName || 'Cố vấn',
+                chatSessionId: chatData.chatSessionId || result.chatSessionId,
+                displayName: chatData.advisorFullName || chatData.advisorName || result.advisorName || 'Cố vấn',
+                handle: chatData.advisorName || result.advisorName,
                 currentUserId: user?.userId,
-                sentTime: new Date().toISOString()
+                sentTime: chatData.startTime || result.startTime || new Date().toISOString()
             });
         } catch (error) {
             console.error('Failed to access chat', error);
@@ -113,18 +115,18 @@ export default function InvestorBookings({ user }) {
     // Derived filtered bookings
     const filteredBookings = bookings.filter(b => {
         // Status filter
-        const matchesStatus = filterStatus === 'all' || 
+        const matchesStatus = filterStatus === 'all' ||
             (filterStatus === 'completed' && (b.status === 3 || b.status === 'Completed')) ||
             (filterStatus === 'confirmed' && (b.status === 2 || b.status === 'Confirmed')) ||
             (filterStatus === 'canceled' && [4, 5, 'Cancel', 'NoResponse'].includes(b.status));
-        
+
         // Search filter
         const displayProjectName = (b.projectName || b.project?.projectName || '').toLowerCase();
         const displayAdvisorName = (b.advisorName || '').toLowerCase();
-        const matchesSearch = searchTerm === '' || 
-            displayProjectName.includes(searchTerm.toLowerCase()) || 
+        const matchesSearch = searchTerm === '' ||
+            displayProjectName.includes(searchTerm.toLowerCase()) ||
             displayAdvisorName.includes(searchTerm.toLowerCase());
-            
+
         return matchesStatus && matchesSearch;
     });
 
@@ -145,199 +147,208 @@ export default function InvestorBookings({ user }) {
 
             <div className={styles.dashboardContent}>
 
-            {/* Stats Grid */}
-            <div className={styles.xStatsGrid}>
-                <div className={styles.xStatCard}>
-                    <span className={styles.xStatLabel}>Tổng buổi</span>
-                    <span className={styles.xStatValue}>{stats.total}</span>
+                {/* Stats Grid */}
+                <div className={styles.xStatsGrid}>
+                    <div className={styles.xStatCard}>
+                        <span className={styles.xStatLabel}>Tổng buổi</span>
+                        <span className={styles.xStatValue}>{stats.total}</span>
+                    </div>
+                    <div className={styles.xStatCard}>
+                        <span className={styles.xStatLabel}>Hoàn thành</span>
+                        <span className={styles.xStatValue} style={{ color: '#17bf63' }}>{stats.completed}</span>
+                    </div>
+                    <div className={styles.xStatCard}>
+                        <span className={styles.xStatLabel}>Đã xác nhận</span>
+                        <span className={styles.xStatValue} style={{ color: '#1d9bf0' }}>{stats.confirmed}</span>
+                    </div>
+                    <div className={styles.xStatCard}>
+                        <span className={styles.xStatLabel}>Đã hủy</span>
+                        <span className={styles.xStatValue} style={{ color: '#f4212e' }}>{stats.canceled}</span>
+                    </div>
                 </div>
-                <div className={styles.xStatCard}>
-                    <span className={styles.xStatLabel}>Hoàn thành</span>
-                    <span className={styles.xStatValue} style={{ color: '#17bf63' }}>{stats.completed}</span>
-                </div>
-                <div className={styles.xStatCard}>
-                    <span className={styles.xStatLabel}>Đã xác nhận</span>
-                    <span className={styles.xStatValue} style={{ color: '#1d9bf0' }}>{stats.confirmed}</span>
-                </div>
-                <div className={styles.xStatCard}>
-                    <span className={styles.xStatLabel}>Đã hủy</span>
-                    <span className={styles.xStatValue} style={{ color: '#f4212e' }}>{stats.canceled}</span>
-                </div>
-            </div>
 
-            {/* Toolbar: Filters Only (Search moved to Header) */}
-            <div className={styles.xToolbar}>
-                <div className={styles.xFilters}>
-                    <button 
-                        className={`${styles.xFilterTab} ${filterStatus === 'all' ? styles.xFilterTabActive : ''}`}
-                        onClick={() => setFilterStatus('all')}
-                    >
-                        Tất cả
-                    </button>
-                    <button 
-                        className={`${styles.xFilterTab} ${filterStatus === 'completed' ? styles.xFilterTabActive : ''}`}
-                        onClick={() => setFilterStatus('completed')}
-                    >
-                        Hoàn thành
-                    </button>
-                    <button 
-                        className={`${styles.xFilterTab} ${filterStatus === 'confirmed' ? styles.xFilterTabActive : ''}`}
-                        onClick={() => setFilterStatus('confirmed')}
-                    >
-                        Đã xác nhận
-                    </button>
-                    <button 
-                        className={`${styles.xFilterTab} ${filterStatus === 'canceled' ? styles.xFilterTabActive : ''}`}
-                        onClick={() => setFilterStatus('canceled')}
-                    >
-                        Đã hủy
-                    </button>
+                {/* Toolbar: Filters Only (Search moved to Header) */}
+                <div className={styles.xToolbar}>
+                    <div className={styles.xFilters}>
+                        <button
+                            className={`${styles.xFilterTab} ${filterStatus === 'all' ? styles.xFilterTabActive : ''}`}
+                            onClick={() => setFilterStatus('all')}
+                        >
+                            Tất cả
+                        </button>
+                        <button
+                            className={`${styles.xFilterTab} ${filterStatus === 'completed' ? styles.xFilterTabActive : ''}`}
+                            onClick={() => setFilterStatus('completed')}
+                        >
+                            Hoàn thành
+                        </button>
+                        <button
+                            className={`${styles.xFilterTab} ${filterStatus === 'confirmed' ? styles.xFilterTabActive : ''}`}
+                            onClick={() => setFilterStatus('confirmed')}
+                        >
+                            Đã xác nhận
+                        </button>
+                        <button
+                            className={`${styles.xFilterTab} ${filterStatus === 'canceled' ? styles.xFilterTabActive : ''}`}
+                            onClick={() => setFilterStatus('canceled')}
+                        >
+                            Đã hủy
+                        </button>
+                    </div>
                 </div>
-            </div>
 
-            {loading ? (
-                <div className={styles.loadingState}>
-                    <Loader className={styles.spinner} size={24} />
-                    <span>Đang tải lịch tư vấn...</span>
-                </div>
-            ) : filteredBookings.length === 0 ? (
-                <div className={styles.emptyState}>
-                    <Clock size={40} style={{ opacity: 0.3, marginBottom: '16px' }} />
-                    <p>Không tìm thấy lịch tư vấn nào phù hợp.</p>
-                </div>
-            ) : (
-                <div className={styles.xBookingGrid}>
-                    {filteredBookings.map(booking => {
-                        const statusInfo = BOOKING_STATUS_LABELS[booking.status] || { label: String(booking.status), cls: 'badgeInfo', color: '#1d9bf0' };
-                        const displayProjectName = booking.projectName || 'Dự án';
-                        const displayAdvisorName = booking.advisorName || 'Cố vấn chuyên môn';
-                        const startTime = new Date(booking.startTime);
-                        const endTime = new Date(booking.endTime);
-                        
-                        return (
-                            <div key={booking.id || booking.bookingId} className={styles.xItem} style={{ borderRadius: '12px', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
-                                <div className={styles.xAvatar}>
-                                    {displayProjectName.charAt(0).toUpperCase()}
+                {loading ? (
+                    <div className={styles.loadingState}>
+                        <Loader className={styles.spinner} size={24} />
+                        <span>Đang tải lịch tư vấn...</span>
+                    </div>
+                ) : filteredBookings.length === 0 ? (
+                    <div className={styles.emptyState}>
+                        <Clock size={40} style={{ opacity: 0.3, marginBottom: '16px' }} />
+                        <p>Không tìm thấy lịch tư vấn nào phù hợp.</p>
+                    </div>
+                ) : (
+                    <div className={styles.xBookingGrid}>
+                        {filteredBookings.map(booking => {
+                            const statusInfo = BOOKING_STATUS_LABELS[booking.status] || { label: String(booking.status), cls: 'badgeInfo', color: '#1d9bf0' };
+                            const displayProjectName = booking.projectName || 'Dự án';
+                            const displayAdvisorName = booking.advisorName || 'Cố vấn chuyên môn';
+                            const startTime = new Date(booking.startTime);
+                            const endTime = new Date(booking.endTime);
+
+                            return (
+                                <div key={booking.id || booking.bookingId} className={styles.xItem} style={{ borderRadius: '12px', border: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)' }}>
+                                    <div className={styles.xAvatar}>
+                                        {displayProjectName.charAt(0).toUpperCase()}
+                                    </div>
+
+                                    <div className={styles.xContent}>
+                                        <div className={styles.xHeader}>
+                                            <h4 className={styles.xProjectName} style={{ fontSize: '16px' }}>{displayProjectName}</h4>
+                                            <span className={`${styles.xStatus} ${styles[statusInfo.cls]}`} style={{ background: 'transparent', border: `1px solid ${statusInfo.color}`, color: statusInfo.color }}>
+                                                {statusInfo.label}
+                                            </span>
+                                        </div>
+
+                                        <div style={{ color: 'var(--primary-blue)', fontWeight: '600', fontSize: '14px', marginBottom: '8px' }}>
+                                            {displayAdvisorName}
+                                        </div>
+
+                                        <div className={styles.xMetaRow}>
+                                            <div className={styles.xMetaItem}><Calendar size={13} /> {startTime.toLocaleDateString('vi-VN')}</div>
+                                            <span className={styles.xDot}>•</span>
+                                            <div className={styles.xMetaItem}><Clock size={13} /> {startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {endTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
+                                            <span className={styles.xDot}>•</span>
+                                            <div className={styles.xMetaItem}>{booking.slotCount} giờ</div>
+                                        </div>
+
+                                        <div className={styles.xActions}>
+                                            <button
+                                                className={styles.xActionButton}
+                                                onClick={() => setDetailBooking(booking)}
+                                            >
+                                                Chi tiết <ChevronRight size={14} />
+                                            </button>
+
+                                            {(booking.status === 1 || booking.status === 'ApprovedAwaitingPayment') && (
+                                                <button className={`${styles.xActionButton} ${styles.xActionSuccess}`} onClick={() => setPaymentBooking(booking)}>
+                                                    <CreditCard size={14} /> Thanh toán
+                                                </button>
+                                            )}
+
+                                            {(booking.status === 2 || booking.status === 'Confirmed') && (
+                                                <button
+                                                    className={`${styles.xActionButton} ${styles.xActionPrimary} ${chatLoading[booking.id] ? styles.xBtnDisabled : ''}`}
+                                                    onClick={() => handleOpenChat(booking)}
+                                                    disabled={!!chatLoading[booking.id]}
+                                                    style={{ minWidth: '85px', justifyContent: 'center' }}
+                                                >
+                                                    {chatLoading[booking.id] ? (
+                                                        <Loader2 size={16} className={styles.spinner} />
+                                                    ) : (
+                                                        <><MessageSquare size={14} /> Chat</>
+                                                    )}
+                                                </button>
+                                            )}
+
+                                            {booking.status === 3 || booking.status === 'Completed' && (
+                                                <button className={styles.xActionButton} onClick={() => setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Investor' })}>
+                                                    <FileText size={14} /> Báo cáo
+                                                </button>
+                                            )}
+
+                                            {[4, 5, 'Cancel', 'NoResponse'].includes(booking.status) && (
+                                                <button className={`${styles.xActionButton} ${styles.xActionPrimary}`} onClick={() => handleRebookReplacement(booking)}>
+                                                    <RefreshCcw size={14} /> Đặt lại
+                                                </button>
+                                            )}
+                                        </div>
+                                    </div>
                                 </div>
+                            );
+                        })}
+                    </div>
+                )}
 
-                                <div className={styles.xContent}>
-                                    <div className={styles.xHeader}>
-                                        <h4 className={styles.xProjectName} style={{ fontSize: '16px' }}>{displayProjectName}</h4>
-                                        <span className={`${styles.xStatus} ${styles[statusInfo.cls]}`} style={{ background: 'transparent', border: `1px solid ${statusInfo.color}`, color: statusInfo.color }}>
-                                            {statusInfo.label}
-                                        </span>
-                                    </div>
+                {/* ConsultingReportModal */}
+                {reportModal && (
+                    <ConsultingReportModal
+                        bookingId={reportModal.bookingId}
+                        userRole={reportModal.userRole}
+                        advisorName={reportModal.advisorName}
+                        onClose={() => setReportModal(null)}
+                        onDone={() => { setReportModal(null); loadBookings(); }}
+                    />
+                )}
 
-                                    <div style={{ color: 'var(--primary-blue)', fontWeight: '600', fontSize: '14px', marginBottom: '8px' }}>
-                                        {displayAdvisorName}
-                                    </div>
-
-                                    <div className={styles.xMetaRow}>
-                                        <div className={styles.xMetaItem}><Calendar size={13} /> {startTime.toLocaleDateString('vi-VN')}</div>
-                                        <span className={styles.xDot}>•</span>
-                                        <div className={styles.xMetaItem}><Clock size={13} /> {startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {endTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
-                                        <span className={styles.xDot}>•</span>
-                                        <div className={styles.xMetaItem}>{booking.slotCount} giờ</div>
-                                    </div>
-
-                                    <div className={styles.xActions}>
-                                        <button 
-                                            className={styles.xActionButton} 
-                                            onClick={() => setDetailBooking(booking)}
-                                        >
-                                            Chi tiết <ChevronRight size={14} />
-                                        </button>
-
-                                        {(booking.status === 1 || booking.status === 'ApprovedAwaitingPayment') && (
-                                            <button className={`${styles.xActionButton} ${styles.xActionSuccess}`} onClick={() => setPaymentBooking(booking)}>
-                                                <CreditCard size={14} /> Thanh toán
-                                            </button>
-                                        )}
-
-                                        {(booking.status === 2 || booking.status === 'Confirmed') && (
-                                            <button className={`${styles.xActionButton} ${styles.xActionPrimary}`} onClick={() => handleOpenChat(booking)} disabled={!!chatLoading[booking.id]}>
-                                                <MessageSquare size={14} /> Chat
-                                            </button>
-                                        )}
-
-                                        {booking.status === 3 || booking.status === 'Completed' && (
-                                            <button className={styles.xActionButton} onClick={() => setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Investor' })}>
-                                                <FileText size={14} /> Báo cáo
-                                            </button>
-                                        )}
-
-                                        {[4, 5, 'Cancel', 'NoResponse'].includes(booking.status) && (
-                                            <button className={`${styles.xActionButton} ${styles.xActionPrimary}`} onClick={() => handleRebookReplacement(booking)}>
-                                                <RefreshCcw size={14} /> Đặt lại
-                                            </button>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
-                </div>
-            )}
-
-            {/* ConsultingReportModal */}
-            {reportModal && (
-                <ConsultingReportModal
-                    bookingId={reportModal.bookingId}
-                    userRole={reportModal.userRole}
-                    advisorName={reportModal.advisorName}
-                    onClose={() => setReportModal(null)}
-                    onDone={() => { setReportModal(null); loadBookings(); }}
+                {/* Floating Chat Widget */}
+                <FloatingChatWidget
+                    chatSessionId={chatSession?.chatSessionId}
+                    displayName={chatSession?.displayName}
+                    currentUserId={chatSession?.currentUserId}
+                    sentTime={chatSession?.sentTime}
+                    onClose={() => setChatSession(null)}
                 />
-            )}
 
-            {/* Floating Chat Widget */}
-            <FloatingChatWidget
-                chatSessionId={chatSession?.chatSessionId}
-                displayName={chatSession?.displayName}
-                currentUserId={chatSession?.currentUserId}
-                sentTime={chatSession?.sentTime}
-                onClose={() => setChatSession(null)}
-            />
+                {/* Payment Modal */}
+                {paymentBooking && (
+                    <PaymentModal
+                        bookingId={paymentBooking.id}
+                        advisorName={paymentBooking.advisorName}
+                        slotCount={paymentBooking.slotCount}
+                        onClose={() => setPaymentBooking(null)}
+                        onPaid={() => {
+                            setPaymentBooking(null);
+                            loadBookings();
+                        }}
+                    />
+                )}
 
-            {/* Payment Modal */}
-            {paymentBooking && (
-                <PaymentModal
-                    bookingId={paymentBooking.id}
-                    advisorName={paymentBooking.advisorName}
-                    slotCount={paymentBooking.slotCount}
-                    onClose={() => setPaymentBooking(null)}
-                    onPaid={() => {
-                        setPaymentBooking(null);
-                        loadBookings();
-                    }}
-                />
-            )}
+                {detailBooking && (
+                    <BookingDetailModal
+                        booking={detailBooking}
+                        userRole="Investor"
+                        onClose={() => setDetailBooking(null)}
+                        onAction={handleDetailAction}
+                    />
+                )}
 
-            {detailBooking && (
-                <BookingDetailModal 
-                    booking={detailBooking} 
-                    userRole="Investor" 
-                    onClose={() => setDetailBooking(null)} 
-                    onAction={handleDetailAction}
-                />
-            )}
-
-            {/* Booking Wizard for Re-booking */}
-            {showBookingWizard && (
-                <BookingWizard 
-                    initialProjectId={rebookData.projectId}
-                    initialAdvisorId={rebookData.advisorId}
-                    sourceBookingId={rebookData.sourceBookingId}
-                    user={user}
-                    onClose={() => setShowBookingWizard(false)}
-                    onSuccess={() => {
-                        setShowBookingWizard(false);
-                        loadBookings();
-                    }}
-                />
-            )}
+                {/* Booking Wizard for Re-booking */}
+                {showBookingWizard && (
+                    <BookingWizard
+                        initialProjectId={rebookData.projectId}
+                        initialAdvisorId={rebookData.advisorId}
+                        sourceBookingId={rebookData.sourceBookingId}
+                        user={user}
+                        onClose={() => setShowBookingWizard(false)}
+                        onSuccess={() => {
+                            setShowBookingWizard(false);
+                            loadBookings();
+                        }}
+                    />
+                )}
+            </div>
         </div>
-    </div>
-);
+    );
 }
 

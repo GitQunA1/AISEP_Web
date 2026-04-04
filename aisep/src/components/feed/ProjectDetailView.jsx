@@ -183,7 +183,7 @@ const MobileDocCard = ({ doc }) => (
 );
 
 /* ─── Main Component ─────────────────────────────────────── */
-export default function ProjectDetailView({ projectId, onBack, user, onShowLogin }) {
+export default function ProjectDetailView({ projectId, onBack, user, onShowLogin, isFullView }) {
   const [project, setProject] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [aiHistory, setAiHistory] = useState([]);
@@ -202,8 +202,14 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
   useEffect(() => {
     if (!projectId || !user) return;
     setLoading(true); setError(null);
+    
+    // Choose API based on isFullView prop
+    const fetchProjectData = isFullView 
+      ? projectSubmissionService.getProjectById(projectId)
+      : projectSubmissionService.getProjectNonPremiumById(projectId);
+
     Promise.all([
-      projectSubmissionService.getProjectNonPremiumById(projectId),
+      fetchProjectData,
       projectSubmissionService.getDocuments(projectId).catch(() => null),
       AIEvaluationService.getProjectAnalysisHistory(projectId).catch(() => null),
       bookingService.getAllBookings('', '-Id', 1, 1000).catch(() => null),
