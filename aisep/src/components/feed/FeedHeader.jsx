@@ -39,11 +39,6 @@ function FeedHeader({
                 <h1 className={styles.title}>{title}</h1>
                 <p className={styles.subtitle}>{subtitle}</p>
               </div>
-
-              <div className={styles.headerRightActions}>
-                {onOpenChat && <NotificationCenter onOpenChat={onOpenChat} />}
-                {customAction}
-              </div>
             </div>
 
             <div className={styles.actionsSection}>
@@ -70,6 +65,11 @@ function FeedHeader({
                   Đăng Dự Án
                 </button>
               )}
+            </div>
+
+            <div className={styles.headerRightActions}>
+              {onOpenChat && <NotificationCenter onOpenChat={onOpenChat} />}
+              {customAction}
             </div>
           </div>
         </div>
