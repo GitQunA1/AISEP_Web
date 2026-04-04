@@ -783,6 +783,7 @@ function MainLayout({
                             activeView === 'dashboard_availability' ? 'Availability' :
                               activeView === 'dashboard_reports' ? 'Reports' :
                                 activeView === 'dashboard_approvals' ? 'Approvals' :
+                                activeView === 'dashboard_approve_bookings' ? 'ApproveBookings' :
                                   activeView === 'dashboard_activity' ? 'Activity' : 'Dashboard'
                   ) : activeView === 'profile' ? 'Profile' : ''
         }

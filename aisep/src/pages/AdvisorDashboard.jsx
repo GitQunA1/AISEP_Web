@@ -3,7 +3,8 @@ import { createPortal } from 'react-dom';
 import { 
     Users, Calendar, FileText, Star, Clock, CheckCircle, MessageSquare, 
     PlusCircle, TrendingUp, Trash2, Edit2, X, AlertCircle, Loader, 
-    ChevronDown, ChevronUp, ChevronLeft, ChevronRight, CreditCard 
+    ChevronDown, ChevronUp, ChevronLeft, ChevronRight, CreditCard,
+    Eye, Check, ShieldCheck
 } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import avStyles from './AdvisorDashboard.module.css';
@@ -13,6 +14,7 @@ import advisorAvailabilityService from '../services/advisorAvailabilityService';
 import bookingService from '../services/bookingService';
 import chatService from '../services/chatService';
 import ConsultingReportModal from '../components/booking/ConsultingReportModal';
+import BookingDetailModal from '../components/booking/BookingDetailModal';
 import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import CustomSelect from '../components/common/CustomSelect';
 
@@ -85,7 +87,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
         setBookingsLoading(true);
         try {
             const [data] = await Promise.all([
-                bookingService.getMyAdvisorBookings('Status==Pending', '-Id', 1, 100),
+                bookingService.getMyAdvisorBookings('', '-Id', 1, 100),
                 new Promise(resolve => setTimeout(resolve, 1000))
             ]);
             const items = data?.items ?? (Array.isArray(data) ? data : []);
@@ -152,11 +154,11 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
 
             {activeSection === 'overview' && (
                 <div className={`${styles.statsGrid} ${isNewAdvisor ? styles.disabledOpacity : ''}`}>
-                    <div className={styles.statCard} onClick={() => !isNewAdvisor && handleNavigate('bookings')}>
+                    <div className={styles.statCard} onClick={() => !isNewAdvisor && handleNavigate('approve_bookings')}>
                         <div className={`${styles.statIcon} ${styles.iconYellow}`}><MessageSquare size={20} /></div>
                         <div className={styles.statInfo}>
                             <div className={styles.statValue}>{isNewAdvisor ? '-' : dashboardData.pendingBookings}</div>
-                            <div className={styles.statLabel}>Booking chờ duyệt</div>
+                            <div className={styles.statLabel}>Booking chờ xác nhận</div>
                         </div>
                     </div>
                     <div className={styles.statCard} onClick={() => !isNewAdvisor && handleNavigate('availability')}>
@@ -203,14 +205,24 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                         />
                     )
                 )}
+                {activeSection === 'approve_bookings' && (
+                    isNewAdvisor ? (
+                        <div className={styles.emptyState} style={{ padding: '40px' }}>
+                            <AlertCircle size={40} />
+                            <p>Bạn cần hoàn tất hồ sơ trước khi xét duyệt các yêu cầu.</p>
+                        </div>
+                    ) : (
+                        <BookingApprovalSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} />
+                    )
+                )}
                 {activeSection === 'bookings' && (
                     isNewAdvisor ? (
                         <div className={styles.emptyState} style={{ padding: '40px' }}>
                             <AlertCircle size={40} />
-                            <p>Bạn cần hoàn tất hồ sơ trước khi xem các yêu cầu tư vấn.</p>
+                            <p>Bạn cần hoàn tất hồ sơ trước khi xem danh sách Booking.</p>
                         </div>
                     ) : (
-                        <IncomingBookingsSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} />
+                        <IncomingBookingsSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} activeSection={activeSection} />
                     )
                 )}
                 {activeSection === 'availability' && (
@@ -329,7 +341,7 @@ function OverviewSection({ availabilities, incomingBookings, onNavigate, loading
                 <div className={styles.card}>
                     <div className={styles.cardHeader}>
                         <h3 className={styles.cardTitle}>Booking chờ xét duyệt</h3>
-                        <button className={styles.linkBtn} onClick={() => onNavigate('bookings')}>Xem tất cả &rsaquo;</button>
+                        <button className={styles.linkBtn} onClick={() => onNavigate('approve_bookings')}>Xem tất cả &rsaquo;</button>
                     </div>
                     <div className={styles.list}>
                         {loadingBookings ? (
@@ -366,31 +378,156 @@ function OverviewSection({ availabilities, incomingBookings, onNavigate, loading
     );
 }
 
-function IncomingBookingsSection({ bookings, loading, onRefresh, user }) {
+/**
+ * AdvisorBookingKanbanCard - Single card for the Advisor Kanban board
+ */
+const AdvisorBookingKanbanCard = ({ booking, onDetail, onApprove, onReject, onChat, onReport, isActioning }) => {
+    const status = booking.status;
+    let statusLabel = 'Chờ duyệt';
+    let localStatus = 'pend';
+    let statusColor = '#ff7a00';
+    let statusBg = 'rgba(255, 122, 0, 0.1)';
+
+    if (status === 2 || status === 'Confirmed') {
+        statusLabel = 'Đã xác nhận';
+        localStatus = 'conf';
+        statusColor = '#1d9bf0';
+        statusBg = 'rgba(29, 155, 240, 0.1)';
+    } else if (status === 3 || status === 'Completed') {
+        statusLabel = 'Hoàn thành';
+        localStatus = 'comp';
+        statusColor = '#10b981';
+        statusBg = 'rgba(16, 185, 129, 0.1)';
+    } else if (status === 4 || status === 'Cancel' || status === 5 || status === 'NoResponse') {
+        statusLabel = status === 5 || status === 'NoResponse' ? 'Không phản hồi' : 'Đã hủy';
+        localStatus = 'rej';
+        statusColor = '#f4212e';
+        statusBg = 'rgba(244, 33, 46, 0.1)';
+    } else if (status === 1 || status === 'ApprovedAwaitingPayment') {
+        statusLabel = 'Chờ thanh toán';
+        localStatus = 'pend';
+        statusColor = '#ff7a00';
+        statusBg = 'rgba(255, 122, 0, 0.1)';
+    }
+
+    return (
+        <div className={avStyles.bcard}>
+            <div className={`${avStyles.bcardStrip} ${avStyles[localStatus]}`}></div>
+            <div className={avStyles.bcardBody}>
+                <div className={avStyles.bcardRow1}>
+                    <div className={avStyles.bcardMainInfo}>
+                        <div className={avStyles.bcardName} style={{ fontFamily: 'monospace', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                            #{booking.id}
+                        </div>
+                        <span className={avStyles.btag} style={{ background: statusBg, color: statusColor }}>
+                            {statusLabel}
+                        </span>
+                    </div>
+                </div>
+
+                <div className={avStyles.bcardFields}>
+                    <div className={avStyles.bf}>
+                        <div className={avStyles.bfKey}>DỰ ÁN</div>
+                        <div className={avStyles.bfVal} title={booking.projectName || 'Trống'}>
+                            {booking.projectName || '—'}
+                        </div>
+                    </div>
+                    <div className={avStyles.bf}>
+                        <div className={avStyles.bfKey}>KHÁCH</div>
+                        <div className={avStyles.bfVal}>{booking.customerName}</div>
+                    </div>
+                    <div className={avStyles.bf}>
+                        <div className={avStyles.bfKey}>GIÁ</div>
+                        <div className={avStyles.bfVal} style={{ color: '#f59e0b' }}>
+                            {Number(booking.price || 0).toLocaleString('vi-VN')}
+                            <span style={{ fontSize: '10px', marginLeft: '2px', opacity: 0.8 }}>VND</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className={avStyles.bcardTeam} style={{ marginTop: '0', paddingTop: '4px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', opacity: 0.8 }}>
+                        <Calendar size={12} />
+                        <span>{new Date(booking.startTime).toLocaleDateString('vi-VN')}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', opacity: 0.8, marginLeft: 'auto' }}>
+                        <Clock size={12} />
+                        <span>{new Date(booking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                    </div>
+                </div>
+
+                <div className={avStyles.bcardActions}>
+                    <button className={avStyles.baBtn} onClick={onDetail}>
+                        <Eye size={14} />
+                        Chi tiết
+                    </button>
+                    {(status === 0 || status === 'Pending') && (
+                        <>
+                            <button className={`${avStyles.baBtn} ${avStyles.rej}`} onClick={onReject} disabled={!!isActioning}>
+                                {isActioning === 'reject' ? <Loader size={14} className={styles.spinner} /> : <X size={14} />}
+                                Từ chối
+                            </button>
+                            <button className={`${avStyles.baBtn} ${avStyles.apr}`} onClick={onApprove} disabled={!!isActioning}>
+                                {isActioning === 'approve' ? <Loader size={14} className={styles.spinner} /> : <Check size={14} />}
+                                Chấp nhận
+                            </button>
+                        </>
+                    )}
+                    {(status === 2 || status === 'Confirmed') && (
+                        <>
+                            <button className={avStyles.baBtn} onClick={onChat}>
+                                <MessageSquare size={14} />
+                                Chat
+                            </button>
+                            <button className={avStyles.baBtn} onClick={onReport}>
+                                <FileText size={14} />
+                                Báo cáo
+                            </button>
+                        </>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+const KanbanSkeleton = ({ count = 3 }) => (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', padding: '16px 0' }}>
+        {Array.from({ length: count }).map((_, i) => (
+            <div key={i} className={avStyles.skeletonCard}>
+                <div className={avStyles.shimmer}></div>
+                <div className={avStyles.skTitle}></div>
+                <div className={avStyles.skDesc}></div>
+                <div className={avStyles.skDesc} style={{ width: '70%' }}></div>
+                <div className={avStyles.skBottom}></div>
+            </div>
+        ))}
+    </div>
+);
+
+const EmptyState = ({ icon: Icon, title, message }) => (
+    <div className={avStyles.emptyStateContainer}>
+        <div className={avStyles.emptyStateIcon}><Icon size={48} strokeWidth={1.5} color="var(--text-muted)" /></div>
+        <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)' }}>{title}</h4>
+        <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '280px', lineHeight: '1.5' }}>{message}</p>
+    </div>
+);
+
+/**
+ * BookingApprovalSection - Dedicated section for approving NEW bookings (status 0)
+ */
+function BookingApprovalSection({ bookings, loading, onRefresh, user }) {
     const [actionLoading, setActionLoading] = useState({});
-    const [actionError, setActionError] = useState({});
-    const [rejectReason, setRejectReason] = useState({});
-    const [showRejectInput, setShowRejectInput] = useState({});
-    const [reportModal, setReportModal] = useState(null); // { bookingId, advisorName, userRole }
-    const [chatSession, setChatSession] = useState(null); // { chatSessionId, displayName }
-    const [chatLoading, setChatLoading] = useState({});
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const pendingBookings = bookings.filter(b => b.status === 0 || b.status === 'Pending');
 
     const handleApprove = async (bookingId) => {
         setActionLoading(prev => ({ ...prev, [bookingId]: 'approve' }));
-        setActionError(prev => ({ ...prev, [bookingId]: null }));
         try {
             await bookingService.approveBooking(bookingId);
             onRefresh();
         } catch (e) {
-            const msg = e.message || 'Lỗi khi chấp nhận.';
-            const isExpired = msg.toLowerCase().includes('response window') || msg.toLowerCase().includes('expired');
-            setActionError(prev => ({
-                ...prev,
-                [bookingId]: isExpired
-                    ? 'Đã hết thời gian phản hồi. Booking tự động chuyển sang NoResponse.'
-                    : msg,
-            }));
-            if (isExpired) onRefresh();
+            console.error(e);
         } finally {
             setActionLoading(prev => ({ ...prev, [bookingId]: null }));
         }
@@ -398,20 +535,135 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user }) {
 
     const handleReject = async (bookingId) => {
         setActionLoading(prev => ({ ...prev, [bookingId]: 'reject' }));
-        setActionError(prev => ({ ...prev, [bookingId]: null }));
         try {
-            await bookingService.rejectBooking(bookingId, rejectReason[bookingId] || null);
+            await bookingService.rejectBooking(bookingId);
             onRefresh();
         } catch (e) {
-            const msg = e.message || 'Lỗi khi từ chối.';
-            const isExpired = msg.toLowerCase().includes('response window') || msg.toLowerCase().includes('expired');
-            setActionError(prev => ({
-                ...prev,
-                [bookingId]: isExpired
-                    ? 'Đã hết thời gian phản hồi. Booking tự động chuyển sang NoResponse.'
-                    : msg,
-            }));
-            if (isExpired) onRefresh();
+            console.error(e);
+        } finally {
+            setActionLoading(prev => ({ ...prev, [bookingId]: null }));
+        }
+    };
+
+    return (
+        <div className={styles.section} style={{ padding: '0 4px' }}>
+            <div className={styles.sectionHeader} style={{ marginBottom: '24px' }}>
+                <h2 className={styles.headerTitle} style={{ fontSize: '24px' }}>Duyệt Booking</h2>
+                <p className={styles.headerSubtitle}>Các yêu cầu tư vấn mới cần bạn xác nhận.</p>
+            </div>
+
+            {loading ? (
+                <div className={avStyles.boardGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))' }}>
+                    <KanbanSkeleton count={6} />
+                </div>
+            ) : pendingBookings.length === 0 ? (
+                <div style={{ marginTop: '40px' }}>
+                    <EmptyState 
+                        icon={ShieldCheck} 
+                        title="Tất cả đã xong!" 
+                        message="Hiện tại không có yêu cầu nào đang chờ bạn phê duyệt." 
+                    />
+                </div>
+            ) : (
+                <div className={avStyles.boardGrid} style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', 
+                    gap: '20px',
+                    padding: '0 0 40px 0'
+                }}>
+                    {pendingBookings.map(b => (
+                        <AdvisorBookingKanbanCard 
+                            key={b.id} 
+                            booking={b}
+                            isActioning={actionLoading[b.id]}
+                            onDetail={() => setSelectedBooking(b)}
+                            onApprove={() => handleApprove(b.id)}
+                            onReject={() => handleReject(b.id)}
+                        />
+                    ))}
+                </div>
+            )}
+
+            {selectedBooking && (
+                <BookingDetailModal 
+                    booking={selectedBooking}
+                    onClose={() => setSelectedBooking(null)}
+                    userRole="Advisor"
+                    onAction={(act, b) => {
+                        if (act === 'Approve') handleApprove(b.id);
+                        if (act === 'Reject') handleReject(b.id);
+                        setSelectedBooking(null);
+                    }}
+                />
+            )}
+        </div>
+    );
+}
+
+function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSection }) {
+    const [actionLoading, setActionLoading] = useState({});
+    const [actionError, setActionError] = useState({});
+    const [reportModal, setReportModal] = useState(null); 
+    const [chatSession, setChatSession] = useState(null); 
+    const [chatLoading, setChatLoading] = useState({});
+    const [selectedBooking, setSelectedBooking] = useState(null);
+    const [activeMobileTab, setActiveMobileTab] = useState('pend'); // pend, conf, comp, canc
+    const tabSwitcherRef = React.useRef(null);
+    const [showLeftTabIndicator, setShowLeftTabIndicator] = useState(false);
+    const [showRightTabIndicator, setShowRightTabIndicator] = useState(false);
+
+    const checkTabScroll = () => {
+        if (tabSwitcherRef.current) {
+            const { scrollLeft, scrollWidth, clientWidth } = tabSwitcherRef.current;
+            setShowLeftTabIndicator(scrollLeft > 10);
+            setShowRightTabIndicator(scrollLeft < scrollWidth - clientWidth - 10);
+        }
+    };
+
+    // Responsive check
+    const [windowWidth, setWindowWidth] = useState(window.innerWidth);
+    useEffect(() => {
+        const h = () => {
+            setWindowWidth(window.innerWidth);
+            checkTabScroll();
+        };
+        window.addEventListener('resize', h);
+        return () => window.removeEventListener('resize', h);
+    }, []);
+
+    useEffect(() => {
+        if (activeSection === 'bookings') {
+            const timer = setTimeout(checkTabScroll, 100);
+            return () => clearTimeout(timer);
+        }
+    }, [activeSection, activeMobileTab, bookings.length]);
+
+    const isMobile = windowWidth <= 1024;
+
+    const groupPending = bookings.filter(b => b.status === 1 || b.status === 'ApprovedAwaitingPayment');
+    const groupConfirmed = bookings.filter(b => b.status === 2 || b.status === 'Confirmed');
+    const groupCompleted = bookings.filter(b => b.status === 3 || b.status === 'Completed');
+    const groupCancelled = bookings.filter(b => b.status === 4 || b.status === 'Cancel' || b.status === 5 || b.status === 'NoResponse');
+
+    const handleApprove = async (bookingId) => {
+        setActionLoading(prev => ({ ...prev, [bookingId]: 'approve' }));
+        try {
+            await bookingService.approveBooking(bookingId);
+            onRefresh();
+        } catch (e) {
+            setActionError(prev => ({ ...prev, [bookingId]: e.message || 'Lỗi khi chấp nhận.' }));
+        } finally {
+            setActionLoading(prev => ({ ...prev, [bookingId]: null }));
+        }
+    };
+
+    const handleReject = async (bookingId) => {
+        setActionLoading(prev => ({ ...prev, [bookingId]: 'reject' }));
+        try {
+            await bookingService.rejectBooking(bookingId);
+            onRefresh();
+        } catch (e) {
+            setActionError(prev => ({ ...prev, [bookingId]: e.message || 'Lỗi khi từ chối.' }));
         } finally {
             setActionLoading(prev => ({ ...prev, [bookingId]: null }));
         }
@@ -434,187 +686,102 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user }) {
         }
     };
 
-    const BOOKING_STATUS_LABELS = {
-        0: { label: 'Chờ xác nhận', cls: 'badgePending' },
-        Pending: { label: 'Chờ xác nhận', cls: 'badgePending' },
-        1: { label: 'Chờ thanh toán', cls: 'badgeInfo' },
-        ApprovedAwaitingPayment: { label: 'Chờ thanh toán', cls: 'badgeInfo' },
-        2: { label: 'Đã xác nhận', cls: 'badgeSuccess' },
-        Confirmed: { label: 'Đã xác nhận', cls: 'badgeSuccess' },
-        3: { label: 'Hoàn thành', cls: 'badgeSuccess' },
-        Completed: { label: 'Hoàn thành', cls: 'badgeSuccess' },
-        4: { label: 'Đã hủy', cls: 'badgeError' },
-        Cancel: { label: 'Đã hủy', cls: 'badgeError' },
-        5: { label: 'Không phản hồi', cls: 'badgeError' },
-        NoResponse: { label: 'Không phản hồi', cls: 'badgeError' },
-    };
-
-    if (loading) {
+    const renderColumn = (title, items, statusId) => {
+        if (isMobile && activeMobileTab !== statusId) return null;
         return (
-            <div className={styles.section}>
-                <div className={styles.card}>
-                    <div className={styles.cardHeader}>
-                        <div className={`${styles.skeleton} ${styles.skeletonTitle}`} style={{ margin: 0 }}></div>
+            <div className={avStyles.bcol}>
+                {!isMobile && (
+                    <div className={`${avStyles.bcolHead} ${avStyles[statusId]}`}>
+                        <div className={avStyles.bcolTitle}>
+                            <div className={`${avStyles.bctDot} ${avStyles[statusId]}`}></div>
+                            {title}
+                        </div>
+                        <div className={`${avStyles.bcolN} ${avStyles[statusId]}`}>{items.length}</div>
                     </div>
-                    <div className={styles.list}>
-                        {[1, 2, 3].map(i => (
-                            <BookingSkeleton key={i} index={i} />
-                        ))}
-                    </div>
+                )}
+                <div className={avStyles.bcolCards}>
+                    {loading ? (
+                        <KanbanSkeleton count={3} />
+                    ) : items.length === 0 ? (
+                        <EmptyState icon={FileText} title="Trống" message={`Không có booking nào ở trạng thái ${title.toLowerCase()}`} />
+                    ) : (
+                        items.map(b => (
+                            <AdvisorBookingKanbanCard 
+                                key={b.id} 
+                                booking={b}
+                                isActioning={actionLoading[b.id]}
+                                onDetail={() => setSelectedBooking(b)}
+                                onApprove={() => handleApprove(b.id)}
+                                onReject={() => handleReject(b.id)}
+                                onChat={() => handleOpenChat(b)}
+                                onReport={() => setReportModal({ bookingId: b.id, advisorName: b.customerName, userRole: 'Advisor' })}
+                            />
+                        ))
+                    )}
                 </div>
             </div>
         );
-    }
+    };
 
     return (
         <>
-        <div className={styles.section}>
-            <div className={styles.card}>
-                <div className={styles.cardHeader}>
-                    <h3 className={styles.cardTitle}>
-                        Booking Đến
-                        {bookings.filter(b => b.status === 0 || b.status === 'Pending').length > 0 && (
-                            <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: 12, fontSize: 11 }}>
-                                {bookings.filter(b => b.status === 0 || b.status === 'Pending').length} chờ xử lý
-                            </span>
-                        )}
-                    </h3>
-                    <button className={styles.secondaryBtn} onClick={onRefresh} style={{ padding: '6px 14px', fontSize: '12px' }}>
-                        Làm mới
-                    </button>
+        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {/* Mobile Tab Switcher */}
+            {isMobile && (
+                <div className={avStyles.tabSwitcherWrapper}>
+                    {showLeftTabIndicator && <div className={`${avStyles.scrollIndicator} ${avStyles.scrollIndicatorLeft}`} style={{ opacity: 1 }} />}
+                    <div 
+                        className={avStyles.mobileTabSwitcher} 
+                        data-tabs="4"
+                        ref={tabSwitcherRef}
+                        onScroll={checkTabScroll}
+                    >
+                        <button className={`${avStyles.mobileTab} ${activeMobileTab === 'pend' ? avStyles.activeMobileTab : ''}`} onClick={() => setActiveMobileTab('pend')} data-status="pend">
+                            <div className={`${avStyles.bctDot} ${avStyles.pend}`}></div>
+                            <span>Chờ thanh toán</span>
+                            <span className={avStyles.mobileTabCount}>{groupPending.length}</span>
+                        </button>
+                        <button className={`${avStyles.mobileTab} ${activeMobileTab === 'conf' ? avStyles.activeMobileTab : ''}`} onClick={() => setActiveMobileTab('conf')} data-status="conf">
+                            <div className={`${avStyles.bctDot} ${avStyles.conf}`}></div>
+                            <span>Đã xác nhận</span>
+                            <span className={avStyles.mobileTabCount}>{groupConfirmed.length}</span>
+                        </button>
+                        <button className={`${avStyles.mobileTab} ${activeMobileTab === 'comp' ? avStyles.activeMobileTab : ''}`} onClick={() => setActiveMobileTab('comp')} data-status="comp">
+                            <div className={`${avStyles.bctDot} ${avStyles.comp}`}></div>
+                            <span>Hoàn thành</span>
+                            <span className={avStyles.mobileTabCount}>{groupCompleted.length}</span>
+                        </button>
+                        <button className={`${avStyles.mobileTab} ${activeMobileTab === 'canc' ? avStyles.activeMobileTab : ''}`} onClick={() => setActiveMobileTab('canc')} data-status="rej">
+                            <div className={`${avStyles.bctDot} ${avStyles.rej}`}></div>
+                            <span>Đã hủy</span>
+                            <span className={avStyles.mobileTabCount}>{groupCancelled.length}</span>
+                        </button>
+                    </div>
+                    {showRightTabIndicator && <div className={`${avStyles.scrollIndicator} ${avStyles.scrollIndicatorRight}`} style={{ opacity: 1 }} />}
                 </div>
+            )}
 
-                {bookings.length === 0 ? (
-                    <div className={styles.emptyState}>
-                        <MessageSquare size={40} />
-                        <p>Không có booking nào đến.</p>
-                    </div>
-                ) : (
-                    <div className={styles.list}>
-                        {bookings.map(booking => {
-                            const statusInfo = BOOKING_STATUS_LABELS[booking.status] || { label: String(booking.status), cls: 'badgeInfo' };
-                            const isPending = booking.status === 0 || booking.status === 'Pending';
-                            const isActioning = !!actionLoading[booking.id];
-                            const err = actionError[booking.id];
-
-                            return (
-                                <div key={booking.id} className={styles.listItem} style={{ flexDirection: 'column', alignItems: 'stretch', gap: '10px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                        <div className={styles.listIcon}><Users size={16} /></div>
-                                        <div className={styles.listContent}>
-                                            <div className={styles.listTitle}>{booking.projectName || 'Dự án'}</div>
-                                            <div className={styles.listMeta}>
-                                                Người đặt: <strong>{booking.customerName}</strong>
-                                                {' · '}{booking.slotCount} slot ({booking.slotCount} giờ)
-                                                {' · '}
-                                                {new Date(booking.startTime).toLocaleDateString('vi-VN')}
-                                                {' '}
-                                                {new Date(booking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                                                {' – '}
-                                                {new Date(booking.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                                            </div>
-                                            {booking.note && (
-                                                <div className={styles.listMeta} style={{ fontStyle: 'italic', marginTop: 2 }}>
-                                                    "{booking.note}"
-                                                </div>
-                                            )}
-                                        </div>
-                                        <span className={`${styles.badge} ${styles[statusInfo.cls]}`}>{statusInfo.label}</span>
-                                    </div>
-
-                                    {err && (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#f4212e', fontSize: 13 }}>
-                                            <AlertCircle size={14} />
-                                            <span>{err}</span>
-                                        </div>
-                                    )}
-
-                                    {/* Chat + Report buttons for Confirmed bookings */}
-                                    {(booking.status === 2 || booking.status === 'Confirmed') && (
-                                        <div style={{ display: 'flex', gap: 8, paddingLeft: '48px' }}>
-                                            <button
-                                                className={styles.primaryBtn}
-                                                style={{ padding: '6px 14px', fontSize: '13px', minWidth: 'auto' }}
-                                                onClick={() => handleOpenChat(booking)}
-                                                disabled={!!chatLoading[booking.id]}
-                                            >
-                                                {chatLoading[booking.id] ? <Loader size={14} /> : <MessageSquare size={14} />}
-                                                Chat
-                                            </button>
-                                            <button
-                                                className={styles.secondaryBtn}
-                                                style={{ padding: '6px 14px', fontSize: '13px' }}
-                                                onClick={() => setReportModal({ bookingId: booking.id, advisorName: booking.customerName, userRole: 'Advisor' })}
-                                            >
-                                                <FileText size={14} />
-                                                Nộp báo cáo
-                                            </button>
-                                        </div>
-                                    )}
-
-                                    {isPending && (
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingLeft: '48px' }}>
-                                            {showRejectInput[booking.id] && (
-                                                <input
-                                                    type="text"
-                                                    placeholder="Lý do từ chối (tùy chọn)..."
-                                                    value={rejectReason[booking.id] || ''}
-                                                    onChange={e => setRejectReason(prev => ({ ...prev, [booking.id]: e.target.value }))}
-                                                    style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid var(--border-color)', background: 'transparent', color: 'var(--text-primary)', fontSize: 13, width: '100%', boxSizing: 'border-box' }}
-                                                />
-                                            )}
-                                            <div className={styles.listActions}>
-                                                <button
-                                                    className={styles.primaryBtn}
-                                                    style={{ padding: '6px 16px', fontSize: '13px', minWidth: 'auto' }}
-                                                    onClick={() => handleApprove(booking.id)}
-                                                    disabled={isActioning}
-                                                >
-                                                    {isActioning === 'approve' ? <Loader size={14} /> : <CheckCircle size={14} />}
-                                                    Chấp nhận
-                                                </button>
-                                                {!showRejectInput[booking.id] ? (
-                                                    <button
-                                                        className={styles.dangerBtn}
-                                                        style={{ padding: '6px 16px', fontSize: '13px' }}
-                                                        onClick={() => setShowRejectInput(prev => ({ ...prev, [booking.id]: true }))}
-                                                        disabled={isActioning}
-                                                    >
-                                                        <X size={14} />
-                                                        Từ chối
-                                                    </button>
-                                                ) : (
-                                                    <>
-                                                        <button
-                                                            className={styles.dangerBtn}
-                                                            style={{ padding: '6px 16px', fontSize: '13px' }}
-                                                            onClick={() => handleReject(booking.id)}
-                                                            disabled={isActioning}
-                                                        >
-                                                            {isActioning === 'reject' ? <Loader size={14} /> : null}
-                                                            Xác nhận từ chối
-                                                        </button>
-                                                        <button
-                                                            className={styles.secondaryBtn}
-                                                            style={{ padding: '6px 12px', fontSize: '13px' }}
-                                                            onClick={() => setShowRejectInput(prev => ({ ...prev, [booking.id]: false }))}
-                                                        >
-                                                            Hủy
-                                                        </button>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                )}
+            <div className={avStyles.boardGrid}>
+                {renderColumn('Chờ thanh toán', groupPending, 'pend')}
+                {renderColumn('Đã xác nhận', groupConfirmed, 'conf')}
+                {renderColumn('Hoàn thành', groupCompleted, 'comp')}
+                {renderColumn('Đã hủy', groupCancelled, 'rej')}
             </div>
         </div>
 
-        {/* ConsultingReportModal */}
+        {selectedBooking && (
+            <BookingDetailModal 
+                booking={selectedBooking}
+                onClose={() => setSelectedBooking(null)}
+                userRole="Advisor"
+                onAction={(act, b) => {
+                    if (act === 'approve') handleApprove(b.id);
+                    if (act === 'reject') handleReject(b.id);
+                    if (act === 'chat') handleOpenChat(b);
+                }}
+            />
+        )}
+
         {reportModal && (
             <ConsultingReportModal
                 bookingId={reportModal.bookingId}
@@ -625,7 +792,6 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user }) {
             />
         )}
 
-        {/* FloatingChatWidget for booking chat */}
         <FloatingChatWidget
             chatSessionId={chatSession?.chatSessionId}
             displayName={chatSession?.displayName}
