@@ -398,7 +398,7 @@
     font-size: 18px;
     font-weight: 800;
     color: var(--text-primary);
-    margin: 0;
+    margin: 0 0 20px 0;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -481,8 +481,7 @@
     }
 
     .cardTitle {
-        margin: 0 !important;
-        /* Remove bottom margin to stay on same line */
+        margin: 0 0 16px 0 !important;
         font-size: 17px !important;
     }
 }
@@ -3551,7 +3550,57 @@
     animation: xSpinAnim 1s linear infinite;
 }
 
+/* Floating Island Header - Modern implementation */
+.xHeaderIsland {
+    background-color: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 20px 24px;
+    margin-bottom: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+
+.xHeaderInfo {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.xHeaderTitle {
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+    letter-spacing: -0.02em;
+}
+
+.xHeaderSubtitle {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin: 0;
+    opacity: 0.8;
+}
+
+@media (max-width: 768px) {
+    .xHeaderIsland {
+        padding: 16px 18px;
+        margin-bottom: 20px;
+        gap: 12px;
+    }
+    .xHeaderTitle {
+        font-size: 18px;
+    }
+    .xHeaderSubtitle {
+        font-size: 12px;
+    }
+}
+
+
 @keyframes xSpinAnim {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
-}
+}

@@ -34,20 +34,16 @@ function FeedHeader({
       <header className={styles.feedHeader}>
         <div className={styles.headerInner}>
           <div className={styles.headerContent}>
-            <div className={styles.titleSection}>
-              <div className={styles.titleRow}>
+            <div className={styles.mainHeaderInfo}>
+              <div className={styles.titleSection}>
                 <h1 className={styles.title}>{title}</h1>
-                {/* On mobile, we might want the custom action right next to the title */}
-                <div className={styles.mobileTitleAction}>
-                  {customAction}
-                  {onOpenChat && (
-                    <div className={styles.mobileNotifications}>
-                      <NotificationCenter onOpenChat={onOpenChat} />
-                    </div>
-                  )}
-                </div>
+                <p className={styles.subtitle}>{subtitle}</p>
               </div>
-              <p className={styles.subtitle}>{subtitle}</p>
+
+              <div className={styles.headerRightActions}>
+                {onOpenChat && <NotificationCenter onOpenChat={onOpenChat} />}
+                {customAction}
+              </div>
             </div>
 
             <div className={styles.actionsSection}>
@@ -63,18 +59,6 @@ function FeedHeader({
                   />
                 </div>
               )}
-
-              {/* Notification Center */}
-              {onOpenChat && (
-                <div className={styles.desktopNotifications}>
-                  <NotificationCenter onOpenChat={onOpenChat} />
-                </div>
-              )}
-
-              {/* Custom Action Button (e.g. Refresh) - Hidden on mobile if rendered in titleRow */}
-              <div className={styles.desktopCustomAction}>
-                {customAction}
-              </div>
 
               {/* "Đăng Dự Án" button for startups */}
               {((user?.role?.toString().toLowerCase() === 'startup') || user?.role === 0 || user?.role === '0') && onShowProjectForm && (

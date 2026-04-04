@@ -110,17 +110,25 @@ export default function StartupBookings({ user }) {
 
     return (
         <div className={styles.dashboardSection}>
-            <FeedHeader
-                title="Lịch tư vấn của tôi"
-                subtitle={`Bạn có ${stats.total} buổi tư vấn được ghi nhận trong hệ thống.`}
-                showFilter={false}
-                user={user}
-                customAction={
-                    <button className={styles.xRefreshIconBtn} onClick={loadBookings} disabled={loading} title="Làm mới danh sách">
+            <div className={styles.xHeaderIsland}>
+                <div className={styles.xHeaderInfo}>
+                    <h1 className={styles.xHeaderTitle}>Lịch tư vấn của tôi</h1>
+                    <p className={styles.xHeaderSubtitle}>
+                        Bạn có {stats.total} buổi tư vấn được ghi nhận trong hệ thống.
+                    </p>
+                </div>
+                <div className={styles.xHeaderAction}>
+                    <button
+                        className={styles.xRefreshIconBtn}
+                        onClick={loadBookings}
+                        disabled={loading}
+                        title="Làm mới danh sách"
+                    >
                         <RefreshCcw size={18} className={loading ? styles.xSpin : ''} />
                     </button>
-                }
-            />
+                </div>
+            </div>
+
 
             <div className={styles.dashboardContent}>
 

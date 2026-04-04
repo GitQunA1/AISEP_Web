@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
@@ -1649,11 +1649,6 @@ export default function StartupDashboard({ user }) {
                         onClick={() => setActiveSection('deals')}
                     >
                         Đầu tư
-                        {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length > 0 && (
-                            <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '8px', fontSize: '10px', padding: '2px 6px' }}>
-                                {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length}
-                            </span>
-                        )}
                     </button>
 
                     {/* Animated Indicator Line */}
