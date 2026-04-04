@@ -36,9 +36,9 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
   } else if (isAdvisor) {
     const advisorItems = [
       { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Tổng quan', href: '#', showWhenLoggedIn: true },
-      { icon: MessageSquare, label: 'Bookings', displayLabel: 'Booking', href: '#', showWhenLoggedIn: true },
+      { icon: ShieldCheck, label: 'ApproveBookings', displayLabel: 'Duyệt', href: '#', showWhenLoggedIn: true },
+      { icon: MessageSquare, label: 'Bookings', displayLabel: 'Danh sách', href: '#', showWhenLoggedIn: true },
       { icon: Calendar, label: 'Availability', displayLabel: 'Lịch rảnh', href: '#', showWhenLoggedIn: true },
-      { icon: BarChart2, label: 'Reports', displayLabel: 'Báo cáo', href: '#', showWhenLoggedIn: true },
       { icon: User, label: 'Profile', displayLabel: 'Hồ sơ', href: '#', showWhenLoggedIn: true },
     ];
     const homeItem = navItems.find(item => item.label === 'Home');
@@ -66,6 +66,9 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
     }
     if (label === 'Bookings' && onShowDashboard) {
       onShowDashboard('bookings');
+    }
+    if (label === 'ApproveBookings' && onShowDashboard) {
+      onShowDashboard('approve_bookings');
     }
     if (label === 'Availability' && onShowDashboard) {
       onShowDashboard('availability');

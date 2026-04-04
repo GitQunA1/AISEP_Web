@@ -7,6 +7,7 @@ import ConsultingReportModal from '../booking/ConsultingReportModal';
 import FloatingChatWidget from '../common/FloatingChatWidget';
 import PaymentModal from '../booking/PaymentModal';
 import BookingWizard from '../booking/BookingWizard';
+import BookingDetailModal from '../booking/BookingDetailModal';
 import FeedHeader from '../feed/FeedHeader';
 
 const BOOKING_STATUS_LABELS = {
@@ -37,10 +38,11 @@ export default function InvestorBookings({ user }) {
     const [chatSession, setChatSession] = useState(null);
     const [chatLoading, setChatLoading] = useState({});
     const [paymentBooking, setPaymentBooking] = useState(null);
+    const [detailBooking, setDetailBooking] = useState(null);
     
     // Booking Wizard State (for re-booking)
     const [showBookingWizard, setShowBookingWizard] = useState(false);
-    const [rebookData, setRebookData] = useState({ projectId: null, advisorId: null });
+    const [rebookData, setRebookData] = useState({ projectId: null, advisorId: null, sourceBookingId: null });
     
     const loadBookings = useCallback(async () => {
         setLoading(true);
@@ -79,9 +81,25 @@ export default function InvestorBookings({ user }) {
     const handleRebook = (booking) => {
         setRebookData({
             projectId: booking.projectId,
-            advisorId: booking.advisorId
+            advisorId: booking.advisorId,
+            sourceBookingId: null
         });
         setShowBookingWizard(true);
+    };
+
+    const handleRebookReplacement = (booking) => {
+        setRebookData({
+            projectId: booking.projectId || booking.project?.projectId,
+            advisorId: null,
+            sourceBookingId: booking.id || booking.bookingId
+        });
+        setShowBookingWizard(true);
+    };
+
+    const handleDetailAction = (action, booking) => {
+        if (action === 'pay') setPaymentBooking(booking);
+        if (action === 'chat') handleOpenChat(booking);
+        if (action === 'rebook') handleRebookReplacement(booking);
     };
 
     // Calculate Stats
@@ -223,23 +241,36 @@ export default function InvestorBookings({ user }) {
                                     </div>
 
                                     <div className={styles.xActions}>
+                                        <button 
+                                            className={styles.xActionButton} 
+                                            onClick={() => setDetailBooking(booking)}
+                                        >
+                                            Chi tiết <ChevronRight size={14} />
+                                        </button>
+
                                         {(booking.status === 1 || booking.status === 'ApprovedAwaitingPayment') && (
-                                            <button className={`${styles.xActionButton} ${styles.xActionSuccess}`} style={{ width: '100%' }} onClick={() => setPaymentBooking(booking)}>
-                                                <CreditCard size={14} /> Thanh toán phí tư vấn
+                                            <button className={`${styles.xActionButton} ${styles.xActionSuccess}`} onClick={() => setPaymentBooking(booking)}>
+                                                <CreditCard size={14} /> Thanh toán
                                             </button>
                                         )}
 
                                         {(booking.status === 2 || booking.status === 'Confirmed') && (
-                                            <button className={`${styles.xActionButton} ${styles.xActionPrimary}`} style={{ width: '100%' }} onClick={() => handleOpenChat(booking)} disabled={!!chatLoading[booking.id]}>
-                                                <MessageSquare size={14} /> Trò chuyện trực tuyến
+                                            <button className={`${styles.xActionButton} ${styles.xActionPrimary}`} onClick={() => handleOpenChat(booking)} disabled={!!chatLoading[booking.id]}>
+                                                <MessageSquare size={14} /> Chat
                                             </button>
                                         )}
 
-                                        {booking.status === 3 || booking.status === 'Completed' ? (
-                                            <button className={styles.xActionButton} style={{ width: '100%' }} onClick={() => setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Investor' })}>
+                                        {booking.status === 3 || booking.status === 'Completed' && (
+                                            <button className={styles.xActionButton} onClick={() => setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Investor' })}>
                                                 <FileText size={14} /> Báo cáo
                                             </button>
-                                        ) : null}
+                                        )}
+
+                                        {[4, 5, 'Cancel', 'NoResponse'].includes(booking.status) && (
+                                            <button className={`${styles.xActionButton} ${styles.xActionPrimary}`} onClick={() => handleRebookReplacement(booking)}>
+                                                <RefreshCcw size={14} /> Đặt lại
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -282,11 +313,21 @@ export default function InvestorBookings({ user }) {
                 />
             )}
 
+            {detailBooking && (
+                <BookingDetailModal 
+                    booking={detailBooking} 
+                    userRole="Investor" 
+                    onClose={() => setDetailBooking(null)} 
+                    onAction={handleDetailAction}
+                />
+            )}
+
             {/* Booking Wizard for Re-booking */}
             {showBookingWizard && (
                 <BookingWizard 
                     initialProjectId={rebookData.projectId}
                     initialAdvisorId={rebookData.advisorId}
+                    sourceBookingId={rebookData.sourceBookingId}
                     user={user}
                     onClose={() => setShowBookingWizard(false)}
                     onSuccess={() => {
