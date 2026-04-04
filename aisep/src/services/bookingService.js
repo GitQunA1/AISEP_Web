@@ -62,6 +62,34 @@ const bookingService = {
   },
 
   /**
+   * Lấy danh sách bookings của chính mình (với vai trò khách hàng: Investor/Startup)
+   * GET /api/Booking/me/customer
+   */
+  getMyCustomerBookings: async (filters = '', sorts = '', page = 1, pageSize = 50) => {
+    const params = new URLSearchParams();
+    if (filters) params.append('filters', filters);
+    if (sorts) params.append('sorts', sorts);
+    params.append('page', page);
+    params.append('pageSize', pageSize);
+    const response = await apiClient.get(`${API_URL}/me/customer?${params.toString()}`);
+    return response?.data ?? response;
+  },
+
+  /**
+   * Lấy danh sách bookings của chính mình (với vai trò Advisor)
+   * GET /api/Booking/me/advisor
+   */
+  getMyAdvisorBookings: async (filters = '', sorts = '', page = 1, pageSize = 50) => {
+    const params = new URLSearchParams();
+    if (filters) params.append('filters', filters);
+    if (sorts) params.append('sorts', sorts);
+    params.append('page', page);
+    params.append('pageSize', pageSize);
+    const response = await apiClient.get(`${API_URL}/me/advisor?${params.toString()}`);
+    return response?.data ?? response;
+  },
+
+  /**
    * Lấy booking theo ID
    * GET /api/Booking/{id}
    */

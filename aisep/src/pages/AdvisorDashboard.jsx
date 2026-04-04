@@ -85,7 +85,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
         setBookingsLoading(true);
         try {
             const [data] = await Promise.all([
-                bookingService.getAllBookings('Status==Pending', '-Id', 1, 100),
+                bookingService.getMyAdvisorBookings('Status==Pending', '-Id', 1, 100),
                 new Promise(resolve => setTimeout(resolve, 1000))
             ]);
             const items = data?.items ?? (Array.isArray(data) ? data : []);
