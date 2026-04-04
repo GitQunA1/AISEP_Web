@@ -8,6 +8,7 @@ import styles from './AdvisorProfilePage.module.css';
 import advisorService from '../services/advisorService';
 import CustomSelect from '../components/common/CustomSelect';
 import FeedHeader from '../components/feed/FeedHeader';
+import SuccessModal from '../components/common/SuccessModal';
 
 const INDUSTRIES = [
     'Fintech', 'Edtech', 'Healthtech', 'Agritech', 'E_Commerce', 
@@ -24,6 +25,7 @@ export default function AdvisorProfilePage({ user, onBack }) {
     const [success, setSuccess] = useState(false);
     const [profile, setProfile] = useState(null);
     const [activeMenu, setActiveMenu] = useState('info'); // 'info', 'expertise', 'experience'
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
 
     // Form states
     const [formData, setFormData] = useState({
@@ -126,9 +128,6 @@ export default function AdvisorProfilePage({ user, onBack }) {
                     setPreviews(prev => ({ ...prev, certificationName: 'Chứng chỉ hiện tại' }));
                 }
             }
-        } catch (err) {
-            setError('Không thể tải thông tin hồ sơ.');
-            console.error(err);
         } finally {
             setIsLoading(false);
         }
@@ -136,7 +135,12 @@ export default function AdvisorProfilePage({ user, onBack }) {
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prev => ({ ...prev, [name]: value }));
+        if (name === 'hourlyRate') {
+            const numVal = value === '' ? 0 : parseInt(value, 10);
+            setFormData(prev => ({ ...prev, [name]: numVal }));
+        } else {
+            setFormData(prev => ({ ...prev, [name]: value }));
+        }
     };
 
     const handleIndustryToggle = (ind) => {
@@ -194,9 +198,12 @@ export default function AdvisorProfilePage({ user, onBack }) {
                 submitData.append('CertificationFile', files.certification);
             }
 
-            await advisorService.updateMyProfile(profile.advisorId, submitData);
-            setSuccess(true);
-            setTimeout(() => setSuccess(false), 3000);
+            if (profile?.advisorId) {
+                await advisorService.updateMyProfile(profile.advisorId, submitData);
+            } else {
+                await advisorService.createMyProfile(submitData);
+            }
+            setShowSuccessModal(true);
             loadProfile(); // Refresh data
         } catch (err) {
             setError(err.message || 'Lỗi khi cập nhật hồ sơ.');
@@ -251,9 +258,9 @@ export default function AdvisorProfilePage({ user, onBack }) {
                                     onChange={(e) => handleFileChange(e, 'profileImage')}
                                 />
                             </div>
-                            <h2 className={styles.userName}>{profile?.userName || user?.name}</h2>
+                            <h2 className={styles.userName}>{profile?.userName || user?.name || user?.fullName}</h2>
                             <p className={styles.userEmail}>{profile?.email || user?.email}</p>
-                            <div className={styles.roleBadge}>Advisor Specialist</div>
+                            <div className={styles.roleBadge}>{profile ? 'Advisor Specialist' : 'New Advisor Onboarding'}</div>
                         </div>
 
                         <div className={styles.menuItems}>
@@ -290,7 +297,9 @@ export default function AdvisorProfilePage({ user, onBack }) {
                     {/* General Info Section */}
                     <div id="section-info" ref={sectionInfoRef} className={styles.glassCard}>
                         <div className={styles.cardHeader}>
-                            <h3 className={styles.cardTitle}>Thông tin cá nhân</h3>
+                            <h3 className={styles.cardTitle}>
+                                {profile ? 'Thông tin cá nhân' : 'Khởi tạo thông tin cá nhân'}
+                            </h3>
                         </div>
                         <div className={styles.cardBody}>
                             <div className={styles.grid2}>
@@ -353,11 +362,11 @@ export default function AdvisorProfilePage({ user, onBack }) {
                                 <div className={styles.formGroup}>
                                     <label>Phí tư vấn theo giờ (VNĐ)</label>
                                     <div className={styles.inputWrapper}>
-                                        <DollarSign size={16} className={styles.inputIcon} />
+                                        <span className={styles.currencyIcon}>₫</span>
                                         <input 
                                             type="number"
                                             name="hourlyRate"
-                                            value={formData.hourlyRate}
+                                            value={formData.hourlyRate === 0 ? '' : formData.hourlyRate}
                                             onChange={handleInputChange}
                                             placeholder="500,000" 
                                         />
@@ -453,19 +462,6 @@ export default function AdvisorProfilePage({ user, onBack }) {
                                 </button>
                             </div>
                         )}
-                        {success && (
-                            <div className={styles.successBanner}>
-                                <CheckCircle size={16} />
-                                <span>Cập nhật hồ sơ thành công!</span>
-                                <button 
-                                    type="button" 
-                                    className={styles.dismissBtn}
-                                    onClick={() => setSuccess(false)}
-                                >
-                                    <X size={14} />
-                                </button>
-                            </div>
-                        )}
                         <div className={styles.actionButtons}>
                             <button 
                                 type="button" 
@@ -486,6 +482,22 @@ export default function AdvisorProfilePage({ user, onBack }) {
                     </div>
                 </div>
             </form>
+
+            {showSuccessModal && (
+                <SuccessModal 
+                    title={profile?.advisorId ? "Cập nhật thành công!" : "Khởi tạo thành công!"}
+                    message={profile?.advisorId 
+                        ? "Hồ sơ chuyên gia của bạn đã được cập nhật thành công." 
+                        : "Chúc mừng! Bạn đã hoàn tất hồ sơ chuyên gia và có thể bắt đầu nhận lịch hẹn tư vấn."
+                    }
+                    onClose={() => setShowSuccessModal(false)}
+                    primaryBtnText="Tiếp tục"
+                    onPrimaryClick={() => {
+                        setShowSuccessModal(false);
+                        if (!profile?.advisorId && onBack) onBack(); // Go back to dashboard if new
+                    }}
+                />
+            )}
         </div>
     );
 }

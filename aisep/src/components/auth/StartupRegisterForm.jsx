@@ -10,6 +10,7 @@ import authService from '../../services/authService';
 function StartupRegisterForm({ onBack, onComplete }) {
   const [formData, setFormData] = useState({
     fullName: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -26,6 +27,13 @@ function StartupRegisterForm({ onBack, onComplete }) {
 
     if (!formData.fullName.trim()) {
       newErrors.fullName = 'Vui lòng nhập họ và tên.';
+    }
+    if (!formData.username.trim()) {
+      newErrors.username = 'Vui lòng nhập tên đăng nhập.';
+    } else if (formData.username.length < 3) {
+      newErrors.username = 'Tên đăng nhập phải có ít nhất 3 ký tự.';
+    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
+      newErrors.username = 'Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới.';
     }
 
     if (!formData.email.trim()) {
@@ -70,6 +78,7 @@ function StartupRegisterForm({ onBack, onComplete }) {
         password: formData.password,
         confirmPassword: formData.confirmPassword,
         fullName: formData.fullName,
+        username: formData.username,
         role: 0, // UserRole.Startup = 0
       });
 
@@ -89,6 +98,7 @@ function StartupRegisterForm({ onBack, onComplete }) {
 
   const isFormValid =
     formData.fullName.trim() &&
+    formData.username.trim() &&
     formData.email.trim() &&
     formData.password.length >= 8 &&
     formData.password === formData.confirmPassword;
@@ -128,6 +138,24 @@ function StartupRegisterForm({ onBack, onComplete }) {
                 disabled={isLoading}
               />
               {errors.fullName && <p className={styles.reg_errorText}>{errors.fullName}</p>}
+            </div>
+
+            {/* Username */}
+            <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
+              <label htmlFor="username" className={styles.reg_label}>
+                Tên đăng nhập (Username) <span className={styles.reg_required}>*</span>
+              </label>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                value={formData.username}
+                onChange={handleInputChange}
+                className={`${styles.reg_input} ${errors.username ? styles.reg_inputError : ''}`}
+                placeholder="Nhập tên đăng nhập của bạn"
+                disabled={isLoading}
+              />
+              {errors.username && <p className={styles.reg_errorText}>{errors.username}</p>}
             </div>
 
             {/* Email */}

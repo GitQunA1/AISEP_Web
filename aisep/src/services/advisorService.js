@@ -88,6 +88,29 @@ const advisorService = {
       console.error('[ADVISOR_SERVICE] Error updating advisor profile:', error);
       throw error;
     }
+  },
+
+  /**
+   * Create a new advisor profile for the current user
+   * @param {Object|FormData} profileData - Profile data (use FormData for binary files)
+   * @returns {Promise<Object>}
+   */
+  createMyProfile: async (profileData) => {
+    try {
+      console.log('[ADVISOR_SERVICE] Creating advisor profile');
+      const isFormData = profileData instanceof FormData;
+      
+      const response = await apiClient.post('/api/Advisor', profileData, {
+        headers: {
+          'Content-Type': isFormData ? 'multipart/form-data' : 'application/json'
+        }
+      });
+      // Extract data wrapper if present
+      return response?.data?.data ?? response?.data ?? response;
+    } catch (error) {
+      console.error('[ADVISOR_SERVICE] Error creating advisor profile:', error);
+      throw error;
+    }
   }
 };
 

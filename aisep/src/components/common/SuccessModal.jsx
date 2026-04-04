@@ -1,5 +1,6 @@
 import React from 'react';
 import { CheckCircle, X, AlertCircle, XCircle, InfoIcon } from 'lucide-react';
+import { createPortal } from 'react-dom';
 import styles from './SuccessModal.module.css';
 
 /**
@@ -16,6 +17,31 @@ export default function SuccessModal({
     onSecondaryClick,
     type = 'success'
 }) {
+    const [isClosing, setIsClosing] = React.useState(false);
+
+    const handleInternalClose = () => {
+        setIsClosing(true);
+        setTimeout(() => {
+            onClose();
+        }, 300);
+    };
+
+    const handlePrimaryClick = () => {
+        if (onPrimaryClick) {
+            // If custom handler provided, let it run but also handle closing
+            onPrimaryClick();
+            handleInternalClose();
+        } else {
+            handleInternalClose();
+        }
+    };
+
+    const handleSecondaryClick = () => {
+        if (onSecondaryClick) {
+            onSecondaryClick();
+        }
+        handleInternalClose();
+    };
     const getIcon = () => {
         switch(type) {
             case 'error':
@@ -44,12 +70,18 @@ export default function SuccessModal({
         }
     };
 
-    return (
-        <div className={styles.overlay} onClick={onClose}>
-            <div className={`${styles.modal} ${styles[type]}`} onClick={(e) => e.stopPropagation()}>
+    const modalContent = (
+        <div 
+            className={`${styles.overlay} ${isClosing ? styles.closingOverlay : ''}`} 
+            onClick={handleInternalClose}
+        >
+            <div 
+                className={`${styles.modal} ${styles[type]} ${isClosing ? styles.closingModal : ''}`} 
+                onClick={(e) => e.stopPropagation()}
+            >
                 <button
                     className={styles.closeButton}
-                    onClick={onClose}
+                    onClick={handleInternalClose}
                     aria-label="Close"
                 >
                     <X size={20} />
@@ -71,14 +103,14 @@ export default function SuccessModal({
                     {secondaryBtnText && (
                         <button 
                             className={styles.secondaryButton} 
-                            onClick={onSecondaryClick || onClose}
+                            onClick={handleSecondaryClick}
                         >
                             {secondaryBtnText}
                         </button>
                     )}
                     <button 
                         className={`${styles.primaryButton} ${styles[type]}`} 
-                        onClick={onPrimaryClick || onClose}
+                        onClick={handlePrimaryClick}
                     >
                         {primaryBtnText || 'Xong'}
                     </button>
@@ -86,4 +118,7 @@ export default function SuccessModal({
             </div>
         </div>
     );
+
+    if (typeof window === 'undefined') return null;
+    return createPortal(modalContent, document.body);
 }

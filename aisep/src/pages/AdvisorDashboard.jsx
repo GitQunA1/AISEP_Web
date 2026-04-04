@@ -20,7 +20,7 @@ import CustomSelect from '../components/common/CustomSelect';
  * AdvisorDashboard – Dashboard cho Advisor
  * Tabs: Tổng quan | Lịch Rảnh | Booking Đến | Yêu cầu tư vấn | Báo cáo
  */
-export default function AdvisorDashboard({ user, initialSection = 'overview', onSectionChange }) {
+export default function AdvisorDashboard({ user, initialSection = 'overview', onSectionChange, onShowProfile }) {
     const [activeSection, setActiveSection] = useState(initialSection);
     const [advisorProfile, setAdvisorProfile] = useState(null);
 
@@ -33,6 +33,11 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
 
     // Handle navigation that should also update the Sidebar
     const handleNavigate = (section) => {
+        if (section === 'profile' && onShowProfile) {
+            onShowProfile();
+            return;
+        }
+        
         setActiveSection(section);
         if (onSectionChange) {
             onSectionChange(section);
@@ -111,42 +116,67 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
         availableSlots: availableSlotCount,
     };
 
+    const isNewAdvisor = !advisorProfile && !availabilitiesLoading;
+
     return (
         <div className={styles.container}>
             <FeedHeader
                 title="Bảng điều khiển Cố vấn"
-                subtitle={`Xin chào, ${user?.name || advisorProfile?.userName || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`}
+                subtitle={isNewAdvisor 
+                    ? `Chào mừng ${user?.fullName || user?.name || ''}, hãy bắt đầu bằng việc thiết lập hồ sơ của bạn.` 
+                    : `Xin chào, ${advisorProfile?.userName || user?.name || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`
+                }
                 showFilter={false}
                 user={user}
             />
 
+            {isNewAdvisor && activeSection !== 'profile' && (
+                <div className={avStyles.onboardingBanner}>
+                    <div className={avStyles.onboardingIcon}>
+                        <AlertCircle size={24} />
+                    </div>
+                    <div className={avStyles.onboardingText}>
+                        <h4>Hoàn tất hồ sơ chuyên gia</h4>
+                        <p>Bạn cần khởi tạo hồ sơ chuyên gia trong tab <strong>Hồ sơ</strong> để có thể đăng ký lịch rảnh và bắt đầu nhận yêu cầu tư vấn từ Startup.</p>
+                    </div>
+                    <button 
+                        className={styles.primaryBtn} 
+                        onClick={() => handleNavigate('profile')}
+                        style={{ whiteSpace: 'nowrap', gap: '8px' }}
+                    >
+                        Thiết lập hồ sơ ngay
+                        <ChevronRight size={16} />
+                    </button>
+                </div>
+            )}
+
             {activeSection === 'overview' && (
-                <div className={styles.statsGrid}>
-                    <div className={styles.statCard} onClick={() => handleNavigate('bookings')}>
+                <div className={`${styles.statsGrid} ${isNewAdvisor ? styles.disabledOpacity : ''}`}>
+                    <div className={styles.statCard} onClick={() => !isNewAdvisor && handleNavigate('bookings')}>
                         <div className={`${styles.statIcon} ${styles.iconYellow}`}><MessageSquare size={20} /></div>
                         <div className={styles.statInfo}>
-                            <div className={styles.statValue}>{dashboardData.pendingBookings}</div>
+                            <div className={styles.statValue}>{isNewAdvisor ? '-' : dashboardData.pendingBookings}</div>
                             <div className={styles.statLabel}>Booking chờ duyệt</div>
                         </div>
                     </div>
-                    <div className={styles.statCard} onClick={() => handleNavigate('availability')}>
+                    <div className={styles.statCard} onClick={() => !isNewAdvisor && handleNavigate('availability')}>
                         <div className={`${styles.statIcon} ${styles.iconBlue}`}><Calendar size={20} /></div>
                         <div className={styles.statInfo}>
-                            <div className={styles.statValue}>{dashboardData.availableSlots}</div>
+                            <div className={styles.statValue}>{isNewAdvisor ? '-' : dashboardData.availableSlots}</div>
                             <div className={styles.statLabel}>Slot còn rảnh</div>
                         </div>
                     </div>
                     <div className={styles.statCard}>
                         <div className={`${styles.statIcon} ${styles.iconGreen}`}><CheckCircle size={20} /></div>
                         <div className={styles.statInfo}>
-                            <div className={styles.statValue}>{availabilities.filter(a => a.status === 1 || a.status === 'Booked').length}</div>
+                            <div className={styles.statValue}>{isNewAdvisor ? '-' : availabilities.filter(a => a.status === 1 || a.status === 'Booked').length}</div>
                             <div className={styles.statLabel}>Slot đã đặt</div>
                         </div>
                     </div>
                     <div className={styles.statCard}>
                         <div className={`${styles.statIcon} ${styles.iconRed}`}><Star size={20} /></div>
                         <div className={styles.statInfo}>
-                            <div className={styles.statValue}>{dashboardData.averageRating > 0 ? dashboardData.averageRating.toFixed(1) : '-'}</div>
+                            <div className={styles.statValue}>{isNewAdvisor ? '-' : (dashboardData.averageRating > 0 ? dashboardData.averageRating.toFixed(1) : '-')}</div>
                             <div className={styles.statLabel}>Đánh giá trung bình</div>
                         </div>
                     </div>
@@ -155,17 +185,54 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
 
             <div className={styles.content}>
                 {activeSection === 'overview' && (
-                    <OverviewSection 
-                        availabilities={availabilities} 
-                        incomingBookings={incomingBookings} 
-                        onNavigate={handleNavigate}
-                        loadingBookings={bookingsLoading}
-                        loadingAvailabilities={availabilitiesLoading}
-                    />
+                    isNewAdvisor ? (
+                        <div className={styles.emptyState} style={{ padding: '40px', background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px dashed var(--border-color)' }}>
+                            <AlertCircle size={40} color="var(--primary-blue)" />
+                            <h3 style={{ marginTop: '16px', color: 'var(--text-primary)' }}>Chưa có dữ liệu tổng quan</h3>
+                            <p style={{ color: 'var(--text-secondary)', maxWidth: '400px', textAlign: 'center' }}>
+                                Vui lòng hoàn tất hồ sơ chuyên gia để chúng tôi có thể hiển thị thống kê và gợi ý phù hợp cho bạn.
+                            </p>
+                        </div>
+                    ) : (
+                        <OverviewSection 
+                            availabilities={availabilities} 
+                            incomingBookings={incomingBookings} 
+                            onNavigate={handleNavigate}
+                            loadingBookings={bookingsLoading}
+                            loadingAvailabilities={availabilitiesLoading}
+                        />
+                    )
                 )}
-                {activeSection === 'bookings' && <IncomingBookingsSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} />}
-                {activeSection === 'availability' && <AvailabilitySection availabilities={availabilities} loading={availabilitiesLoading} onRefresh={loadAvailabilities} />}
-                {activeSection === 'reports' && <ReportsSection />}
+                {activeSection === 'bookings' && (
+                    isNewAdvisor ? (
+                        <div className={styles.emptyState} style={{ padding: '40px' }}>
+                            <AlertCircle size={40} />
+                            <p>Bạn cần hoàn tất hồ sơ trước khi xem các yêu cầu tư vấn.</p>
+                        </div>
+                    ) : (
+                        <IncomingBookingsSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} />
+                    )
+                )}
+                {activeSection === 'availability' && (
+                    isNewAdvisor ? (
+                        <div className={styles.emptyState} style={{ padding: '40px' }}>
+                            <AlertCircle size={40} />
+                            <p>Bạn cần hoàn tất hồ sơ trước khi quản lý lịch rảnh.</p>
+                        </div>
+                    ) : (
+                        <AvailabilitySection availabilities={availabilities} loading={availabilitiesLoading} onRefresh={loadAvailabilities} />
+                    )
+                )}
+                {activeSection === 'reports' && (
+                    isNewAdvisor ? (
+                        <div className={styles.emptyState} style={{ padding: '40px' }}>
+                            <AlertCircle size={40} />
+                            <p>Bạn cần hoàn tất hồ sơ trước khi xem báo cáo tư vấn.</p>
+                        </div>
+                    ) : (
+                        <ReportsSection />
+                    )
+                )}
             </div>
         </div>
     );
