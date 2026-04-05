@@ -22,8 +22,8 @@
 }
 
 .modal {
-    background-color: #000;
-    border: 1px solid #2f3336;
+    background-color: var(--bg-primary, #000);
+    border: 1px solid var(--border-color, #2f3336);
     border-radius: 16px;
     width: 100%;
     max-width: 400px; /* Confirmation modals are usually narrower */
@@ -56,7 +56,7 @@
 .title {
     font-size: 22px;
     font-weight: 800;
-    color: white;
+    color: var(--text-primary, white);
     margin: 0 0 12px 0;
     line-height: 1.2;
     letter-spacing: -0.01em;
@@ -64,10 +64,12 @@
 
 .message {
     font-size: 15px;
-    color: #71767b;
+    color: var(--text-secondary, #71767b);
     line-height: 1.5;
     margin: 0 0 32px 0;
     font-weight: 400;
+    white-space: pre-line;
+    text-align: left;
 }
 
 /* Footer Buttons - Pillar Style */
@@ -93,12 +95,12 @@
 }
 
 .primaryBtn {
-    background-color: #eff3f4; /* X default primary is light for confirmation */
-    color: #0f1419;
+    background-color: var(--text-primary, #eff3f4); 
+    color: var(--bg-primary, #0f1419);
 }
 
 .primaryBtn:hover:not(:disabled) {
-    background-color: #d7dbdc;
+    opacity: 0.85;
 }
 
 /* Types */
@@ -123,12 +125,12 @@
 
 .secondaryBtn {
     background-color: transparent;
-    color: white;
-    border: 1px solid #536471;
+    color: var(--text-primary, white);
+    border: 1px solid var(--border-color, #536471);
 }
 
 .secondaryBtn:hover:not(:disabled) {
-    background-color: rgba(239, 243, 244, 0.1);
+    background-color: var(--bg-hover, rgba(239, 243, 244, 0.1));
 }
 
 .primaryBtn:disabled, .secondaryBtn:disabled {

@@ -59,7 +59,6 @@ function Sidebar({
       { icon: ShieldCheck, label: 'ApproveBookings', displayLabel: 'Duyệt Booking', href: '#', showWhenLoggedIn: true },
       { icon: MessageSquare, label: 'Bookings', displayLabel: 'Danh sách Booking', href: '#', showWhenLoggedIn: true },
       { icon: Calendar, label: 'Availability', displayLabel: 'Lịch Rảnh', href: '#', showWhenLoggedIn: true },
-      { icon: FileText, label: 'Reports', displayLabel: 'Báo cáo', href: '#', showWhenLoggedIn: true },
       { icon: User, label: 'Profile', displayLabel: 'Hồ sơ', href: '#', showWhenLoggedIn: true },
     ];
     const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
@@ -99,9 +98,7 @@ function Sidebar({
     if (label === 'ApproveBookings' && onShowDashboard) {
       onShowDashboard('approve_bookings');
     }
-    if (label === 'Reports' && onShowDashboard) {
-      onShowDashboard('reports');
-    }
+
     if (label === 'UserReports' && onShowDashboard) {
       onShowDashboard('user_reports');
     }
@@ -206,7 +203,6 @@ function Sidebar({
                   if (activeView === 'dashboard_advisor_approval') return 'AdvisorApproval';
                   if (activeView === 'dashboard_availability') return 'Availability';
                   if (activeView === 'dashboard_approve_bookings') return 'ApproveBookings';
-                  if (activeView === 'dashboard_reports') return 'Reports';
                   if (activeView === 'dashboard_user_reports') return 'UserReports';
                   if (activeView === 'profile') return 'Profile';
                   if (activeView === 'advisors') return 'Advisors';

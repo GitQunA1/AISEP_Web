@@ -9,6 +9,7 @@ import advisorService from '../services/advisorService';
 import CustomSelect from '../components/common/CustomSelect';
 import FeedHeader from '../components/feed/FeedHeader';
 import SuccessModal from '../components/common/SuccessModal';
+import ConfirmationModal from '../components/common/ConfirmationModal';
 
 const INDUSTRIES = [
     'Fintech', 'Edtech', 'Healthtech', 'Agritech', 'E_Commerce', 
@@ -26,6 +27,7 @@ export default function AdvisorProfilePage({ user, onBack }) {
     const [profile, setProfile] = useState(null);
     const [activeMenu, setActiveMenu] = useState('info'); // 'info', 'expertise', 'experience'
     const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [showConfirmModal, setShowConfirmModal] = useState(false);
 
     // Form states
     const [formData, setFormData] = useState({
@@ -169,8 +171,13 @@ export default function AdvisorProfilePage({ user, onBack }) {
         }
     };
 
-    const handleSubmit = async (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
+        setShowConfirmModal(true);
+    };
+
+    const executeSubmit = async () => {
+        setShowConfirmModal(false);
         setIsSaving(true);
         setError(null);
         setSuccess(false);
@@ -498,6 +505,22 @@ export default function AdvisorProfilePage({ user, onBack }) {
                     }}
                 />
             )}
+
+            <ConfirmationModal
+                isOpen={showConfirmModal}
+                title={profile?.advisorId ? "Cập nhật hồ sơ" : "Tạo mới hồ sơ"}
+                message={`Sau khi gửi thông tin, đội ngũ AISEP sẽ cần từ 2–4 ngày để xét duyệt hồ sơ của bạn.\n\n${
+                    profile?.advisorId
+                        ? "• Ví thu nhập sẽ tạm thời bị đóng băng cho đến khi quá trình xét duyệt hoàn tất."
+                        : "• Ví thu nhập sẽ được kích hoạt sau khi thông tin được xác nhận thành công."
+                }`}
+                type="info"
+                primaryBtnText="Tiếp tục gửi"
+                secondaryBtnText="Hủy"
+                onPrimaryClick={executeSubmit}
+                onSecondaryClick={() => setShowConfirmModal(false)}
+                onClose={() => setShowConfirmModal(false)}
+            />
         </div>
     );
 }
