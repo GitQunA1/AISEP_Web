@@ -15,6 +15,7 @@ import authService from './services/authService';
 import startupProfileService from './services/startupProfileService';
 import AdvisorProfilePage from './pages/AdvisorProfilePage';
 import AdvisorApprovalPage from './components/advisor/AdvisorApprovalPage';
+import ProjectDetailView from './components/feed/ProjectDetailView';
 import SessionExpiredModal from './components/auth/SessionExpiredModal';
 
 function App() {
@@ -22,6 +23,7 @@ function App() {
   const [selectedRole, setSelectedRole] = useState(null);
   const [user, setUser] = useState(null);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
+  const [lastInvestorBookingFilter, setLastInvestorBookingFilter] = useState('ApprovedAwaitingPayment');
 
   // Listen for global session_expired events from apiClient
   useEffect(() => {
@@ -231,6 +233,7 @@ function App() {
           showInvestors={currentView === 'investors'}
           showAI={currentView === 'ai'}
           activeView={currentView}
+          isFullWidthContent={currentView.startsWith('dashboard_project_')}
         >
           {currentView === 'profile' && <AdvisorProfilePage user={user} onBack={handleShowHome} />}
           {currentView.startsWith('dashboard') && (
@@ -243,7 +246,25 @@ function App() {
                 return <StartupDashboard user={user} />;
               } else if (roleStr === 'investor' || roleNum === 1) {
                 if (currentView === 'dashboard_bookings') {
-                  return <InvestorBookings user={user} />;
+                  return (
+                    <InvestorBookings 
+                      user={user} 
+                      onViewProject={(pid) => setCurrentView('dashboard_project_' + pid)} 
+                      initialFilterStatus={lastInvestorBookingFilter}
+                      onFilterStatusChange={setLastInvestorBookingFilter}
+                    />
+                  );
+                }
+                if (currentView.startsWith('dashboard_project_')) {
+                  const pid = currentView.replace('dashboard_project_', '');
+                  return (
+                    <ProjectDetailView 
+                        projectId={pid} 
+                        onBack={() => setCurrentView('dashboard_bookings')} 
+                        user={user} 
+                        isFullView={false} 
+                    />
+                  );
                 }
                 return <InvestorDashboard user={user} />;
               } else if (roleStr === 'advisor' || roleNum === 2) {

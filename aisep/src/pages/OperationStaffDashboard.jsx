@@ -1598,7 +1598,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                                     <div>
                                                         <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)' }}>{report.category}</div>
                                                         <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                                            Người báo cáo: <strong>{report.reporterName}</strong> | 
+                                                            Người báo cáo: <strong>{report.reporterName}</strong> |
                                                             {report.targetUserName && <> Đối tượng: <strong>{report.targetUserName}</strong> |</>}
                                                             Ngày: {new Date(report.createdAt).toLocaleDateString('vi-VN')}
                                                         </div>
@@ -1632,16 +1632,16 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
 
                                             {report.status === 'Pending' && (
                                                 <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                                                    <button 
-                                                        className={`${styles.baBtn} ${styles.apr}`} 
+                                                    <button
+                                                        className={`${styles.baBtn} ${styles.apr}`}
                                                         onClick={() => handleResolveReport(report.userReportId, true)}
                                                         disabled={processingProjectId === report.userReportId}
                                                     >
                                                         {processingProjectId === report.userReportId ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
                                                         Báo cáo hợp lệ
                                                     </button>
-                                                    <button 
-                                                        className={`${styles.baBtn} ${styles.rej}`} 
+                                                    <button
+                                                        className={`${styles.baBtn} ${styles.rej}`}
                                                         onClick={() => handleResolveReport(report.userReportId, false)}
                                                         disabled={processingProjectId === report.userReportId}
                                                     >

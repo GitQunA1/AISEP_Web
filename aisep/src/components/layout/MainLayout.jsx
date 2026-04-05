@@ -46,7 +46,8 @@ function MainLayout({
   showAdvisors = false,
   showInvestors = false,
   showAI = false,
-  activeView = 'main'
+  activeView = 'main',
+  isFullWidthContent = false
 }) {
   const [isPremium] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -582,7 +583,7 @@ function MainLayout({
       <main
         ref={mainContentRef}
         key={activeView}
-        className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} view-enter`}
+        className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} ${isFullWidthContent ? styles.fullWidthContent : ''} view-enter`}
       >
         {/* Feed Content or Profile Page */}
         {(activeView === 'profile' || activeView.startsWith('dashboard')) && children ? (

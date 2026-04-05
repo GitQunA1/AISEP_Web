@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { X, TrendingUp, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
 import dealsService from '../../services/dealsService';
 import styles from './InvestmentModal.module.css';
@@ -145,7 +146,7 @@ const InvestmentModal = ({
     onClose?.();
   };
 
-  return (
+  return createPortal(
     <div className={styles.backdrop} onClick={handleClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
@@ -255,7 +256,8 @@ const InvestmentModal = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

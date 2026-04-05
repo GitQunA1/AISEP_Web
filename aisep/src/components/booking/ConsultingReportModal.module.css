@@ -238,9 +238,9 @@
 .footerRow {
   display: flex;
   gap: 12px;
-  margin-top: 12px;
+  padding: 16px 24px;
   border-top: 1px solid var(--border-color);
-  padding-top: 24px;
+  background: var(--bg-primary);
 }
 
 .primaryBtn {
