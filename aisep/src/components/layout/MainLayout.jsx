@@ -161,6 +161,7 @@ function MainLayout({
   const [followedProjectIds, setFollowedProjectIds] = useState(new Set()); // Cache for quick lookup
   const [sentConnectionIds, setSentConnectionIds] = useState(new Set()); // Cache for connection status
   const [investedProjectIds, setInvestedProjectIds] = useState(new Set()); // Cache for already invested projects
+  const [investorsByProject, setInvestorsByProject] = useState(new Map()); // Map: projectId -> array of investor objects (Contract_Signed only)
 
   // Refetch invested projects (called after successful investment)
   const refetchInvestedProjects = useCallback(async () => {
@@ -356,6 +357,71 @@ function MainLayout({
     fetchInvestedProjects();
   }, [user]);
 
+  // Fetch all deals and count investors per project (Contract_Signed only)
+  useEffect(() => {
+    const fetchInvestorData = async () => {
+      try {
+        const response = await dealsService.getInvestorDeals();
+        let deals = [];
+        if (response && response.data) {
+          if (response.data.items && Array.isArray(response.data.items)) {
+            deals = response.data.items;
+          } else if (Array.isArray(response.data)) {
+            deals = response.data;
+          }
+        } else if (Array.isArray(response)) {
+          deals = response;
+        }
+
+        // Filter for Contract_Signed status only
+        const contractSignedDeals = deals.filter(d => d.status === 'Contract_Signed' || d.status === 3);
+        
+        // Group investors by project
+        const investorMap = new Map();
+        const investorSet = new Set(); // Track unique investors to avoid duplicates
+        
+        contractSignedDeals.forEach(deal => {
+          const pId = deal.projectId;
+          
+          // Try to get investor info from deal
+          let investor = null;
+          if (deal.investor && typeof deal.investor === 'object') {
+            // If deal has investor object
+            investor = {
+              id: deal.investor.id || deal.investor.investorId || deal.investorId,
+              name: deal.investor.name || deal.investor.email || 'Investor',
+              avatar: deal.investor.profilePicture || deal.investor.avatar || null,
+              email: deal.investor.email
+            };
+          } else if (deal.investorId) {
+            // If only ID provided
+            investor = {
+              id: deal.investorId,
+              name: 'Investor',
+              avatar: null
+            };
+          }
+          
+          if (investor && !investorSet.has(investor.id + '-' + pId)) {
+            if (!investorMap.has(pId)) {
+              investorMap.set(pId, []);
+            }
+            investorMap.get(pId).push(investor);
+            investorSet.add(investor.id + '-' + pId);
+          }
+        });
+        
+        setInvestorsByProject(investorMap);
+        console.log('[MainLayout] Investors by project:', investorMap);
+      } catch (error) {
+        console.error('[MainLayout] Failed to fetch investor data:', error);
+        setInvestorsByProject(new Map());
+      }
+    };
+
+    fetchInvestorData();
+  }, []);
+
   useEffect(() => {
     // Only fetch if we are showing the main feed
     if (showAdvisors || showInvestors) return;
@@ -423,7 +489,8 @@ function MainLayout({
                 teamMembers: p.teamMembers,
                 teamExperience: p.teamExperience,
                 status: p.status,
-                viewCount: p.viewCount
+                viewCount: p.viewCount,
+                followerCount: p.followerCount || 0
               };
             });
 
@@ -699,6 +766,7 @@ function MainLayout({
                       followedProjectIds={followedProjectIds}
                       sentConnectionIds={sentConnectionIds}
                       investedProjectIds={investedProjectIds}
+                      investors={investorsByProject.get(startup.id) || []}
                       onInvestmentSuccess={refetchInvestedProjects}
                       isReturning={isReturning}
                       onViewProfile={(id) => {
