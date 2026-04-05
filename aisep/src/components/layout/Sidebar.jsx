@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle } from 'lucide-react';
+import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle, Loader } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
@@ -26,6 +26,7 @@ function Sidebar({
   activeView = 'main' // New prop to determine active state
 }) {
   const { theme, toggleTheme } = useTheme();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   let navItems = [
     { icon: Compass, label: 'Home', displayLabel: 'Khám phá dự án', href: '#' },
@@ -139,10 +140,16 @@ function Sidebar({
     onClose?.();
   };
 
-  const handleLogoutClick = () => {
-    onLogout?.();
-    onMenuItemClick?.();
-    onClose?.();
+  const handleLogoutClick = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await onLogout?.();
+      onMenuItemClick?.();
+      onClose?.();
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -256,8 +263,10 @@ function Sidebar({
                 className={styles.logoutButton}
                 onClick={handleLogoutClick}
                 aria-label="Logout"
+                disabled={isLoggingOut}
+                style={{ opacity: isLoggingOut ? 0.7 : 1, cursor: isLoggingOut ? 'not-allowed' : 'pointer' }}
               >
-                <LogOut size={20} />
+                {isLoggingOut ? <Loader size={20} className={styles.spin} /> : <LogOut size={20} />}
               </button>
             </div>
           ) : (
