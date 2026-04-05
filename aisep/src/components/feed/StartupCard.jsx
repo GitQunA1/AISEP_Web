@@ -11,7 +11,7 @@ import dealsService from '../../services/dealsService';
  * StartupCard Component - "Visual Priority (Concept C)"
  * Clean, full-width data density
  */
-function StartupCard({ startup, isPremium = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false }) {
+function StartupCard({ startup, isPremium = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), investors = [], onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
   const [interestMessage, setInterestMessage] = useState('');
@@ -323,6 +323,59 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
           <div className={styles.description}>
             {startup.description}
           </div>
+
+          {/* Follower Count */}
+          {startup.followerCount !== undefined && (
+            <div style={{ marginTop: '8px', fontSize: '13px', color: '#0097a7' }}>
+              ⭐ {startup.followerCount} người quan tâm
+            </div>
+          )}
+
+          {/* Investor Avatars (Contract_Signed only) */}
+          {investors && investors.length > 0 && (
+            <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+              <span style={{ fontSize: '13px', color: '#22c55e', fontWeight: '500' }}>
+                💼 {investors.length} nhà đầu tư:
+              </span>
+              <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
+                {investors.map((investor, idx) => (
+                  <div
+                    key={investor.id || idx}
+                    onClick={() => onViewProfile && onViewProfile(investor.id)}
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      borderRadius: '50%',
+                      backgroundColor: investor.avatar ? 'transparent' : '#0097a7',
+                      backgroundImage: investor.avatar ? `url(${investor.avatar})` : 'none',
+                      backgroundSize: 'cover',
+                      backgroundPosition: 'center',
+                      border: '1px solid #e5e7eb',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      cursor: 'pointer',
+                      fontSize: '11px',
+                      color: 'white',
+                      fontWeight: 'bold',
+                      transition: 'transform 0.2s',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.transform = 'scale(1.15)';
+                      e.currentTarget.style.zIndex = '10';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.transform = 'scale(1)';
+                      e.currentTarget.style.zIndex = '1';
+                    }}
+                    title={investor.name || 'Investor'}
+                  >
+                    {!investor.avatar && investor.name?.charAt(0).toUpperCase()}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Project Image Thumbnail */}
@@ -460,7 +513,10 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
 
             {/* Request Info Button */}
             <button
-              onClick={() => !hasRequested && setShowRequestModal(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!hasRequested) setShowRequestModal(true);
+              }}
               disabled={hasRequested}
               style={{
                 flex: 1,
@@ -559,7 +615,10 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
             ) : (
               // Show invest button
               <button
-                onClick={() => setShowInvestmentModal(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowInvestmentModal(true);
+                }}
                 style={{
                   flex: 1,
                   minWidth: '100px',

@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { X, Calendar, Clock, User, Briefcase, CreditCard, ChevronRight, MessageSquare, RefreshCcw, AlertCircle, FileText } from 'lucide-react';
 import styles from './BookingDetailModal.module.css';
 
@@ -29,7 +30,7 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
   const price = booking.price || booking.estimatedPrice || 0;
   const formatPrice = (p) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
-  return (
+  return createPortal(
     <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
         {/* Modal Header — Replicating Staff Dashboard Style */}
@@ -149,7 +150,8 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
             </button>
           )}
 
-          {userRole === 'Advisor' && booking.projectId && [1, 2, 3, 'ApprovedAwaitingPayment', 'Confirmed', 'Completed'].includes(booking.status) && (
+          {/* View Project Button - Available for all roles if projectId exists */}
+          {booking.projectId && (
             <button
               className={styles.primaryBtn}
               onClick={() => { onAction('viewProject', booking); onClose(); }}
@@ -189,6 +191,7 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

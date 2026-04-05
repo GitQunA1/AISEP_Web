@@ -33,7 +33,7 @@ export default function InvestorDashboard({ user }) {
     const [contractDealData, setContractDealData] = useState(null);
     const [contractStatus, setContractStatus] = useState(null);
     const [isSigningContract, setIsSigningContract] = useState(false);
-    
+
     // Contract signing form states
     const [signFormData, setSignFormData] = useState({
         finalAmount: 0,
@@ -52,7 +52,7 @@ export default function InvestorDashboard({ user }) {
         const initSignalR = async () => {
             try {
                 // Get JWT token from localStorage or auth context
-                const token = localStorage.getItem('token') || sessionStorage.getItem('token');
+                const token = localStorage.getItem('aisep_token') || sessionStorage.getItem('token');
                 if (token && user?.userId) {
                     await signalRService.initialize(token);
                     console.log('[InvestorDashboard] SignalR initialized successfully');
@@ -84,7 +84,7 @@ export default function InvestorDashboard({ user }) {
         };
 
         window.addEventListener('deal_created', handleDealCreated);
-        
+
         return () => {
             window.removeEventListener('deal_created', handleDealCreated);
         };
@@ -95,7 +95,7 @@ export default function InvestorDashboard({ user }) {
             setIsLoading(true);
             try {
                 console.log('[InvestorDashboard] Starting parallel fetch of all data...');
-                
+
                 // Fetch all 3 APIs in PARALLEL using Promise.all()
                 const [followingRes, connectRes, dealsRes] = await Promise.all([
                     followerService.getMyFollowing().catch(err => {
@@ -111,7 +111,7 @@ export default function InvestorDashboard({ user }) {
                         return null;
                     })
                 ]);
-                
+
                 console.log('[InvestorDashboard] Parallel fetch completed');
 
                 // Process Followed Projects
@@ -122,16 +122,16 @@ export default function InvestorDashboard({ user }) {
                     } else if (Array.isArray(followingRes.data)) {
                         followedProjects = followingRes.data;
                     }
-                    
+
                     const formattedInterests = followedProjects.map(project => ({
                         id: project.projectId,
                         projectId: project.projectId,
                         projectName: project.projectName,
                         projectImageUrl: project.projectImageUrl,
                         industry: project.industry,
-                        sentDate: new Date(project.followedAt).toLocaleString('vi-VN', { 
-                            year: 'numeric', 
-                            month: '2-digit', 
+                        sentDate: new Date(project.followedAt).toLocaleString('vi-VN', {
+                            year: 'numeric',
+                            month: '2-digit',
                             day: '2-digit',
                             hour: '2-digit',
                             minute: '2-digit',
@@ -150,9 +150,9 @@ export default function InvestorDashboard({ user }) {
                     const formattedRequests = connectRes.data.items.map(request => {
                         let formattedDate = '';
                         if (request.responseDate) {
-                            formattedDate = new Date(request.responseDate).toLocaleString('vi-VN', { 
-                                year: 'numeric', 
-                                month: '2-digit', 
+                            formattedDate = new Date(request.responseDate).toLocaleString('vi-VN', {
+                                year: 'numeric',
+                                month: '2-digit',
                                 day: '2-digit',
                                 hour: '2-digit',
                                 minute: '2-digit',
@@ -222,7 +222,7 @@ export default function InvestorDashboard({ user }) {
 
     const handleStartChat = (connectionRequestId) => {
         console.log('[InvestorDashboard] Starting chat for connectionRequestId:', connectionRequestId);
-        
+
         // Find the connection request and extract chatSessionId
         const request = sentConnectionRequests.find(r => (r.id || r.connectionRequestId) === connectionRequestId);
         if (request && request.chatSessionId) {
@@ -240,20 +240,20 @@ export default function InvestorDashboard({ user }) {
     const handleShowContractPreview = async (deal) => {
         console.log('[InvestorDashboard] handleShowContractPreview called for deal:', deal.dealId, 'status:', deal.status);
         setIsLoadingContract(true);
-        
+
         try {
             setContractDealData(deal);
             // Use status directly from deal object (already have it from GET /api/Deals)
             setContractStatus(deal.status);
             console.log('[InvestorDashboard] Set contractStatus to:', deal.status, 'type:', typeof deal.status);
-            
+
             setSignFormData({
                 finalAmount: deal.amount || 0,
                 finalEquityPercentage: deal.equityPercentage || 0,
                 additionalTerms: '',
                 signatureBase64: ''
             });
-            
+
             const response = await dealsService.getContractPreview(deal.dealId);
             if (response && response.data) {
                 setContractPreviewHtml(response.data);
@@ -290,17 +290,17 @@ export default function InvestorDashboard({ user }) {
         if (signatureCanvasRef.current) {
             const isEmpty = signatureCanvasRef.current.isEmpty();
             console.log('[InvestorDashboard] Canvas isEmpty:', isEmpty);
-            
+
             if (!isEmpty) {
                 try {
                     const canvasUrl = signatureCanvasRef.current.toDataURL('image/png');
                     // Extract plain base64 from data URL (remove 'data:image/png;base64,' prefix)
                     const base64String = canvasUrl.replace(/^data:image\/png;base64,/, '');
                     console.log('[InvestorDashboard] Signature Base64 length:', base64String.length);
-                    
+
                     // Store in ref for reliable access
                     signatureDataRef.current = base64String;
-                    
+
                     // Also update state for UI
                     setSignFormData(prev => {
                         const updated = { ...prev, signatureBase64: base64String };
@@ -320,14 +320,14 @@ export default function InvestorDashboard({ user }) {
 
     const handleSignContract = async () => {
         if (!contractDealData) return;
-        
+
         console.log('[InvestorDashboard] handleSignContract called');
         console.log('[InvestorDashboard] Current signFormData:', signFormData);
         console.log('[InvestorDashboard] Ref signature length:', signatureDataRef.current.length);
-        
+
         // Priority: ref > state > canvas
         let finalSignature = signatureDataRef.current || signFormData.signatureBase64;
-        
+
         // If no signature in ref/state, try to get from canvas directly
         if (!finalSignature && signatureCanvasRef.current) {
             console.log('[InvestorDashboard] Getting signature from canvas directly');
@@ -342,28 +342,28 @@ export default function InvestorDashboard({ user }) {
                 }
             }
         }
-        
+
         // Validate form
         if (!signFormData.finalAmount || signFormData.finalAmount === 0) {
             alert('Vui lòng nhập số tiền');
             return;
         }
-        
+
         if (!signFormData.finalEquityPercentage && signFormData.finalEquityPercentage !== 0) {
             alert('Vui lòng nhập phần trăm cổ phần');
             return;
         }
-        
+
         if (!finalSignature) {
             console.log('[InvestorDashboard] No signature found');
             alert('Vui lòng vẽ chữ ký');
             return;
         }
-        
+
         setIsSigningContract(true);
         try {
             console.log('[InvestorDashboard] Signing contract for deal:', contractDealData.dealId);
-            
+
             // Prepare data with final signature
             const contractData = {
                 finalAmount: signFormData.finalAmount,
@@ -371,14 +371,14 @@ export default function InvestorDashboard({ user }) {
                 additionalTerms: signFormData.additionalTerms,
                 signatureBase64: finalSignature
             };
-            
+
             console.log('[InvestorDashboard] Sending contract data:', {
                 dealId: contractDealData.dealId,
                 finalAmount: contractData.finalAmount,
                 finalEquityPercentage: contractData.finalEquityPercentage,
                 signatureBase64Length: contractData.signatureBase64.length
             });
-            
+
             const response = await dealsService.signContract(contractDealData.dealId, contractData);
             if (response?.success) {
                 alert('✓ Hợp đồng đã được ký thành công!');
@@ -424,9 +424,9 @@ export default function InvestorDashboard({ user }) {
                     const formattedRequests = response.data.items.map(request => {
                         let formattedDate = '';
                         if (request.responseDate) {
-                            formattedDate = new Date(request.responseDate).toLocaleString('vi-VN', { 
-                                year: 'numeric', 
-                                month: '2-digit', 
+                            formattedDate = new Date(request.responseDate).toLocaleString('vi-VN', {
+                                year: 'numeric',
+                                month: '2-digit',
                                 day: '2-digit',
                                 hour: '2-digit',
                                 minute: '2-digit',
@@ -609,12 +609,12 @@ export default function InvestorDashboard({ user }) {
                                         <p>Bạn chưa gửi yêu cầu thông tin nào.</p>
                                     </div>
                                 ) : sentConnectionRequests.map(request => {
-                                    const statusColor = request.status === 'Pending' ? '#f59e0b' : 
-                                                       request.status === 'Accepted' ? '#10b981' : '#ef4444';
+                                    const statusColor = request.status === 'Pending' ? '#f59e0b' :
+                                        request.status === 'Accepted' ? '#10b981' : '#ef4444';
                                     const statusText = request.status === 'Pending' ? 'Đang chờ' :
-                                                      request.status === 'Accepted' ? 'Chấp nhận' : 'Từ chối';
+                                        request.status === 'Accepted' ? 'Chấp nhận' : 'Từ chối';
                                     const canChat = request.status === 'Accepted' && request.chatSessionId;
-                                    
+
                                     return (
                                         <div key={request.id} className={styles.listItem}>
                                             <div className={styles.listContent}>
@@ -625,9 +625,9 @@ export default function InvestorDashboard({ user }) {
                                                     </span>
                                                 </h4>
                                                 <div className={styles.listMeta}>
-                                                    <span 
+                                                    <span
                                                         className={`${styles.badge}`}
-                                                        style={{ 
+                                                        style={{
                                                             backgroundColor: statusColor,
                                                             color: '#fff',
                                                             marginRight: '8px'
@@ -647,7 +647,7 @@ export default function InvestorDashboard({ user }) {
                                             </div>
                                             <div className={styles.listActions} style={{ alignItems: 'center' }}>
                                                 {canChat ? (
-                                                    <button 
+                                                    <button
                                                         className={styles.primaryBtn}
                                                         onClick={() => handleStartChat(request.id || request.connectionRequestId)}
                                                     >
@@ -658,7 +658,7 @@ export default function InvestorDashboard({ user }) {
                                                         Chat chưa sẵn sàng
                                                     </span>
                                                 ) : (
-                                                    <button 
+                                                    <button
                                                         className={styles.secondaryBtn}
                                                         onClick={() => console.log('View details:', request.id)}
                                                     >
@@ -695,8 +695,8 @@ export default function InvestorDashboard({ user }) {
                                                 Quan tâm từ: {interest.sentDate}
                                             </div>
                                             {interest.projectImageUrl && (
-                                                <img 
-                                                    src={interest.projectImageUrl} 
+                                                <img
+                                                    src={interest.projectImageUrl}
                                                     alt={interest.projectName}
                                                     style={{ marginTop: '8px', maxWidth: '200px', maxHeight: '120px', borderRadius: '4px' }}
                                                 />
@@ -744,7 +744,7 @@ export default function InvestorDashboard({ user }) {
                                     };
                                     const statusInfo = statusMap[deal.status] || { label: deal.status || 'Unknown', color: '#64748b' };
                                     const isContractSigned = !!deal.contractSignedAt;
-                                    
+
                                     return (
                                         <div key={deal.dealId} className={styles.listItem}>
                                             <div className={styles.listContent}>
@@ -755,9 +755,9 @@ export default function InvestorDashboard({ user }) {
                                                     )}
                                                 </h4>
                                                 <div className={styles.listMeta} style={{ marginTop: '8px' }}>
-                                                    <span 
+                                                    <span
                                                         className={`${styles.badge}`}
-                                                        style={{ 
+                                                        style={{
                                                             backgroundColor: statusInfo.color,
                                                             color: '#fff',
                                                             marginRight: '12px'
@@ -1089,7 +1089,7 @@ export default function InvestorDashboard({ user }) {
                                                     width: 400,
                                                     height: 150,
                                                     className: 'signature-canvas',
-                                                    style: { 
+                                                    style: {
                                                         display: 'block',
                                                         backgroundColor: '#fff',
                                                         cursor: 'crosshair',

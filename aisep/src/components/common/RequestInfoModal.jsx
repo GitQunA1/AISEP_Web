@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { X, Send, Loader, MapPin, User, Mail, Phone, Globe } from 'lucide-react';
 import styles from './RequestInfoModal.module.css';
 import connectionService from '../../services/connectionService';
@@ -77,7 +78,7 @@ function RequestInfoModal({ isOpen, onClose, projectId, projectName, onSuccess }
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
@@ -199,7 +200,8 @@ function RequestInfoModal({ isOpen, onClose, projectId, projectName, onSuccess }
           </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

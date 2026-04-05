@@ -85,6 +85,11 @@
   overflow: hidden !important;
 }
 
+.fullWidthContent {
+  padding: 0 !important;
+  background: var(--bg-primary) !important;
+}
+
 /* COLUMN 3: RIGHT PANEL */
 .rightPanel {
   height: 100%;

@@ -205,16 +205,18 @@ export default function UserReportModal({ bookingId, targetUserId, targetUserNam
                   <span>{error}</span>
                 </div>
               )}
-
-              <div className={styles.footerRow}>
-                <button className={styles.secondaryBtn} onClick={onClose}>Hủy</button>
-                <button className={styles.primaryBtn} onClick={handleSubmit}>
-                  <Send size={16} /> Gửi báo cáo
-                </button>
-              </div>
             </div>
           )}
         </div>
+
+        {phase === 'form' && (
+          <div className={styles.footerRow}>
+            <button className={styles.secondaryBtn} onClick={onClose}>Hủy</button>
+            <button className={styles.primaryBtn} onClick={handleSubmit}>
+              <Send size={16} /> Gửi báo cáo
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

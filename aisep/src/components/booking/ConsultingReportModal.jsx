@@ -290,13 +290,6 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
                   <AlertCircle size={16} /><span>{formError}</span>
                 </div>
               )}
-              <div className={styles.footerRow}>
-                <button className={styles.secondaryBtn} onClick={onClose} disabled={submitting}>Hủy bỏ</button>
-                <button className={styles.primaryBtn} onClick={handleSubmit} disabled={submitting}>
-                  {submitting ? <Loader size={16} className={styles.spinning} /> : <Send size={16} />}
-                  {submitting ? 'Đang gửi báo cáo...' : 'Gửi báo cáo'}
-                </button>
-              </div>
             </div>
           )}
 
@@ -371,53 +364,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
                     )}
                   </div>
 
-                  {/* Actions for Startup/Investor Review */}
-                  {!isAdvisor && report.status === 'Submitted' && (
-                    <div className={styles.footerRow} style={{ flexDirection: 'column', gap: '16px' }}>
-                      {showRevisionInput && (
-                        <div className={styles.field}>
-                          <label className={styles.label}>Lý do yêu cầu sửa đổi cụ thể</label>
-                          <textarea
-                            className={styles.textarea}
-                            rows={3}
-                            placeholder="Vui lòng nêu rõ các điểm cần Advisor cập nhật thêm..."
-                            value={revisionReason}
-                            onChange={e => setRevisionReason(e.target.value)}
-                          />
-                        </div>
-                      )}
-                      
-                      {actionError && (
-                        <div className={styles.errorRow}>
-                          <AlertCircle size={16} /><span>{actionError}</span>
-                        </div>
-                      )}
 
-                      <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-                        {!showRevisionInput ? (
-                          <>
-                            <button className={styles.secondaryBtn} onClick={() => setShowRevisionInput(true)} disabled={actionLoading}>
-                              <RotateCcw size={16} /> Yêu cầu sửa lại
-                            </button>
-                            <button className={styles.approveBtn} onClick={handleApprove} disabled={actionLoading}>
-                              {actionLoading ? <Loader size={16} className={styles.spinning} /> : <CheckCircle size={16} />}
-                              Chấp nhận báo cáo
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button className={styles.secondaryBtn} onClick={() => { setShowRevisionInput(false); setRevisionReason(''); setActionError(''); }} disabled={actionLoading}>
-                              Hủy bỏ
-                            </button>
-                            <button className={styles.revisionSubmitBtn} onClick={handleRevision} disabled={actionLoading}>
-                              {actionLoading ? <Loader size={16} className={styles.spinning} /> : <Send size={16} />}
-                              Gửi yêu cầu
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  )}
 
                   {/* Status Indicator for Approved/Completed/ApprovedByStartup */}
                   {(report.status === 'Approved' || report.status === 'Completed' || report.status === 'ApprovedByStartup') && (
@@ -449,6 +396,64 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
             </>
           )}
         </div>
+
+        {/* Sticky Footers */}
+        {phase === 'submit-form' && (
+          <div className={styles.footerRow}>
+            <button className={styles.secondaryBtn} onClick={onClose} disabled={submitting}>Hủy bỏ</button>
+            <button className={styles.primaryBtn} onClick={handleSubmit} disabled={submitting}>
+              {submitting ? <Loader size={16} className={styles.spinning} /> : <Send size={16} />}
+              {submitting ? 'Đang gửi...' : 'Gửi báo cáo'}
+            </button>
+          </div>
+        )}
+
+        {phase === 'view-report' && report && !isAdvisor && report.status === 'Submitted' && (
+          <div className={styles.footerRow} style={{ flexDirection: 'column', gap: '16px' }}>
+            {showRevisionInput && (
+              <div className={styles.field}>
+                <label className={styles.label}>Lý do yêu cầu sửa đổi cụ thể</label>
+                <textarea
+                  className={styles.textarea}
+                  rows={3}
+                  placeholder="Vui lòng nêu rõ các điểm cần Advisor cập nhật thêm..."
+                  value={revisionReason}
+                  onChange={e => setRevisionReason(e.target.value)}
+                />
+              </div>
+            )}
+            
+            {actionError && (
+              <div className={styles.errorRow}>
+                <AlertCircle size={16} /><span>{actionError}</span>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+              {!showRevisionInput ? (
+                <>
+                  <button className={styles.secondaryBtn} onClick={() => setShowRevisionInput(true)} disabled={actionLoading}>
+                    <RotateCcw size={16} /> Yêu cầu sửa lại
+                  </button>
+                  <button className={styles.approveBtn} onClick={handleApprove} disabled={actionLoading}>
+                    {actionLoading ? <Loader size={16} className={styles.spinning} /> : <CheckCircle size={16} />}
+                    Chấp nhận báo cáo
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button className={styles.secondaryBtn} onClick={() => { setShowRevisionInput(false); setRevisionReason(''); setActionError(''); }} disabled={actionLoading}>
+                    Hủy bỏ
+                  </button>
+                  <button className={styles.revisionSubmitBtn} onClick={handleRevision} disabled={actionLoading}>
+                    {actionLoading ? <Loader size={16} className={styles.spinning} /> : <Send size={16} />}
+                    Gửi yêu cầu
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

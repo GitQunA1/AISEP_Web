@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle } from 'lucide-react';
+import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle, Loader } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
@@ -26,6 +26,7 @@ function Sidebar({
   activeView = 'main' // New prop to determine active state
 }) {
   const { theme, toggleTheme } = useTheme();
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   let navItems = [
     { icon: Compass, label: 'Home', displayLabel: 'Khám phá dự án', href: '#' },
@@ -59,7 +60,6 @@ function Sidebar({
       { icon: ShieldCheck, label: 'ApproveBookings', displayLabel: 'Duyệt Booking', href: '#', showWhenLoggedIn: true },
       { icon: MessageSquare, label: 'Bookings', displayLabel: 'Danh sách Booking', href: '#', showWhenLoggedIn: true },
       { icon: Calendar, label: 'Availability', displayLabel: 'Lịch Rảnh', href: '#', showWhenLoggedIn: true },
-      { icon: FileText, label: 'Reports', displayLabel: 'Báo cáo', href: '#', showWhenLoggedIn: true },
       { icon: User, label: 'Profile', displayLabel: 'Hồ sơ', href: '#', showWhenLoggedIn: true },
     ];
     const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
@@ -99,9 +99,7 @@ function Sidebar({
     if (label === 'ApproveBookings' && onShowDashboard) {
       onShowDashboard('approve_bookings');
     }
-    if (label === 'Reports' && onShowDashboard) {
-      onShowDashboard('reports');
-    }
+
     if (label === 'UserReports' && onShowDashboard) {
       onShowDashboard('user_reports');
     }
@@ -142,10 +140,16 @@ function Sidebar({
     onClose?.();
   };
 
-  const handleLogoutClick = () => {
-    onLogout?.();
-    onMenuItemClick?.();
-    onClose?.();
+  const handleLogoutClick = async () => {
+    if (isLoggingOut) return;
+    setIsLoggingOut(true);
+    try {
+      await onLogout?.();
+      onMenuItemClick?.();
+      onClose?.();
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   return (
@@ -206,7 +210,6 @@ function Sidebar({
                   if (activeView === 'dashboard_advisor_approval') return 'AdvisorApproval';
                   if (activeView === 'dashboard_availability') return 'Availability';
                   if (activeView === 'dashboard_approve_bookings') return 'ApproveBookings';
-                  if (activeView === 'dashboard_reports') return 'Reports';
                   if (activeView === 'dashboard_user_reports') return 'UserReports';
                   if (activeView === 'profile') return 'Profile';
                   if (activeView === 'advisors') return 'Advisors';
@@ -260,8 +263,10 @@ function Sidebar({
                 className={styles.logoutButton}
                 onClick={handleLogoutClick}
                 aria-label="Logout"
+                disabled={isLoggingOut}
+                style={{ opacity: isLoggingOut ? 0.7 : 1, cursor: isLoggingOut ? 'not-allowed' : 'pointer' }}
               >
-                <LogOut size={20} />
+                {isLoggingOut ? <Loader size={20} className={styles.spin} /> : <LogOut size={20} />}
               </button>
             </div>
           ) : (

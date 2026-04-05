@@ -73,9 +73,6 @@ function BottomNav({ user, onShowProfile, onShowHome, onShowAdvisors, onShowInve
     if (label === 'Availability' && onShowDashboard) {
       onShowDashboard('availability');
     }
-    if (label === 'Reports' && onShowDashboard) {
-      onShowDashboard('reports');
-    }
     if (label === 'Approvals' && onShowDashboard) {
       onShowDashboard('approvals');
     }

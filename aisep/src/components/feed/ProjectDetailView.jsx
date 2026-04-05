@@ -202,9 +202,9 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
   useEffect(() => {
     if (!projectId || !user) return;
     setLoading(true); setError(null);
-    
+
     // Choose API based on isFullView prop
-    const fetchProjectData = isFullView 
+    const fetchProjectData = isFullView
       ? projectSubmissionService.getProjectById(projectId)
       : projectSubmissionService.getProjectNonPremiumById(projectId);
 
@@ -243,11 +243,11 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
         url: doc.fileUrl,
       })));
       setAiHistory(aRes?.data || []);
-      
+
       // Bookings: Filter by current projectId since backend filter might not be reliable
       const bItems = bRes?.data?.items || bRes?.items || (Array.isArray(bRes) ? bRes : []);
-      const filteredBookings = bItems.filter(b => 
-        String(b.projectId) === String(projectId) || 
+      const filteredBookings = bItems.filter(b =>
+        String(b.projectId) === String(projectId) ||
         (b.projectId === projectId)
       );
       setAdvisorBookings(filteredBookings);
@@ -262,10 +262,10 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
   /* ── Auth screen ── */
   if (!user || error === 'Unauthorized') {
     return (
-      <AuthRequirementScreen 
-        type="dự án" 
-        onBack={onBack} 
-        onLogin={onShowLogin} 
+      <AuthRequirementScreen
+        type="dự án"
+        onBack={onBack}
+        onLogin={onShowLogin}
       />
     );
   }
@@ -275,15 +275,15 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
 
   /* ── Error state ── */
   if (error || !project) return (
-    <ProfileErrorScreen 
-      title="dự án" 
-      message={error} 
-      onBack={onBack} 
+    <ProfileErrorScreen
+      title="dự án"
+      message={error}
+      onBack={onBack}
       onRetry={() => {
         setLoading(true);
         setError(null);
         // useEffect will refetch due to state change if logic permits or we just refetch here
-        window.location.reload(); 
+        window.location.reload();
       }}
     />
   );
@@ -298,15 +298,15 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
     : (project.startupPotentialScore ?? null);
 
   const PremiumBadge = ({ inline }) => (
-    <div style={{ 
-      display: inline ? 'inline-flex' : 'flex', 
-      alignItems: 'center', 
-      gap: 6, 
-      fontSize: 12, 
-      fontWeight: 700, 
-      color: '#ffad1f', 
-      background: 'rgba(255, 173, 31, 0.12)', 
-      padding: '4px 10px', 
+    <div style={{
+      display: inline ? 'inline-flex' : 'flex',
+      alignItems: 'center',
+      gap: 6,
+      fontSize: 12,
+      fontWeight: 700,
+      color: '#ffad1f',
+      background: 'rgba(255, 173, 31, 0.12)',
+      padding: '4px 10px',
       borderRadius: 6,
       border: '1px solid rgba(255, 173, 31, 0.2)',
       marginTop: inline ? 0 : 4,
@@ -650,9 +650,9 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
           </div>
 
           {/* Assigned Advisor Section (Always visible) */}
-          <SectionCard style={{ 
-            border: (project.assignedAdvisorId || project.assignedAdvisorName) ? `1px solid ${T.blue}` : `1px solid ${T.border}`, 
-            background: (project.assignedAdvisorId || project.assignedAdvisorName) ? T.surface3 : T.card 
+          <SectionCard style={{
+            border: (project.assignedAdvisorId || project.assignedAdvisorName) ? `1px solid ${T.blue}` : `1px solid ${T.border}`,
+            background: (project.assignedAdvisorId || project.assignedAdvisorName) ? T.surface3 : T.card
           }}>
             <SectionHeader>
               <BadgeCheck size={14} style={{ color: T.blue }} /> Cố Vấn Chính Thức
@@ -699,14 +699,14 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
 
                   {/* Bottom: Action Footer (Investor Only) */}
                   {(user.role?.toLowerCase() === 'investor' || user.role === 1) && (
-                    <div style={{ 
+                    <div style={{
                       padding: '14px 16px',
                       background: 'rgba(255,255,255,0.015)',
                       borderTop: `1px solid ${T.border}`,
                       display: 'flex',
                       justifyContent: 'flex-end'
                     }}>
-                      <button 
+                      <button
                         onClick={() => setShowBookingWizard(true)}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 10,
@@ -718,13 +718,13 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
                           width: isMobile ? '100%' : 'auto',
                           justifyContent: 'center'
                         }}
-                        onMouseEnter={e => { 
-                          e.currentTarget.style.transform = 'translateY(-2px)'; 
+                        onMouseEnter={e => {
+                          e.currentTarget.style.transform = 'translateY(-2px)';
                           e.currentTarget.style.boxShadow = '0 8px 18px rgba(29, 155, 240, 0.3)';
                           e.currentTarget.style.filter = 'brightness(1.05)';
                         }}
-                        onMouseLeave={e => { 
-                          e.currentTarget.style.transform = 'translateY(0)'; 
+                        onMouseLeave={e => {
+                          e.currentTarget.style.transform = 'translateY(0)';
                           e.currentTarget.style.boxShadow = '0 4px 12px rgba(29, 155, 240, 0.25)';
                           e.currentTarget.style.filter = 'none';
                         }}
@@ -915,9 +915,9 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
       </div>{/* /grid */}
 
       <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
-      
+
       {showBookingWizard && (
-        <BookingWizard 
+        <BookingWizard
           onClose={() => setShowBookingWizard(false)}
           user={user}
           initialProjectId={projectId}

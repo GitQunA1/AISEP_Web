@@ -27,6 +27,7 @@ import BookingWizard from '../components/booking/BookingWizard';
 
 import StartupProfileBanner from '../components/startup/StartupProfileBanner';
 import StartupBookings from '../components/startup/StartupBookings';
+import ProjectDetailView from '../components/feed/ProjectDetailView';
 
 
 /**
@@ -43,6 +44,7 @@ export default function StartupDashboard({ user }) {
     const [showRightKanbanIndicator, setShowRightKanbanIndicator] = React.useState(false);
 
     const [activeSection, setActiveSection] = React.useState('overview');
+    const [lastBookingFilter, setLastBookingFilter] = React.useState('ApprovedAwaitingPayment');
     const [activeProjectMobileTab, setActiveProjectMobileTab] = React.useState('draft');
     const [projectSearchTerm, setProjectSearchTerm] = React.useState('');
     const [showCompleteInfoForm, setShowCompleteInfoForm] = React.useState(false);
@@ -1533,21 +1535,25 @@ export default function StartupDashboard({ user }) {
 
     return (
         <div className={styles.container}>
-            {/* Unified Header */}
-            <FeedHeader
-                title="Bảng điều khiển"
-                subtitle={`Xin chào, ${user?.name || 'Người sáng lập'}! Đây là tổng quan khởi nghiệp của bạn.`}
-                showFilter={false} // No filter for dashboard
-                user={user}
-                onOpenChat={(chatSessionId) => {
-                    setActiveChatSession({
-                        chatSessionId,
-                        displayName: 'Investor',
-                        currentUserId: user?.userId,
-                        sentTime: new Date().toISOString(),
-                    });
-                }}
-            />
+            {!activeSection.startsWith('project_') && (
+                <>
+                    {/* Unified Header */}
+                    <FeedHeader
+                        title="Bảng điều khiển"
+                        subtitle={`Xin chào, ${user?.name || 'Người sáng lập'}! Đây là tổng quan khởi nghiệp của bạn.`}
+                        showFilter={false} // No filter for dashboard
+                        user={user}
+                        onOpenChat={(chatSessionId) => {
+                            setActiveChatSession({
+                                chatSessionId,
+                                displayName: 'Investor',
+                                currentUserId: user?.userId,
+                                sentTime: new Date().toISOString(),
+                            });
+                        }}
+                    />
+                </>
+            )}
 
             {!isLoadingInitialData && !startupProfile && (
                 <StartupProfileBanner
@@ -1563,7 +1569,9 @@ export default function StartupDashboard({ user }) {
                             <Eye size={20} />
                         </div>
                         <div className={styles.statInfo}>
-                            <div className={styles.statValue}>{dashboardData.profileViews}</div>
+                            <div className={styles.statValue}>
+                                {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.profileViews}
+                            </div>
                             <div className={styles.statLabel}>Lượt xem hồ sơ</div>
                         </div>
                     </div>
@@ -1573,7 +1581,9 @@ export default function StartupDashboard({ user }) {
                             <Users size={20} />
                         </div>
                         <div className={styles.statInfo}>
-                            <div className={styles.statValue}>{dashboardData.investorInterests}</div>
+                            <div className={styles.statValue}>
+                                {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.investorInterests}
+                            </div>
                             <div className={styles.statLabel}>Nhà đầu tư quan tâm</div>
                         </div>
                     </div>
@@ -1583,7 +1593,9 @@ export default function StartupDashboard({ user }) {
                             <FileText size={20} />
                         </div>
                         <div className={styles.statInfo}>
-                            <div className={styles.statValue}>{dashboardData.documentsUploaded}</div>
+                            <div className={styles.statValue}>
+                                {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.documentsUploaded}
+                            </div>
                             <div className={styles.statLabel}>Tài liệu đã tải lên</div>
                         </div>
                     </div>
@@ -1593,22 +1605,24 @@ export default function StartupDashboard({ user }) {
                             <TrendingUp size={20} />
                         </div>
                         <div className={styles.statInfo}>
-                            <div className={styles.statValue}>{dashboardData.aiScore}</div>
+                            <div className={styles.statValue}>
+                                {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.aiScore}
+                            </div>
                             <div className={styles.statLabel}>Điểm AI / 100</div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            {/* Navigation Tabs */}
-            <div className={styles.tabSwitcherWrapper}>
-                {isMobile && showLeftTabIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorLeft}`} />}
+            {!activeSection.startsWith('project_') && (
+                <div className={styles.tabSwitcherWrapper}>
+                    {isMobile && showLeftTabIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorLeft}`} />}
 
-                <div
-                    className={`${styles.tabs} ${styles.animatedTabs}`}
-                    ref={tabsRef}
-                    onScroll={checkTabScroll}
-                >
+                    <div
+                        className={`${styles.tabs} ${styles.animatedTabs}`}
+                        ref={tabsRef}
+                        onScroll={checkTabScroll}
+                    >
                     <button
                         className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
                         onClick={() => setActiveSection('overview')}
@@ -1653,9 +1667,10 @@ export default function StartupDashboard({ user }) {
 
                 {isMobile && showRightTabIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorRight}`} />}
             </div>
+            )}
 
             {/* Content Sections */}
-            <div className={styles.content}>
+            <div className={styles.content} style={activeSection.startsWith('project_') ? { padding: 0 } : {}}>
                 {/* Startup Profile Form (Section View) */}
                 {activeSection === 'complete-info' && (
                     <div className={styles.section}>
@@ -1678,38 +1693,45 @@ export default function StartupDashboard({ user }) {
                             {/* Profile Completion */}
                             <div className={styles.card}>
                                 <h3 className={styles.cardTitle}>Mức độ hoàn thiện hồ sơ</h3>
-                                <div className={styles.progressContainer}>
-                                    <div className={styles.progressBar}>
-                                        <div
-                                            className={styles.progress}
-                                            style={{ width: `${dashboardData.profileCompletion}%` }}
-                                        ></div>
+                                {isLoadingInitialData ? (
+                                    <div style={{ padding: '20px', display: 'flex', justifyContent: 'center' }}>
+                                        <Loader2 size={24} className="animate-spin" style={{ color: 'var(--text-secondary)' }} />
                                     </div>
-                                    <div className={styles.progressText}>
-                                        <span>Tiến độ</span>
-                                        {dashboardData.profileCompletion}% Hoàn thành
-                                    </div>
-                                </div>
-                                <p className={styles.hint}>Hoàn thiện hồ sơ để thu hút nhiều nhà đầu tư hơn</p>
-                                <button
-                                    onClick={() => setActiveSection('complete-info')}
-                                    className={styles.linkBtn}
-                                    style={{ marginTop: '12px' }}
-                                >
-                                    Điền thông tin đầy đủ →
-                                </button>
+                                ) : (
+                                    <>
+                                        <div className={styles.progressContainer}>
+                                            <div className={styles.progressBar}>
+                                                <div
+                                                    className={styles.progress}
+                                                    style={{ width: `${dashboardData.profileCompletion}%` }}
+                                                ></div>
+                                            </div>
+                                            <div className={styles.progressText}>
+                                                <span>Tiến độ</span>
+                                                {dashboardData.profileCompletion}% Hoàn thành
+                                            </div>
+                                        </div>
+                                        <p className={styles.hint}>Hoàn thiện hồ sơ để thu hút nhiều nhà đầu tư hơn</p>
+                                        <button
+                                            onClick={() => setActiveSection('complete-info')}
+                                            className={styles.linkBtn}
+                                            style={{ marginTop: '12px' }}
+                                        >
+                                            Điền thông tin đầy đủ →
+                                        </button>
+                                    </>
+                                )}
                             </div>
 
                             {/* AI Score Details */}
                             <div className={styles.card}>
                                 <h3 className={styles.cardTitle}>Điểm tiềm năng AI</h3>
-                                <div className={styles.scoreDisplay}>
-                                    <div className={styles.scoreCircle}>
-                                        <span className={styles.scoreNumber}>{dashboardData.aiScore}</span>
-                                        <span className={styles.scoreMax}>/ 100</span>
+                                <div className={styles.scoreDisplay} style={{ opacity: 0.6 }}>
+                                    <div className={styles.scoreCircle} style={{ background: 'transparent', border: '2px dashed var(--border-color)', color: 'var(--text-muted)' }}>
+                                        <span className={styles.scoreNumber}>-</span>
                                     </div>
-                                    <p className={styles.scoreDescription}>
-                                        Startup của bạn thể hiện tiềm năng mạnh mẽ về đổi mới thị trường và sức mạnh đội ngũ.
+                                    <p className={styles.scoreDescription} style={{ fontStyle: 'italic', color: 'var(--text-secondary)' }}>
+                                        Tính năng đang phát triển...
                                     </p>
                                 </div>
                             </div>
@@ -1719,7 +1741,7 @@ export default function StartupDashboard({ user }) {
                                 <h3 className={styles.cardTitle}>Hoạt động gần đây</h3>
                                 <div className={styles.list}>
                                     <div className={styles.emptyState}>
-                                        <p>Chưa có hoạt động nào</p>
+                                        <p style={{ fontStyle: 'italic' }}>Tính năng đang phát triển...</p>
                                     </div>
                                 </div>
                             </div>
@@ -1831,7 +1853,7 @@ export default function StartupDashboard({ user }) {
                                             const desc = (p.shortDescription || p.description || '').toLowerCase();
                                             const search = projectSearchTerm.toLowerCase();
                                             return name.includes(search) || desc.includes(search);
-                                        });
+                                        }).sort((a, b) => new Date(b.createdAt || b.createdDate || 0) - new Date(a.createdAt || a.createdDate || 0));
 
                                         const columns = [
                                             {
@@ -2130,7 +2152,21 @@ export default function StartupDashboard({ user }) {
 
                 {/* Bookings Section */}
                 {activeSection === 'bookings' && (
-                    <StartupBookings user={user} />
+                    <StartupBookings 
+                        user={user} 
+                        onViewProject={(pid) => setActiveSection('project_' + pid)}
+                        initialFilterStatus={lastBookingFilter}
+                        onFilterStatusChange={setLastBookingFilter}
+                    />
+                )}
+
+                {activeSection.startsWith('project_') && (
+                    <ProjectDetailView 
+                        projectId={activeSection.split('_')[1]} 
+                        onBack={() => setActiveSection('bookings')} 
+                        user={user} 
+                        isFullView={true}
+                    />
                 )}
 
                 {/* Deals Approval Section */}
