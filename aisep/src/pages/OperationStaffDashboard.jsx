@@ -802,35 +802,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                 searchPlaceholder={activeSection === 'project_management' ? "Tìm kiếm dự án..." : (activeSection === 'bookings' ? "Tìm kiếm booking..." : "Tìm kiếm...")}
             />
 
-            {/* Quick Stats - Only show in main statistics/analytics dashboard views */}
-            {['statistics', 'analytics', 'activity'].includes(activeSection) && (
-                <>
-                    <h3 className={styles.cardTitle} style={{ margin: '20px 24px 8px', fontSize: '14px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Hoạt động hôm nay
-                    </h3>
-                    <div className={styles.statsGrid}>
-                        <div className={styles.statCard}>
-                            <div className={`${styles.statIcon} ${styles.iconYellow}`}>
-                                <FileCheck size={20} />
-                            </div>
-                            <div className={styles.statInfo}>
-                                <div className={styles.statValue}>{dashboardData.pendingDocuments}</div>
-                                <div className={styles.statLabel}>Tài liệu chờ kiểm tra</div>
-                            </div>
-                        </div>
 
-                        <div className={styles.statCard}>
-                            <div className={`${styles.statIcon} ${styles.iconBlue}`}>
-                                <Users size={20} />
-                            </div>
-                            <div className={styles.statInfo}>
-                                <div className={styles.statValue}>{dashboardData.pendingApprovals}</div>
-                                <div className={styles.statLabel}>Phê duyệt chờ xử lý</div>
-                            </div>
-                        </div>
-                    </div>
-                </>
-            )}
 
             {/* Navigation Tabs (Only for main statistics/analytics/activity) */}
             {['statistics', 'analytics', 'activity'].includes(activeSection) && (
