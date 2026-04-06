@@ -14,6 +14,8 @@ import userReportService from '../services/userReportService';
 import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/ProjectStatus';
 import AdvisorApprovalPage from '../components/advisor/AdvisorApprovalPage';
+import PackageManagement from '../components/staff/PackageManagement';
+import GlobalSubscriptionHistory from '../components/staff/GlobalSubscriptionHistory';
 
 /**
  * ProjectKanbanCard - Single card for the Kanban board
@@ -206,6 +208,100 @@ const BookingKanbanCard = ({ booking, status, onDetail }) => {
 };
 
 /**
+ * UserReportCard - Redesigned report item with Twitter/X aesthetic
+ */
+const UserReportCard = ({ report, onResolve, isProcessing }) => {
+    const getStatusConfig = (status) => {
+        switch (status) {
+            case 'Pending': return { label: 'Đang chờ', class: local.rbPending, icon: Clock };
+            case 'Valid': return { label: 'Hợp lệ', class: local.rbValid, icon: CheckCircle };
+            case 'False': return { label: 'Sai lệch', class: local.rbFalse, icon: XCircle };
+            default: return { label: status, class: '', icon: AlertCircle };
+        }
+    };
+
+    const status = getStatusConfig(report.status);
+    const StatusIcon = status.icon;
+
+    // Handle evidence images — API returns evidenceImageUrls as an array
+    const images = Array.isArray(report.evidenceImageUrls) ? report.evidenceImageUrls : [];
+    
+    return (
+        <div className={local.rcard}>
+            <div className={local.rcardHeader}>
+                <div className={local.rcardInfo}>
+                    <div className={local.rcardTop}>
+                        <h4 className={local.rcardCategory}>{report.category}</h4>
+                        <span className={`${local.rbadge} ${status.class}`}>
+                            <StatusIcon size={12} />
+                            {status.label}
+                        </span>
+                    </div>
+                    <div className={local.rcardMeta}>
+                        <span title={`Người báo cáo ID: ${report.reporterId}`}>Người báo cáo: <strong>#{report.reporterId}</strong></span>
+                        {report.reportedUserId && (
+                            <>
+                                <span className={local.metaDot}>•</span>
+                                <span title={`Đối tượng ID: ${report.reportedUserId}`}>Đối tượng: <strong>#{report.reportedUserId}</strong></span>
+                            </>
+                        )}
+                        <span className={local.metaDot}>•</span>
+                        <span>{report.createdAt ? new Date(report.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div className={local.rcardBody}>
+                <div className={local.rcardDescLabel}>Mô tả chi tiết</div>
+                <div className={local.rcardDescText}>{report.description}</div>
+                
+                {(images.length > 0 || report.videoEvidenceUrl) && (
+                    <div className={local.rcardEvidence}>
+                        {images.length > 0 && (
+                            <div className={local.evidenceGrid}>
+                                {images.map((img, i) => (
+                                    <a key={i} href={img} target="_blank" rel="noopener noreferrer" className={local.evidenceImgWrapper}>
+                                        <img src={img} alt={`Evidence ${i + 1}`} />
+                                    </a>
+                                ))}
+                            </div>
+                        )}
+                        
+                        {report.videoEvidenceUrl && (
+                            <a href={report.videoEvidenceUrl} target="_blank" rel="noopener noreferrer" className={local.videoBtn}>
+                                <ExternalLink size={14} />
+                                <span>Xem Video bằng chứng</span>
+                            </a>
+                        )}
+                    </div>
+                )}
+            </div>
+
+            {report.status === 'Pending' && (
+                <div className={local.rcardActions}>
+                    <button 
+                        className={`${local.raBtn} ${local.raValid}`}
+                        onClick={() => onResolve(report.userReportId, true)}
+                        disabled={isProcessing}
+                    >
+                        {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                        Hợp lệ
+                    </button>
+                    <button 
+                        className={`${local.raBtn} ${local.raFalse}`}
+                        onClick={() => onResolve(report.userReportId, false)}
+                        disabled={isProcessing}
+                    >
+                        {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
+                        Sai lệch
+                    </button>
+                </div>
+            )}
+        </div>
+    );
+};
+
+/**
  * KanbanSkeleton - Shimmering loading placeholder
  */
 const KanbanSkeleton = ({ count = 3 }) => {
@@ -295,6 +391,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
     const [showHistoryView, setShowHistoryView] = useState(false);
     const [selectedHistoryResult, setSelectedHistoryResult] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
 
     // Additional Statistics state for enhanced dashboard
     const [totalProjects, setTotalProjects] = useState(0);
@@ -742,7 +839,9 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
         setUserReportsError(null);
         try {
             const response = await userReportService.getAllReports();
-            setUserReports(response || []);
+            // Some API endpoints return { data: [...] } or { items: [...] }
+            const reports = response?.data || response?.items || (Array.isArray(response) ? response : []);
+            setUserReports(reports);
         } catch (error) {
             console.error('Error fetching user reports:', error);
             setUserReportsError('Không thể tải danh sách báo cáo vi phạm.');
@@ -789,20 +888,53 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
     const filteredApproved = filterProjects(approvedProjects);
     const filteredRejected = filterProjects(rejectedProjects);
 
+    const filteredUserReports = (userReports || []).filter(r => 
+        (r.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (r.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (r.reporterId || '').toString().includes(searchTerm) ||
+        (r.userReportId || '').toString().includes(searchTerm)
+    );
+
     return (
         <div className={styles.container}>
             {/* Unified Header */}
             <FeedHeader
-                title="Bảng điều khiển Nhân viên vận hành"
-                subtitle={`Xin chào, ${user?.name || 'Nhân viên'}! Quản lý hoạt động nền tảng và các yêu cầu phê duyệt.`}
+                title={
+                    activeSection === 'subscription_history' ? "Lịch sử đăng ký gói" :
+                        (activeSection === 'package_management' ? "Quản lý Gói dịch vụ" :
+                            (activeSection === 'project_management' ? "Quản lý Dự án" :
+                                (activeSection === 'bookings' ? "Quản lý Booking" :
+                                    (activeSection === 'user_reports' ? "Quản lý báo cáo" :
+                                        (activeSection === 'advisor_approval' ? "Phê duyệt cố vấn" :
+                                            (activeSection === 'statistics' ? "Thống kê hoạt động" : "Bảng điều khiển Nhân viên"))))))
+                }
+                subtitle={
+                    activeSection === 'subscription_history' ? "Theo dõi và quản lý lịch sử thanh toán, gia hạn các gói dịch vụ của người dùng trên hệ thống." :
+                        (activeSection === 'package_management' ? "Cấu hình hạn mức, thời hạn và giá cả cho các gói đăng ký trên toàn hệ thống AISEP." :
+                            (activeSection === 'project_management' ? "Phê duyệt và quản lý các startup tham gia nền tảng." :
+                                (activeSection === 'bookings' ? "Theo dõi và giám sát các lịch hẹn đào tạo trong hệ thống." :
+                                    (activeSection === 'user_reports' ? "Giải quyết các báo cáo vi phạm và khiếu nại từ người dùng." :
+                                        (activeSection === 'advisor_approval' ? "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn trên nền tảng AISEP." :
+                                            (activeSection === 'statistics' ? "Tổng quan về các số liệu tăng trưởng và hiệu suất nền tảng." : "Quản lý nền tảng và các yêu cầu phê duyệt."))))))
+                }
                 showFilter={false}
                 user={user}
-                searchTerm={activeSection === 'project_management' ? searchTerm : (activeSection === 'bookings' ? bookingSearchTerm : '')}
-                onSearchChange={activeSection === 'project_management' ? setSearchTerm : (activeSection === 'bookings' ? setBookingSearchTerm : null)}
-                searchPlaceholder={activeSection === 'project_management' ? "Tìm kiếm dự án..." : (activeSection === 'bookings' ? "Tìm kiếm booking..." : "Tìm kiếm...")}
+                searchTerm={
+                    activeSection === 'project_management' ? searchTerm :
+                        (activeSection === 'bookings' ? bookingSearchTerm :
+                            (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : ''))
+                }
+                onSearchChange={(val) => {
+                    if (activeSection === 'project_management') setSearchTerm(val);
+                    else if (activeSection === 'bookings') setBookingSearchTerm(val);
+                    else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
+                }}
+                searchPlaceholder={
+                    activeSection === 'project_management' ? "Tìm kiếm dự án..." :
+                        (activeSection === 'bookings' ? "Tìm kiếm booking..." :
+                            "Tìm kiếm...")
+                }
             />
-
-
 
             {/* Navigation Tabs (Only for main statistics/analytics/activity) */}
             {['statistics', 'analytics', 'activity'].includes(activeSection) && (
@@ -1570,7 +1702,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>
                                 Quản lý báo cáo vi phạm
-                                {userReports.filter(r => r.status === 'Pending').length > 0 && (
+                                {Array.isArray(userReports) && userReports.filter(r => r.status === 'Pending').length > 0 && (
                                     <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginLeft: '12px' }}>
                                         {userReports.filter(r => r.status === 'Pending').length} Chờ xử lý
                                     </span>
@@ -1578,79 +1710,31 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                             </h3>
 
                             {isLoadingUserReports ? (
-                                <div style={{ padding: '40px', textAlign: 'center' }}>
+                                <div style={{ padding: '60px', textAlign: 'center' }}>
                                     <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 16px', color: 'var(--primary-blue)' }} />
-                                    <p style={{ color: 'var(--text-secondary)' }}>Đang tải danh sách báo cáo...</p>
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Đang tải danh sách báo cáo...</p>
                                 </div>
-                            ) : userReportsError ? (
-                                <EmptyState icon={AlertCircle} title="Lỗi" message={userReportsError} onRetry={fetchUserReports} isError />
-                            ) : userReports.length === 0 ? (
-                                <EmptyState icon={Shield} title="Trống" message="Hiện không có báo cáo vi phạm nào cần xử lý." />
+                            ) : (userReportsError || !Array.isArray(userReports)) ? (
+                                <div style={{ padding: '60px' }}>
+                                    <EmptyState icon={AlertCircle} title="Lỗi" message={userReportsError || "Không thể tải danh sách báo cáo"} onRetry={fetchUserReports} isError />
+                                </div>
+                            ) : filteredUserReports.length === 0 ? (
+                                <div style={{ padding: '60px' }}>
+                                    <EmptyState 
+                                        icon={searchTerm ? Search : Shield} 
+                                        title={searchTerm ? "Không tìm thấy" : "Trống"} 
+                                        message={searchTerm ? `Không tìm thấy báo cáo nào khớp với "${searchTerm}"` : "Hiện không có báo cáo vi phạm nào cần xử lý."} 
+                                    />
+                                </div>
                             ) : (
-                                <div className={styles.list}>
-                                    {userReports.map(report => (
-                                        <div key={report.userReportId} className={styles.listItem} style={{ flexDirection: 'column', alignItems: 'flex-start', padding: '24px', gap: '16px' }}>
-                                            <div style={{ display: 'flex', width: '100%', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                <div style={{ display: 'flex', gap: '12px' }}>
-                                                    <div style={{ padding: '10px', borderRadius: '12px', background: 'rgba(244, 33, 46, 0.1)', color: '#f4212e' }}>
-                                                        <AlertCircle size={24} />
-                                                    </div>
-                                                    <div>
-                                                        <div style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)' }}>{report.category}</div>
-                                                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>
-                                                            Người báo cáo: <strong>{report.reporterName}</strong> |
-                                                            {report.targetUserName && <> Đối tượng: <strong>{report.targetUserName}</strong> |</>}
-                                                            Ngày: {new Date(report.createdAt).toLocaleDateString('vi-VN')}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                <div className={`${styles.badge} ${report.status === 'Pending' ? styles.badgeInfo : report.status === 'Valid' ? styles.badgeSuccess : styles.badgeError}`}>
-                                                    {report.status === 'Pending' ? 'Đang chờ' : report.status === 'Valid' ? 'Hợp lệ' : 'Sai lệch'}
-                                                </div>
-                                            </div>
-
-                                            <div style={{ width: '100%', background: 'var(--bg-secondary)', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                                                <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--text-muted)', textTransform: 'uppercase', marginBottom: '8px' }}>Mô tả chi tiết</div>
-                                                <div style={{ fontSize: '14px', lineHeight: '1.6', color: 'var(--text-primary)' }}>{report.description}</div>
-                                            </div>
-
-                                            {(report.evidenceImages?.length > 0 || report.videoEvidenceUrl) && (
-                                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', width: '100%' }}>
-                                                    {report.evidenceImages?.split(',').map((img, i) => (
-                                                        <a key={i} href={img.trim()} target="_blank" rel="noopener noreferrer" style={{ width: '100px', height: '100px', borderRadius: '8px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
-                                                            <img src={img.trim()} alt="Evidence" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                        </a>
-                                                    ))}
-                                                    {report.videoEvidenceUrl && (
-                                                        <a href={report.videoEvidenceUrl} target="_blank" rel="noopener noreferrer" className={styles.baBtn} style={{ height: '100px', width: '100px', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: '8px', background: 'rgba(29, 155, 240, 0.1)', color: 'var(--primary-blue)', border: '1px dashed var(--primary-blue)' }}>
-                                                            <ExternalLink size={20} />
-                                                            <span style={{ fontSize: '11px', fontWeight: '700' }}>Xem Video</span>
-                                                        </a>
-                                                    )}
-                                                </div>
-                                            )}
-
-                                            {report.status === 'Pending' && (
-                                                <div style={{ display: 'flex', gap: '12px', marginTop: '8px' }}>
-                                                    <button
-                                                        className={`${styles.baBtn} ${styles.apr}`}
-                                                        onClick={() => handleResolveReport(report.userReportId, true)}
-                                                        disabled={processingProjectId === report.userReportId}
-                                                    >
-                                                        {processingProjectId === report.userReportId ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                                                        Báo cáo hợp lệ
-                                                    </button>
-                                                    <button
-                                                        className={`${styles.baBtn} ${styles.rej}`}
-                                                        onClick={() => handleResolveReport(report.userReportId, false)}
-                                                        disabled={processingProjectId === report.userReportId}
-                                                    >
-                                                        {processingProjectId === report.userReportId ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
-                                                        Báo cáo sai lệch
-                                                    </button>
-                                                </div>
-                                            )}
-                                        </div>
+                                <div className={local.reportGrid}>
+                                    {filteredUserReports.map(report => (
+                                        <UserReportCard 
+                                            key={report.userReportId} 
+                                            report={report}
+                                            onResolve={handleResolveReport}
+                                            isProcessing={processingProjectId === report.userReportId}
+                                        />
                                     ))}
                                 </div>
                             )}
@@ -1697,6 +1781,18 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                 </div>
                             </div>
                         </div>
+                    </div>
+                )}
+
+                {activeSection === 'package_management' && (
+                    <div className={styles.section} style={{ padding: 0, gap: 0, margin: '-24px' }}>
+                        <PackageManagement searchTerm={subscriptionSearchTerm} />
+                    </div>
+                )}
+
+                {activeSection === 'subscription_history' && (
+                    <div className={styles.section} style={{ padding: 0, gap: 0, margin: '-24px' }}>
+                        <GlobalSubscriptionHistory searchTerm={subscriptionSearchTerm} />
                     </div>
                 )}
             </div>

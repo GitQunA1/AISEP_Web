@@ -36,15 +36,18 @@ export default function PaymentModal({ bookingId, price, advisorName, slotCount,
     stopPolling();
     pollRef.current = setInterval(async () => {
       try {
-        const status = await paymentService.getBookingPaymentStatus(bid);
-        if (status?.isPaid || status?.transactionStatus === 'Completed') {
+        const res = await paymentService.getBookingPaymentStatus(bid);
+        const actualIsPaid = res?.isPaid || res?.data?.isPaid;
+        const actualTxStatus = res?.transactionStatus || res?.data?.transactionStatus;
+
+        if (actualIsPaid || actualTxStatus === 'Completed' || actualTxStatus === 'Success') {
           stopPolling();
           setPhase('success');
           if (!hasCalledPaid.current) {
             hasCalledPaid.current = true;
             onPaid?.();
           }
-        } else if (status?.transactionStatus === 'Failed') {
+        } else if (actualTxStatus === 'Failed' || res?.transactionStatus === 'Failed') {
           stopPolling();
           setPhase('failed');
         }

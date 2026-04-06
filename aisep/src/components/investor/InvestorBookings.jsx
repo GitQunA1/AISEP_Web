@@ -45,8 +45,8 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
     const [showBookingWizard, setShowBookingWizard] = useState(false);
     const [rebookData, setRebookData] = useState({ projectId: null, advisorId: null, sourceBookingId: null });
 
-    const loadBookings = useCallback(async () => {
-        setLoading(true);
+    const loadBookings = useCallback(async (isSilent = false) => {
+        if (!isSilent) setLoading(true);
         try {
             const response = await bookingService.getMyCustomerBookings('', '-Id', 1, 100);
             const items = response?.items ?? (Array.isArray(response) ? response : []);
@@ -54,7 +54,7 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
         } catch (error) {
             console.error('Failed to load investor bookings', error);
         } finally {
-            setLoading(false);
+            if (!isSilent) setLoading(false);
         }
     }, []);
 
@@ -130,6 +130,14 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
         if (action === 'rebook') handleRebookReplacement(booking);
         if (action === 'viewProject' && onViewProject) onViewProject(booking.projectId);
     };
+
+    const handleClosePayment = useCallback(() => {
+        setPaymentBooking(null);
+    }, []);
+
+    const handlePaymentSuccess = useCallback(() => {
+        loadBookings(true); // Silent background refresh
+    }, [loadBookings]);
 
     // Calculate Stats
     const stats = {
@@ -341,11 +349,8 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
                         bookingId={paymentBooking.id}
                         advisorName={paymentBooking.advisorName}
                         slotCount={paymentBooking.slotCount}
-                        onClose={() => setPaymentBooking(null)}
-                        onPaid={() => {
-                            setPaymentBooking(null);
-                            loadBookings();
-                        }}
+                        onClose={handleClosePayment}
+                        onPaid={handlePaymentSuccess}
                     />
                 )}
 

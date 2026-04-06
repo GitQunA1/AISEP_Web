@@ -46,8 +46,8 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
     const [showBookingWizard, setShowBookingWizard] = useState(false);
     const [rebookData, setRebookData] = useState({ projectId: null, advisorId: null, sourceBookingId: null });
 
-    const loadBookings = useCallback(async () => {
-        setLoading(true);
+    const loadBookings = useCallback(async (isSilent = false) => {
+        if (!isSilent) setLoading(true);
         try {
             const response = await bookingService.getMyCustomerBookings('', '-Id', 1, 100);
             const items = response?.items ?? (Array.isArray(response) ? response : []);
@@ -55,7 +55,7 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
         } catch (error) {
             console.error('Failed to load startup bookings', error);
         } finally {
-            setLoading(false);
+            if (!isSilent) setLoading(false);
         }
     }, []);
 
@@ -108,6 +108,14 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
         if (action === 'report') setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Startup' });
         if (action === 'viewProject' && onViewProject) onViewProject(booking.projectId);
     };
+
+    const handleClosePayment = useCallback(() => {
+        setPaymentBooking(null);
+    }, []);
+
+    const handlePaymentSuccess = useCallback(() => {
+        loadBookings(true); // Silent background refresh
+    }, [loadBookings]);
 
     // Calculate Stats
     const stats = {
@@ -296,7 +304,13 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
                 )}
                 <FloatingChatWidget chatSessionId={chatSession?.chatSessionId} displayName={chatSession?.displayName} currentUserId={chatSession?.currentUserId} sentTime={chatSession?.sentTime} onClose={() => setChatSession(null)} />
                 {paymentBooking && (
-                    <PaymentModal bookingId={paymentBooking.id} advisorName={paymentBooking.advisorName} slotCount={paymentBooking.slotCount} onClose={() => setPaymentBooking(null)} onPaid={() => { setPaymentBooking(null); loadBookings(); }} />
+                    <PaymentModal 
+                        bookingId={paymentBooking.id} 
+                        advisorName={paymentBooking.advisorName} 
+                        slotCount={paymentBooking.slotCount} 
+                        onClose={handleClosePayment} 
+                        onPaid={handlePaymentSuccess} 
+                    />
                 )}
                 {complainBooking && (
                     <UserReportModal 

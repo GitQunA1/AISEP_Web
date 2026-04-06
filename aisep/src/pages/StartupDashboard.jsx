@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User } from 'lucide-react';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User, Crown } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
@@ -28,13 +28,15 @@ import BookingWizard from '../components/booking/BookingWizard';
 import StartupProfileBanner from '../components/startup/StartupProfileBanner';
 import StartupBookings from '../components/startup/StartupBookings';
 import ProjectDetailView from '../components/feed/ProjectDetailView';
+import SubscriptionManagement from '../components/subscription/SubscriptionManagement';
 
 
 /**
  * StartupDashboard - Comprehensive dashboard for startup founders
  * Features: Overview stats, Profile completion, Documents, AI Score, Advisor requests
  */
-export default function StartupDashboard({ user }) {
+export default function StartupDashboard({ user, initialSection = 'overview' }) {
+    const [activeSection, setActiveSection] = React.useState(initialSection);
     const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 1024);
     const [showLeftTabIndicator, setShowLeftTabIndicator] = React.useState(false);
     const [showRightTabIndicator, setShowRightTabIndicator] = React.useState(false);
@@ -43,7 +45,17 @@ export default function StartupDashboard({ user }) {
     const [showLeftKanbanIndicator, setShowLeftKanbanIndicator] = React.useState(false);
     const [showRightKanbanIndicator, setShowRightKanbanIndicator] = React.useState(false);
 
-    const [activeSection, setActiveSection] = React.useState('overview');
+    // Sync activeSection with initialSection prop
+    React.useEffect(() => {
+        if (initialSection) setActiveSection(initialSection);
+    }, [initialSection]);
+
+    // Handle window resize for mobile check
+    React.useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth <= 1024);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
     const [lastBookingFilter, setLastBookingFilter] = React.useState('ApprovedAwaitingPayment');
     const [activeProjectMobileTab, setActiveProjectMobileTab] = React.useState('draft');
     const [projectSearchTerm, setProjectSearchTerm] = React.useState('');
@@ -1654,13 +1666,12 @@ export default function StartupDashboard({ user }) {
                     >
                         Lịch tư vấn
                     </button>
-                    <button
+                     <button
                         className={`${styles.tab} ${activeSection === 'deals' ? styles.active : ''}`}
                         onClick={() => setActiveSection('deals')}
                     >
                         Đầu tư
                     </button>
-
                     {/* Animated Indicator Line */}
                     <div className={styles.tabIndicator} style={indicatorStyle} />
                 </div>
@@ -2397,6 +2408,7 @@ export default function StartupDashboard({ user }) {
                         </div>
                     </div>
                 )}
+
             </div>
 
             {/* Modal Overlay for Complete Info Form */}
