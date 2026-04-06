@@ -13,6 +13,7 @@ import InvestorBookings from './components/investor/InvestorBookings';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import authService from './services/authService';
 import startupProfileService from './services/startupProfileService';
+import SubscriptionManagement from './components/subscription/SubscriptionManagement';
 import AdvisorProfilePage from './pages/AdvisorProfilePage';
 import AdvisorApprovalPage from './components/advisor/AdvisorApprovalPage';
 import ProjectDetailView from './components/feed/ProjectDetailView';
@@ -192,6 +193,10 @@ function App() {
     setCurrentView('ai');
   };
 
+  const handleShowSubscription = () => {
+    setCurrentView('subscription');
+  };
+
   const handleShowProfile = () => {
     setCurrentView('profile');
   };
@@ -217,7 +222,7 @@ function App() {
           onShowRegister={handleShowRegister}
           onBack={handleBackToMain}
         />
-      ) : (['main', 'advisors', 'investors', 'ai', 'dashboard', 'profile'].includes(currentView) || currentView.startsWith('dashboard_')) ? (
+      ) : (['main', 'advisors', 'investors', 'ai', 'dashboard', 'profile', 'subscription'].includes(currentView) || currentView.startsWith('dashboard_')) ? (
         <MainLayout
           onShowRegister={handleShowRegister}
           onShowLogin={handleShowLogin}
@@ -225,6 +230,7 @@ function App() {
           onShowAdvisors={handleShowAdvisors}
           onShowInvestors={handleShowInvestors}
           onShowDashboard={handleShowDashboard}
+          onShowSubscription={handleShowSubscription}
           onShowAI={handleShowAI}
           onShowProfile={handleShowProfile}
           user={user}
@@ -235,6 +241,7 @@ function App() {
           activeView={currentView}
           isFullWidthContent={currentView.startsWith('dashboard_project_')}
         >
+          {currentView === 'subscription' && <SubscriptionManagement user={user} />}
           {currentView === 'profile' && <AdvisorProfilePage user={user} onBack={handleShowHome} />}
           {currentView.startsWith('dashboard') && (
             (() => {
@@ -243,7 +250,8 @@ function App() {
               const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
               
               if (roleStr === 'startup' || roleNum === 0) {
-                return <StartupDashboard user={user} />;
+                const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
+                return <StartupDashboard user={user} initialSection={section} />;
               } else if (roleStr === 'investor' || roleNum === 1) {
                 if (currentView === 'dashboard_bookings') {
                   return (
@@ -266,7 +274,8 @@ function App() {
                     />
                   );
                 }
-                return <InvestorDashboard user={user} />;
+                const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
+                return <InvestorDashboard user={user} initialSection={section} />;
               } else if (roleStr === 'advisor' || roleNum === 2) {
                 const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
                 return <AdvisorDashboard user={user} initialSection={section} onSectionChange={handleShowDashboard} onShowProfile={handleShowProfile} />;

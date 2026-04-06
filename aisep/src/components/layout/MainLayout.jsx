@@ -41,6 +41,7 @@ function MainLayout({
   onShowDashboard,
   onShowAI,
   onShowProfile,
+  onShowSubscription,
   user,
   onLogout,
   showAdvisors = false,
@@ -631,6 +632,7 @@ function MainLayout({
           onShowDashboard={onShowDashboard}
           onShowAI={onShowAI}
           onShowProfile={onShowProfile}
+          onShowSubscription={onShowSubscription}
           onMenuItemClick={() => {
             // Reset cached scroll if user navigates via sidebar
             homeScrollPos.current = 0;
@@ -653,7 +655,7 @@ function MainLayout({
         className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} ${isFullWidthContent ? styles.fullWidthContent : ''} view-enter`}
       >
         {/* Feed Content or Profile Page */}
-        {(activeView === 'profile' || activeView.startsWith('dashboard')) && children ? (
+        {(activeView === 'profile' || activeView === 'subscription' || activeView.startsWith('dashboard')) && children ? (
           children
         ) : showAdvisors ? (
           selectedAdvisor ? (

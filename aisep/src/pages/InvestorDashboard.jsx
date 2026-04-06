@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare, TrendingUpIcon, Loader2 } from 'lucide-react';
+import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare, TrendingUpIcon, Loader2, Crown } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
@@ -16,8 +16,13 @@ import { apiClient } from '../services/apiClient';
  * InvestorDashboard - Comprehensive dashboard for investors
  * Features: Portfolio overview, Watchlist, Sent interests, Active investments, Preferences
  */
-export default function InvestorDashboard({ user }) {
-    const [activeSection, setActiveSection] = useState('overview');
+export default function InvestorDashboard({ user, initialSection = 'overview' }) {
+    const [activeSection, setActiveSection] = useState(initialSection);
+    
+    // Sync activeSection with initialSection prop
+    React.useEffect(() => {
+        if (initialSection) setActiveSection(initialSection);
+    }, [initialSection]);
     const [sentInterests, setSentInterests] = useState([]);
     const [sentConnectionRequests, setSentConnectionRequests] = useState([]);
     const [deals, setDeals] = useState([]);
@@ -869,6 +874,7 @@ export default function InvestorDashboard({ user }) {
                         </div>
                     </div>
                 )}
+
 
                 <FloatingChatWidget
                     chatSessionId={activeChatSession?.chatSessionId}
