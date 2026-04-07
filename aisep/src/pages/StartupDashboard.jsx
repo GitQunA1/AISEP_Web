@@ -2023,8 +2023,9 @@ export default function StartupDashboard({ user }) {
                                             className={styles.listItem}
                                             style={{
                                                 borderLeft: 'none',
-                                                borderTop: `3px solid ${request.status === 'pending' ? '#f59e0b' : request.status === 'accepted' ? '#10b981' : '#ef4444'}`,
-                                                padding: '12px 16px'
+                                                borderTop: `3px solid ${request.status === 'pending' ? '#0ea5e9' : request.status === 'accepted' ? '#10b981' : '#64748b'}`,
+                                                padding: '12px 16px',
+                                                backgroundColor: '#f8fafc'
                                             }}
                                         >
                                             <div className={styles.listContent}>
@@ -2033,10 +2034,10 @@ export default function StartupDashboard({ user }) {
                                                     <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
                                                         {request.status === 'pending' ? '⏳ Đang chờ' : request.status === 'accepted' ? '✓ Đã chấp nhận' : '✗ Đã từ chối'}
                                                     </span>
-                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
+                                                    <span style={{ fontSize: '12px', color: '#475569', backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                                                         NĐT: <strong>{request.investorName || 'Investor'}</strong>
                                                     </span>
-                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
+                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                                                         {request.sentDate}
                                                     </span>
                                                 </div>
@@ -2049,7 +2050,7 @@ export default function StartupDashboard({ user }) {
                                                     <button
                                                         style={{
                                                             padding: '6px 12px',
-                                                            backgroundColor: '#10b981',
+                                                            backgroundColor: '#0ea5e9',
                                                             color: '#fff',
                                                             border: 'none',
                                                             borderRadius: '4px',
@@ -2059,7 +2060,8 @@ export default function StartupDashboard({ user }) {
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             gap: '4px',
-                                                            transition: 'all 0.2s'
+                                                            transition: 'all 0.2s',
+                                                            opacity: isRespondingToRequest === request.connectionRequestId ? 0.7 : 1
                                                         }}
                                                         onClick={() => handleApproveConnectionRequest(request.connectionRequestId)}
                                                         disabled={isRespondingToRequest === request.connectionRequestId}
@@ -2076,8 +2078,8 @@ export default function StartupDashboard({ user }) {
                                                     <button
                                                         style={{
                                                             padding: '6px 12px',
-                                                            backgroundColor: '#ef4444',
-                                                            color: '#fff',
+                                                            backgroundColor: '#cbd5e1',
+                                                            color: '#475569',
                                                             border: 'none',
                                                             borderRadius: '4px',
                                                             fontSize: '12px',
@@ -2086,7 +2088,8 @@ export default function StartupDashboard({ user }) {
                                                             display: 'flex',
                                                             alignItems: 'center',
                                                             gap: '4px',
-                                                            transition: 'all 0.2s'
+                                                            transition: 'all 0.2s',
+                                                            opacity: isRespondingToRequest === request.connectionRequestId ? 0.7 : 1
                                                         }}
                                                         onClick={() => handleRejectConnectionRequest(request.connectionRequestId)}
                                                         disabled={isRespondingToRequest === request.connectionRequestId}
@@ -2101,7 +2104,7 @@ export default function StartupDashboard({ user }) {
                                                     <button
                                                         style={{
                                                             padding: '6px 16px',
-                                                            backgroundColor: '#7c3aed',
+                                                            backgroundColor: '#0ea5e9',
                                                             color: '#fff',
                                                             border: 'none',
                                                             borderRadius: '4px',
@@ -2163,13 +2166,14 @@ export default function StartupDashboard({ user }) {
                                             className={styles.listItem}
                                             style={{ 
                                                 borderLeft: 'none',
-                                                borderTop: `3px solid ${deal.status === 'Pending' || deal.status === 0 ? '#f59e0b' : '#10b981'}`,
-                                                padding: '12px 16px'
+                                                borderTop: `3px solid ${deal.status === 'Pending' || deal.status === 0 ? '#0ea5e9' : '#10b981'}`,
+                                                padding: '12px 16px',
+                                                backgroundColor: '#f8fafc'
                                             }}
                                         >
                                             <div className={styles.listContent}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
+                                                    <span style={{ fontSize: '12px', color: '#475569', backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                                                         <strong>NĐT:</strong> {deal.investorName || 'Nhà đầu tư'}
                                                     </span>
                                                     {deal.investmentAmount && (
@@ -2177,7 +2181,7 @@ export default function StartupDashboard({ user }) {
                                                             💰 {deal.investmentAmount.toLocaleString('vi-VN')} VNĐ
                                                         </span>
                                                     )}
-                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f1f5f9', padding: '4px 8px', borderRadius: '4px' }}>
+                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
                                                         {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('vi-VN') : 'Ngày'}
                                                     </span>
                                                 </div>
@@ -2261,8 +2265,8 @@ export default function StartupDashboard({ user }) {
                                                         <button
                                                             style={{
                                                                 padding: '6px 12px',
-                                                                backgroundColor: '#ef4444',
-                                                                color: '#fff',
+                                                                backgroundColor: '#cbd5e1',
+                                                                color: '#475569',
                                                                 border: 'none',
                                                                 borderRadius: '4px',
                                                                 fontSize: '12px',
@@ -2271,7 +2275,8 @@ export default function StartupDashboard({ user }) {
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 gap: '4px',
-                                                                transition: 'all 0.2s'
+                                                                transition: 'all 0.2s',
+                                                                opacity: isRespondingToDeal === deal.dealId ? 0.7 : 1
                                                             }}
                                                             onClick={() => handleRejectDeal(deal.dealId)}
                                                             disabled={isRespondingToDeal === deal.dealId}
@@ -2292,7 +2297,7 @@ export default function StartupDashboard({ user }) {
                                                     <button
                                                         style={{
                                                             padding: '6px 12px',
-                                                            backgroundColor: '#667eea',
+                                                            backgroundColor: '#0ea5e9',
                                                             color: '#fff',
                                                             border: 'none',
                                                             borderRadius: '4px',
@@ -2314,7 +2319,7 @@ export default function StartupDashboard({ user }) {
                                                     <button
                                                         style={{
                                                             padding: '6px 12px',
-                                                            backgroundColor: '#f97316',
+                                                            backgroundColor: '#0ea5e9',
                                                             color: '#fff',
                                                             border: 'none',
                                                             borderRadius: '4px',

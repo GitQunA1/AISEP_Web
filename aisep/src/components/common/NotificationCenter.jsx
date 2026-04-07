@@ -1,19 +1,40 @@
-import React, { useState, useEffect } from 'react';
-import { Bell, X, Trash2, Mail, Users, AlertTriangle, Info, CheckCheck } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Bell, X, Trash2, Mail, Users, AlertTriangle, Info, CheckCheck, Briefcase, MessageCircle } from 'lucide-react';
 import styles from './NotificationCenter.module.css';
 import notificationService from '../../services/notificationService';
 import chatService from '../../services/chatService';
+import signalRService from '../../services/signalRService';
 
 const NotificationCenter = ({ onOpenChat }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const signalRSubscribed = useRef(false);
 
-  // Load notifications on mount
+  // Load notifications on mount and setup SignalR
   useEffect(() => {
     loadNotifications();
     loadUnreadCount();
+    
+    // Subscribe to real-time notifications via SignalR
+    if (!signalRSubscribed.current) {
+      signalRSubscribed.current = true;
+      signalRService.onNotificationReceived((newNotification) => {
+        console.log('[NotificationCenter] Real-time notification received:', newNotification);
+        // Add new notification to the top of the list
+        setNotifications(prev => [newNotification, ...prev]);
+        // Increment unread count
+        if (!newNotification.isRead) {
+          setUnreadCount(prev => prev + 1);
+        }
+      });
+    }
+    
+    return () => {
+      // Clean up SignalR subscription
+      signalRSubscribed.current = false;
+    };
   }, []);
 
   const loadNotifications = async () => {
@@ -64,6 +85,7 @@ const NotificationCenter = ({ onOpenChat }) => {
 
   const handleNotificationClick = async (notification) => {
     try {
+      // Mark as read
       if (!notification.isRead) {
         await notificationService.markAsRead(notification.notificationId);
         setNotifications(prev =>
@@ -82,18 +104,37 @@ const NotificationCenter = ({ onOpenChat }) => {
     if (!notification.referenceId) return;
 
     try {
+      // Handle different notification types
       if (notification.referenceType === 'ChatSession') {
+        console.log('[NotificationCenter] Opening chat session:', notification.referenceId);
         onOpenChat?.(notification.referenceId, notification);
         togglePanel();
       } else if (notification.referenceType === 'ConnectionRequest') {
+        console.log('[NotificationCenter] Opening connection request chat');
         const session = await chatService.getChatSessionFromConnectionRequest(notification.referenceId);
         if (session && session.chatSessionId) {
           onOpenChat?.(session.chatSessionId, notification);
           togglePanel();
         }
+      } else if (notification.referenceType === 'Deal') {
+        console.log('[NotificationCenter] Navigating to deal:', notification.referenceId);
+        // Navigate to appropriate dashboard section
+        const userRole = localStorage.getItem('userRole');
+        let dashboardUrl = '/dashboard';
+        if (userRole === 'Investor') {
+          dashboardUrl = '/investor-dashboard';
+        } else if (userRole === 'Startup') {
+          dashboardUrl = '/startup-dashboard';
+        }
+        window.location.href = dashboardUrl;
+        togglePanel();
+      } else if (notification.referenceType === 'Project') {
+        console.log('[NotificationCenter] Navigating to project:', notification.referenceId);
+        window.location.href = `/project/${notification.referenceId}`;
+        togglePanel();
       }
     } catch (error) {
-      console.error('Error opening chat from notification:', error);
+      console.error('[NotificationCenter] Error handling notification click:', error);
     }
   };
 
@@ -121,17 +162,36 @@ const NotificationCenter = ({ onOpenChat }) => {
     }
   };
 
-  const getNotificationIcon = (type) => {
-    switch (type?.toLowerCase()) {
-      case 'message':
-        return <Mail size={18} style={{ color: '#0ea5e9' }} />;
-      case 'connection':
-        return <Users size={18} style={{ color: '#8b5cf6' }} />;
-      case 'alert':
-        return <AlertTriangle size={18} style={{ color: '#f59e0b' }} />;
-      default:
-        return <Info size={18} style={{ color: '#64748b' }} />;
+  const getNotificationIcon = (notification) => {
+    const { type, referenceType, title } = notification;
+    const iconSize = 18;
+    
+    // Check both type and referenceType for more accurate icon selection
+    const iconType = type?.toLowerCase() || referenceType?.toLowerCase() || '';
+    
+    if (iconType.includes('deal') || referenceType === 'Deal') {
+      return <Briefcase size={iconSize} style={{ color: '#0ea5e9' }} />;
     }
+    if (iconType.includes('chat') || referenceType === 'ChatSession') {
+      return <MessageCircle size={iconSize} style={{ color: '#06b6d4' }} />;
+    }
+    if (iconType.includes('connection') || referenceType === 'ConnectionRequest') {
+      return <Users size={iconSize} style={{ color: '#8b5cf6' }} />;
+    }
+    if (iconType.includes('contract') || title?.includes('Contract')) {
+      return <Mail size={iconSize} style={{ color: '#10b981' }} />;
+    }
+    if (iconType.includes('investment') || title?.includes('invest')) {
+      return <Briefcase size={iconSize} style={{ color: '#6366f1' }} />;
+    }
+    if (iconType.includes('message')) {
+      return <Mail size={iconSize} style={{ color: '#0ea5e9' }} />;
+    }
+    if (iconType.includes('alert') || iconType.includes('warning')) {
+      return <AlertTriangle size={iconSize} style={{ color: '#f59e0b' }} />;
+    }
+    
+    return <Info size={iconSize} style={{ color: '#64748b' }} />;
   };
 
   return (
@@ -170,7 +230,7 @@ const NotificationCenter = ({ onOpenChat }) => {
                   onClick={() => handleNotificationClick(notification)}
                 >
                   <div className={styles.notificationIcon}>
-                    {getNotificationIcon(notification.type)}
+                    {getNotificationIcon(notification)}
                   </div>
                   <div className={styles.notificationContent}>
                     <div className={styles.title}>{notification.title}</div>
