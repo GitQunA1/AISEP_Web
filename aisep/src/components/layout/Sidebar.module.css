@@ -22,10 +22,13 @@
 /* Internal Layout */
 .content {
   display: grid;
-  grid-template-rows: auto 1fr auto; /* Rigid layout: Header, Scrollable Menu, Fixed Footer */
+  grid-template-rows: auto 1fr auto;
+  /* Rigid layout: Header, Scrollable Menu, Fixed Footer */
   height: 100vh;
   width: 100%;
+  max-width: 100%;
   overflow: hidden;
+  box-sizing: border-box;
 }
 
 /* --- HEADER SECTION --- */
@@ -34,6 +37,10 @@
   align-items: center;
   justify-content: space-between;
   padding: 24px 24px 20px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .logo {
@@ -43,6 +50,8 @@
   font-size: 1.5rem;
   font-weight: 800;
   color: var(--text-primary);
+  min-width: 0;
+  overflow: hidden;
 }
 
 /* Close Button (Hidden on Desktop) */
@@ -64,11 +73,13 @@
 /* --- MENU SECTION --- */
 .menuContainer {
   position: relative;
-  min-height: 0; 
-  height: 100%; /* Force fill the 1fr grid row */
+  min-height: 0;
+  height: 100%;
+  /* Force fill the 1fr grid row */
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .menuScrollArea {
@@ -78,6 +89,7 @@
   padding: 0 24px;
   scrollbar-width: thin;
   scrollbar-color: var(--border-color) transparent;
+  box-sizing: border-box;
 }
 
 .menuScrollArea::-webkit-scrollbar {
@@ -133,6 +145,8 @@
   flex-direction: column;
   gap: 8px;
   padding-bottom: 20px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .navItem {
@@ -146,6 +160,17 @@
   font-weight: 500;
   font-size: 1.1rem;
   transition: all 0.2s ease;
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.navItem span {
+  flex: 1;
+  overflow: visible;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.3;
 }
 
 .navItem:hover {
@@ -166,7 +191,8 @@
   gap: 16px;
   width: 100%;
   padding: 0;
-  margin: 0; /* Removing redundant margin to rely on parent gap */
+  margin: 0;
+  /* Removing redundant margin to rely on parent gap */
 }
 
 .signInBtn {
@@ -221,9 +247,15 @@
   background: var(--bg-primary);
   display: flex;
   flex-direction: column;
-  gap: 16px; /* Increased to 16px for a more airy, premium feel */
+  gap: 16px;
+  /* Increased to 16px for a more airy, premium feel */
   z-index: 20;
   flex-shrink: 0;
+  /* Required so flex/grid children can truncate text correctly */
+  min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .themeToggle {
@@ -240,8 +272,10 @@
   font-weight: 700;
   font-size: 0.95rem;
   cursor: pointer;
-  margin: 0; /* Forced 0 margin to rely on parent gap */
+  margin: 0;
+  /* Forced 0 margin to rely on parent gap */
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .authIcon {
@@ -250,7 +284,8 @@
 }
 
 .registerBtn .authIcon {
-  color: white; /* White icon on blue button */
+  color: white;
+  /* White icon on blue button */
 }
 
 .btnText {
@@ -273,8 +308,11 @@
   padding: 8px 12px;
   border: 1px solid var(--border-color);
   border-radius: 9999px;
-  margin: 0; /* Forced 0 margin */
+  margin: 0;
+  /* Forced 0 margin */
   transition: background-color 0.2s ease;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .profileSection:hover {
@@ -369,7 +407,7 @@
   .logo span {
     display: none;
   }
-  
+
   .logo {
     justify-content: center;
   }
@@ -380,7 +418,8 @@
   }
 
   .navItem span {
-    display: none; /* Hide text, icon only */
+    display: none;
+    /* Hide text, icon only */
   }
 
   .themeToggle span {
@@ -412,12 +451,13 @@
     justify-content: center;
     margin: 0;
   }
-  
+
   .authSection {
     align-items: center;
   }
-  
-  .signInBtn, .registerBtn {
+
+  .signInBtn,
+  .registerBtn {
     padding: 0;
     width: 48px;
     height: 48px;
@@ -529,14 +569,32 @@
 /* Theme Toggle - Removed duplicate to avoid margin conflicts */
 
 @keyframes bounce {
-  0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
-  40% {transform: translateY(-8px);}
-  60% {transform: translateY(-4px);}
+
+  0%,
+  20%,
+  50%,
+  80%,
+  100% {
+    transform: translateY(0);
+  }
+
+  40% {
+    transform: translateY(-8px);
+  }
+
+  60% {
+    transform: translateY(-4px);
+  }
 }
 
 @keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .spin {

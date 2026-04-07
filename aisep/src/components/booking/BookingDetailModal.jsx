@@ -98,6 +98,14 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
                   {price === 0 ? 'Miễn phí ✨' : formatPrice(price)}
                 </span>
               </div>
+              {booking.commissionSnapshot !== undefined && booking.commissionSnapshot !== null && (
+                <div className={styles.metaItem}>
+                  <span className={styles.label}>Hoa hồng hệ thống</span>
+                  <span className={styles.value} style={{ color: '#7c3aed', fontWeight: '800' }}>
+                    {booking.commissionSnapshot}%
+                  </span>
+                </div>
+              )}
               {booking.note && (
                 <div className={styles.metaItem} style={{ gridColumn: 'span 2' }}>
                   <span className={styles.label}>Ghi chú từ khách hàng</span>
