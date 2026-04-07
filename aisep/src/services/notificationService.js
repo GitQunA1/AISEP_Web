@@ -42,14 +42,14 @@ const notificationService = {
 
   /**
    * Mark notification as read
-   * PATCH /api/notifications/{notificationId}/read
+   * PUT /api/notifications/{notificationId}/read
    * @param {number} notificationId - Notification ID
    * @returns {Promise<any>}
    */
   markAsRead: async (notificationId) => {
     try {
       console.log('[notificationService] Marking as read:', notificationId);
-      const response = await apiClient.patch(`/api/notifications/${notificationId}/read`);
+      const response = await apiClient.put(`/api/notifications/${notificationId}/read`);
       console.log('[notificationService] Mark as read response:', response);
       return response;
     } catch (error) {
@@ -60,13 +60,13 @@ const notificationService = {
 
   /**
    * Mark all notifications as read
-   * PATCH /api/notifications/read-all
+   * PUT /api/notifications/read-all
    * @returns {Promise<any>}
    */
   markAllAsRead: async () => {
     try {
       console.log('[notificationService] Marking all as read');
-      const response = await apiClient.patch('/api/notifications/read-all');
+      const response = await apiClient.put('/api/notifications/read-all');
       console.log('[notificationService] Mark all as read response:', response);
       return response;
     } catch (error) {
@@ -108,6 +108,50 @@ const notificationService = {
       console.error('[notificationService] Failed to get unread count:', error);
       throw error;
     }
+  },
+
+  /**
+   * Get notification type icon and color
+   */
+  getNotificationStyle(type) {
+    const styles = {
+      Deal: { icon: '📋', color: '#0ea5e9', bgColor: '#e0f2fe' },
+      ConnectionRequest: { icon: '💬', color: '#8b5cf6', bgColor: '#f3e8ff' },
+      ChatSession: { icon: '💭', color: '#06b6d4', bgColor: '#cffafe' },
+      Contract: { icon: '✍️', color: '#10b981', bgColor: '#d1fae5' },
+      Project: { icon: '🚀', color: '#f59e0b', bgColor: '#fef3c7' },
+      Investment: { icon: '💼', color: '#6366f1', bgColor: '#e0e7ff' },
+    };
+    return styles[type] || { icon: '🔔', color: '#64748b', bgColor: '#f1f5f9' };
+  },
+
+  /**
+   * Get action URL based on notification type and reference
+   */
+  getNotificationActionUrl(notification) {
+    const { type, referenceType, referenceId } = notification;
+    
+    if (referenceType === 'Deal') {
+      return `/dashboard/investments`; // Navigate to investments/deals view
+    }
+    if (referenceType === 'ChatSession') {
+      return `/messages`; // Open messages/chat
+    }
+    if (referenceType === 'ConnectionRequest') {
+      return `/dashboard/connections`; // View connection requests
+    }
+    if (referenceType === 'Project') {
+      return `/project/${referenceId}`; // View specific project
+    }
+    
+    return null;
+  },
+
+  /**
+   * Determine if notification needs action
+   */
+  isActionableNotification(notification) {
+    return notification.referenceType && notification.referenceId;
   }
 };
 

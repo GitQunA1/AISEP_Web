@@ -76,6 +76,30 @@ const dealsService = {
   },
 
   /**
+   * Get all signed deals (for staff/admin)
+   * @returns {Promise} - API response with all signed deals
+   */
+  getAllSignedDeals: async () => {
+    try {
+      console.log('[dealsService] GET /api/Deals?status=3 - Fetching all signed contracts');
+      const response = await apiClient.get('/api/Deals?status=3');
+      console.log('[dealsService] GET /api/Deals?status=3 - Response:', {
+        success: response?.success,
+        statusCode: response?.statusCode,
+        dataLength: Array.isArray(response?.data) ? response.data.length : response?.data?.items?.length || 0
+      });
+      return response;
+    } catch (error) {
+      console.error('[dealsService] GET /api/Deals?status=3 - Error:', {
+        status: error.response?.status,
+        message: error.message,
+        errorResponse: error.response?.data
+      });
+      throw error;
+    }
+  },
+
+  /**
    * Get deal details by ID
    * @param {number} dealId - The ID of the deal
    * @returns {Promise} - API response with deal details
