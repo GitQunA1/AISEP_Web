@@ -33,6 +33,7 @@ function Sidebar({
   let navItems = [
     { icon: Compass, label: 'Home', displayLabel: 'Khám phá dự án', href: '#' },
     { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
+    { icon: Newspaper, label: 'PRNews', displayLabel: 'Tin tức', href: '#', showWhenLoggedIn: true },
     { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#', hideFor: ['investor'] },
     { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor'] },
   ];
@@ -49,6 +50,7 @@ function Sidebar({
       { icon: FileText, label: 'Projects', displayLabel: 'Quản lý dự án', href: '#', showWhenLoggedIn: true },
       { icon: Calendar, label: 'Bookings', displayLabel: 'Quản lý Booking', href: '#', showWhenLoggedIn: true },
       { icon: Newspaper, label: 'PRManagement', displayLabel: 'Đăng bài PR', href: '#', showWhenLoggedIn: true },
+      { icon: Newspaper, label: 'PRNews', displayLabel: 'Tin tức', href: '#', showWhenLoggedIn: true },
       { icon: AlertCircle, label: 'UserReports', displayLabel: 'Báo cáo vi phạm', href: '#', showWhenLoggedIn: true },
       { icon: ShieldCheck, label: 'Approvals', displayLabel: 'Phê duyệt Startup', href: '#', showWhenLoggedIn: true },
       { icon: Award, label: 'AdvisorApproval', displayLabel: 'Phê duyệt cố vấn', href: '#', showWhenLoggedIn: true },
@@ -148,6 +150,9 @@ function Sidebar({
     }
     if (label === 'PRManagement' && onShowDashboard) {
       onShowDashboard('pr_management');
+    }
+    if (label === 'PRNews' && onShowDashboard) {
+      onShowDashboard('pr_news');
     }
 
     // Navigate to home when clicking Home
@@ -268,12 +273,15 @@ function Sidebar({
                       if (activeView === 'dashboard_availability') return 'Availability';
                       if (activeView === 'dashboard_approve_bookings') return 'ApproveBookings';
                       if (activeView === 'dashboard_user_reports') return 'UserReports';
+                      if (activeView === 'dashboard_pr_management') return 'PRManagement';
+                      if (activeView === 'dashboard_pr_news') return 'PRNews';
                       if (activeView === 'dashboard_package_management') return 'PackageManagement';
                       if (activeView === 'dashboard_subscription_history') return 'SubscriptionHistory';
                       if (activeView === 'profile') return 'Profile';
                       if (activeView === 'advisors') return 'Advisors';
                       if (activeView === 'investors') return 'Investors';
                       if (activeView === 'subscription') return 'Subscription';
+                      if (activeView === 'news') return 'News';
                       return null;
                     };
                     const isActive = item.label === getActiveLabel();

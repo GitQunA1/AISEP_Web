@@ -12,6 +12,7 @@ import bookingService from '../services/bookingService';
 import startupProfileService from '../services/startupProfileService';
 import userReportService from '../services/userReportService';
 import dealsService from '../services/dealsService';
+import prService from '../services/prService';
 import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/ProjectStatus';
 import AdvisorApprovalPage from '../components/advisor/AdvisorApprovalPage';
@@ -423,6 +424,23 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
     const [signedDealsError, setSignedDealsError] = useState(null);
     const [prSearchTerm, setPrSearchTerm] = useState('');
     const [processingDealId, setProcessingDealId] = useState(null);
+    const [showPRModal, setShowPRModal] = useState(false);
+    const [selectedDealForPR, setSelectedDealForPR] = useState(null);
+    const [prFormData, setPrFormData] = useState({ title: '', content: '' });
+    const [isSubmittingPR, setIsSubmittingPR] = useState(false);
+
+    // PR News state
+    const [prNewsList, setPrNewsList] = useState([]);
+    const [isLoadingPRNews, setIsLoadingPRNews] = useState(false);
+    const [prNewsError, setPrNewsError] = useState(null);
+    const [prNewsSearchTerm, setPrNewsSearchTerm] = useState('');
+    const [processingPRId, setProcessingPRId] = useState(null);
+    const [showDeletePRModal, setShowDeletePRModal] = useState(false);
+    const [selectedPRForDelete, setSelectedPRForDelete] = useState(null);
+    const [showEditPRModal, setShowEditPRModal] = useState(false);
+    const [selectedPRForEdit, setSelectedPRForEdit] = useState(null);
+    const [editTitle, setEditTitle] = useState('');
+    const [editContent, setEditContent] = useState('');
 
     // Mobile States
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
@@ -654,6 +672,9 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             fetchUserReports();
         } else if (activeSection === 'pr_management') {
             fetchSignedDeals();
+            fetchPRNews();
+        } else if (activeSection === 'pr_news') {
+            fetchPRNews();
         }
     }, [activeSection]);
 
@@ -867,20 +888,162 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
         try {
             // Use getAllSignedDeals for staff to fetch all signed contracts
             const response = await dealsService.getAllSignedDeals();
-            const deals = Array.isArray(response?.data) ? response.data : (response?.data?.items || []);
             
-            // Filter and include only deals with complete project information
+            // Response data structure: { page, pageSize, totalCount, items: [...] }
+            let deals = [];
+            if (response?.data?.items && Array.isArray(response.data.items)) {
+                deals = response.data.items;
+            } else if (Array.isArray(response?.data)) {
+                deals = response.data;
+            }
+            
+            // Filter to get only deals with status "Contract_Signed"
             const signedDealsFiltered = deals.filter(deal => 
-                (deal.status === 3 || deal.status === 'Contract_Signed') && deal.project
+                deal.status === 'Contract_Signed' && deal.projectId && deal.projectName
             );
             
-            console.log('[OperationStaffDashboard] Signed deals fetched:', signedDealsFiltered.length);
+            console.log('[OperationStaffDashboard] Signed deals fetched:', signedDealsFiltered.length, 'from total:', deals.length);
             setSignedDeals(signedDealsFiltered);
         } catch (error) {
             console.error('Error fetching signed deals:', error);
             setSignedDealsError('Không thể tải danh sách dự án đã ký hợp đồng.');
         } finally {
             setIsLoadingSignedDeals(false);
+        }
+    };
+
+    const handleSubmitPR = async () => {
+        if (!selectedDealForPR || !prFormData.title.trim() || !prFormData.content.trim()) {
+            setModalType('error');
+            setModalMessage('Vui lòng điền đầy đủ tiêu đề và nội dung bài viết PR');
+            setShowModal(true);
+            return;
+        }
+
+        setIsSubmittingPR(true);
+        try {
+            const payload = {
+                dealId: selectedDealForPR.dealId,
+                title: prFormData.title.trim(),
+                content: prFormData.content.trim()
+            };
+
+            console.log('[OperationStaffDashboard] Submitting PR:', payload);
+            const response = await prService.createPR(payload);
+
+            if (response?.success || response?.statusCode === 200) {
+                setShowPRModal(false);
+                setPrFormData({ title: '', content: '' });
+                setSelectedDealForPR(null);
+                setModalType('success');
+                setModalMessage(`✨ Đăng bài PR thành công cho dự án "${selectedDealForPR.projectName}"!`);
+                setShowModal(true);
+                // Refresh signed deals list and PR news
+                setTimeout(() => {
+                    fetchSignedDeals();
+                    fetchPRNews();
+                }, 500);
+            } else {
+                throw new Error(response?.message || 'Lỗi khi đăng bài PR');
+            }
+        } catch (error) {
+            console.error('Error submitting PR:', error);
+            setModalType('error');
+            setModalMessage(error.message || 'Không thể đăng bài PR. Vui lòng thử lại.');
+            setShowModal(true);
+        } finally {
+            setIsSubmittingPR(false);
+        }
+    };
+
+    const fetchPRNews = async () => {
+        setIsLoadingPRNews(true);
+        setPrNewsError(null);
+        try {
+            const response = await prService.getPRs();
+            
+            // Response data structure: { data: { page, pageSize, totalCount, totalPages, items: [...] } }
+            let prsList = [];
+            if (response?.data?.items && Array.isArray(response.data.items)) {
+                prsList = response.data.items;
+            } else if (Array.isArray(response?.data)) {
+                prsList = response.data;
+            } else if (Array.isArray(response?.items)) {
+                prsList = response.items;
+            }
+            
+            console.log('[OperationStaffDashboard] PR News fetched:', prsList.length);
+            setPrNewsList(prsList);
+        } catch (error) {
+            console.error('Error fetching PR news:', error);
+            setPrNewsError('Không thể tải tin tức PR.');
+        } finally {
+            setIsLoadingPRNews(false);
+        }
+    };
+
+    const handleOpenEditPR = (pr) => {
+        setSelectedPRForEdit(pr);
+        setEditTitle(pr.title);
+        setEditContent(pr.content);
+        setShowEditPRModal(true);
+    };
+
+    const handleSaveEditPR = async () => {
+        if (!selectedPRForEdit) return;
+        if (!editTitle.trim() || !editContent.trim()) {
+            setModalType('error');
+            setModalMessage('Vui lòng điền đầy đủ tiêu đề và nội dung.');
+            setShowModal(true);
+            return;
+        }
+        
+        setProcessingPRId(selectedPRForEdit.postPrId);
+        try {
+            const response = await prService.updatePR(selectedPRForEdit.postPrId, editTitle, editContent);
+            // API returns data directly, no error thrown means success
+            setShowEditPRModal(false);
+            setSelectedPRForEdit(null);
+            setEditTitle('');
+            setEditContent('');
+            setModalType('success');
+            setModalMessage('✏️ Chỉnh sửa bài PR thành công!');
+            setShowModal(true);
+            // Refresh PR news
+            setTimeout(() => fetchPRNews(), 500);
+        } catch (error) {
+            console.error('Error editing PR:', error);
+            setModalType('error');
+            setModalMessage(error.message || 'Không thể chỉnh sửa bài PR. Vui lòng thử lại.');
+            setShowModal(true);
+        } finally {
+            setProcessingPRId(null);
+        }
+    };
+
+    const handleDeletePR = async () => {
+        if (!selectedPRForDelete) return;
+        setProcessingPRId(selectedPRForDelete.postPrId);
+        try {
+            const response = await prService.deletePR(selectedPRForDelete.postPrId);
+            if (response?.success || response?.statusCode === 200) {
+                setShowDeletePRModal(false);
+                setSelectedPRForDelete(null);
+                setModalType('success');
+                setModalMessage('🗑️ Xóa bài PR thành công!');
+                setShowModal(true);
+                // Refresh PR news
+                setTimeout(() => fetchPRNews(), 500);
+            } else {
+                throw new Error(response?.message || 'Lỗi khi xóa bài PR');
+            }
+        } catch (error) {
+            console.error('Error deleting PR:', error);
+            setModalType('error');
+            setModalMessage(error.message || 'Không thể xóa bài PR. Vui lòng thử lại.');
+            setShowModal(true);
+        } finally {
+            setProcessingPRId(null);
         }
     };
 
@@ -938,20 +1101,23 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                         (activeSection === 'package_management' ? "Quản lý Gói dịch vụ" :
                             (activeSection === 'project_management' ? "Quản lý Dự án" :
                                 (activeSection === 'pr_management' ? "Đăng bài PR - Dự án Đầu tư" :
-                                    (activeSection === 'bookings' ? "Quản lý Booking" :
-                                        (activeSection === 'user_reports' ? "Quản lý báo cáo" :
-                                            (activeSection === 'advisor_approval' ? "Phê duyệt cố vấn" :
-                                                (activeSection === 'statistics' ? "Thống kê hoạt động" : "Bảng điều khiển Nhân viên")))))))
+                                    (activeSection === 'pr_news' ? "Tin tức PR" :
+                                        (activeSection === 'bookings' ? "Quản lý Booking" :
+                                            (activeSection === 'user_reports' ? "Quản lý báo cáo" :
+                                                (activeSection === 'advisor_approval' ? "Phê duyệt cố vấn" :
+                                                    (activeSection === 'statistics' ? "Thống kê hoạt động" : "Bảng điều khiển Nhân viên"))))))))
                 }
                 subtitle={
                     activeSection === 'subscription_history' ? "Theo dõi và quản lý lịch sử thanh toán, gia hạn các gói dịch vụ của người dùng trên hệ thống." :
-                        (activeSection === 'package_management' ? "Cấu hình hạn mức, thời hạn và giá cả cho các gói đăng ký trên toàn hệ thống AISEP." :
-                            (activeSection === 'project_management' ? "Phê duyệt và quản lý các startup tham gia nền tảng." :
-                                (activeSection === 'pr_management' ? "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký)." :
-                                    (activeSection === 'bookings' ? "Theo dõi và giám sát các lịch hẹn đào tạo trong hệ thống." :
-                                        (activeSection === 'user_reports' ? "Giải quyết các báo cáo vi phạm và khiếu nại từ người dùng." :
-                                            (activeSection === 'advisor_approval' ? "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn trên nền tảng AISEP." :
-                                                (activeSection === 'statistics' ? "Tổng quan về các số liệu tăng trưởng và hiệu suất nền tảng." : "Quản lý nền tảng và các yêu cầu phê duyệt.")))))))
+                    activeSection === 'package_management' ? "Cấu hình hạn mức, thời hạn và giá cả cho các gói đăng ký trên toàn hệ thống AISEP." :
+                    activeSection === 'project_management' ? "Phê duyệt và quản lý các startup tham gia nền tảng." :
+                    activeSection === 'pr_management' ? "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký)." :
+                    activeSection === 'pr_news' ? "Xem tất cả các bài PR đã được đăng lên hệ thống." :
+                    activeSection === 'bookings' ? "Theo dõi và giám sát các lịch hẹn đào tạo trong hệ thống." :
+                    activeSection === 'user_reports' ? "Giải quyết các báo cáo vi phạm và khiếu nại từ người dùng." :
+                    activeSection === 'advisor_approval' ? "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn trên nền tảng AISEP." :
+                    activeSection === 'statistics' ? "Tổng quan về các số liệu tăng trưởng và hiệu suất nền tảng." : 
+                    "Quản lý nền tảng và các yêu cầu phê duyệt."
                 }
                 showFilter={false}
                 user={user}
@@ -959,19 +1125,22 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                     activeSection === 'project_management' ? searchTerm :
                         (activeSection === 'bookings' ? bookingSearchTerm :
                             (activeSection === 'pr_management' ? prSearchTerm :
-                                (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : '')))
+                                (activeSection === 'pr_news' ? prNewsSearchTerm :
+                                    (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : ''))))
                 }
                 onSearchChange={(val) => {
                     if (activeSection === 'project_management') setSearchTerm(val);
                     else if (activeSection === 'bookings') setBookingSearchTerm(val);
                     else if (activeSection === 'pr_management') setPrSearchTerm(val);
+                    else if (activeSection === 'pr_news') setPrNewsSearchTerm(val);
                     else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
                 }}
                 searchPlaceholder={
                     activeSection === 'project_management' ? "Tìm kiếm dự án..." :
                         (activeSection === 'bookings' ? "Tìm kiếm booking..." :
                             (activeSection === 'pr_management' ? "Tìm kiếm dự án đã ký..." :
-                                "Tìm kiếm..."))
+                                (activeSection === 'pr_news' ? "Tìm kiếm bài PR..." :
+                                    "Tìm kiếm...")))
                 }
             />
 
@@ -1453,6 +1622,11 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                 {/* PR Management Section */}
                 {activeSection === 'pr_management' && (
                     <div className={styles.section}>
+                        {/* Posting Section Header */}
+                        <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            📝 Đăng bài PR
+                        </h3>
+
                         {/* Header Stats */}
                         <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1515,9 +1689,8 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                         if (!prSearchTerm.trim()) return true;
                                         const search = prSearchTerm.toLowerCase();
                                         return (
-                                            deal.project?.projectName?.toLowerCase().includes(search) ||
-                                            deal.investor?.name?.toLowerCase().includes(search) ||
-                                            deal.project?.shortDescription?.toLowerCase().includes(search) ||
+                                            deal.projectName?.toLowerCase().includes(search) ||
+                                            deal.investorName?.toLowerCase().includes(search) ||
                                             deal.dealId?.toString().includes(search)
                                         );
                                     })
@@ -1537,7 +1710,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
                                                 <div>
                                                     <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                                                        {deal.project?.projectName || 'Dự án không tên'}
+                                                        {deal.projectName || 'Dự án không tên'}
                                                     </h4>
                                                     <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
                                                         Deal #{deal.dealId}
@@ -1562,7 +1735,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
 
                                             {/* Project Info */}
                                             <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px', borderLeft: '3px solid var(--primary-blue)' }}>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Mô tả dự án</div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Tên startup</div>
                                                 <p style={{
                                                     margin: 0,
                                                     fontSize: '13px',
@@ -1573,7 +1746,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                                     WebkitBoxOrient: 'vertical',
                                                     overflow: 'hidden'
                                                 }}>
-                                                    {deal.project?.shortDescription || 'Không có mô tả'}
+                                                    {deal.startupName || 'Không có tên'}
                                                 </p>
                                             </div>
 
@@ -1582,13 +1755,13 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                                 <div>
                                                     <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Nhà đầu tư</div>
                                                     <div style={{ color: 'var(--text-primary)', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {deal.investor?.name || 'N/A'}
+                                                        {deal.investorName || 'N/A'}
                                                     </div>
                                                 </div>
                                                 <div>
                                                     <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Số tiền</div>
                                                     <div style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '13px' }}>
-                                                        {deal.investmentAmount ? `${Number(deal.investmentAmount).toLocaleString('vi-VN')}` : 'N/A'} <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>VND</span>
+                                                        {deal.amount ? `${Number(deal.amount).toLocaleString('vi-VN')}` : 'N/A'} <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>VND</span>
                                                     </div>
                                                 </div>
                                             </div>
@@ -1598,13 +1771,13 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                                 <div>
                                                     <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Ngày tạo</div>
                                                     <div style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
-                                                        {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                                                        {deal.dealDate ? new Date(deal.dealDate).toLocaleDateString('vi-VN') : 'N/A'}
                                                     </div>
                                                 </div>
                                                 <div>
                                                     <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Ngày ký</div>
                                                     <div style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
-                                                        {deal.contractSignedDate ? new Date(deal.contractSignedDate).toLocaleDateString('vi-VN') : 'Vừa xong'}
+                                                        {deal.startupSignedAt ? new Date(deal.startupSignedAt).toLocaleDateString('vi-VN') : 'Vừa xong'}
                                                     </div>
                                                 </div>
                                             </div>
@@ -1612,14 +1785,11 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                             {/* Action Button - PR Posting */}
                                             <button
                                                 onClick={() => {
-                                                    setProcessingDealId(deal.dealId);
-                                                    // Will be implemented when user provides PR API endpoint
-                                                    setModalType('info');
-                                                    setModalMessage(`✨ Chức năng đăng PR cho dự án "${deal.project?.projectName}" sẵn sàng. API endpoint sẽ được cung cấp để hoàn thành chức năng này.`);
-                                                    setShowModal(true);
-                                                    setTimeout(() => setProcessingDealId(null), 500);
+                                                    setSelectedDealForPR(deal);
+                                                    setPrFormData({ title: '', content: '' });
+                                                    setShowPRModal(true);
                                                 }}
-                                                disabled={processingDealId === deal.dealId}
+                                                disabled={isSubmittingPR}
                                                 style={{
                                                     display: 'flex',
                                                     alignItems: 'center',
@@ -1654,9 +1824,370 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                     ))}
                             </div>
                         )}
+
+                        {/* News Section */}
+                        <div style={{ marginTop: '40px', paddingTop: '24px', borderTop: '2px solid var(--border-color)' }}>
+                            <h3 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-primary)', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                📰 Tin tức ({prNewsList.length})
+                            </h3>
+
+                        {/* News Header Stats */}
+                        <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <Newspaper size={24} color="var(--primary-blue)" />
+                                <div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng PR được đăng</div>
+                                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-primary)' }}>{prNewsList.length}</div>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <CheckCircle size={24} color="#10b981" />
+                                <div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Đã xuất bản</div>
+                                    <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>
+                                        {prNewsList.filter(pr => pr.publishedAt).length}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Error State */}
+                        {prNewsError && (
+                            <div className={local.errorWrapper} style={{ marginBottom: '20px' }}>
+                                <EmptyState
+                                    icon={AlertCircle}
+                                    title="Lỗi tải dữ liệu"
+                                    message={prNewsError}
+                                    isError={true}
+                                    onRetry={fetchPRNews}
+                                />
+                            </div>
+                        )}
+
+                        {/* Loading State */}
+                        {isLoadingPRNews && (
+                            <div className={styles.card}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '12px' }}>
+                                    <Loader2 size={20} className="animate-spin" />
+                                    <span style={{ color: 'var(--text-secondary)' }}>Đang tải dữ liệu...</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Empty State */}
+                        {!isLoadingPRNews && prNewsList.length === 0 && (
+                            <div className={styles.card}>
+                                <EmptyState
+                                    icon={Archive}
+                                    title="Chưa có PR được đăng"
+                                    message="Hiện chưa có bài PR nào được đăng. Hãy đăng bài PR từ tab 'Đăng bài PR'."
+                                />
+                            </div>
+                        )}
+
+                        {/* PR News List */}
+                        {!isLoadingPRNews && prNewsList.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '16px' }}>
+                                {prNewsList
+                                    .filter(pr => {
+                                        if (!prNewsSearchTerm.trim()) return true;
+                                        const search = prNewsSearchTerm.toLowerCase();
+                                        return (
+                                            pr.title?.toLowerCase().includes(search) ||
+                                            pr.content?.toLowerCase().includes(search) ||
+                                            pr.projectName?.toLowerCase().includes(search) ||
+                                            pr.investorName?.toLowerCase().includes(search)
+                                        );
+                                    })
+                                    .map(pr => (
+                                        <div
+                                            key={pr.postPrId}
+                                            className={styles.card}
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '12px',
+                                                borderLeft: '4px solid var(--primary-blue)',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            {/* PR Image */}
+                                            {pr.projectImage && (
+                                                <img
+                                                    src={pr.projectImage}
+                                                    alt={pr.projectName}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '180px',
+                                                        objectFit: 'cover',
+                                                        borderRadius: '6px'
+                                                    }}
+                                                />
+                                            )}
+
+                                            {/* PR Header */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', lineHeight: '1.3' }}>
+                                                        {pr.title}
+                                                    </h4>
+                                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                        {pr.projectName}
+                                                    </p>
+                                                </div>
+                                                <div style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    padding: '4px 10px',
+                                                    backgroundColor: pr.status === 'Pending' ? '#fef3c7' : '#d1fae5',
+                                                    color: pr.status === 'Pending' ? '#b45309' : '#065f46',
+                                                    fontSize: '11px',
+                                                    fontWeight: '700',
+                                                    borderRadius: '4px',
+                                                    whiteSpace: 'nowrap'
+                                                }}>
+                                                    {pr.status === 'Pending' ? '⏳ Chờ duyệt' : '✨ Đã xuất bản'}
+                                                </div>
+                                            </div>
+
+                                            {/* PR Content Preview */}
+                                            <p style={{
+                                                margin: 0,
+                                                fontSize: '13px',
+                                                color: 'var(--text-secondary)',
+                                                lineHeight: '1.5',
+                                                display: '-webkit-box',
+                                                WebkitLineClamp: 3,
+                                                WebkitBoxOrient: 'vertical',
+                                                overflow: 'hidden'
+                                            }}>
+                                                {pr.content}
+                                            </p>
+
+                                            {/* PR Meta Info */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', paddingTop: '8px', borderTop: '1px solid var(--border-color)' }}>
+                                                <div>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Startup</div>
+                                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>
+                                                        {pr.startupName}
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Nhà đầu tư</div>
+                                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>
+                                                        {pr.investorName}
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ gridColumn: '1 / -1' }}>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Ngày đăng</div>
+                                                    <div style={{ color: 'var(--text-primary)', fontSize: '11px' }}>
+                                                        {pr.publishedAt ? new Date(pr.publishedAt).toLocaleDateString('vi-VN') : 'Chưa xuất bản'}
+                                                    </div>
+                                                </div>
+
+                                                {/* Action Buttons */}
+                                                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                                    <button
+                                                        onClick={() => handleOpenEditPR(pr)}
+                                                        style={{
+                                                            flex: 1,
+                                                            padding: '8px 12px',
+                                                            backgroundColor: 'var(--primary-blue)',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                    >
+                                                        ✏️ Chỉnh sửa
+                                                    </button>
+                                                    <button
+                                                        onClick={() => {
+                                                            setSelectedPRForDelete(pr);
+                                                            setShowDeletePRModal(true);
+                                                        }}
+                                                        disabled={processingPRId === pr.postPrId}
+                                                        style={{
+                                                            flex: !pr.publishedAt ? 0.5 : 1,
+                                                            padding: '8px 12px',
+                                                            backgroundColor: '#ef4444',
+                                                            color: 'white',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: processingPRId === pr.postPrId ? 'wait' : 'pointer',
+                                                            opacity: processingPRId === pr.postPrId ? 0.7 : 1
+                                                        }}
+                                                    >
+                                                        {processingPRId === pr.postPrId ? '⏳' : '🗑️ Xóa'}
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                            </div>
+                        )}
+                        </div>
                     </div>
                 )}
 
+                {/* PR News Section (Standalone View) */}
+                {activeSection === 'pr_news' && (
+                    <div className={styles.section}>
+                        {/* News Header Stats */}
+                        <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <Newspaper size={24} color="var(--primary-blue)" />
+                                <div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng PR được đăng</div>
+                                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-primary)' }}>{prNewsList.length}</div>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <CheckCircle size={24} color="#10b981" />
+                                <div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Đã xuất bản</div>
+                                    <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>
+                                        {prNewsList.filter(pr => pr.publishedAt).length}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Error State */}
+                        {prNewsError && (
+                            <div className={local.errorWrapper} style={{ marginBottom: '20px' }}>
+                                <EmptyState
+                                    icon={AlertCircle}
+                                    title="Lỗi tải dữ liệu"
+                                    message={prNewsError}
+                                    isError={true}
+                                    onRetry={fetchPRNews}
+                                />
+                            </div>
+                        )}
+
+                        {/* Loading State */}
+                        {isLoadingPRNews && (
+                            <div className={styles.card}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '12px' }}>
+                                    <Loader2 size={20} className="animate-spin" />
+                                    <span style={{ color: 'var(--text-secondary)' }}>Đang tải dữ liệu...</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Empty State */}
+                        {!isLoadingPRNews && prNewsList.length === 0 && (
+                            <div className={styles.card}>
+                                <EmptyState
+                                    icon={Archive}
+                                    title="Chưa có PR được đăng"
+                                    message="Hiện chưa có bài PR nào được đăng. Hãy đăng bài PR từ mục 'Đăng bài PR'."
+                                />
+                            </div>
+                        )}
+
+                        {/* PR News List */}
+                        {!isLoadingPRNews && prNewsList.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '16px' }}>
+                                {prNewsList
+                                    .filter(pr => {
+                                        if (!prNewsSearchTerm.trim()) return true;
+                                        const search = prNewsSearchTerm.toLowerCase();
+                                        return (
+                                            pr.title?.toLowerCase().includes(search) ||
+                                            pr.content?.toLowerCase().includes(search) ||
+                                            pr.projectName?.toLowerCase().includes(search) ||
+                                            pr.investorName?.toLowerCase().includes(search)
+                                        );
+                                    })
+                                    .map(pr => (
+                                        <div
+                                            key={pr.postPrId}
+                                            className={styles.card}
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '12px',
+                                                borderLeft: '4px solid var(--primary-blue)',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            {/* PR Image */}
+                                            {pr.projectImage && (
+                                                <img
+                                                    src={pr.projectImage}
+                                                    alt={pr.projectName}
+                                                    style={{
+                                                        width: '100%',
+                                                        height: '180px',
+                                                        objectFit: 'cover',
+                                                        borderRadius: '6px'
+                                                    }}
+                                                />
+                                            )}
+
+                                            {/* PR Header */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', lineHeight: '1.3' }}>
+                                                        {pr.title}
+                                                    </h4>
+                                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                        {pr.projectName}
+                                                    </p>
+                                                </div>
+                                            </div>
+
+                                            {/* PR Content Preview */}
+                                            <p style={{
+                                                margin: 0,
+                                                fontSize: '13px',
+                                                color: 'var(--text-secondary)',
+                                                lineHeight: '1.5',
+                                                display: '-webkit-box',
+                                                WebkitLineClamp: 3,
+                                                WebkitBoxOrient: 'vertical',
+                                                overflow: 'hidden'
+                                            }}>
+                                                {pr.content}
+                                            </p>
+
+                                            {/* PR Meta Info */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', paddingTop: '8px', borderTop: '1px solid var(--border-color)' }}>
+                                                <div>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Startup</div>
+                                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>
+                                                        {pr.startupName}
+                                                    </div>
+                                                </div>
+
+                                                <div>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Nhà đầu tư</div>
+                                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>
+                                                        {pr.investorName}
+                                                    </div>
+                                                </div>
+
+                                                <div style={{ gridColumn: '1 / -1' }}>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Ngày đăng</div>
+                                                    <div style={{ color: 'var(--text-primary)', fontSize: '11px' }}>
+                                                        {pr.publishedAt ? new Date(pr.publishedAt).toLocaleDateString('vi-VN') : 'Chưa xuất bản'}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {/* Booking Management Section */}
                 {activeSection === 'bookings' && (
@@ -2042,6 +2573,377 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                     </div>
                 )}
             </div>
+
+            {/* PR Posting Modal */}
+            {showPRModal && selectedDealForPR && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        padding: '32px',
+                        maxWidth: '700px',
+                        width: '90%',
+                        maxHeight: '90vh',
+                        overflow: 'auto',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+                    }}>
+                        <h2 style={{ margin: '0 0 24px 0', color: 'var(--text-primary)', fontSize: '20px', fontWeight: '700' }}>
+                            Đăng bài PR - {selectedDealForPR.projectName}
+                        </h2>
+
+                        {/* Deal Information Summary */}
+                        <div style={{
+                            backgroundColor: 'var(--bg-light)',
+                            padding: '16px',
+                            borderRadius: '8px',
+                            marginBottom: '24px',
+                            border: '1px solid var(--border-color)'
+                        }}>
+                            <h3 style={{ margin: '0 0 16px 0', fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)', textTransform: 'uppercase' }}>
+                                Thông tin deal
+                            </h3>
+
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '13px' }}>
+                                <div>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>Dự án</div>
+                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{selectedDealForPR.projectName}</div>
+                                </div>
+
+                                <div>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>Startup</div>
+                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{selectedDealForPR.startupName}</div>
+                                </div>
+
+                                <div>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>Nhà đầu tư</div>
+                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>{selectedDealForPR.investorName}</div>
+                                </div>
+
+                                <div>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>Số tiền đầu tư</div>
+                                    <div style={{ color: 'var(--text-primary)', fontWeight: '700' }}>
+                                        {selectedDealForPR.amount ? `${Number(selectedDealForPR.amount).toLocaleString('vi-VN')} VND` : 'N/A'}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>Cổ phần</div>
+                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>
+                                        {selectedDealForPR.equityPercentage ? `${selectedDealForPR.equityPercentage}%` : 'N/A'}
+                                    </div>
+                                </div>
+
+                                <div>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>Ngày ký</div>
+                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>
+                                        {selectedDealForPR.startupSignedAt ? new Date(selectedDealForPR.startupSignedAt).toLocaleDateString('vi-VN') : 'N/A'}
+                                    </div>
+                                </div>
+
+                                <div style={{ gridColumn: '1 / -1' }}>
+                                    <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '600', marginBottom: '4px', textTransform: 'uppercase' }}>Điều khoản bổ sung</div>
+                                    <div style={{ color: 'var(--text-primary)', fontSize: '12px' }}>
+                                        {selectedDealForPR.additionalTerms || 'Không có'}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Form Section */}
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                Tiêu đề bài viết <span style={{ color: '#ef4444' }}>*</span>
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="Nhập tiêu đề bài PR..."
+                                value={prFormData.title}
+                                onChange={(e) => setPrFormData({ ...prFormData, title: e.target.value })}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    color: 'var(--text-primary)',
+                                    fontFamily: 'inherit',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ marginBottom: '24px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                Nội dung bài viết <span style={{ color: '#ef4444' }}>*</span>
+                            </label>
+                            <textarea
+                                placeholder="Nhập nội dung bài PR..."
+                                value={prFormData.content}
+                                onChange={(e) => setPrFormData({ ...prFormData, content: e.target.value })}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    color: 'var(--text-primary)',
+                                    fontFamily: 'inherit',
+                                    minHeight: '200px',
+                                    resize: 'vertical',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => {
+                                    setShowPRModal(false);
+                                    setPrFormData({ title: '', content: '' });
+                                }}
+                                disabled={isSubmittingPR}
+                                style={{
+                                    padding: '10px 24px',
+                                    border: '1px solid var(--border-color)',
+                                    backgroundColor: 'white',
+                                    color: 'var(--text-primary)',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    cursor: isSubmittingPR ? 'not-allowed' : 'pointer',
+                                    opacity: isSubmittingPR ? 0.5 : 1
+                                }}
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleSubmitPR}
+                                disabled={isSubmittingPR || !prFormData.title.trim() || !prFormData.content.trim()}
+                                style={{
+                                    padding: '10px 24px',
+                                    backgroundColor: 'var(--primary-blue)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    cursor: isSubmittingPR ? 'wait' : 'pointer',
+                                    opacity: isSubmittingPR || !prFormData.title.trim() || !prFormData.content.trim() ? 0.6 : 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '8px'
+                                }}
+                            >
+                                {isSubmittingPR ? (
+                                    <>
+                                        <Loader2 size={16} className="animate-spin" />
+                                        Đang gửi...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Send size={16} />
+                                        Đăng bài PR
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete PR Confirmation Modal */}
+            {showDeletePRModal && selectedPRForDelete && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        padding: '32px',
+                        maxWidth: '400px',
+                        width: '90%',
+                        boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)'
+                    }}>
+                        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+                            <div style={{ fontSize: '48px', marginBottom: '12px' }}>🗑️</div>
+                            <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)', fontSize: '18px', fontWeight: '700' }}>
+                                Xóa bài PR
+                            </h3>
+                            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '14px' }}>
+                                Bạn có chắc muốn xóa bài PR "{selectedPRForDelete.title}"? Hành động này không thể hoàn tác.
+                            </p>
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => {
+                                    setShowDeletePRModal(false);
+                                    setSelectedPRForDelete(null);
+                                }}
+                                disabled={processingPRId === selectedPRForDelete.postPrId}
+                                style={{
+                                    padding: '10px 24px',
+                                    border: '1px solid var(--border-color)',
+                                    backgroundColor: 'white',
+                                    color: 'var(--text-primary)',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleDeletePR}
+                                disabled={processingPRId === selectedPRForDelete.postPrId}
+                                style={{
+                                    padding: '10px 24px',
+                                    backgroundColor: '#ef4444',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    cursor: processingPRId === selectedPRForDelete.postPrId ? 'wait' : 'pointer',
+                                    opacity: processingPRId === selectedPRForDelete.postPrId ? 0.7 : 1
+                                }}
+                            >
+                                {processingPRId === selectedPRForDelete.postPrId ? 'Đang xóa...' : 'Xóa'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Edit PR Modal */}
+            {showEditPRModal && selectedPRForEdit && (
+                <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px'
+                }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        padding: '32px',
+                        borderRadius: '12px',
+                        maxWidth: '500px',
+                        width: '100%',
+                        boxShadow: '0 10px 40px rgba(0, 0, 0, 0.2)',
+                        maxHeight: '90vh',
+                        overflowY: 'auto'
+                    }}>
+                        <h3 style={{ margin: '0 0 24px 0', fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>✏️ Chỉnh sửa bài PR</h3>
+                        
+                        <div style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>Tiêu đề</label>
+                            <input
+                                type="text"
+                                value={editTitle}
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    fontFamily: 'inherit',
+                                    boxSizing: 'border-box'
+                                }}
+                                placeholder="Nhập tiêu đề bài PR"
+                            />
+                        </div>
+
+                        <div style={{ marginBottom: '24px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>Nội dung</label>
+                            <textarea
+                                value={editContent}
+                                onChange={(e) => setEditContent(e.target.value)}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    fontFamily: 'inherit',
+                                    minHeight: '150px',
+                                    boxSizing: 'border-box',
+                                    resize: 'vertical'
+                                }}
+                                placeholder="Nhập nội dung bài PR"
+                            />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => {
+                                    setShowEditPRModal(false);
+                                    setSelectedPRForEdit(null);
+                                    setEditTitle('');
+                                    setEditContent('');
+                                }}
+                                style={{
+                                    padding: '10px 24px',
+                                    backgroundColor: 'var(--border-color)',
+                                    color: 'var(--text-primary)',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleSaveEditPR}
+                                disabled={processingPRId === selectedPRForEdit.postPrId}
+                                style={{
+                                    padding: '10px 24px',
+                                    backgroundColor: 'var(--primary-blue)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    fontWeight: '600',
+                                    cursor: processingPRId === selectedPRForEdit.postPrId ? 'wait' : 'pointer',
+                                    opacity: processingPRId === selectedPRForEdit.postPrId ? 0.7 : 1
+                                }}
+                            >
+                                {processingPRId === selectedPRForEdit.postPrId ? '⏳ Đang...' : '💾 Lưu'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Success/Error Modal */}
             {showModal && (

@@ -4,6 +4,7 @@ import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
 import FloatingChatWidget from '../components/common/FloatingChatWidget';
+import PRNewsSection from '../components/common/PRNewsSection';
 import followerService from '../services/followerService';
 import connectionService from '../services/connectionService';
 import chatService from '../services/chatService';
@@ -95,6 +96,18 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
         };
     }, []);
 
+    // Auto-refresh polling interval (every 5 seconds to keep data fresh)
+    React.useEffect(() => {
+        const pollingInterval = setInterval(() => {
+            console.log('[InvestorDashboard] Auto-refresh polling triggered');
+            setRefreshTrigger(prev => prev + 1);
+        }, 5000); // 5 seconds
+
+        return () => {
+            clearInterval(pollingInterval);
+        };
+    }, []);
+
     React.useEffect(() => {
         const fetchAllData = async () => {
             setIsLoading(true);
@@ -102,6 +115,7 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                 console.log('[InvestorDashboard] Starting parallel fetch of all data...');
 
                 // Fetch all 3 APIs in PARALLEL using Promise.all()
+                // Use large pageSize to fetch all deals at once (avoid pagination issues)
                 const [followingRes, connectRes, dealsRes] = await Promise.all([
                     followerService.getMyFollowing().catch(err => {
                         console.error('Failed to fetch following:', err);
@@ -111,7 +125,7 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                         console.error('Failed to fetch connection requests:', err);
                         return null;
                     }),
-                    dealsService.getInvestorDeals().catch(err => {
+                    dealsService.getInvestorDeals({ pageSize: 100 }).catch(err => {
                         console.error('Failed to fetch deals:', err);
                         return null;
                     })
@@ -420,124 +434,57 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
         console.log('[InvestorDashboard] Closing chat window');
         setActiveChatSession(null);
         setActiveChatConnectionId(null);
-        // Refresh sent requests to update status
-        const refetchRequests = async () => {
-            try {
-                const response = await connectionService.getMyConnectionRequests({ pageNumber: 1, pageSize: 10 });
-                if (response && response.data && response.data.items) {
-                    // Apply same formatting as initial load
-                    const formattedRequests = response.data.items.map(request => {
-                        let formattedDate = '';
-                        if (request.responseDate) {
-                            formattedDate = new Date(request.responseDate).toLocaleString('vi-VN', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                                hour12: false
-                            });
-                        }
-                        return {
-                            id: request.connectionRequestId || request.id,
-                            connectionRequestId: request.connectionRequestId,
-                            projectId: request.projectId,
-                            projectName: request.projectName || 'Unknown Project',
-                            startupName: request.startupName || 'Unknown Startup',
-                            status: request.status || 'Pending',
-                            message: request.message || '',
-                            responseDate: formattedDate,
-                            responseDateRaw: request.responseDate,
-                            chatSessionId: request.chatSessionId || null
-                        };
-                    });
-                    setSentConnectionRequests(formattedRequests);
-                }
-            } catch (error) {
-                console.error('[InvestorDashboard] Failed to refetch requests:', error);
-            }
-        };
-        refetchRequests();
+        // Refresh ALL data after chat closes (deals, requests, interests)
+        refreshDeals();
     };
 
     return (
         <div className={styles.container}>
-            {/* Unified Header */}
-            <FeedHeader
-                title="Bảng điều khiển Nhà đầu tư"
-                subtitle={`Xin chào, ${user?.name || 'Nhà đầu tư'}! Quản lý đầu tư và khám phá startup.`}
-                showFilter={false}
-                user={user}
-                onOpenChat={(chatSessionId) => {
-                    setActiveChatSession({
-                        chatSessionId,
-                        displayName: 'Startup Founder',
-                        currentUserId: user?.userId,
-                        sentTime: new Date().toISOString(),
-                    });
-                }}
-            />
+            {/* Unified Header - Hidden for PR News */}
+            {activeSection !== 'pr_news' && (
+                <>
+                    <FeedHeader
+                        title="Bảng điều khiển Nhà đầu tư"
+                        subtitle={`Xin chào, ${user?.name || 'Nhà đầu tư'}! Quản lý đầu tư và khám phá startup.`}
+                        showFilter={false}
+                        user={user}
+                        onOpenChat={(chatSessionId) => {
+                            setActiveChatSession({
+                                chatSessionId,
+                                displayName: 'Startup Founder',
+                                currentUserId: user?.userId,
+                                sentTime: new Date().toISOString(),
+                            });
+                        }}
+                    />
 
-            {/* Quick Stats */}
-            <div className={styles.statsGrid}>
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconPurple}`}>
-                        <TrendingUp size={20} />
-                    </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.activeInvestments}</div>
-                        <div className={styles.statLabel}>Đang đầu tư</div>
-                    </div>
-                </div>
+                    {/* Quick Stats */}
+                    <div className={styles.statsGrid}>
+                        <div className={styles.statCard}>
+                            <div className={`${styles.statIcon} ${styles.iconPurple}`}>
+                                <TrendingUp size={20} />
+                            </div>
+                            <div className={styles.statInfo}>
+                                <div className={styles.statValue}>{dashboardData.activeInvestments}</div>
+                                <div className={styles.statLabel}>Đang đầu tư</div>
+                            </div>
+                        </div>
 
-                <div className={styles.statCard}>
-                    <div className={`${styles.statIcon} ${styles.iconGreen}`}>
-                        <MessageSquare size={20} />
+                        <div className={styles.statCard}>
+                            <div className={`${styles.statIcon} ${styles.iconGreen}`}>
+                                <MessageSquare size={20} />
+                            </div>
+                            <div className={styles.statInfo}>
+                                <div className={styles.statValue}>{dashboardData.acceptedInterests}</div>
+                                <div className={styles.statLabel}>Pitch được chấp nhận</div>
+                            </div>
+                        </div>
                     </div>
-                    <div className={styles.statInfo}>
-                        <div className={styles.statValue}>{dashboardData.acceptedInterests}</div>
-                        <div className={styles.statLabel}>Pitch được chấp nhận</div>
-                    </div>
-                </div>
-            </div>
-
-            {/* Navigation Tabs */}
-            <div className={styles.tabs}>
-                <button
-                    className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('overview')}
-                >
-                    Tổng quan
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'investments' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('investments')}
-                >
-                    Đang đầu tư
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'connectionrequests' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('connectionrequests')}
-                >
-                    Yêu cầu thông tin
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'interests' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('interests')}
-                >
-                    Quan tâm đã gửi
-                </button>
-                <button
-                    className={`${styles.tab} ${activeSection === 'preferences' ? styles.active : ''}`}
-                    onClick={() => setActiveSection('preferences')}
-                >
-                    Sở thích đầu tư
-                </button>
-            </div>
+                </>
+            )}
 
             {/* Content Sections */}
-            <div className={styles.content}>
+            <div className={styles.content} style={activeSection === 'pr_news' ? { paddingTop: 0 } : {}}>
                 {/* Overview Section */}
                 {activeSection === 'overview' && (
                     <div className={styles.section}>
@@ -875,6 +822,10 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                     </div>
                 )}
 
+                {/* PR News Section */}
+                {activeSection === 'pr_news' && (
+                    <PRNewsSection />
+                )}
 
                 <FloatingChatWidget
                     chatSessionId={activeChatSession?.chatSessionId}

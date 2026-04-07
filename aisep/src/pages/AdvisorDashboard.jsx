@@ -18,6 +18,7 @@ import signalRService from '../services/signalRService';
 import BookingDetailModal from '../components/booking/BookingDetailModal';
 import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import CustomSelect from '../components/common/CustomSelect';
+import PRNewsSection from '../components/common/PRNewsSection';
 import ProjectDetailView from '../components/feed/ProjectDetailView';
 
 /**
@@ -151,7 +152,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
 
     return (
         <div className={styles.container}>
-            {!activeSection.startsWith('project_') && (
+            {!activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
                 <FeedHeader
                     title="Bảng điều khiển Cố vấn"
                     subtitle={isNewAdvisor
@@ -227,7 +228,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                 </div>
             )}
 
-            <div className={styles.content} style={activeSection.startsWith('project_') ? { padding: 0 } : {}}>
+            <div className={styles.content} style={activeSection.startsWith('project_') ? { padding: 0 } : activeSection === 'pr_news' ? { paddingTop: 0 } : {}}>
                 {activeSection === 'overview' && (
                     isNewAdvisor ? (
                         <div className={styles.emptyState} style={{ padding: '40px', background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px dashed var(--border-color)' }}>
@@ -287,6 +288,11 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                         <ReportsSection />
                     )
                 )}
+
+                {activeSection === 'pr_news' && (
+                    <PRNewsSection />
+                )}
+                
                 {activeSection.startsWith('project_') && (
                     <ProjectDetailView 
                         projectId={activeSection.split('_')[1]} 
