@@ -26,12 +26,12 @@ const BOOKING_STATUS_LABELS = {
     NoResponse: { label: 'Không phản hồi', cls: 'badgeError', color: '#f4212e' },
 };
 
-export default function StartupBookings({ user }) {
+export default function StartupBookings({ user, onViewProject, initialFilterStatus, onFilterStatusChange }) {
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
-
+ 
     // Filter & Search State
-    const [filterStatus, setFilterStatus] = useState('all');
+    const [filterStatus, setFilterStatus] = useState(initialFilterStatus || 'ApprovedAwaitingPayment');
     const [searchTerm, setSearchTerm] = useState('');
 
     // UI state
@@ -46,8 +46,8 @@ export default function StartupBookings({ user }) {
     const [showBookingWizard, setShowBookingWizard] = useState(false);
     const [rebookData, setRebookData] = useState({ projectId: null, advisorId: null, sourceBookingId: null });
 
-    const loadBookings = useCallback(async () => {
-        setLoading(true);
+    const loadBookings = useCallback(async (isSilent = false) => {
+        if (!isSilent) setLoading(true);
         try {
             const response = await bookingService.getMyCustomerBookings('', '-Id', 1, 100);
             const items = response?.items ?? (Array.isArray(response) ? response : []);
@@ -55,7 +55,7 @@ export default function StartupBookings({ user }) {
         } catch (error) {
             console.error('Failed to load startup bookings', error);
         } finally {
-            setLoading(false);
+            if (!isSilent) setLoading(false);
         }
     }, []);
 
@@ -106,7 +106,16 @@ export default function StartupBookings({ user }) {
         if (action === 'rebook') handleRebookReplacement(booking);
         if (action === 'complain') setComplainBooking(booking);
         if (action === 'report') setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Startup' });
+        if (action === 'viewProject' && onViewProject) onViewProject(booking.projectId);
     };
+
+    const handleClosePayment = useCallback(() => {
+        setPaymentBooking(null);
+    }, []);
+
+    const handlePaymentSuccess = useCallback(() => {
+        loadBookings(true); // Silent background refresh
+    }, [loadBookings]);
 
     // Calculate Stats
     const stats = {
@@ -118,10 +127,13 @@ export default function StartupBookings({ user }) {
 
     // Derived filtered bookings
     const filteredBookings = bookings.filter(b => {
-        const matchesStatus = filterStatus === 'all' ||
-            (filterStatus === 'completed' && (b.status === 3 || b.status === 'Completed')) ||
-            (filterStatus === 'confirmed' && (b.status === 2 || b.status === 'Confirmed')) ||
-            (filterStatus === 'canceled' && [4, 5, 'Cancel', 'NoResponse'].includes(b.status));
+        const matchesStatus = 
+            (filterStatus === 'ApprovedAwaitingPayment' && (b.status === 1 || b.status === 'ApprovedAwaitingPayment')) ||
+            (filterStatus === 'Pending' && (b.status === 0 || b.status === 'Pending')) ||
+            (filterStatus === 'Confirmed' && (b.status === 2 || b.status === 'Confirmed')) ||
+            (filterStatus === 'Completed' && (b.status === 3 || b.status === 'Completed')) ||
+            (filterStatus === 'NoResponse' && (b.status === 5 || b.status === 'NoResponse')) ||
+            (filterStatus === 'Cancel' && (b.status === 4 || b.status === 'Cancel'));
 
         const displayProjectName = (b.projectName || b.project?.projectName || '').toLowerCase();
         const displayAdvisorName = (b.advisorName || '').toLowerCase();
@@ -130,7 +142,7 @@ export default function StartupBookings({ user }) {
             displayAdvisorName.includes(searchTerm.toLowerCase());
 
         return matchesStatus && matchesSearch;
-    });
+    }).sort((a, b) => new Date(b.startTime || b.createdAt || 0) - new Date(a.startTime || a.createdAt || 0));
 
     return (
         <div className={styles.dashboardSection}>
@@ -177,10 +189,25 @@ export default function StartupBookings({ user }) {
 
                 <div className={styles.xToolbar}>
                     <div className={styles.xFilters}>
-                        <button className={`${styles.xFilterTab} ${filterStatus === 'all' ? styles.xFilterTabActive : ''}`} onClick={() => setFilterStatus('all')}>Tất cả</button>
-                        <button className={`${styles.xFilterTab} ${filterStatus === 'completed' ? styles.xFilterTabActive : ''}`} onClick={() => setFilterStatus('completed')}>Hoàn thành</button>
-                        <button className={`${styles.xFilterTab} ${filterStatus === 'confirmed' ? styles.xFilterTabActive : ''}`} onClick={() => setFilterStatus('confirmed')}>Đã xác nhận</button>
-                        <button className={`${styles.xFilterTab} ${filterStatus === 'canceled' ? styles.xFilterTabActive : ''}`} onClick={() => setFilterStatus('canceled')}>Đã hủy</button>
+                        {[
+                            { id: 'ApprovedAwaitingPayment', label: 'Chờ thanh toán' },
+                            { id: 'Pending', label: 'Chờ duyệt' },
+                            { id: 'Confirmed', label: 'Đã xác nhận' },
+                            { id: 'Completed', label: 'Hoàn thành' },
+                            { id: 'NoResponse', label: 'Không phản hồi' },
+                            { id: 'Cancel', label: 'Đã hủy' }
+                        ].map(tab => (
+                            <button 
+                                key={tab.id}
+                                className={`${styles.xFilterTab} ${filterStatus === tab.id ? styles.xFilterTabActive : ''}`} 
+                                onClick={() => {
+                                    setFilterStatus(tab.id);
+                                    if (onFilterStatusChange) onFilterStatusChange(tab.id);
+                                }}
+                            >
+                                {tab.label}
+                            </button>
+                        ))}
                     </div>
                 </div>
 
@@ -277,7 +304,13 @@ export default function StartupBookings({ user }) {
                 )}
                 <FloatingChatWidget chatSessionId={chatSession?.chatSessionId} displayName={chatSession?.displayName} currentUserId={chatSession?.currentUserId} sentTime={chatSession?.sentTime} onClose={() => setChatSession(null)} />
                 {paymentBooking && (
-                    <PaymentModal bookingId={paymentBooking.id} advisorName={paymentBooking.advisorName} slotCount={paymentBooking.slotCount} onClose={() => setPaymentBooking(null)} onPaid={() => { setPaymentBooking(null); loadBookings(); }} />
+                    <PaymentModal 
+                        bookingId={paymentBooking.id} 
+                        advisorName={paymentBooking.advisorName} 
+                        slotCount={paymentBooking.slotCount} 
+                        onClose={handleClosePayment} 
+                        onPaid={handlePaymentSuccess} 
+                    />
                 )}
                 {complainBooking && (
                     <UserReportModal 

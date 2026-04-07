@@ -1,0 +1,179 @@
+.pillCard {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 9999px;
+  margin: 0; /* Removed margin-bottom to rely on parent gap */
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  min-height: 58px; /* Maintain consistent height with profile card */
+}
+
+.pillCard:hover {
+  background-color: var(--bg-hover);
+}
+
+.pillCard.active {
+  background: var(--bg-hover);
+  border-color: var(--primary-blue);
+  box-shadow: 0 0 0 1px var(--primary-blue);
+}
+
+.pillCard.premium.active {
+  background: rgba(218, 165, 32, 0.1);
+  border-color: #daa520;
+  box-shadow: 0 0 0 1px #daa520;
+}
+
+.pillCard.premium {
+  background: linear-gradient(135deg, rgba(255, 215, 0, 0.05) 0%, rgba(255, 165, 0, 0.05) 100%);
+  border-color: rgba(255, 215, 0, 0.3);
+}
+
+.contentWrapper {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex: 1;
+  min-width: 0;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.iconContainer {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.premium .iconContainer {
+  background: rgba(255, 215, 0, 0.1);
+  color: #daa520;
+  box-shadow: 0 0 10px rgba(255, 215, 0, 0.2);
+}
+
+.info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.packageName {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  display: flex;
+  flex-direction: column;
+  line-height: 1.1;
+}
+
+.packagePrefix {
+  font-size: 0.6rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  opacity: 0.7;
+}
+
+.packageValue {
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.premiumText {
+  background: linear-gradient(90deg, #daa520, #ffd700);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.expiryRow {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  opacity: 0.8;
+  margin-top: 1px;
+}
+
+.actionBtn {
+  background: var(--primary-blue);
+  color: white;
+  border: none;
+  border-radius: 9999px;
+  padding: 5px 12px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  transition: all 0.2s ease;
+  z-index: 2;
+  flex-shrink: 0;
+  margin-left: 4px;
+}
+
+.premium .actionBtn {
+  background: #daa520;
+  color: #000; /* Contrast against gold */
+}
+
+.actionBtn:hover {
+  opacity: 0.85;
+}
+
+.activeStatus {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+}
+
+.loadingText {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.errorText {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ef4444;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Tablet/Laptop Icon-only state */
+@media (max-width: 1439px) and (min-width: 1024px) {
+  .pillCard {
+    padding: 8px;
+    justify-content: center;
+    border: none;
+    min-height: 56px;
+  }
+  .info, .actionBtn {
+    display: none;
+  }
+}

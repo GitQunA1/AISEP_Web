@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle, Loader } from 'lucide-react';
+import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle, Loader, Shield, History, ChevronUp, ChevronDown } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
+import SubscriptionPillCard from '../subscription/SubscriptionPillCard';
 
 /**
  * Sidebar Component
@@ -20,6 +21,7 @@ function Sidebar({
   onShowAdvisors,
   onShowDashboard,
   onShowAI,
+  onShowSubscription,
   onMenuItemClick,
   user,
   onLogout,
@@ -48,7 +50,9 @@ function Sidebar({
       { icon: Calendar, label: 'Bookings', displayLabel: 'Quản lý Booking', href: '#', showWhenLoggedIn: true },
       { icon: AlertCircle, label: 'UserReports', displayLabel: 'Báo cáo vi phạm', href: '#', showWhenLoggedIn: true },
       { icon: ShieldCheck, label: 'Approvals', displayLabel: 'Phê duyệt Startup', href: '#', showWhenLoggedIn: true },
-      { icon: Award, label: 'AdvisorApproval', displayLabel: 'Duyệt Cố vấn', href: '#', showWhenLoggedIn: true },
+      { icon: Award, label: 'AdvisorApproval', displayLabel: 'Phê duyệt cố vấn', href: '#', showWhenLoggedIn: true },
+      { icon: Shield, label: 'PackageManagement', displayLabel: 'Quản lý gói', href: '#', showWhenLoggedIn: true },
+      { icon: History, label: 'SubscriptionHistory', displayLabel: 'Lịch sử đăng ký gói', href: '#', showWhenLoggedIn: true },
     ];
     const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
     const homeItem = navItems.find(item => item.label === 'Home');
@@ -76,6 +80,38 @@ function Sidebar({
     navItems = [...investorItems, homeItem, ...otherItems];
   }
 
+  const menuRef = React.useRef(null);
+  const [showTopFade, setShowTopFade] = useState(false);
+  const [showBottomFade, setShowBottomFade] = useState(false);
+
+  const checkScroll = React.useCallback(() => {
+    if (menuRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = menuRef.current;
+      setShowTopFade(scrollTop > 5);
+      setShowBottomFade(scrollTop + clientHeight < scrollHeight - 5);
+    }
+  }, []);
+
+  // Auto-scroll to active item and check initial scroll state
+  React.useEffect(() => {
+    const timer = setTimeout(() => {
+      if (menuRef.current) {
+        const activeItem = menuRef.current.querySelector(`.${styles.active}`);
+        if (activeItem) {
+          activeItem.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+        checkScroll();
+      }
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [activeView, checkScroll]);
+
+  React.useEffect(() => {
+    checkScroll();
+    window.addEventListener('resize', checkScroll);
+    return () => window.removeEventListener('resize', checkScroll);
+  }, [checkScroll, navItems]);
+
   const handleNavClick = (label) => {
     // Navigate to dashboard when clicking Dashboard
     if (label === 'Dashboard' && onShowDashboard) {
@@ -102,6 +138,12 @@ function Sidebar({
 
     if (label === 'UserReports' && onShowDashboard) {
       onShowDashboard('user_reports');
+    }
+    if (label === 'PackageManagement' && onShowDashboard) {
+      onShowDashboard('package_management');
+    }
+    if (label === 'SubscriptionHistory' && onShowDashboard) {
+      onShowDashboard('subscription_history');
     }
 
     // Navigate to home when clicking Home
@@ -180,73 +222,105 @@ function Sidebar({
             </button>
           </div>
 
-          {/* Navigation Links */}
-          <nav className={styles.nav}>
-            {navItems
-              .filter(item => {
-                // Hide Dashboard when user is not logged in
-                if (item.showWhenLoggedIn && !user) {
-                  return false;
-                }
-                // Hide Profile when user is not logged in
-                if (item.label === 'Profile' && !user) {
-                  return false;
-                }
-                // Hide items for specific roles
-                if (item.hideFor && user?.role && item.hideFor.includes(user.role)) {
-                  return false;
-                }
-                return true;
-              })
-              .map((item) => {
-                const Icon = item.icon;
-                // Map activeView to nav item labels
-                const getActiveLabel = () => {
-                  if (activeView === 'main') return 'Home';
-                  if (activeView === 'dashboard') return 'Dashboard';
-                  if (activeView === 'dashboard_project_management') return 'Projects';
-                  if (activeView === 'dashboard_bookings') return 'Bookings';
-                  if (activeView === 'dashboard_approvals') return 'Approvals';
-                  if (activeView === 'dashboard_advisor_approval') return 'AdvisorApproval';
-                  if (activeView === 'dashboard_availability') return 'Availability';
-                  if (activeView === 'dashboard_approve_bookings') return 'ApproveBookings';
-                  if (activeView === 'dashboard_user_reports') return 'UserReports';
-                  if (activeView === 'profile') return 'Profile';
-                  if (activeView === 'advisors') return 'Advisors';
-                  if (activeView === 'investors') return 'Investors';
-                  return 'Home';
-                };
-                const isActive = item.label === getActiveLabel();
+          {/* Scrollable Navigation Body */}
+          <div className={styles.menuContainer}>
+            {/* Subtle Gradient Indicators with Icons */}
+            <div className={`${styles.scrollFade} ${styles.scrollFadeTop} ${showTopFade ? styles.visible : ''}`}>
+              <ChevronUp size={22} className={styles.fadeIcon} />
+            </div>
+            
+            <div 
+              className={styles.menuScrollArea} 
+              ref={menuRef}
+              onScroll={checkScroll}
+            >
+              <nav className={styles.nav}>
+                {navItems
+                  .filter(item => {
+                    // Hide Dashboard when user is not logged in
+                    if (item.showWhenLoggedIn && !user) {
+                      return false;
+                    }
+                    // Hide Profile when user is not logged in
+                    if (item.label === 'Profile' && !user) {
+                      return false;
+                    }
+                    // Hide items for specific roles
+                    if (item.hideFor && user?.role && item.hideFor.includes(user.role)) {
+                      return false;
+                    }
+                    return true;
+                  })
+                  .map((item) => {
+                    const Icon = item.icon;
+                    // Map activeView to nav item labels
+                    const getActiveLabel = () => {
+                      if (activeView === 'main') return 'Home';
+                      if (activeView === 'dashboard') return 'Dashboard';
+                      if (activeView === 'dashboard_project_management') return 'Projects';
+                      if (activeView === 'dashboard_bookings') return 'Bookings';
+                      if (activeView === 'dashboard_approvals') return 'Approvals';
+                      if (activeView === 'dashboard_advisor_approval') return 'AdvisorApproval';
+                      if (activeView === 'dashboard_availability') return 'Availability';
+                      if (activeView === 'dashboard_approve_bookings') return 'ApproveBookings';
+                      if (activeView === 'dashboard_user_reports') return 'UserReports';
+                      if (activeView === 'dashboard_package_management') return 'PackageManagement';
+                      if (activeView === 'dashboard_subscription_history') return 'SubscriptionHistory';
+                      if (activeView === 'profile') return 'Profile';
+                      if (activeView === 'advisors') return 'Advisors';
+                      if (activeView === 'investors') return 'Investors';
+                      if (activeView === 'subscription') return 'Subscription';
+                      return null;
+                    };
+                    const isActive = item.label === getActiveLabel();
 
-                return (
-                  <a
-                    key={item.label}
-                    href={item.href}
-                    className={`${styles.navItem} ${isActive ? styles.active : ''}`}
-                    onClick={(e) => {
-                      e.preventDefault();
-                      handleNavClick(item.label);
-                    }}
-                  >
-                    <Icon size={24} />
-                    <span>{item.displayLabel}</span>
-                  </a>
-                );
-              })}
-          </nav>
+                    return (
+                      <a
+                        key={item.label}
+                        href={item.href}
+                        className={`${styles.navItem} ${isActive ? styles.active : ''}`}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          handleNavClick(item.label);
+                        }}
+                      >
+                        <Icon size={24} />
+                        <span>{item.displayLabel}</span>
+                      </a>
+                    );
+                  })}
+              </nav>
+            </div>
 
-          {/* Theme Toggle */}
-          <button
-            className={styles.themeToggle}
-            onClick={toggleTheme}
-            aria-label="Toggle theme"
-            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-          >
-            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-            <span>Giao diện</span>
-          </button>
+            <div className={`${styles.scrollFade} ${styles.scrollFadeBottom} ${showBottomFade ? styles.visible : ''}`}>
+              <ChevronDown size={22} className={styles.fadeIcon} />
+            </div>
+          </div>
+
+          {/* Fixed Footer Section */}
+          <div className={styles.footerSection}>
+            {/* Theme Toggle */}
+            <button
+              className={styles.themeToggle}
+              onClick={toggleTheme}
+              aria-label="Toggle theme"
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            >
+              {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+              <span>Giao diện</span>
+            </button>
 
           {/* Auth Section / Profile Display */}
+          {user && (
+            <SubscriptionPillCard
+              user={user}
+              onManage={() => {
+                if (onShowSubscription) onShowSubscription();
+              }}
+              isActive={activeView === 'subscription'}
+            />
+          )}
+
           {user ? (
             /* Logged In: Show Profile Display with Logout Button */
             <div className={styles.profileSection}>
@@ -286,6 +360,7 @@ function Sidebar({
               </button>
             </div>
           )}
+          </div>
         </div>
       </aside>
     </>

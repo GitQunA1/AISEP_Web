@@ -353,6 +353,11 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
     createdBooking?.status === 'ApprovedAwaitingPayment' ||
     createdBooking?.status === 1;
 
+  const handleClosePaymentModal = useCallback(() => {
+    setShowPaymentModal(false);
+    onClose();
+  }, [onClose]);
+
   // ── Success Screen ─────────────────────────────────────────────────────
   if (isSuccess) {
     return (
@@ -438,8 +443,10 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
             price={createdBooking.price}
             advisorName={selectedAdvisor?.advisorName || adv.userName || ''}
             slotCount={selectedSlotIds.length}
-            onClose={() => setShowPaymentModal(false)}
-            onPaid={() => { setShowPaymentModal(false); onClose(); }}
+            onClose={handleClosePaymentModal}
+            onPaid={() => {
+              // Background update if needed
+            }}
           />
         )}
       </div>

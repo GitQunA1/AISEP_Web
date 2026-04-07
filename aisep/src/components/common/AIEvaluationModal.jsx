@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { CheckCircle, AlertCircle, TrendingUp, X, AlertTriangle, BarChart3, Brain, Sparkles, ChevronRight, Loader2 } from 'lucide-react';
 import styles from './AIEvaluationModal.module.css';
 
@@ -101,7 +102,7 @@ export default function AIEvaluationModal({
         return result;
     };
 
-    return (
+    return createPortal(
         <div className={styles.backdrop} onClick={onCancel}>
             <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
@@ -404,6 +405,7 @@ export default function AIEvaluationModal({
                     </div>
                 )}
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

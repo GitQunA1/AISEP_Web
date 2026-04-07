@@ -513,7 +513,10 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
 
             {/* Request Info Button */}
             <button
-              onClick={() => !hasRequested && setShowRequestModal(true)}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!hasRequested) setShowRequestModal(true);
+              }}
               disabled={hasRequested}
               style={{
                 flex: 1,
@@ -612,7 +615,10 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
             ) : (
               // Show invest button
               <button
-                onClick={() => setShowInvestmentModal(true)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowInvestmentModal(true);
+                }}
                 style={{
                   flex: 1,
                   minWidth: '100px',

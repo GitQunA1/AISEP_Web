@@ -473,7 +473,7 @@ const AdvisorBookingKanbanCard = ({ booking, onDetail, onApprove, onReject, onCh
             <div className={avStyles.bcardBody}>
                 <div className={avStyles.bcardRow1}>
                     <div className={avStyles.bcardMainInfo}>
-                        <div className={avStyles.bcardName} style={{ fontFamily: 'monospace', fontSize: '13px', color: 'var(--text-secondary)' }}>
+                        <div className={avStyles.bcardName} style={{ fontFamily: 'monospace', fontSize: '13px', color: 'var(--text-primary)', fontWeight: '700' }}>
                             #{booking.id}
                         </div>
                         <span className={avStyles.btag} style={{ background: statusBg, color: statusColor }}>
@@ -497,18 +497,18 @@ const AdvisorBookingKanbanCard = ({ booking, onDetail, onApprove, onReject, onCh
                         <div className={avStyles.bfKey}>GIÁ</div>
                         <div className={avStyles.bfVal} style={{ color: '#f59e0b' }}>
                             {Number(booking.price || 0).toLocaleString('vi-VN')}
-                            <span style={{ fontSize: '10px', marginLeft: '2px', opacity: 0.8 }}>VND</span>
+                            <span style={{ fontSize: '10px', marginLeft: '2px', color: 'var(--text-secondary)', fontWeight: '400' }}>VND</span>
                         </div>
                     </div>
                 </div>
 
-                <div className={avStyles.bcardTeam} style={{ marginTop: '0', paddingTop: '4px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', opacity: 0.8 }}>
-                        <Calendar size={12} />
+                <div className={avStyles.bcardTeam}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <Calendar size={13} style={{ color: 'var(--primary-blue)' }} />
                         <span>{new Date(booking.startTime).toLocaleDateString('vi-VN')}</span>
                     </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '11px', opacity: 0.8, marginLeft: 'auto' }}>
-                        <Clock size={12} />
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
+                        <Clock size={13} style={{ color: 'var(--primary-blue)' }} />
                         <span>{new Date(booking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
                     </div>
                 </div>

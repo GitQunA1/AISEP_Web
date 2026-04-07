@@ -13,8 +13,10 @@ import InvestorBookings from './components/investor/InvestorBookings';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import authService from './services/authService';
 import startupProfileService from './services/startupProfileService';
+import SubscriptionManagement from './components/subscription/SubscriptionManagement';
 import AdvisorProfilePage from './pages/AdvisorProfilePage';
 import AdvisorApprovalPage from './components/advisor/AdvisorApprovalPage';
+import ProjectDetailView from './components/feed/ProjectDetailView';
 import SessionExpiredModal from './components/auth/SessionExpiredModal';
 
 function App() {
@@ -22,6 +24,7 @@ function App() {
   const [selectedRole, setSelectedRole] = useState(null);
   const [user, setUser] = useState(null);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
+  const [lastInvestorBookingFilter, setLastInvestorBookingFilter] = useState('ApprovedAwaitingPayment');
 
   // Listen for global session_expired events from apiClient
   useEffect(() => {
@@ -190,6 +193,10 @@ function App() {
     setCurrentView('ai');
   };
 
+  const handleShowSubscription = () => {
+    setCurrentView('subscription');
+  };
+
   const handleShowProfile = () => {
     setCurrentView('profile');
   };
@@ -215,7 +222,7 @@ function App() {
           onShowRegister={handleShowRegister}
           onBack={handleBackToMain}
         />
-      ) : (['main', 'advisors', 'investors', 'ai', 'dashboard', 'profile'].includes(currentView) || currentView.startsWith('dashboard_')) ? (
+      ) : (['main', 'advisors', 'investors', 'ai', 'dashboard', 'profile', 'subscription'].includes(currentView) || currentView.startsWith('dashboard_')) ? (
         <MainLayout
           onShowRegister={handleShowRegister}
           onShowLogin={handleShowLogin}
@@ -223,6 +230,7 @@ function App() {
           onShowAdvisors={handleShowAdvisors}
           onShowInvestors={handleShowInvestors}
           onShowDashboard={handleShowDashboard}
+          onShowSubscription={handleShowSubscription}
           onShowAI={handleShowAI}
           onShowProfile={handleShowProfile}
           user={user}
@@ -231,7 +239,9 @@ function App() {
           showInvestors={currentView === 'investors'}
           showAI={currentView === 'ai'}
           activeView={currentView}
+          isFullWidthContent={currentView.startsWith('dashboard_project_')}
         >
+          {currentView === 'subscription' && <SubscriptionManagement user={user} />}
           {currentView === 'profile' && <AdvisorProfilePage user={user} onBack={handleShowHome} />}
           {currentView.startsWith('dashboard') && (
             (() => {
@@ -240,12 +250,32 @@ function App() {
               const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
               
               if (roleStr === 'startup' || roleNum === 0) {
-                return <StartupDashboard user={user} />;
+                const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
+                return <StartupDashboard user={user} initialSection={section} />;
               } else if (roleStr === 'investor' || roleNum === 1) {
                 if (currentView === 'dashboard_bookings') {
-                  return <InvestorBookings user={user} />;
+                  return (
+                    <InvestorBookings 
+                      user={user} 
+                      onViewProject={(pid) => setCurrentView('dashboard_project_' + pid)} 
+                      initialFilterStatus={lastInvestorBookingFilter}
+                      onFilterStatusChange={setLastInvestorBookingFilter}
+                    />
+                  );
                 }
-                return <InvestorDashboard user={user} />;
+                if (currentView.startsWith('dashboard_project_')) {
+                  const pid = currentView.replace('dashboard_project_', '');
+                  return (
+                    <ProjectDetailView 
+                        projectId={pid} 
+                        onBack={() => setCurrentView('dashboard_bookings')} 
+                        user={user} 
+                        isFullView={false} 
+                    />
+                  );
+                }
+                const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
+                return <InvestorDashboard user={user} initialSection={section} />;
               } else if (roleStr === 'advisor' || roleNum === 2) {
                 const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
                 return <AdvisorDashboard user={user} initialSection={section} onSectionChange={handleShowDashboard} onShowProfile={handleShowProfile} />;

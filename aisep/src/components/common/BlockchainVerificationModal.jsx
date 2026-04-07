@@ -1,4 +1,5 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { Check, AlertCircle, Copy, X, Activity, Shield, ExternalLink } from 'lucide-react';
 import styles from './BlockchainVerificationModal.module.css';
 
@@ -35,7 +36,7 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
         }
     };
 
-    return (
+    return createPortal(
         <div className={styles.modalBackdrop} onClick={onClose}>
             <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
                 {/* Header */}
@@ -140,6 +141,7 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                     </div>
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 }

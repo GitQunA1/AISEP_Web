@@ -301,7 +301,6 @@
     font-family: 'IBM Plex Mono', monospace;
     font-size: 10px;
     color: var(--text-secondary);
-    opacity: 0.7;
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: .08em;
@@ -388,10 +387,13 @@
 .bcardTeam {
     display: flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    color: var(--text-secondary);
+    gap: 10px;
+    font-size: 11px;
+    color: var(--text-primary);
     margin-top: 6px;
+    background: rgba(var(--bg-primary-rgb), 0.05);
+    padding: 6px 10px;
+    border-radius: 8px;
 }
 
 @keyframes cardAppear {

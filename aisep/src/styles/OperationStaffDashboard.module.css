@@ -1672,3 +1672,207 @@ btnReject {
     pointer-events: none !important;
     cursor: not-allowed !important;
 }
+
+/* --- User Reports Redesign --- */
+.reportGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 20px;
+    padding: 0;
+}
+
+.rcard {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 24px;
+    transition: all 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.rcard:hover {
+    border-color: rgba(244, 33, 46, 0.4);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.rcardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.rcardInfo {
+    flex: 1;
+}
+
+.rcardTop {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 8px;
+}
+
+.rcardCategory {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0;
+}
+
+.rbadge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 99px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    text-transform: uppercase;
+}
+
+.rbPending {
+    background: rgba(29, 155, 240, 0.1);
+    color: var(--primary-blue);
+}
+
+.rbValid {
+    background: rgba(16, 185, 129, 0.1);
+    color: #10b981;
+}
+
+.rbFalse {
+    background: rgba(244, 33, 46, 0.1);
+    color: #f4212e;
+}
+
+.rcardMeta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.metaDot {
+    color: var(--border-color);
+}
+
+.rcardBody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.rcardDescLabel {
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.rcardDescText {
+    font-size: 15px;
+    line-height: 1.6;
+    color: var(--text-primary);
+}
+
+.rcardEvidence {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.evidenceGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 120px));
+    gap: 10px;
+}
+
+.evidenceImgWrapper {
+    width: 120px;
+    height: 120px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    transition: transform 0.2s;
+}
+
+.evidenceImgWrapper:hover {
+    transform: scale(1.05);
+    border-color: var(--primary-blue);
+}
+
+.evidenceImgWrapper img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.videoBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--primary-blue);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 16px;
+    background: rgba(29, 155, 240, 0.05);
+    border: 1px dashed var(--primary-blue);
+    border-radius: 10px;
+    width: fit-content;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.videoBtn:hover {
+    background: rgba(29, 155, 240, 0.1);
+}
+
+.rcardActions {
+    display: flex;
+    gap: 12px;
+    margin-top: 10px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.raBtn {
+    flex: 1;
+    height: 42px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+    border: none;
+}
+
+.raValid {
+    background: var(--staff-success);
+    color: white;
+}
+
+.raValid:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+}
+
+.raFalse {
+    background: transparent;
+    border: 1px solid var(--staff-danger);
+    color: var(--staff-danger);
+}
+
+.raFalse:hover {
+    background: rgba(239, 68, 68, 0.05);
+    transform: translateY(-1px);
+}
