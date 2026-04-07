@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileCheck, CheckCircle, AlertCircle, Search, Archive, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, XCircle, FileText, Loader2, TrendingUp, ExternalLink, Shield, History, Calendar, PieChart, Briefcase, Clock, DollarSign } from 'lucide-react';
+import { FileCheck, CheckCircle, AlertCircle, Search, Archive, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, XCircle, FileText, Loader2, TrendingUp, ExternalLink, Shield, History, Calendar, PieChart, Briefcase, Clock, DollarSign, Send, Newspaper } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import local from '../styles/OperationStaffDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
@@ -11,6 +11,7 @@ import AIEvaluationService from '../services/AIEvaluationService';
 import bookingService from '../services/bookingService';
 import startupProfileService from '../services/startupProfileService';
 import userReportService from '../services/userReportService';
+import dealsService from '../services/dealsService';
 import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/ProjectStatus';
 import AdvisorApprovalPage from '../components/advisor/AdvisorApprovalPage';
@@ -416,6 +417,13 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
     const [isLoadingUserReports, setIsLoadingUserReports] = useState(false);
     const [userReportsError, setUserReportsError] = useState(null);
 
+    // PR Management state
+    const [signedDeals, setSignedDeals] = useState([]);
+    const [isLoadingSignedDeals, setIsLoadingSignedDeals] = useState(false);
+    const [signedDealsError, setSignedDealsError] = useState(null);
+    const [prSearchTerm, setPrSearchTerm] = useState('');
+    const [processingDealId, setProcessingDealId] = useState(null);
+
     // Mobile States
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
     const [activeMobileTab, setActiveMobileTab] = useState('pend'); // 'pend', 'appr', 'rej'
@@ -627,6 +635,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             fetchBookings();
             fetchPendingStartups();
             fetchUserReports();
+            fetchSignedDeals();
         };
         loadInitialData();
     }, []);
@@ -643,6 +652,8 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             fetchPendingStartups();
         } else if (activeSection === 'user_reports') {
             fetchUserReports();
+        } else if (activeSection === 'pr_management') {
+            fetchSignedDeals();
         }
     }, [activeSection]);
 
@@ -850,6 +861,29 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
         }
     };
 
+    const fetchSignedDeals = async () => {
+        setIsLoadingSignedDeals(true);
+        setSignedDealsError(null);
+        try {
+            // Use getAllSignedDeals for staff to fetch all signed contracts
+            const response = await dealsService.getAllSignedDeals();
+            const deals = Array.isArray(response?.data) ? response.data : (response?.data?.items || []);
+            
+            // Filter and include only deals with complete project information
+            const signedDealsFiltered = deals.filter(deal => 
+                (deal.status === 3 || deal.status === 'Contract_Signed') && deal.project
+            );
+            
+            console.log('[OperationStaffDashboard] Signed deals fetched:', signedDealsFiltered.length);
+            setSignedDeals(signedDealsFiltered);
+        } catch (error) {
+            console.error('Error fetching signed deals:', error);
+            setSignedDealsError('Không thể tải danh sách dự án đã ký hợp đồng.');
+        } finally {
+            setIsLoadingSignedDeals(false);
+        }
+    };
+
     const handleResolveReport = async (reportId, isValid) => {
         if (processingProjectId === reportId) return;
         setProcessingProjectId(reportId);
@@ -903,36 +937,41 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                     activeSection === 'subscription_history' ? "Lịch sử đăng ký gói" :
                         (activeSection === 'package_management' ? "Quản lý Gói dịch vụ" :
                             (activeSection === 'project_management' ? "Quản lý Dự án" :
-                                (activeSection === 'bookings' ? "Quản lý Booking" :
-                                    (activeSection === 'user_reports' ? "Quản lý báo cáo" :
-                                        (activeSection === 'advisor_approval' ? "Phê duyệt cố vấn" :
-                                            (activeSection === 'statistics' ? "Thống kê hoạt động" : "Bảng điều khiển Nhân viên"))))))
+                                (activeSection === 'pr_management' ? "Đăng bài PR - Dự án Đầu tư" :
+                                    (activeSection === 'bookings' ? "Quản lý Booking" :
+                                        (activeSection === 'user_reports' ? "Quản lý báo cáo" :
+                                            (activeSection === 'advisor_approval' ? "Phê duyệt cố vấn" :
+                                                (activeSection === 'statistics' ? "Thống kê hoạt động" : "Bảng điều khiển Nhân viên")))))))
                 }
                 subtitle={
                     activeSection === 'subscription_history' ? "Theo dõi và quản lý lịch sử thanh toán, gia hạn các gói dịch vụ của người dùng trên hệ thống." :
                         (activeSection === 'package_management' ? "Cấu hình hạn mức, thời hạn và giá cả cho các gói đăng ký trên toàn hệ thống AISEP." :
                             (activeSection === 'project_management' ? "Phê duyệt và quản lý các startup tham gia nền tảng." :
-                                (activeSection === 'bookings' ? "Theo dõi và giám sát các lịch hẹn đào tạo trong hệ thống." :
-                                    (activeSection === 'user_reports' ? "Giải quyết các báo cáo vi phạm và khiếu nại từ người dùng." :
-                                        (activeSection === 'advisor_approval' ? "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn trên nền tảng AISEP." :
-                                            (activeSection === 'statistics' ? "Tổng quan về các số liệu tăng trưởng và hiệu suất nền tảng." : "Quản lý nền tảng và các yêu cầu phê duyệt."))))))
+                                (activeSection === 'pr_management' ? "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký)." :
+                                    (activeSection === 'bookings' ? "Theo dõi và giám sát các lịch hẹn đào tạo trong hệ thống." :
+                                        (activeSection === 'user_reports' ? "Giải quyết các báo cáo vi phạm và khiếu nại từ người dùng." :
+                                            (activeSection === 'advisor_approval' ? "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn trên nền tảng AISEP." :
+                                                (activeSection === 'statistics' ? "Tổng quan về các số liệu tăng trưởng và hiệu suất nền tảng." : "Quản lý nền tảng và các yêu cầu phê duyệt.")))))))
                 }
                 showFilter={false}
                 user={user}
                 searchTerm={
                     activeSection === 'project_management' ? searchTerm :
                         (activeSection === 'bookings' ? bookingSearchTerm :
-                            (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : ''))
+                            (activeSection === 'pr_management' ? prSearchTerm :
+                                (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : '')))
                 }
                 onSearchChange={(val) => {
                     if (activeSection === 'project_management') setSearchTerm(val);
                     else if (activeSection === 'bookings') setBookingSearchTerm(val);
+                    else if (activeSection === 'pr_management') setPrSearchTerm(val);
                     else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
                 }}
                 searchPlaceholder={
                     activeSection === 'project_management' ? "Tìm kiếm dự án..." :
                         (activeSection === 'bookings' ? "Tìm kiếm booking..." :
-                            "Tìm kiếm...")
+                            (activeSection === 'pr_management' ? "Tìm kiếm dự án đã ký..." :
+                                "Tìm kiếm..."))
                 }
             />
 
@@ -1406,6 +1445,213 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                         </div>
                                     </div>
                                 )}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* PR Management Section */}
+                {activeSection === 'pr_management' && (
+                    <div className={styles.section}>
+                        {/* Header Stats */}
+                        <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <Newspaper size={24} color="var(--primary-blue)" />
+                                <div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Dự án đã ký</div>
+                                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-primary)' }}>{signedDeals.length}</div>
+                                </div>
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <CheckCircle size={24} color="#10b981" />
+                                <div>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Sẵn sàng PR</div>
+                                    <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>
+                                        {signedDeals.filter(d => d.project).length}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Error State */}
+                        {signedDealsError && (
+                            <div className={local.errorWrapper} style={{ marginBottom: '20px' }}>
+                                <EmptyState
+                                    icon={AlertCircle}
+                                    title="Lỗi tải dữ liệu"
+                                    message={signedDealsError}
+                                    isError={true}
+                                    onRetry={fetchSignedDeals}
+                                />
+                            </div>
+                        )}
+
+                        {/* Loading State */}
+                        {isLoadingSignedDeals && (
+                            <div className={styles.card}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '12px' }}>
+                                    <Loader2 size={20} className="animate-spin" />
+                                    <span style={{ color: 'var(--text-secondary)' }}>Đang tải dữ liệu...</span>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Empty State */}
+                        {!isLoadingSignedDeals && signedDeals.length === 0 && (
+                            <div className={styles.card}>
+                                <EmptyState
+                                    icon={Archive}
+                                    title="Không có dự án"
+                                    message="Hiện không có dự án nào đã ký hợp đồng thành công. Khi có dự án được ký bởi cả 2 bên, chúng sẽ xuất hiện ở đây."
+                                />
+                            </div>
+                        )}
+
+                        {/* Deals List */}
+                        {!isLoadingSignedDeals && signedDeals.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                {signedDeals
+                                    .filter(deal => {
+                                        if (!prSearchTerm.trim()) return true;
+                                        const search = prSearchTerm.toLowerCase();
+                                        return (
+                                            deal.project?.projectName?.toLowerCase().includes(search) ||
+                                            deal.investor?.name?.toLowerCase().includes(search) ||
+                                            deal.project?.shortDescription?.toLowerCase().includes(search) ||
+                                            deal.dealId?.toString().includes(search)
+                                        );
+                                    })
+                                    .map(deal => (
+                                        <div
+                                            key={deal.dealId}
+                                            className={styles.card}
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '12px',
+                                                borderLeft: '4px solid var(--primary-blue)',
+                                                transition: 'all 0.2s ease'
+                                            }}
+                                        >
+                                            {/* Deal Header */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                                                <div>
+                                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                                        {deal.project?.projectName || 'Dự án không tên'}
+                                                    </h4>
+                                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                        Deal #{deal.dealId}
+                                                    </p>
+                                                </div>
+                                                <div style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                                    color: '#10b981',
+                                                    padding: '4px 12px',
+                                                    borderRadius: '12px',
+                                                    fontSize: '11px',
+                                                    fontWeight: '700',
+                                                    whiteSpace: 'nowrap'
+                                                }}>
+                                                    <CheckCircle size={12} />
+                                                    Đã ký
+                                                </div>
+                                            </div>
+
+                                            {/* Project Info */}
+                                            <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '8px', borderLeft: '3px solid var(--primary-blue)' }}>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginBottom: '4px' }}>Mô tả dự án</div>
+                                                <p style={{
+                                                    margin: 0,
+                                                    fontSize: '13px',
+                                                    color: 'var(--text-primary)',
+                                                    lineHeight: '1.4',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 2,
+                                                    WebkitBoxOrient: 'vertical',
+                                                    overflow: 'hidden'
+                                                }}>
+                                                    {deal.project?.shortDescription || 'Không có mô tả'}
+                                                </p>
+                                            </div>
+
+                                            {/* Investor & Investment Info */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px' }}>
+                                                <div>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Nhà đầu tư</div>
+                                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                        {deal.investor?.name || 'N/A'}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Số tiền</div>
+                                                    <div style={{ color: 'var(--text-primary)', fontWeight: '700', fontSize: '13px' }}>
+                                                        {deal.investmentAmount ? `${Number(deal.investmentAmount).toLocaleString('vi-VN')}` : 'N/A'} <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>VND</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Dates */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '12px', paddingTop: '8px', borderTop: '1px solid var(--border-color)' }}>
+                                                <div>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Ngày tạo</div>
+                                                    <div style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
+                                                        {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '4px' }}>Ngày ký</div>
+                                                    <div style={{ color: 'var(--text-primary)', fontWeight: '500' }}>
+                                                        {deal.contractSignedDate ? new Date(deal.contractSignedDate).toLocaleDateString('vi-VN') : 'Vừa xong'}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Action Button - PR Posting */}
+                                            <button
+                                                onClick={() => {
+                                                    setProcessingDealId(deal.dealId);
+                                                    // Will be implemented when user provides PR API endpoint
+                                                    setModalType('info');
+                                                    setModalMessage(`✨ Chức năng đăng PR cho dự án "${deal.project?.projectName}" sẵn sàng. API endpoint sẽ được cung cấp để hoàn thành chức năng này.`);
+                                                    setShowModal(true);
+                                                    setTimeout(() => setProcessingDealId(null), 500);
+                                                }}
+                                                disabled={processingDealId === deal.dealId}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'center',
+                                                    gap: '8px',
+                                                    padding: '10px',
+                                                    backgroundColor: 'var(--primary-blue)',
+                                                    color: 'white',
+                                                    border: 'none',
+                                                    borderRadius: '8px',
+                                                    fontSize: '13px',
+                                                    fontWeight: '700',
+                                                    cursor: processingDealId === deal.dealId ? 'wait' : 'pointer',
+                                                    opacity: processingDealId === deal.dealId ? 0.7 : 1,
+                                                    transition: 'all 0.2s ease',
+                                                    marginTop: '4px'
+                                                }}
+                                            >
+                                                {processingDealId === deal.dealId ? (
+                                                    <>
+                                                        <Loader2 size={14} className="animate-spin" />
+                                                        Đang xử lý...
+                                                    </>
+                                                ) : (
+                                                    <>
+                                                        <Send size={14} />
+                                                        Đăng PR
+                                                    </>
+                                                )}
+                                            </button>
+                                        </div>
+                                    ))}
                             </div>
                         )}
                     </div>
