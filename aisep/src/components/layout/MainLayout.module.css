@@ -65,6 +65,7 @@
   flex-direction: column;
   overflow: hidden;
   background-color: var(--bg-primary);
+  min-width: 0;
   /* Ensure it covers anything behind if needed */
 }
 

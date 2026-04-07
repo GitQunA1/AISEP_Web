@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileCheck, CheckCircle, AlertCircle, Search, Archive, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, XCircle, FileText, Loader2, TrendingUp, ExternalLink, Shield, History, Calendar, PieChart, Briefcase, Clock, DollarSign, Send, Newspaper } from 'lucide-react';
+import { FileCheck, CheckCircle, AlertCircle, Search, Archive, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, XCircle, FileText, Loader2, TrendingUp, ExternalLink, Shield, History, Calendar, PieChart, Briefcase, Clock, DollarSign, Send, Newspaper, User } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import local from '../styles/OperationStaffDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
@@ -17,6 +17,8 @@ import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/Projec
 import AdvisorApprovalPage from '../components/advisor/AdvisorApprovalPage';
 import PackageManagement from '../components/staff/PackageManagement';
 import GlobalSubscriptionHistory from '../components/staff/GlobalSubscriptionHistory';
+import WithdrawManagement from '../components/staff/WithdrawManagement';
+import CommissionManagement from '../components/staff/CommissionManagement';
 
 /**
  * ProjectKanbanCard - Single card for the Kanban board
@@ -214,90 +216,99 @@ const BookingKanbanCard = ({ booking, status, onDetail }) => {
 const UserReportCard = ({ report, onResolve, isProcessing }) => {
     const getStatusConfig = (status) => {
         switch (status) {
-            case 'Pending': return { label: 'Đang chờ', class: local.rbPending, icon: Clock };
-            case 'Valid': return { label: 'Hợp lệ', class: local.rbValid, icon: CheckCircle };
-            case 'False': return { label: 'Sai lệch', class: local.rbFalse, icon: XCircle };
-            default: return { label: status, class: '', icon: AlertCircle };
+            case 'Pending': return { label: 'Đang chờ', class: local.glassPending, tint: local.rpPending, icon: Clock };
+            case 'Resolved': return { label: 'Hợp lệ', class: local.glassValid, tint: local.rpValid, icon: CheckCircle };
+            case 'Dismissed': return { label: 'Sai lệch', class: local.glassFalse, tint: local.rpFalse, icon: XCircle };
+            default: return { label: status, class: '', tint: '', icon: AlertCircle };
         }
     };
 
-    const status = getStatusConfig(report.status);
-    const StatusIcon = status.icon;
-
-    // Handle evidence images — API returns evidenceImageUrls as an array
+    const config = getStatusConfig(report.status);
+    const StatusIcon = config.icon;
     const images = Array.isArray(report.evidenceImageUrls) ? report.evidenceImageUrls : [];
-    
+
     return (
-        <div className={local.rcard}>
-            <div className={local.rcardHeader}>
-                <div className={local.rcardInfo}>
-                    <div className={local.rcardTop}>
-                        <h4 className={local.rcardCategory}>{report.category}</h4>
-                        <span className={`${local.rbadge} ${status.class}`}>
-                            <StatusIcon size={12} />
-                            {status.label}
-                        </span>
+        <div className={`${local.reportCard} ${config.tint}`} style={{ position: 'relative' }}>
+            <div className={local.projectHeader}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', position: 'relative' }}>
+                    <h3 className={local.projectTitle}>{report.category}</h3>
+                    <div className={`${local.pillBadge} ${config.class}`} style={{ position: 'absolute', top: '0', right: '0', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+                        <StatusIcon size={12} />
+                        {config.label}
                     </div>
-                    <div className={local.rcardMeta}>
-                        <span title={`Người báo cáo ID: ${report.reporterId}`}>Người báo cáo: <strong>#{report.reporterId}</strong></span>
-                        {report.reportedUserId && (
-                            <>
-                                <span className={local.metaDot}>•</span>
-                                <span title={`Đối tượng ID: ${report.reportedUserId}`}>Đối tượng: <strong>#{report.reportedUserId}</strong></span>
-                            </>
-                        )}
-                        <span className={local.metaDot}>•</span>
-                        <span>{report.createdAt ? new Date(report.createdAt).toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' }) : 'N/A'}</span>
-                    </div>
+                </div>
+
+                <p className={local.reportReason}>{report.description}</p>
+            </div>
+
+            <div className={local.reportContent}>
+                <div className={local.reportDescription}>
+                    {report.description}
                 </div>
             </div>
 
-            <div className={local.rcardBody}>
-                <div className={local.rcardDescLabel}>Mô tả chi tiết</div>
-                <div className={local.rcardDescText}>{report.description}</div>
-                
-                {(images.length > 0 || report.videoEvidenceUrl) && (
-                    <div className={local.rcardEvidence}>
-                        {images.length > 0 && (
-                            <div className={local.evidenceGrid}>
-                                {images.map((img, i) => (
-                                    <a key={i} href={img} target="_blank" rel="noopener noreferrer" className={local.evidenceImgWrapper}>
-                                        <img src={img} alt={`Evidence ${i + 1}`} />
-                                    </a>
-                                ))}
-                            </div>
-                        )}
-                        
-                        {report.videoEvidenceUrl && (
-                            <a href={report.videoEvidenceUrl} target="_blank" rel="noopener noreferrer" className={local.videoBtn}>
-                                <ExternalLink size={14} />
-                                <span>Xem Video bằng chứng</span>
-                            </a>
-                        )}
+            {(images.length > 0 || report.videoEvidenceUrl) && (
+                <div className={local.evidenceSection}>
+                    {images.length > 0 && (
+                        <div className={local.evidenceThumbGrid}>
+                            {images.map((img, i) => (
+                                <a key={i} href={img} target="_blank" rel="noopener noreferrer">
+                                    <img src={img} alt={`Evidence ${i + 1}`} className={local.evidenceThumb} />
+                                </a>
+                            ))}
+                        </div>
+                    )}
+
+                    {report.videoEvidenceUrl && (
+                        <a href={report.videoEvidenceUrl} target="_blank" rel="noopener noreferrer" className={local.videoChip}>
+                            <ExternalLink size={14} />
+                            <span>Xem Video bằng chứng</span>
+                        </a>
+                    )}
+                </div>
+            )}
+
+            <div className={local.reportFooter}>
+                <div className={local.reportMetaGroup}>
+                    <div className={local.reportMetaItem} title={`Người báo cáo ID: ${report.reporterId}`}>
+                        <User size={14} className={`${local.reportMetaIcon} ${local.reporter}`} />
+                        <span className={local.reportMetaValue}>#{report.reporterId}</span>
+                    </div>
+                    {report.reportedUserId && (
+                        <div className={local.reportMetaItem} title={`Đối tượng ID: ${report.reportedUserId}`}>
+                            <Shield size={14} className={`${local.reportMetaIcon} ${local.target}`} />
+                            <span className={local.reportMetaValue}>#{report.reportedUserId}</span>
+                        </div>
+                    )}
+                    <div className={local.reportMetaItem}>
+                        <Clock size={14} className={`${local.reportMetaIcon} ${local.time}`} />
+                        <span className={local.reportMetaValue}>
+                            {report.createdAt ? new Date(report.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                        </span>
+                    </div>
+                </div>
+
+                {report.status === 'Pending' && (
+                    <div className={local.resolveGroup}>
+                        <button
+                            className={`${local.resolveChip} ${local.v}`}
+                            onClick={() => onResolve(report.userReportId, true)}
+                            disabled={isProcessing}
+                        >
+                            {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                            Hợp lệ
+                        </button>
+                        <button
+                            className={`${local.resolveChip} ${local.f}`}
+                            onClick={() => onResolve(report.userReportId, false)}
+                            disabled={isProcessing}
+                        >
+                            {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
+                            Sai lệch
+                        </button>
                     </div>
                 )}
             </div>
-
-            {report.status === 'Pending' && (
-                <div className={local.rcardActions}>
-                    <button 
-                        className={`${local.raBtn} ${local.raValid}`}
-                        onClick={() => onResolve(report.userReportId, true)}
-                        disabled={isProcessing}
-                    >
-                        {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                        Hợp lệ
-                    </button>
-                    <button 
-                        className={`${local.raBtn} ${local.raFalse}`}
-                        onClick={() => onResolve(report.userReportId, false)}
-                        disabled={isProcessing}
-                    >
-                        {isProcessing ? <Loader2 size={16} className="animate-spin" /> : <XCircle size={16} />}
-                        Sai lệch
-                    </button>
-                </div>
-            )}
         </div>
     );
 };
@@ -392,7 +403,18 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
     const [showHistoryView, setShowHistoryView] = useState(false);
     const [selectedHistoryResult, setSelectedHistoryResult] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [withdrawSearchTerm, setWithdrawSearchTerm] = useState('');
+    const [commissionSearchTerm, setCommissionSearchTerm] = useState('');
     const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
+    const [reportFilter, setReportFilter] = useState('Pending'); // 'All', 'Pending', 'Resolved', 'Dismissed'
+
+    const handleSearchChange = (val) => {
+        if (activeSection === 'project_management') setSearchTerm(val);
+        else if (activeSection === 'bookings') setBookingSearchTerm(val);
+        else if (activeSection === 'withdrawals') setWithdrawSearchTerm(val);
+        else if (activeSection === 'commission') setCommissionSearchTerm(val);
+        else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
+    };
 
     // Additional Statistics state for enhanced dashboard
     const [totalProjects, setTotalProjects] = useState(0);
@@ -416,6 +438,31 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
     const [userReports, setUserReports] = useState([]);
     const [isLoadingUserReports, setIsLoadingUserReports] = useState(false);
     const [userReportsError, setUserReportsError] = useState(null);
+
+    // Filtered User Reports
+    const filteredUserReports = React.useMemo(() => {
+        if (!userReports || !Array.isArray(userReports)) return [];
+
+        let list = [...userReports];
+
+        // Filter by status tab
+        if (reportFilter !== 'All') {
+            list = list.filter(r => r.status === reportFilter);
+        }
+
+        // Filter by search term
+        if (searchTerm && searchTerm.trim()) {
+            const lowerSearch = searchTerm.toLowerCase();
+            list = list.filter(r =>
+                (r.category || '').toLowerCase().includes(lowerSearch) ||
+                (r.description || '').toLowerCase().includes(lowerSearch) ||
+                (r.reporterId || '').toString().toLowerCase().includes(lowerSearch) ||
+                (r.reportedUserId || '').toString().toLowerCase().includes(lowerSearch)
+            );
+        }
+
+        return list;
+    }, [userReports, searchTerm, reportFilter]);
 
     // PR Management state
     const [signedDeals, setSignedDeals] = useState([]);
@@ -443,6 +490,42 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [isLoadingBookingDetail, setIsLoadingBookingDetail] = useState(false);
+
+    const getSectionTitle = (section) => {
+        switch (section) {
+            case 'statistics': return "Thống kê hoạt động";
+            case 'project_management': return "Quản lý Dự án";
+            case 'bookings': return "Quản lý Booking";
+            case 'user_reports': return "Quản lý báo cáo";
+            case 'advisor_approval': return "Phê duyệt cố vấn";
+            case 'package_management': return "Quản lý Gói dịch vụ";
+            case 'subscription_history': return "Lịch sử đăng ký gói";
+            case 'withdrawals': return "Quản lý Rút tiền";
+            case 'commission': return "Cấu hình Hoa hồng";
+            case 'pr_management': return "Đăng bài PR - Dự án Đầu tư";
+            case 'analytics': return "Phân tích dữ liệu";
+            case 'activity': return "Giám sát hoạt động";
+            default: return "Bảng điều khiển Nhân viên";
+        }
+    };
+
+    const getSectionSubtitle = (section) => {
+        switch (section) {
+            case 'statistics': return "Tổng quan về các số liệu tăng trưởng và hiệu suất nền tảng.";
+            case 'project_management': return "Phê duyệt và quản lý các startup tham gia nền tảng.";
+            case 'bookings': return "Theo dõi và giám sát các lịch hẹn đào tạo trong hệ thống.";
+            case 'user_reports': return "Giải quyết các báo cáo vi phạm và khiếu nại từ người dùng.";
+            case 'advisor_approval': return "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn.";
+            case 'package_management': return "Cấu hình hạn mức, thời hạn và giá cả cho các gói đăng ký.";
+            case 'subscription_history': return "Theo dõi lịch sử thanh toán, gia hạn các gói dịch vụ của người dùng.";
+            case 'withdrawals': return "Phê duyệt và theo dõi các yêu cầu rút tiền của Advisor.";
+            case 'commission': return "Điều chỉnh tỷ lệ phần trăm hoa hồng hệ thống áp dụng cho các phiên tư vấn.";
+            case 'pr_management': return "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký).";
+            case 'analytics': return "Biểu đồ phân tích chuyên sâu về dữ liệu hệ thống.";
+            case 'activity': return "Nhật ký hoạt động và giám sát thời gian thực.";
+            default: return "Quản lý nền tảng và các yêu cầu phê duyệt.";
+        }
+    };
 
     const filterBookings = (list) => {
         if (!bookingSearchTerm || !bookingSearchTerm.trim()) return list || [];
@@ -922,57 +1005,45 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
     const filteredApproved = filterProjects(approvedProjects);
     const filteredRejected = filterProjects(rejectedProjects);
 
-    const filteredUserReports = (userReports || []).filter(r => 
-        (r.category || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (r.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (r.reporterId || '').toString().includes(searchTerm) ||
-        (r.userReportId || '').toString().includes(searchTerm)
-    );
+    const headerSearchTerm = activeSection === 'project_management'
+        ? searchTerm
+        : activeSection === 'bookings'
+            ? bookingSearchTerm
+            : activeSection === 'pr_management'
+                ? prSearchTerm
+            : activeSection === 'withdrawals'
+                ? withdrawSearchTerm
+                : activeSection === 'commission'
+                    ? commissionSearchTerm
+                    : (activeSection === 'package_management' || activeSection === 'subscription_history')
+                        ? subscriptionSearchTerm
+                        : undefined;
+
+    const headerSearchPlaceholder = activeSection === 'project_management'
+        ? "Tìm kiếm dự án..."
+        : activeSection === 'bookings'
+            ? "Tìm kiếm booking..."
+            : activeSection === 'pr_management'
+                ? "Tìm kiếm dự án đã ký..."
+            : activeSection === 'withdrawals'
+                ? "Tìm kiếm Advisor hoặc tài khoản..."
+                : activeSection === 'commission'
+                    ? "Tìm kiếm lịch sử thay đổi..."
+                    : "Tìm kiếm...";
+
+    const headerSearchEnabled = ['project_management', 'bookings', 'pr_management', 'withdrawals', 'commission', 'package_management', 'subscription_history'].includes(activeSection);
 
     return (
         <div className={styles.container}>
             {/* Unified Header */}
             <FeedHeader
-                title={
-                    activeSection === 'subscription_history' ? "Lịch sử đăng ký gói" :
-                        (activeSection === 'package_management' ? "Quản lý Gói dịch vụ" :
-                            (activeSection === 'project_management' ? "Quản lý Dự án" :
-                                (activeSection === 'pr_management' ? "Đăng bài PR - Dự án Đầu tư" :
-                                    (activeSection === 'bookings' ? "Quản lý Booking" :
-                                        (activeSection === 'user_reports' ? "Quản lý báo cáo" :
-                                            (activeSection === 'advisor_approval' ? "Phê duyệt cố vấn" :
-                                                (activeSection === 'statistics' ? "Thống kê hoạt động" : "Bảng điều khiển Nhân viên")))))))
-                }
-                subtitle={
-                    activeSection === 'subscription_history' ? "Theo dõi và quản lý lịch sử thanh toán, gia hạn các gói dịch vụ của người dùng trên hệ thống." :
-                        (activeSection === 'package_management' ? "Cấu hình hạn mức, thời hạn và giá cả cho các gói đăng ký trên toàn hệ thống AISEP." :
-                            (activeSection === 'project_management' ? "Phê duyệt và quản lý các startup tham gia nền tảng." :
-                                (activeSection === 'pr_management' ? "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký)." :
-                                    (activeSection === 'bookings' ? "Theo dõi và giám sát các lịch hẹn đào tạo trong hệ thống." :
-                                        (activeSection === 'user_reports' ? "Giải quyết các báo cáo vi phạm và khiếu nại từ người dùng." :
-                                            (activeSection === 'advisor_approval' ? "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn trên nền tảng AISEP." :
-                                                (activeSection === 'statistics' ? "Tổng quan về các số liệu tăng trưởng và hiệu suất nền tảng." : "Quản lý nền tảng và các yêu cầu phê duyệt.")))))))
-                }
+                title={getSectionTitle(activeSection)}
+                subtitle={getSectionSubtitle(activeSection)}
                 showFilter={false}
                 user={user}
-                searchTerm={
-                    activeSection === 'project_management' ? searchTerm :
-                        (activeSection === 'bookings' ? bookingSearchTerm :
-                            (activeSection === 'pr_management' ? prSearchTerm :
-                                (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : '')))
-                }
-                onSearchChange={(val) => {
-                    if (activeSection === 'project_management') setSearchTerm(val);
-                    else if (activeSection === 'bookings') setBookingSearchTerm(val);
-                    else if (activeSection === 'pr_management') setPrSearchTerm(val);
-                    else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
-                }}
-                searchPlaceholder={
-                    activeSection === 'project_management' ? "Tìm kiếm dự án..." :
-                        (activeSection === 'bookings' ? "Tìm kiếm booking..." :
-                            (activeSection === 'pr_management' ? "Tìm kiếm dự án đã ký..." :
-                                "Tìm kiếm..."))
-                }
+                searchTerm={headerSearchTerm}
+                onSearchChange={headerSearchEnabled ? handleSearchChange : undefined}
+                searchPlaceholder={headerSearchPlaceholder}
             />
 
             {/* Navigation Tabs (Only for main statistics/analytics/activity) */}
@@ -1001,6 +1072,18 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
 
             {/* Content Sections */}
             <div className={styles.content}>
+                {/* FINANCIAL SECTIONS */}
+                {activeSection === 'withdrawals' && (
+                    <div className={styles.section}>
+                        <WithdrawManagement searchTerm={withdrawSearchTerm} />
+                    </div>
+                )}
+                {activeSection === 'commission' && (
+                    <div className={styles.section}>
+                        <CommissionManagement searchTerm={commissionSearchTerm} />
+                    </div>
+                )}
+
                 {/* STATISTICS SECTION */}
                 {activeSection === 'statistics' && (
                     <div className={styles.section}>
@@ -1944,47 +2027,87 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
 
                 {/* User Reports Section */}
                 {activeSection === 'user_reports' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>
-                                Quản lý báo cáo vi phạm
-                                {Array.isArray(userReports) && userReports.filter(r => r.status === 'Pending').length > 0 && (
-                                    <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginLeft: '12px' }}>
-                                        {userReports.filter(r => r.status === 'Pending').length} Chờ xử lý
-                                    </span>
-                                )}
-                            </h3>
+                    <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
+                        <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-color)', width: 'fit-content', marginBottom: '12px' }}>
+                            {[
+                                { id: 'All', label: 'Tất cả' },
+                                { id: 'Pending', label: 'Chờ xử lý' },
+                                { id: 'Resolved', label: 'Đã duyệt' },
+                                { id: 'Dismissed', label: 'Từ chối' }
+                            ].map(tab => {
+                                const count = tab.id === 'All'
+                                    ? (userReports?.length || 0)
+                                    : (userReports?.filter(r => r.status === tab.id).length || 0);
 
-                            {isLoadingUserReports ? (
-                                <div style={{ padding: '60px', textAlign: 'center' }}>
-                                    <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 16px', color: 'var(--primary-blue)' }} />
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Đang tải danh sách báo cáo...</p>
-                                </div>
-                            ) : (userReportsError || !Array.isArray(userReports)) ? (
-                                <div style={{ padding: '60px' }}>
-                                    <EmptyState icon={AlertCircle} title="Lỗi" message={userReportsError || "Không thể tải danh sách báo cáo"} onRetry={fetchUserReports} isError />
-                                </div>
-                            ) : filteredUserReports.length === 0 ? (
-                                <div style={{ padding: '60px' }}>
-                                    <EmptyState 
-                                        icon={searchTerm ? Search : Shield} 
-                                        title={searchTerm ? "Không tìm thấy" : "Trống"} 
-                                        message={searchTerm ? `Không tìm thấy báo cáo nào khớp với "${searchTerm}"` : "Hiện không có báo cáo vi phạm nào cần xử lý."} 
-                                    />
-                                </div>
-                            ) : (
-                                <div className={local.reportGrid}>
-                                    {filteredUserReports.map(report => (
-                                        <UserReportCard 
-                                            key={report.userReportId} 
-                                            report={report}
-                                            onResolve={handleResolveReport}
-                                            isProcessing={processingProjectId === report.userReportId}
-                                        />
-                                    ))}
-                                </div>
-                            )}
+                                const isActive = reportFilter === tab.id;
+
+                                return (
+                                    <button
+                                        key={tab.id}
+                                        onClick={() => setReportFilter(tab.id)}
+                                        style={{
+                                            padding: '8px 16px',
+                                            borderRadius: '8px',
+                                            border: 'none',
+                                            background: isActive ? 'var(--bg-primary)' : 'transparent',
+                                            color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                            fontWeight: isActive ? '800' : '500',
+                                            cursor: 'pointer',
+                                            boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                                            transition: 'all 0.2s',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px'
+                                        }}
+                                    >
+                                        {tab.label}
+                                        {count > 0 && (
+                                            <span style={{
+                                                fontSize: '10px',
+                                                fontWeight: '800',
+                                                padding: '1px 6px',
+                                                borderRadius: '6px',
+                                                background: isActive ? 'var(--primary-blue)' : 'rgba(255,255,255,0.08)',
+                                                color: isActive ? 'white' : 'var(--text-secondary)',
+                                                transition: 'all 0.2s'
+                                            }}>
+                                                {count}
+                                            </span>
+                                        )}
+                                    </button>
+                                );
+                            })}
                         </div>
+
+                        {isLoadingUserReports ? (
+                            <div style={{ padding: '60px', textAlign: 'center' }}>
+                                <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 16px', color: 'var(--primary-blue)' }} />
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Đang tải danh sách báo cáo...</p>
+                            </div>
+                        ) : (userReportsError || !Array.isArray(userReports)) ? (
+                            <div style={{ padding: '60px' }}>
+                                <EmptyState icon={AlertCircle} title="Lỗi" message={userReportsError || "Không thể tải danh sách báo cáo"} onRetry={fetchUserReports} isError />
+                            </div>
+                        ) : filteredUserReports.length === 0 ? (
+                            <div style={{ padding: '60px' }}>
+                                <EmptyState
+                                    icon={searchTerm ? Search : Shield}
+                                    title={searchTerm ? "Không tìm thấy" : "Trống"}
+                                    message={searchTerm ? `Không tìm thấy báo cáo nào khớp với "${searchTerm}"` : "Hiện không có báo cáo vi phạm nào trong danh mục này."}
+                                />
+                            </div>
+                        ) : (
+                            <div className={local.reportGrid}>
+                                {filteredUserReports.map(report => (
+                                    <UserReportCard
+                                        key={report.userReportId}
+                                        report={report}
+                                        onResolve={handleResolveReport}
+                                        isProcessing={processingProjectId === report.userReportId}
+                                    />
+                                ))}
+                            </div>
+                        )}
                     </div>
                 )}
 
