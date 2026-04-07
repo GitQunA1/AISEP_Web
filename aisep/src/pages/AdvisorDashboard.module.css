@@ -6,8 +6,15 @@
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 .card {
@@ -37,7 +44,10 @@
     gap: 12px;
 }
 
-.primaryBtn, .secondaryBtn, .dangerBtn, .baBtn {
+.primaryBtn,
+.secondaryBtn,
+.dangerBtn,
+.baBtn {
     padding: 10px 20px;
     border-radius: 12px;
     font-size: 14px;
@@ -51,33 +61,36 @@
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.primaryBtn { 
-    background: var(--primary-blue); 
-    color: white; 
+.primaryBtn {
+    background: var(--primary-blue);
+    color: white;
     box-shadow: 0 4px 12px rgba(29, 155, 240, 0.3);
 }
-.primaryBtn:hover { 
-    background: #1a8cd8; 
+
+.primaryBtn:hover {
+    background: #1a8cd8;
     transform: translateY(-1px);
     box-shadow: 0 6px 16px rgba(29, 155, 240, 0.4);
 }
 
-.secondaryBtn { 
-    background: var(--surface2); 
-    color: var(--text-primary); 
+.secondaryBtn {
+    background: var(--surface2);
+    color: var(--text-primary);
     border: 1px solid var(--border-color);
 }
-.secondaryBtn:hover { 
+
+.secondaryBtn:hover {
     background: var(--bg-hover);
     border-color: var(--text-muted);
 }
 
-.dangerBtn { 
-    background: rgba(244, 33, 46, 0.1); 
+.dangerBtn {
+    background: rgba(244, 33, 46, 0.1);
     color: #f4212e;
 }
-.dangerBtn:hover { 
-    background: rgba(244, 33, 46, 0.2); 
+
+.dangerBtn:hover {
+    background: rgba(244, 33, 46, 0.2);
     transform: translateY(-1px);
 }
 
@@ -90,10 +103,25 @@
     letter-spacing: 0.5px;
 }
 
-.badgePending { background: rgba(255, 122, 0, 0.15); color: #ff7a00; }
-.badgeSuccess { background: rgba(16, 185, 129, 0.15); color: #10b981; }
-.badgeInfo { background: rgba(29, 155, 240, 0.15); color: #1d9bf0; }
-.badgeError { background: rgba(244, 33, 46, 0.15); color: #f4212e; }
+.badgePending {
+    background: rgba(255, 122, 0, 0.15);
+    color: #ff7a00;
+}
+
+.badgeSuccess {
+    background: rgba(16, 185, 129, 0.15);
+    color: #10b981;
+}
+
+.badgeInfo {
+    background: rgba(29, 155, 240, 0.15);
+    color: #1d9bf0;
+}
+
+.badgeError {
+    background: rgba(244, 33, 46, 0.15);
+    color: #f4212e;
+}
 
 /* â”€â”€ ONBOARDING BANNER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .onboardingBanner {
@@ -138,7 +166,8 @@
     border-radius: 0;
     background-color: transparent;
     overflow: hidden;
-    margin: -24px -24px -100px -24px; /* Lower margin to prevent clipping */
+    margin: -24px -24px -100px -24px;
+    /* Lower margin to prevent clipping */
     align-items: stretch;
     flex: 1;
     min-height: calc(100vh - 150px);
@@ -177,10 +206,21 @@
     z-index: 10;
 }
 
-.bcolHead.pend { border-bottom-color: #ff7a00; }
-.bcolHead.conf { border-bottom-color: #1d9bf0; }
-.bcolHead.comp { border-bottom-color: #10b981; }
-.bcolHead.rej { border-bottom-color: #f4212e; }
+.bcolHead.pend {
+    border-bottom-color: #ff7a00;
+}
+
+.bcolHead.conf {
+    border-bottom-color: #1d9bf0;
+}
+
+.bcolHead.comp {
+    border-bottom-color: #10b981;
+}
+
+.bcolHead.rej {
+    border-bottom-color: #f4212e;
+}
 
 .bcolTitle {
     display: flex;
@@ -197,10 +237,25 @@
     border-radius: 50%;
 }
 
-.bctDot.pend { background: #ff7a00; box-shadow: 0 0 8px rgba(255, 122, 0, 0.4); }
-.bctDot.conf { background: #1d9bf0; box-shadow: 0 0 8px rgba(29, 155, 240, 0.4); }
-.bctDot.comp { background: #10b981; box-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
-.bctDot.rej { background: #f4212e; box-shadow: 0 0 8px rgba(244, 33, 46, 0.4); }
+.bctDot.pend {
+    background: #ff7a00;
+    box-shadow: 0 0 8px rgba(255, 122, 0, 0.4);
+}
+
+.bctDot.conf {
+    background: #1d9bf0;
+    box-shadow: 0 0 8px rgba(29, 155, 240, 0.4);
+}
+
+.bctDot.comp {
+    background: #10b981;
+    box-shadow: 0 0 8px rgba(16, 185, 129, 0.4);
+}
+
+.bctDot.rej {
+    background: #f4212e;
+    box-shadow: 0 0 8px rgba(244, 33, 46, 0.4);
+}
 
 .bcolN {
     font-family: 'IBM Plex Mono', monospace;
@@ -210,10 +265,25 @@
     font-weight: 600;
 }
 
-.bcolN.pend { color: #ff7a00; background: rgba(255, 122, 0, 0.1); }
-.bcolN.conf { color: #1d9bf0; background: rgba(29, 155, 240, 0.1); }
-.bcolN.comp { color: #10b981; background: rgba(16, 185, 129, 0.1); }
-.bcolN.rej { color: #f4212e; background: rgba(244, 33, 46, 0.1); }
+.bcolN.pend {
+    color: #ff7a00;
+    background: rgba(255, 122, 0, 0.1);
+}
+
+.bcolN.conf {
+    color: #1d9bf0;
+    background: rgba(29, 155, 240, 0.1);
+}
+
+.bcolN.comp {
+    color: #10b981;
+    background: rgba(16, 185, 129, 0.1);
+}
+
+.bcolN.rej {
+    color: #f4212e;
+    background: rgba(244, 33, 46, 0.1);
+}
 
 .bcolCards {
     flex: 1;
@@ -255,11 +325,25 @@
     flex-shrink: 0;
 }
 
-.bcardStrip.pend { background: #ff7a00; }
-.bcardStrip.appr { background: #00ba7c; }
-.bcardStrip.rej { background: #f4212e; }
-.bcardStrip.conf { background: #1d9bf0; }
-.bcardStrip.comp { background: #10b981; }
+.bcardStrip.pend {
+    background: #ff7a00;
+}
+
+.bcardStrip.appr {
+    background: #00ba7c;
+}
+
+.bcardStrip.rej {
+    background: #f4212e;
+}
+
+.bcardStrip.conf {
+    background: #1d9bf0;
+}
+
+.bcardStrip.comp {
+    background: #10b981;
+}
 
 .bcardBody {
     flex: 1;
@@ -397,8 +481,15 @@
 }
 
 @keyframes cardAppear {
-    from { opacity: 0; transform: translateY(8px); }
-    to { opacity: 1; transform: translateY(0); }
+    from {
+        opacity: 0;
+        transform: translateY(8px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* â”€â”€ MOBILE TAB SWITCHER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
@@ -413,16 +504,16 @@
     position: absolute;
     top: 6px;
     bottom: 6px;
-    width: 50px;
+    width: 40px;
     z-index: 25;
     pointer-events: none;
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease;
     display: flex;
     align-items: center;
 }
 
 .scrollIndicatorLeft {
-    left: 1px;
+    left: 2px;
     background: linear-gradient(to right, var(--bg-secondary) 50%, transparent 100%);
     border-radius: 14px 0 0 14px;
     justify-content: flex-start;
@@ -430,7 +521,7 @@
 }
 
 .scrollIndicatorRight {
-    right: 1px;
+    right: 2px;
     background: linear-gradient(to left, var(--bg-secondary) 50%, transparent 100%);
     border-radius: 0 14px 14px 0;
     justify-content: flex-end;
@@ -446,8 +537,13 @@
     opacity: 0.9;
 }
 
-.scrollIndicatorLeft::before { transform: rotate(-135deg); }
-.scrollIndicatorRight::before { transform: rotate(45deg); }
+.scrollIndicatorLeft::before {
+    transform: rotate(-135deg);
+}
+
+.scrollIndicatorRight::before {
+    transform: rotate(45deg);
+}
 
 .mobileTabSwitcher {
     display: flex;
@@ -466,7 +562,9 @@
     width: 100%;
 }
 
-.mobileTabSwitcher::-webkit-scrollbar { display: none; }
+.mobileTabSwitcher::-webkit-scrollbar {
+    display: none;
+}
 
 .mobileTab {
     flex: 1;
@@ -480,12 +578,23 @@
     background: transparent;
     cursor: pointer;
     position: relative;
-    transition: all 0.2s ease;
-    min-width: 105px;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    min-width: 0;
     border-radius: 10px;
     white-space: nowrap;
     color: var(--text-secondary);
     opacity: 0.7;
+}
+
+/* Specific styling for 4-tab (Booking) layout - Fixes stretching */
+.mobileTabSwitcher[data-tabs="4"] .mobileTab {
+    min-width: 105px;
+    padding: 10px 8px;
+    flex: 0 0 auto;
+}
+
+.mobileTabSwitcher[data-tabs="4"] .mobileTab span {
+    font-size: 12px;
 }
 
 .mobileTabCount {
@@ -499,7 +608,7 @@
 }
 
 .activeMobileTab {
-    background: var(--bg-hover) !important;
+    background: var(--bg-primary) !important;
     box-shadow: var(--shadow-sm);
     color: var(--text-primary) !important;
     opacity: 1;
@@ -522,10 +631,21 @@
     border-radius: 3px;
 }
 
-.activeMobileTab[data-status='pend']::after { background: #ff7a00; }
-.activeMobileTab[data-status='conf']::after { background: #1d9bf0; }
-.activeMobileTab[data-status='comp']::after { background: #10b981; }
-.activeMobileTab[data-status='rej']::after { background: #f4212e; }
+.activeMobileTab[data-status='pend']::after {
+    background: #ff7a00;
+}
+
+.activeMobileTab[data-status='conf']::after {
+    background: #1d9bf0;
+}
+
+.activeMobileTab[data-status='comp']::after {
+    background: #10b981;
+}
+
+.activeMobileTab[data-status='rej']::after {
+    background: #f4212e;
+}
 
 /* â”€â”€ LOADING & EMPTY STATES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .skeletonCard {
@@ -540,19 +660,47 @@
 
 .shimmer {
     position: absolute;
-    top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.05), transparent);
     animation: shimmer 1.5s infinite;
 }
 
 @keyframes shimmer {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(100%); }
+    0% {
+        transform: translateX(-100%);
+    }
+
+    100% {
+        transform: translateX(100%);
+    }
 }
 
-.skTitle { height: 16px; width: 60%; background: var(--border-color); border-radius: 4px; margin-bottom: 12px; }
-.skDesc { height: 12px; width: 90%; background: var(--border-color); border-radius: 4px; margin-bottom: 8px; }
-.skBottom { height: 28px; width: 80px; background: var(--border-color); border-radius: 9999px; margin-top: 16px; }
+.skTitle {
+    height: 16px;
+    width: 60%;
+    background: var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.skDesc {
+    height: 12px;
+    width: 90%;
+    background: var(--border-color);
+    border-radius: 4px;
+    margin-bottom: 8px;
+}
+
+.skBottom {
+    height: 28px;
+    width: 80px;
+    background: var(--border-color);
+    border-radius: 9999px;
+    margin-top: 16px;
+}
 
 .emptyStateContainer {
     display: flex;
@@ -564,7 +712,10 @@
     color: var(--text-secondary);
 }
 
-.emptyStateIcon { opacity: 0.3; margin-bottom: 12px; }
+.emptyStateIcon {
+    opacity: 0.3;
+    margin-bottom: 12px;
+}
 
 /* ── APPROVAL ITEM (RESPONSIVE LIST) ──────────────────────────── */
 .approvalItem {
@@ -629,9 +780,8 @@
         justify-content: flex-end;
         flex-wrap: wrap;
     }
-    
+
     .approvalActions button {
         flex: 1;
     }
 }
-

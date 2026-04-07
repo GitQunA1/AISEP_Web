@@ -20,6 +20,7 @@ import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import CustomSelect from '../components/common/CustomSelect';
 import PRNewsSection from '../components/common/PRNewsSection';
 import ProjectDetailView from '../components/feed/ProjectDetailView';
+import WalletSection from '../components/advisor/WalletSection';
 
 /**
  * AdvisorDashboard – Dashboard cho Advisor
@@ -154,10 +155,12 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
         <div className={styles.container}>
             {!activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
                 <FeedHeader
-                    title="Bảng điều khiển Cố vấn"
-                    subtitle={isNewAdvisor
-                        ? `Chào mừng ${user?.fullName || user?.name || ''}, hãy bắt đầu bằng việc thiết lập hồ sơ của bạn.`
-                        : `Xin chào, ${user?.fullName || user?.name || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`
+                    title={activeSection === 'wallet' ? "Ví & Thu nhập" : "Bảng điều khiển Cố vấn"}
+                    subtitle={activeSection === 'wallet' 
+                        ? "Quản lý số dư và các yêu cầu rút tiền của bạn."
+                        : (isNewAdvisor
+                            ? `Chào mừng ${user?.fullName || user?.name || ''}, hãy bắt đầu bằng việc thiết lập hồ sơ của bạn.`
+                            : `Xin chào, ${user?.fullName || user?.name || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`)
                     }
                     stats={!isNewAdvisor && activeSection === 'overview' ? dashboardData : null}
                     onNavigate={handleNavigate}
@@ -293,21 +296,31 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                     <PRNewsSection />
                 )}
                 
+                {activeSection === 'wallet' && (
+                    isNewAdvisor ? (
+                        <div className={styles.emptyState} style={{ padding: '40px' }}>
+                            <AlertCircle size={40} />
+                            <p>Bạn cần hoàn tất hồ sơ trước khi quản lý ví.</p>
+                        </div>
+                    ) : (
+                        <WalletSection advisorProfile={advisorProfile} user={user} />
+                    )
+                )}
                 {activeSection.startsWith('project_') && (
-                    <ProjectDetailView 
-                        projectId={activeSection.split('_')[1]} 
-                        onBack={() => handleNavigate('bookings')} 
-                        user={user} 
+                    <ProjectDetailView
+                        projectId={activeSection.split('_')[1]}
+                        onBack={() => handleNavigate('bookings')}
+                        user={user}
                         isFullView={true}
                     />
                 )}
-            {activeChatSession && (
-                <FloatingChatWidget 
-                    sessionId={activeChatSession} 
-                    onClose={() => setActiveChatSession(null)} 
-                    user={user}
-                />
-            )}
+                {activeChatSession && (
+                    <FloatingChatWidget
+                        sessionId={activeChatSession}
+                        onClose={() => setActiveChatSession(null)}
+                        user={user}
+                    />
+                )}
             </div>
         </div>
     );
@@ -636,10 +649,10 @@ function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate
             ) : (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingBottom: '40px' }}>
                     {pendingBookings.map((b, idx) => (
-                        <div 
-                          key={b.id} 
-                          className={`${styles.listItem} ${styles.staggerEntry} ${avStyles.approvalItem}`} 
-                          style={{ animationDelay: `${idx * 0.05}s` }}
+                        <div
+                            key={b.id}
+                            className={`${styles.listItem} ${styles.staggerEntry} ${avStyles.approvalItem}`}
+                            style={{ animationDelay: `${idx * 0.05}s` }}
                         >
                             {/* Left: Info */}
                             <div className={avStyles.approvalInfo}>
@@ -666,7 +679,7 @@ function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate
                                         {new Date(b.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(b.startTime).toLocaleDateString('vi-VN')}
                                     </div>
                                 </div>
-                                
+
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
                                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>Chi phí</span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '14px', fontWeight: '800', color: '#f59e0b' }}>
@@ -677,8 +690,8 @@ function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate
 
                             {/* Right: Actions */}
                             <div className={avStyles.approvalActions}>
-                                <button 
-                                    onClick={() => setSelectedBooking(b)} 
+                                <button
+                                    onClick={() => setSelectedBooking(b)}
                                     style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0 }}
                                     title="Xem chi tiết"
                                     onMouseOver={(e) => { e.currentTarget.style.background = 'var(--bg-hover)'; e.currentTarget.style.color = 'var(--text-primary)'; }}
@@ -686,8 +699,8 @@ function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate
                                 >
                                     <Eye size={18} />
                                 </button>
-                                <button 
-                                    onClick={() => handleReject(b.id)} 
+                                <button
+                                    onClick={() => handleReject(b.id)}
                                     disabled={!!actionLoading[b.id]}
                                     style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(244, 33, 46, 0.1)', border: 'none', color: '#f4212e', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0 }}
                                     title="Từ chối"
@@ -696,9 +709,9 @@ function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate
                                 >
                                     {actionLoading[b.id] === 'reject' ? <Loader size={18} className={styles.spinner} /> : <X size={18} />}
                                 </button>
-                                <button 
-                                    className={styles.primaryBtn} 
-                                    onClick={() => handleApprove(b.id)} 
+                                <button
+                                    className={styles.primaryBtn}
+                                    onClick={() => handleApprove(b.id)}
                                     disabled={!!actionLoading[b.id]}
                                     style={{ borderRadius: '10px', height: '40px', padding: '0 20px', fontSize: '14px', fontWeight: '700' }}
                                 >
@@ -743,8 +756,8 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSec
     const checkTabScroll = () => {
         if (tabSwitcherRef.current) {
             const { scrollLeft, scrollWidth, clientWidth } = tabSwitcherRef.current;
-            setShowLeftTabIndicator(scrollLeft > 10);
-            setShowRightTabIndicator(scrollLeft < scrollWidth - clientWidth - 10);
+            setShowLeftTabIndicator(scrollLeft > 5);
+            setShowRightTabIndicator(scrollLeft < scrollWidth - clientWidth - 5);
         }
     };
 
@@ -864,7 +877,7 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSec
                 {/* Mobile Tab Switcher */}
                 {isMobile && (
                     <div className={avStyles.tabSwitcherWrapper}>
-                        {showLeftTabIndicator && <div className={`${avStyles.scrollIndicator} ${avStyles.scrollIndicatorLeft}`} style={{ opacity: 1 }} />}
+                        {showLeftTabIndicator && <div className={`${avStyles.scrollIndicator} ${avStyles.scrollIndicatorLeft}`} />}
                         <div
                             className={avStyles.mobileTabSwitcher}
                             data-tabs="4"
@@ -892,7 +905,7 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSec
                                 <span className={avStyles.mobileTabCount}>{groupCancelled.length}</span>
                             </button>
                         </div>
-                        {showRightTabIndicator && <div className={`${avStyles.scrollIndicator} ${avStyles.scrollIndicatorRight}`} style={{ opacity: 1 }} />}
+                        {showRightTabIndicator && <div className={`${avStyles.scrollIndicator} ${avStyles.scrollIndicatorRight}`} />}
                     </div>
                 )}
 

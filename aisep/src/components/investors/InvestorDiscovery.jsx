@@ -205,21 +205,7 @@ export default function InvestorDiscovery({ user, onShowLogin }) {
 
                                 {/* Actions Group (Bottom Left) */}
                                 <div className={styles.actions}>
-                                    {(() => {
-                                        const roleValue = user?.role;
-                                        const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
-                                        const canConnect = roleStr === 'startup' || roleStr === 'advisor' || roleValue === 0 || roleValue === 2;
-                                        
-                                        return canConnect && (
-                                            <button className={styles.primaryBtn} onClick={(e) => {
-                                                e.stopPropagation();
-                                                alert(`Yêu cầu kết nối đã được gửi tới ${investor.name}!`);
-                                            }}>
-                                                <TrendingUp size={15} />
-                                                <span>Yêu cầu kết nối</span>
-                                            </button>
-                                        );
-                                    })()}
+                                    {/* Connection request button removed as per user requirement */}
                                     <button className={styles.viewProfileBtn} onClick={(e) => {
                                         e.stopPropagation();
                                         setSelectedInvestorId(investor.id);

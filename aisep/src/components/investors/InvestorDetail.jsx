@@ -35,17 +35,7 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
         }
     }, [investorId]);
 
-    const handlePitchClick = () => {
-        const roleValue = user?.role;
-        const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
-        const canConnect = roleStr === 'startup' || roleStr === 'advisor' || roleValue === 0 || roleValue === 2;
-        
-        if (!canConnect) {
-            alert('Chỉ tài khoản Startup hoặc Cố vấn mới có thể gửi yêu cầu kết nối cho nhà đầu tư.');
-            return;
-        }
-        alert(`Yêu cầu kết nối đã được gửi tới ${investor?.userName || 'nhà đầu tư'}! (Tính năng đang phát triển)`);
-    };
+    // handlePitchClick removed as the button is no longer present
 
     if (!user) {
         return (
@@ -116,17 +106,7 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
                         <div className={styles.initialText}>{initial}</div>
                     </div>
                     <div className={styles.headerActions}>
-                        {(() => {
-                            const roleValue = user?.role;
-                            const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
-                            const canConnect = roleStr === 'startup' || roleStr === 'advisor' || roleValue === 0 || roleValue === 2;
-                            
-                            return canConnect && (
-                                <button className={styles.connectBtn} onClick={handlePitchClick}>
-                                    Kết nối
-                                </button>
-                            );
-                        })()}
+                        {/* Connect button removed as per user requirement */}
                     </div>
                 </div>
 
