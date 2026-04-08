@@ -2,19 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { Search, Newspaper, Calendar, User, Building2, TrendingUp, Filter, X, ChevronDown, Loader2, AlertCircle } from 'lucide-react';
 import FeedHeader from '../components/feed/FeedHeader';
 import prService from '../services/prService';
+import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import styles from './DiscoveryHub.module.css'; // Reuse DiscoveryHub styles
 
 /**
  * PR Hub - Browse all press releases from the platform
  * Features: Search, filter by project/investor, sort options, detail view
  */
-const PRHubPage = () => {
+const PRHubPage = ({ user }) => {
     const [allPRs, setAllPRs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState(null);
     const [searchQuery, setSearchQuery] = useState('');
     const [selectedPR, setSelectedPR] = useState(null); // For detail modal
     const [showDetailModal, setShowDetailModal] = useState(false);
+    const [activeChatSession, setActiveChatSession] = useState(null);
 
     // Filter & Sort states
     const [filterProject, setFilterProject] = useState('all'); // 'all' or projectId
@@ -141,6 +143,15 @@ const PRHubPage = () => {
                 title="PR & News Hub"
                 subtitle="Khám phá những tin tức và bài viết mới nhất từ các dự án được đầu tư thành công"
                 showFilter={false}
+                user={user}
+                onOpenChat={(chatSessionId, notification) => {
+                    setActiveChatSession({
+                        chatSessionId,
+                        displayName: notification?.title || 'Chat mới',
+                        currentUserId: user?.userId,
+                        sentTime: new Date().toISOString()
+                    });
+                }}
             />
 
             {/* Stats Section */}
@@ -779,6 +790,12 @@ const PRHubPage = () => {
                         </div>
                     </div>
                 </div>
+            )}
+            {activeChatSession && (
+                <FloatingChatWidget
+                    {...activeChatSession}
+                    onClose={() => setActiveChatSession(null)}
+                />
             )}
         </div>
     );

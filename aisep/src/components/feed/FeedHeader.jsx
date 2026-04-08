@@ -12,13 +12,13 @@ import NotificationCenter from '../common/NotificationCenter';
  * @param {function} onShowProjectForm - Callback to show project submission form
  * @param {function} onOpenChat - Callback to open chat from notification
  */
-function FeedHeader({ 
-  user, 
-  onFilterChange, 
-  activeFilters, 
-  onShowProjectForm, 
-  title = "Khám phá dự án", 
-  subtitle = "Khám phá các dự án sáng tạo được hỗ trợ bởi AI", 
+function FeedHeader({
+  user,
+  onFilterChange,
+  activeFilters,
+  onShowProjectForm,
+  title = "Khám phá dự án",
+  subtitle = "Khám phá các dự án sáng tạo được hỗ trợ bởi AI",
   showFilter = true,
   showStats = false,
   stats = { approvedCount: 0, investorCount: 0, industryCount: 0 },
@@ -54,8 +54,10 @@ function FeedHeader({
                   />
                 </div>
               )}
+            </div>
 
-              {/* "Đăng Dự Án" button for startups */}
+            <div className={styles.headerRightActions}>
+              {/* "Đăng Dự Án" button for startups - moved here to sit next to the notification bell */}
               {((user?.role?.toString().toLowerCase() === 'startup') || user?.role === 0 || user?.role === '0') && onShowProjectForm && (
                 <button
                   onClick={onShowProjectForm}
@@ -65,21 +67,18 @@ function FeedHeader({
                   Đăng Dự Án
                 </button>
               )}
-            </div>
-
-            <div className={styles.headerRightActions}>
-              {onOpenChat && <NotificationCenter onOpenChat={onOpenChat} />}
               {customAction}
+              {onOpenChat && <NotificationCenter onOpenChat={onOpenChat} />}
             </div>
           </div>
         </div>
 
         {/* Feed Filter (Tabs) — now Row 2 */}
         {showFilter && (
-          <FeedFilter 
-            user={user} 
+          <FeedFilter
+            user={user}
             activeFilters={activeFilters}
-            onFilterChange={onFilterChange} 
+            onFilterChange={onFilterChange}
             industryCounts={industryCounts}
             totalCount={stats?.approvedCount ?? 0}
           />

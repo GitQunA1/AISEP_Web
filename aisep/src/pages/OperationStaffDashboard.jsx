@@ -971,7 +971,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
         try {
             // Use getAllSignedDeals for staff to fetch all signed contracts
             const response = await dealsService.getAllSignedDeals();
-            
+
             // Response data structure: { page, pageSize, totalCount, items: [...] }
             let deals = [];
             if (response?.data?.items && Array.isArray(response.data.items)) {
@@ -979,12 +979,12 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             } else if (Array.isArray(response?.data)) {
                 deals = response.data;
             }
-            
+
             // Filter to get only deals with status "Contract_Signed"
-            const signedDealsFiltered = deals.filter(deal => 
+            const signedDealsFiltered = deals.filter(deal =>
                 deal.status === 'Contract_Signed' && deal.projectId && deal.projectName
             );
-            
+
             console.log('[OperationStaffDashboard] Signed deals fetched:', signedDealsFiltered.length, 'from total:', deals.length);
             setSignedDeals(signedDealsFiltered);
         } catch (error) {
@@ -1044,7 +1044,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
         setPrNewsError(null);
         try {
             const response = await prService.getPRs();
-            
+
             // Response data structure: { data: { page, pageSize, totalCount, totalPages, items: [...] } }
             let prsList = [];
             if (response?.data?.items && Array.isArray(response.data.items)) {
@@ -1054,7 +1054,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             } else if (Array.isArray(response?.items)) {
                 prsList = response.items;
             }
-            
+
             console.log('[OperationStaffDashboard] PR News fetched:', prsList.length);
             setPrNewsList(prsList);
         } catch (error) {
@@ -1080,7 +1080,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             setShowModal(true);
             return;
         }
-        
+
         setProcessingPRId(selectedPRForEdit.postPrId);
         try {
             const response = await prService.updatePR(selectedPRForEdit.postPrId, editTitle, editContent);
@@ -1174,13 +1174,13 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             ? bookingSearchTerm
             : activeSection === 'pr_management'
                 ? prSearchTerm
-            : activeSection === 'withdrawals'
-                ? withdrawSearchTerm
-                : activeSection === 'commission'
-                    ? commissionSearchTerm
-                    : (activeSection === 'package_management' || activeSection === 'subscription_history')
-                        ? subscriptionSearchTerm
-                        : undefined;
+                : activeSection === 'withdrawals'
+                    ? withdrawSearchTerm
+                    : activeSection === 'commission'
+                        ? commissionSearchTerm
+                        : (activeSection === 'package_management' || activeSection === 'subscription_history')
+                            ? subscriptionSearchTerm
+                            : undefined;
 
     const headerSearchPlaceholder = activeSection === 'project_management'
         ? "Tìm kiếm dự án..."
@@ -1188,11 +1188,11 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             ? "Tìm kiếm booking..."
             : activeSection === 'pr_management'
                 ? "Tìm kiếm dự án đã ký..."
-            : activeSection === 'withdrawals'
-                ? "Tìm kiếm Advisor hoặc tài khoản..."
-                : activeSection === 'commission'
-                    ? "Tìm kiếm lịch sử thay đổi..."
-                    : "Tìm kiếm...";
+                : activeSection === 'withdrawals'
+                    ? "Tìm kiếm Advisor hoặc tài khoản..."
+                    : activeSection === 'commission'
+                        ? "Tìm kiếm lịch sử thay đổi..."
+                        : "Tìm kiếm...";
 
     const headerSearchEnabled = ['project_management', 'bookings', 'pr_management', 'withdrawals', 'commission', 'package_management', 'subscription_history'].includes(activeSection);
 
@@ -1213,15 +1213,15 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                 }
                 subtitle={
                     activeSection === 'subscription_history' ? "Theo dõi và quản lý lịch sử thanh toán, gia hạn các gói dịch vụ của người dùng trên hệ thống." :
-                    activeSection === 'package_management' ? "Cấu hình hạn mức, thời hạn và giá cả cho các gói đăng ký trên toàn hệ thống AISEP." :
-                    activeSection === 'project_management' ? "Phê duyệt và quản lý các startup tham gia nền tảng." :
-                    activeSection === 'pr_management' ? "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký)." :
-                    activeSection === 'pr_news' ? "Xem tất cả các bài PR đã được đăng lên hệ thống." :
-                    activeSection === 'bookings' ? "Theo dõi và giám sát các lịch hẹn đào tạo trong hệ thống." :
-                    activeSection === 'user_reports' ? "Giải quyết các báo cáo vi phạm và khiếu nại từ người dùng." :
-                    activeSection === 'advisor_approval' ? "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn trên nền tảng AISEP." :
-                    activeSection === 'statistics' ? "Tổng quan về các số liệu tăng trưởng và hiệu suất nền tảng." : 
-                    "Quản lý nền tảng và các yêu cầu phê duyệt."
+                        activeSection === 'package_management' ? "Cấu hình hạn mức, thời hạn và giá cả cho các gói đăng ký trên toàn hệ thống AISEP." :
+                            activeSection === 'project_management' ? "Phê duyệt và quản lý các startup tham gia nền tảng." :
+                                activeSection === 'pr_management' ? "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký)." :
+                                    activeSection === 'pr_news' ? "Xem tất cả các bài PR đã được đăng lên hệ thống." :
+                                        activeSection === 'bookings' ? "Theo dõi và giám sát các lịch hẹn đào tạo trong hệ thống." :
+                                            activeSection === 'user_reports' ? "Giải quyết các báo cáo vi phạm và khiếu nại từ người dùng." :
+                                                activeSection === 'advisor_approval' ? "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn trên nền tảng AISEP." :
+                                                    activeSection === 'statistics' ? "Tổng quan về các số liệu tăng trưởng và hiệu suất nền tảng." :
+                                                        "Quản lý nền tảng và các yêu cầu phê duyệt."
                 }
                 showFilter={false}
                 user={user}
@@ -1947,207 +1947,207 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                 📰 Tin tức ({prNewsList.length})
                             </h3>
 
-                        {/* News Header Stats */}
-                        <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <Newspaper size={24} color="var(--primary-blue)" />
-                                <div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng PR được đăng</div>
-                                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-primary)' }}>{prNewsList.length}</div>
+                            {/* News Header Stats */}
+                            <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <Newspaper size={24} color="var(--primary-blue)" />
+                                    <div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng PR được đăng</div>
+                                        <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-primary)' }}>{prNewsList.length}</div>
+                                    </div>
                                 </div>
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <CheckCircle size={24} color="#10b981" />
-                                <div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Đã xuất bản</div>
-                                    <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>
-                                        {prNewsList.filter(pr => pr.publishedAt).length}
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <CheckCircle size={24} color="#10b981" />
+                                    <div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Đã xuất bản</div>
+                                        <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>
+                                            {prNewsList.filter(pr => pr.publishedAt).length}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-                        </div>
 
-                        {/* Error State */}
-                        {prNewsError && (
-                            <div className={local.errorWrapper} style={{ marginBottom: '20px' }}>
-                                <EmptyState
-                                    icon={AlertCircle}
-                                    title="Lỗi tải dữ liệu"
-                                    message={prNewsError}
-                                    isError={true}
-                                    onRetry={fetchPRNews}
-                                />
-                            </div>
-                        )}
-
-                        {/* Loading State */}
-                        {isLoadingPRNews && (
-                            <div className={styles.card}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '12px' }}>
-                                    <Loader2 size={20} className="animate-spin" />
-                                    <span style={{ color: 'var(--text-secondary)' }}>Đang tải dữ liệu...</span>
+                            {/* Error State */}
+                            {prNewsError && (
+                                <div className={local.errorWrapper} style={{ marginBottom: '20px' }}>
+                                    <EmptyState
+                                        icon={AlertCircle}
+                                        title="Lỗi tải dữ liệu"
+                                        message={prNewsError}
+                                        isError={true}
+                                        onRetry={fetchPRNews}
+                                    />
                                 </div>
-                            </div>
-                        )}
+                            )}
 
-                        {/* Empty State */}
-                        {!isLoadingPRNews && prNewsList.length === 0 && (
-                            <div className={styles.card}>
-                                <EmptyState
-                                    icon={Archive}
-                                    title="Chưa có PR được đăng"
-                                    message="Hiện chưa có bài PR nào được đăng. Hãy đăng bài PR từ tab 'Đăng bài PR'."
-                                />
-                            </div>
-                        )}
+                            {/* Loading State */}
+                            {isLoadingPRNews && (
+                                <div className={styles.card}>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '12px' }}>
+                                        <Loader2 size={20} className="animate-spin" />
+                                        <span style={{ color: 'var(--text-secondary)' }}>Đang tải dữ liệu...</span>
+                                    </div>
+                                </div>
+                            )}
 
-                        {/* PR News List */}
-                        {!isLoadingPRNews && prNewsList.length > 0 && (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '16px' }}>
-                                {prNewsList
-                                    .filter(pr => {
-                                        if (!prNewsSearchTerm.trim()) return true;
-                                        const search = prNewsSearchTerm.toLowerCase();
-                                        return (
-                                            pr.title?.toLowerCase().includes(search) ||
-                                            pr.content?.toLowerCase().includes(search) ||
-                                            pr.projectName?.toLowerCase().includes(search) ||
-                                            pr.investorName?.toLowerCase().includes(search)
-                                        );
-                                    })
-                                    .map(pr => (
-                                        <div
-                                            key={pr.postPrId}
-                                            className={styles.card}
-                                            style={{
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                gap: '12px',
-                                                borderLeft: '4px solid var(--primary-blue)',
-                                                transition: 'all 0.2s ease'
-                                            }}
-                                        >
-                                            {/* PR Image */}
-                                            {pr.projectImage && (
-                                                <img
-                                                    src={pr.projectImage}
-                                                    alt={pr.projectName}
-                                                    style={{
-                                                        width: '100%',
-                                                        height: '180px',
-                                                        objectFit: 'cover',
-                                                        borderRadius: '6px'
-                                                    }}
-                                                />
-                                            )}
+                            {/* Empty State */}
+                            {!isLoadingPRNews && prNewsList.length === 0 && (
+                                <div className={styles.card}>
+                                    <EmptyState
+                                        icon={Archive}
+                                        title="Chưa có PR được đăng"
+                                        message="Hiện chưa có bài PR nào được đăng. Hãy đăng bài PR từ tab 'Đăng bài PR'."
+                                    />
+                                </div>
+                            )}
 
-                                            {/* PR Header */}
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
-                                                <div style={{ flex: 1 }}>
-                                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', lineHeight: '1.3' }}>
-                                                        {pr.title}
-                                                    </h4>
-                                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                                        {pr.projectName}
-                                                    </p>
+                            {/* PR News List */}
+                            {!isLoadingPRNews && prNewsList.length > 0 && (
+                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '16px' }}>
+                                    {prNewsList
+                                        .filter(pr => {
+                                            if (!prNewsSearchTerm.trim()) return true;
+                                            const search = prNewsSearchTerm.toLowerCase();
+                                            return (
+                                                pr.title?.toLowerCase().includes(search) ||
+                                                pr.content?.toLowerCase().includes(search) ||
+                                                pr.projectName?.toLowerCase().includes(search) ||
+                                                pr.investorName?.toLowerCase().includes(search)
+                                            );
+                                        })
+                                        .map(pr => (
+                                            <div
+                                                key={pr.postPrId}
+                                                className={styles.card}
+                                                style={{
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    gap: '12px',
+                                                    borderLeft: '4px solid var(--primary-blue)',
+                                                    transition: 'all 0.2s ease'
+                                                }}
+                                            >
+                                                {/* PR Image */}
+                                                {pr.projectImage && (
+                                                    <img
+                                                        src={pr.projectImage}
+                                                        alt={pr.projectName}
+                                                        style={{
+                                                            width: '100%',
+                                                            height: '180px',
+                                                            objectFit: 'cover',
+                                                            borderRadius: '6px'
+                                                        }}
+                                                    />
+                                                )}
+
+                                                {/* PR Header */}
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', lineHeight: '1.3' }}>
+                                                            {pr.title}
+                                                        </h4>
+                                                        <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                            {pr.projectName}
+                                                        </p>
+                                                    </div>
+                                                    <div style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        padding: '4px 10px',
+                                                        backgroundColor: pr.status === 'Pending' ? '#fef3c7' : '#d1fae5',
+                                                        color: pr.status === 'Pending' ? '#b45309' : '#065f46',
+                                                        fontSize: '11px',
+                                                        fontWeight: '700',
+                                                        borderRadius: '4px',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {pr.status === 'Pending' ? '⏳ Chờ duyệt' : '✨ Đã xuất bản'}
+                                                    </div>
                                                 </div>
-                                                <div style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    padding: '4px 10px',
-                                                    backgroundColor: pr.status === 'Pending' ? '#fef3c7' : '#d1fae5',
-                                                    color: pr.status === 'Pending' ? '#b45309' : '#065f46',
-                                                    fontSize: '11px',
-                                                    fontWeight: '700',
-                                                    borderRadius: '4px',
-                                                    whiteSpace: 'nowrap'
+
+                                                {/* PR Content Preview */}
+                                                <p style={{
+                                                    margin: 0,
+                                                    fontSize: '13px',
+                                                    color: 'var(--text-secondary)',
+                                                    lineHeight: '1.5',
+                                                    display: '-webkit-box',
+                                                    WebkitLineClamp: 3,
+                                                    WebkitBoxOrient: 'vertical',
+                                                    overflow: 'hidden'
                                                 }}>
-                                                    {pr.status === 'Pending' ? '⏳ Chờ duyệt' : '✨ Đã xuất bản'}
+                                                    {pr.content}
+                                                </p>
+
+                                                {/* PR Meta Info */}
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', paddingTop: '8px', borderTop: '1px solid var(--border-color)' }}>
+                                                    <div>
+                                                        <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Startup</div>
+                                                        <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>
+                                                            {pr.startupName}
+                                                        </div>
+                                                    </div>
+
+                                                    <div>
+                                                        <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Nhà đầu tư</div>
+                                                        <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>
+                                                            {pr.investorName}
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ gridColumn: '1 / -1' }}>
+                                                        <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Ngày đăng</div>
+                                                        <div style={{ color: 'var(--text-primary)', fontSize: '11px' }}>
+                                                            {pr.publishedAt ? new Date(pr.publishedAt).toLocaleDateString('vi-VN') : 'Chưa xuất bản'}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Action Buttons */}
+                                                    <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', marginTop: '8px' }}>
+                                                        <button
+                                                            onClick={() => handleOpenEditPR(pr)}
+                                                            style={{
+                                                                flex: 1,
+                                                                padding: '8px 12px',
+                                                                backgroundColor: 'var(--primary-blue)',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '6px',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer'
+                                                            }}
+                                                        >
+                                                            ✏️ Chỉnh sửa
+                                                        </button>
+                                                        <button
+                                                            onClick={() => {
+                                                                setSelectedPRForDelete(pr);
+                                                                setShowDeletePRModal(true);
+                                                            }}
+                                                            disabled={processingPRId === pr.postPrId}
+                                                            style={{
+                                                                flex: !pr.publishedAt ? 0.5 : 1,
+                                                                padding: '8px 12px',
+                                                                backgroundColor: '#ef4444',
+                                                                color: 'white',
+                                                                border: 'none',
+                                                                borderRadius: '6px',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                cursor: processingPRId === pr.postPrId ? 'wait' : 'pointer',
+                                                                opacity: processingPRId === pr.postPrId ? 0.7 : 1
+                                                            }}
+                                                        >
+                                                            {processingPRId === pr.postPrId ? '⏳' : '🗑️ Xóa'}
+                                                        </button>
+                                                    </div>
                                                 </div>
                                             </div>
-
-                                            {/* PR Content Preview */}
-                                            <p style={{
-                                                margin: 0,
-                                                fontSize: '13px',
-                                                color: 'var(--text-secondary)',
-                                                lineHeight: '1.5',
-                                                display: '-webkit-box',
-                                                WebkitLineClamp: 3,
-                                                WebkitBoxOrient: 'vertical',
-                                                overflow: 'hidden'
-                                            }}>
-                                                {pr.content}
-                                            </p>
-
-                                            {/* PR Meta Info */}
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', paddingTop: '8px', borderTop: '1px solid var(--border-color)' }}>
-                                                <div>
-                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Startup</div>
-                                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>
-                                                        {pr.startupName}
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Nhà đầu tư</div>
-                                                    <div style={{ color: 'var(--text-primary)', fontWeight: '600' }}>
-                                                        {pr.investorName}
-                                                    </div>
-                                                </div>
-
-                                                <div style={{ gridColumn: '1 / -1' }}>
-                                                    <div style={{ color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px' }}>Ngày đăng</div>
-                                                    <div style={{ color: 'var(--text-primary)', fontSize: '11px' }}>
-                                                        {pr.publishedAt ? new Date(pr.publishedAt).toLocaleDateString('vi-VN') : 'Chưa xuất bản'}
-                                                    </div>
-                                                </div>
-
-                                                {/* Action Buttons */}
-                                                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', marginTop: '8px' }}>
-                                                    <button
-                                                        onClick={() => handleOpenEditPR(pr)}
-                                                        style={{
-                                                            flex: 1,
-                                                            padding: '8px 12px',
-                                                            backgroundColor: 'var(--primary-blue)',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '6px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            cursor: 'pointer'
-                                                        }}
-                                                    >
-                                                        ✏️ Chỉnh sửa
-                                                    </button>
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedPRForDelete(pr);
-                                                            setShowDeletePRModal(true);
-                                                        }}
-                                                        disabled={processingPRId === pr.postPrId}
-                                                        style={{
-                                                            flex: !pr.publishedAt ? 0.5 : 1,
-                                                            padding: '8px 12px',
-                                                            backgroundColor: '#ef4444',
-                                                            color: 'white',
-                                                            border: 'none',
-                                                            borderRadius: '6px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            cursor: processingPRId === pr.postPrId ? 'wait' : 'pointer',
-                                                            opacity: processingPRId === pr.postPrId ? 0.7 : 1
-                                                        }}
-                                                    >
-                                                        {processingPRId === pr.postPrId ? '⏳' : '🗑️ Xóa'}
-                                                    </button>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    ))}
-                            </div>
-                        )}
+                                        ))}
+                                </div>
+                            )}
                         </div>
                     </div>
                 )}
@@ -3018,7 +3018,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                         overflowY: 'auto'
                     }}>
                         <h3 style={{ margin: '0 0 24px 0', fontSize: '18px', fontWeight: '700', color: 'var(--text-primary)' }}>✏️ Chỉnh sửa bài PR</h3>
-                        
+
                         <div style={{ marginBottom: '20px' }}>
                             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>Tiêu đề</label>
                             <input

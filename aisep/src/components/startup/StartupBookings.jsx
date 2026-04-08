@@ -279,7 +279,7 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
                                                 </button>
                                             )}
 
-                                            {(booking.status === 2 || booking.status === 'Confirmed' || booking.status === 3 || booking.status === 'Completed') && (
+                                            {(booking.status === 2 || booking.status === 'Confirmed') && (
                                                 <button className={`${styles.xActionButton} ${styles.xActionDanger}`} onClick={() => setComplainBooking(booking)} style={{ color: '#f4212e' }}>
                                                     <AlertCircle size={14} /> Khiếu nại
                                                 </button>

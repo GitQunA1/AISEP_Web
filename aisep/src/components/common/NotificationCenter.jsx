@@ -39,8 +39,11 @@ const NotificationCenter = ({ onOpenChat }) => {
 
   const loadNotifications = async () => {
     try {
-      const response = await notificationService.getNotifications();
-      const items = Array.isArray(response) ? response : (response?.items || []);
+      // Fetch more notifications (100) to ensure historical data is visible
+      const response = await notificationService.getNotifications({ pageSize: 100 });
+      
+      // Unwrap the ApiResponse structure: response.data is the PagedResult, response.data.items is the list
+      const items = response?.data?.items || (Array.isArray(response) ? response : []);
       setNotifications(items);
     } catch (error) {
       console.error('Error loading notifications:', error);
@@ -49,7 +52,9 @@ const NotificationCenter = ({ onOpenChat }) => {
 
   const loadUnreadCount = async () => {
     try {
-      const count = await notificationService.getUnreadCount();
+      const response = await notificationService.getUnreadCount();
+      // Extract unread count from ApiResponse.Data
+      const count = typeof response?.data === 'number' ? response.data : 0;
       setUnreadCount(count);
     } catch (error) {
       console.error('Error loading unread count:', error);

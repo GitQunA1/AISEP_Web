@@ -9,6 +9,7 @@ import FloatingChatWidget from '../common/FloatingChatWidget';
 import PaymentModal from '../booking/PaymentModal';
 import BookingWizard from '../booking/BookingWizard';
 import BookingDetailModal from '../booking/BookingDetailModal';
+import UserReportModal from '../booking/UserReportModal';
 import FeedHeader from '../feed/FeedHeader';
 
 const BOOKING_STATUS_LABELS = {
@@ -40,6 +41,7 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
     const [chatLoading, setChatLoading] = useState({});
     const [paymentBooking, setPaymentBooking] = useState(null);
     const [detailBooking, setDetailBooking] = useState(null);
+    const [complainBooking, setComplainBooking] = useState(null);
 
     // Booking Wizard State (for re-booking)
     const [showBookingWizard, setShowBookingWizard] = useState(false);
@@ -128,6 +130,8 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
         if (action === 'pay') setPaymentBooking(booking);
         if (action === 'chat') handleOpenChat(booking);
         if (action === 'rebook') handleRebookReplacement(booking);
+        if (action === 'complain') setComplainBooking(booking);
+        if (action === 'report') setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Investor' });
         if (action === 'viewProject' && onViewProject) onViewProject(booking.projectId);
     };
 
@@ -172,10 +176,18 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
         <div className={styles.dashboardSection}>
             {/* Unified Header matching Investor Dashboard */}
             <FeedHeader
-                title="Lịch tư vấn của tôi"
-                subtitle={`Bạn có ${stats.total} buổi tư vấn được ghi nhận trong hệ thống.`}
+                title="Lịch tư vấn"
+                subtitle="Quản lý các buổi tư vấn với cố vấn và chuyên gia."
                 showFilter={false}
                 user={user}
+                onOpenChat={(chatSessionId, notification) => {
+                    setChatSession({
+                        chatSessionId,
+                        displayName: notification?.title || 'Chat mới',
+                        currentUserId: user?.userId,
+                        sentTime: new Date().toISOString()
+                    });
+                }}
                 customAction={
                     <button className={styles.xRefreshIconBtn} onClick={loadBookings} disabled={loading} title="Làm mới danh sách">
                         <RefreshCcw size={18} className={loading ? styles.xSpin : ''} />
@@ -304,9 +316,15 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
                                                 </button>
                                             )}
 
-                                            {booking.status === 3 || booking.status === 'Completed' && (
+                                            {(booking.status === 2 || booking.status === 'Confirmed' || booking.status === 3 || booking.status === 'Completed') && (
                                                 <button className={styles.xActionButton} onClick={() => setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Investor' })}>
                                                     <FileText size={14} /> Báo cáo
+                                                </button>
+                                            )}
+
+                                            {(booking.status === 2 || booking.status === 'Confirmed') && (
+                                                <button className={`${styles.xActionButton} ${styles.xActionDanger}`} onClick={() => setComplainBooking(booking)} style={{ color: '#f4212e' }}>
+                                                    <AlertCircle size={14} /> Khiếu nại
                                                 </button>
                                             )}
 
@@ -360,6 +378,16 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
                         userRole="Investor"
                         onClose={() => setDetailBooking(null)}
                         onAction={handleDetailAction}
+                    />
+                )}
+
+                {complainBooking && (
+                    <UserReportModal 
+                        bookingId={complainBooking.id} 
+                        targetUserId={complainBooking.advisorId} 
+                        targetUserName={complainBooking.advisorName} 
+                        onClose={() => setComplainBooking(null)} 
+                        onDone={() => setComplainBooking(null)} 
                     />
                 )}
 

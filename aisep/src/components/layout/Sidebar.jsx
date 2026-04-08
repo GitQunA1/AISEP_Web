@@ -30,58 +30,20 @@ function Sidebar({
   const { theme, toggleTheme } = useTheme();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  let navItems = [
-    { icon: Compass, label: 'Home', displayLabel: 'Khám phá dự án', href: '#' },
-    { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
-    { icon: Newspaper, label: 'PRNews', displayLabel: 'Tin tức', href: '#', showWhenLoggedIn: true },
-    { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#', hideFor: ['investor'] },
-    { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor'] },
-  ];
-
-    const rStr = user?.role?.toString().toLowerCase() || '';
-    const rNum = user?.role !== undefined ? Number(user.role) : -1;
-    const isS = rStr === 'operationstaff' || rStr === 'operation_staff' || rStr === 'staff' || rNum === 3;
-
-  if (isStaff) {
-    // Reorder: Dashboard sections first, then others
-    const staffItems = [
+  const navItems = React.useMemo(() => {
+    const baseItems = [
+      { icon: Compass, label: 'Home', displayLabel: 'Khám phá dự án', href: '#' },
       { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
-      { icon: FileText, label: 'Projects', displayLabel: 'Quản lý dự án', href: '#', showWhenLoggedIn: true },
-      { icon: Calendar, label: 'Bookings', displayLabel: 'Quản lý Booking', href: '#', showWhenLoggedIn: true },
-      { icon: Newspaper, label: 'PRManagement', displayLabel: 'Đăng bài PR', href: '#', showWhenLoggedIn: true },
       { icon: Newspaper, label: 'PRNews', displayLabel: 'Tin tức', href: '#', showWhenLoggedIn: true },
-      { icon: AlertCircle, label: 'UserReports', displayLabel: 'Báo cáo vi phạm', href: '#', showWhenLoggedIn: true },
-      { icon: ShieldCheck, label: 'Approvals', displayLabel: 'Phê duyệt Startup', href: '#', showWhenLoggedIn: true },
-      { icon: Award, label: 'AdvisorApproval', displayLabel: 'Phê duyệt cố vấn', href: '#', showWhenLoggedIn: true },
-      { icon: Shield, label: 'PackageManagement', displayLabel: 'Quản lý gói', href: '#', showWhenLoggedIn: true },
-      { icon: History, label: 'SubscriptionHistory', displayLabel: 'Lịch sử đăng ký gói', href: '#', showWhenLoggedIn: true },
+      { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#', hideFor: ['investor'] },
+      { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor'] },
     ];
-    const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
-    const homeItem = navItems.find(item => item.label === 'Home');
-    navItems = [...staffItems, homeItem, ...otherItems];
-  } else if (roleStr === 'advisor' || roleNum === 2) {
-    // Specialized items for Advisor
-    const advisorItems = [
-      { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
-      { icon: ShieldCheck, label: 'ApproveBookings', displayLabel: 'Duyệt Booking', href: '#', showWhenLoggedIn: true },
-      { icon: MessageSquare, label: 'Bookings', displayLabel: 'Danh sách Booking', href: '#', showWhenLoggedIn: true },
-      { icon: Calendar, label: 'Availability', displayLabel: 'Lịch Rảnh', href: '#', showWhenLoggedIn: true },
-      { icon: User, label: 'Profile', displayLabel: 'Hồ sơ', href: '#', showWhenLoggedIn: true },
-    ];
-    const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
-    const homeItem = navItems.find(item => item.label === 'Home');
-    navItems = [...advisorItems, homeItem, ...otherItems];
-  } else if (roleStr === 'investor' || roleNum === 1) {
-    // Specialized items for Investor
-    const investorItems = [
-      { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
-      { icon: Calendar, label: 'Bookings', displayLabel: 'Lịch Tư Vấn', href: '#', showWhenLoggedIn: true },
-    ];
-    const otherItems = navItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
-    const homeItem = navItems.find(item => item.label === 'Home');
-    navItems = [...investorItems, homeItem, ...otherItems];
-  }
-    if (isS) {
+
+    const roleStr = user?.role?.toString().toLowerCase() || '';
+    const roleNum = user?.role !== undefined ? Number(user.role) : -1;
+    const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
+
+    if (isStaff) {
       const staffItems = [
         { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
         { icon: DollarSign, label: 'WithdrawRequest', displayLabel: 'Yêu cầu rút tiền', href: '#', showWhenLoggedIn: true },
@@ -95,10 +57,12 @@ function Sidebar({
         { icon: Shield, label: 'PackageManagement', displayLabel: 'Quản lý gói', href: '#', showWhenLoggedIn: true },
         { icon: History, label: 'SubscriptionHistory', displayLabel: 'Lịch sử đăng ký gói', href: '#', showWhenLoggedIn: true },
       ];
-      const otherItems = items.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
-      const homeItem = items.find(item => item.label === 'Home');
+      const otherItems = baseItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
+      const homeItem = baseItems.find(item => item.label === 'Home');
       return [...staffItems, homeItem, ...otherItems];
-    } else if (rStr === 'advisor' || rNum === 2) {
+    }
+
+    if (roleStr === 'advisor' || roleNum === 2) {
       const advisorItems = [
         { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
         { icon: CreditCard, label: 'Wallet', displayLabel: 'Ví & Thu nhập', href: '#', showWhenLoggedIn: true },
@@ -107,20 +71,24 @@ function Sidebar({
         { icon: Calendar, label: 'Availability', displayLabel: 'Lịch Rảnh', href: '#', showWhenLoggedIn: true },
         { icon: User, label: 'Profile', displayLabel: 'Hồ sơ', href: '#', showWhenLoggedIn: true },
       ];
-      const otherItems = items.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
-      const homeItem = items.find(item => item.label === 'Home');
+      const otherItems = baseItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
+      const homeItem = baseItems.find(item => item.label === 'Home');
       return [...advisorItems, homeItem, ...otherItems];
-    } else if (rStr === 'investor' || rNum === 1) {
+    }
+
+    if (roleStr === 'investor' || roleNum === 1) {
       const investorItems = [
         { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
         { icon: Calendar, label: 'Bookings', displayLabel: 'Lịch Tư Vấn', href: '#', showWhenLoggedIn: true },
       ];
-      const otherItems = items.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
-      const homeItem = items.find(item => item.label === 'Home');
+      const otherItems = baseItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
+      const homeItem = baseItems.find(item => item.label === 'Home');
       return [...investorItems, homeItem, ...otherItems];
     }
-    return items;
+
+    return baseItems;
   }, [user]);
+
 
   const menuRef = React.useRef(null);
   const [showTopFade, setShowTopFade] = useState(false);

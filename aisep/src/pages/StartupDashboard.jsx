@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User, Crown, DollarSign } from 'lucide-react';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User, Crown, DollarSign, Settings, Info, Download, Check } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
+import contractStyles from './ContractSigningModal.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
 import SuccessModal from '../components/common/SuccessModal';
@@ -11,7 +12,7 @@ import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import FeedHeader from '../components/feed/FeedHeader';
 import FloatingChatWidget from '../components/common/FloatingChatWidget';
-import PRNewsSection from '../components/common/PRNewsSection';
+import NewsPRSection from '../components/common/NewsPRSection';
 import ProjectValidationService from '../services/ProjectValidation.js';
 import BlockchainService from '../services/BlockchainService.js';
 import AIEvaluationService from '../services/AIEvaluationService.js';
@@ -1547,7 +1548,8 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
     };
 
     return (
-        <div className={styles.container}>
+        <div className={styles.container} style={activeSection === 'pr_news' ? { minHeight: 'auto' } : {}}>
+
             {!activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
                 <>
                     {/* Unified Header */}
@@ -1573,52 +1575,54 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                     )}
 
                     {/* Quick Stats */}
-                    <div className={styles.statsGrid}>
-                        <div className={styles.statCard}>
-                            <div className={`${styles.statIcon} ${styles.iconCyan}`}>
-                                <Eye size={20} />
-                            </div>
-                            <div className={styles.statInfo}>
-                                <div className={styles.statValue}>
-                                    {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.profileViews}
+                    <div className={`${styles.statsWrapper} ${activeSection !== 'overview' ? styles.statsCollapsed : ''}`}>
+                        <div className={styles.statsGrid}>
+                            <div className={styles.statCard}>
+                                <div className={`${styles.statIcon} ${styles.iconCyan}`}>
+                                    <Eye size={20} />
                                 </div>
-                                <div className={styles.statLabel}>Lượt xem hồ sơ</div>
+                                <div className={styles.statInfo}>
+                                    <div className={styles.statValue}>
+                                        {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.profileViews}
+                                    </div>
+                                    <div className={styles.statLabel}>Lượt xem hồ sơ</div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className={styles.statCard}>
-                            <div className={`${styles.statIcon} ${styles.iconYellow}`}>
-                                <Users size={20} />
-                            </div>
-                            <div className={styles.statInfo}>
-                                <div className={styles.statValue}>
-                                    {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.investorInterests}
+                            <div className={styles.statCard}>
+                                <div className={`${styles.statIcon} ${styles.iconYellow}`}>
+                                    <Users size={20} />
                                 </div>
-                                <div className={styles.statLabel}>Nhà đầu tư quan tâm</div>
+                                <div className={styles.statInfo}>
+                                    <div className={styles.statValue}>
+                                        {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.investorInterests}
+                                    </div>
+                                    <div className={styles.statLabel}>Nhà đầu tư quan tâm</div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className={styles.statCard}>
-                            <div className={`${styles.statIcon} ${styles.iconGreen}`}>
-                                <FileText size={20} />
-                            </div>
-                            <div className={styles.statInfo}>
-                                <div className={styles.statValue}>
-                                    {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.documentsUploaded}
+                            <div className={styles.statCard}>
+                                <div className={`${styles.statIcon} ${styles.iconGreen}`}>
+                                    <FileText size={20} />
                                 </div>
-                                <div className={styles.statLabel}>Tài liệu đã tải lên</div>
+                                <div className={styles.statInfo}>
+                                    <div className={styles.statValue}>
+                                        {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.documentsUploaded}
+                                    </div>
+                                    <div className={styles.statLabel}>Tài liệu đã tải lên</div>
+                                </div>
                             </div>
-                        </div>
 
-                        <div className={styles.statCard}>
-                            <div className={`${styles.statIcon} ${styles.iconPurple}`}>
-                                <TrendingUp size={20} />
-                            </div>
-                            <div className={styles.statInfo}>
-                                <div className={styles.statValue}>
-                                    {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.aiScore}
+                            <div className={styles.statCard}>
+                                <div className={`${styles.statIcon} ${styles.iconPurple}`}>
+                                    <TrendingUp size={20} />
                                 </div>
-                                <div className={styles.statLabel}>Điểm AI / 100</div>
+                                <div className={styles.statInfo}>
+                                    <div className={styles.statValue}>
+                                        {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.aiScore}
+                                    </div>
+                                    <div className={styles.statLabel}>Điểm AI / 100</div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -1652,12 +1656,6 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                             Dự án của tôi
                         </button>
                         <button
-                            className={`${styles.tab} ${activeSection === 'connection-requests' ? styles.active : ''}`}
-                            onClick={() => setActiveSection('connection-requests')}
-                        >
-                            Yêu cầu thông tin
-                        </button>
-                        <button
                             className={`${styles.tab} ${activeSection === 'bookings' ? styles.active : ''}`}
                             onClick={() => setActiveSection('bookings')}
                         >
@@ -1670,10 +1668,10 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                             Đầu tư
                         </button>
                         <button
-                            className={`${styles.tab} ${activeSection === 'pr_news' ? styles.active : ''}`}
-                            onClick={() => setActiveSection('pr_news')}
+                            className={`${styles.tab} ${activeSection === 'connection-requests' ? styles.active : ''}`}
+                            onClick={() => setActiveSection('connection-requests')}
                         >
-                            Tin tức
+                            Yêu cầu thông tin
                         </button>
                         {/* Animated Indicator Line */}
                         <div className={styles.tabIndicator} style={indicatorStyle} />
@@ -1684,8 +1682,9 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                 </>
             )}
 
-            {/* Content Sections */}
+            {activeSection !== 'pr_news' && (
             <div className={styles.content}>
+
                 {/* Startup Profile Form (Section View) */}
                 {activeSection === 'complete-info' && (
                     <div className={styles.section}>
@@ -2032,7 +2031,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
 
                 {/* Connection Requests Section - Investor inquiries */}
                 {activeSection === 'connection-requests' && (
-                    <div className={styles.section}>
+                    <div className={styles.section} style={{ paddingBottom: '40px' }}>
                         {/* Header Stats */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                             <div className={styles.card} style={{ padding: '16px' }}>
@@ -2136,7 +2135,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                             </div>
 
                                             {/* Investor Info */}
-                                            <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '6px' }}>
+                                            <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '6px' }}>
                                                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                                                     <strong>Thông tin</strong>
                                                 </div>
@@ -2148,7 +2147,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                             {/* Details */}
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                                 {request.sentDate && (
-                                                    <div style={{ backgroundColor: '#f8fafc', padding: '10px', borderRadius: '6px' }}>
+                                                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '10px', borderRadius: '6px' }}>
                                                         <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Ngày gửi</div>
                                                         <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
                                                             {request.sentDate}
@@ -2156,7 +2155,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                     </div>
                                                 )}
                                                 {request.status === 'accepted' && (
-                                                    <div style={{ backgroundColor: '#f0fdf4', padding: '10px', borderRadius: '6px' }}>
+                                                    <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '6px' }}>
                                                         <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Trạng thái</div>
                                                         <div style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>
                                                             ✓ Đã chấp nhận
@@ -2167,7 +2166,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
 
                                             {/* Message (if available) */}
                                             {request.message && (
-                                                <div style={{ backgroundColor: '#f1f5f9', padding: '12px', borderRadius: '6px', fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', borderLeft: '3px solid var(--primary-blue)' }}>
+                                                <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '6px', fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', borderLeft: '3px solid var(--primary-blue)' }}>
                                                     💬 {request.message}
                                                 </div>
                                             )}
@@ -2269,9 +2268,9 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                         style={{
                                                             flex: 1,
                                                             padding: '8px 12px',
-                                                            backgroundColor: '#f1f5f9',
-                                                            color: '#475569',
-                                                            border: '1px solid #cbd5e1',
+                                                            backgroundColor: 'var(--bg-secondary)',
+                                                            color: 'var(--text-secondary)',
+                                                            border: '1px solid var(--border-color)',
                                                             borderRadius: '4px',
                                                             fontSize: '12px',
                                                             fontWeight: '600',
@@ -2311,7 +2310,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
 
                 {/* Deals Approval Section */}
                 {activeSection === 'deals' && (
-                    <div className={styles.section}>
+                    <div className={styles.section} style={{ paddingBottom: '40px' }}>
                         {/* Header Stats */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                             <div className={styles.card} style={{ padding: '16px' }}>
@@ -2426,7 +2425,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                             </div>
 
                                             {/* Investor Info */}
-                                            <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '6px' }}>
+                                            <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '6px' }}>
                                                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
                                                     <strong>Nhà đầu tư</strong>
                                                 </div>
@@ -2438,7 +2437,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                             {/* Deal Details */}
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
                                                 {deal.investmentAmount && (
-                                                    <div style={{ backgroundColor: '#f0fdf4', padding: '10px', borderRadius: '6px' }}>
+                                                    <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '6px' }}>
                                                         <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Số tiền</div>
                                                         <div style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>
                                                             {deal.investmentAmount.toLocaleString('vi-VN')} VNĐ
@@ -2446,7 +2445,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                     </div>
                                                 )}
                                                 {deal.createdAt && (
-                                                    <div style={{ backgroundColor: '#f8fafc', padding: '10px', borderRadius: '6px' }}>
+                                                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '10px', borderRadius: '6px' }}>
                                                         <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Ngày tạo</div>
                                                         <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
                                                             {new Date(deal.createdAt).toLocaleDateString('vi-VN')}
@@ -2599,9 +2598,9 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                         style={{
                                                             flex: 1,
                                                             padding: '8px 12px',
-                                                            backgroundColor: '#f1f5f9',
-                                                            color: '#475569',
-                                                            border: '1px solid #cbd5e1',
+                                                            backgroundColor: 'var(--bg-secondary)',
+                                                            color: 'var(--text-secondary)',
+                                                            border: '1px solid var(--border-color)',
                                                             borderRadius: '4px',
                                                             fontSize: '12px',
                                                             fontWeight: '600',
@@ -2621,9 +2620,8 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                     </div>
                 )}
 
-
-
             </div>
+            )}
 
             {/* Modal Overlay for Complete Info Form */}
             {showCompleteInfoForm && (
@@ -3493,434 +3491,199 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                 />
             )}
 
-    {/* Contract Preview Modal */}
-    {showContractModal && contractPreviewHtml && (
-        <div
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 1000,
-                padding: '16px',
-            }}
-            onClick={handleCloseContractModal}
-        >
-            <div
-                style={{
-                    backgroundColor: '#fff',
-                    borderRadius: '8px',
-                    width: '100%',
-                    maxWidth: '1000px',
-                    maxHeight: '90vh',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                }}
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div
-                    style={{
-                        padding: '20px',
-                        borderBottom: '1px solid #e2e8f0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                    }}
-                >
-                    <div>
-                        <h2 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700' }}>
-                            {contractStatus === 'Contract_Signed' ? 'Xem hợp đồng đã ký' : 'Ký hợp đồng đầu tư'}
-                        </h2>
-                        {contractDealData && (
-                            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-                                <strong>Nhà đầu tư:</strong> {contractDealData.investorName} • <strong>Số tiền:</strong> {contractDealData.investmentAmount?.toLocaleString('vi-VN')} VNĐ
-                            </p>
-                        )}
-                    </div>
-                    <button
-                        onClick={handleCloseContractModal}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            fontSize: '24px',
-                            cursor: 'pointer',
-                            color: '#64748b',
-                        }}
-                    >
-                        ×
-                    </button>
-                </div>
+            {/* Contract Preview Modal - Modernized */}
+            {showContractModal && contractPreviewHtml && (
+                <div className={contractStyles.modalOverlay} onClick={handleCloseContractModal}>
+                    <div className={contractStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className={contractStyles.header}>
+                            <div className={contractStyles.headerInfo}>
+                                <h2>Ký hợp đồng đầu tư</h2>
+                                {contractDealData && (
+                                    <p>
+                                        Nhà đầu tư: <strong>{contractDealData.investorName || 'Nhà đầu tư'}</strong> • Số tiền: <strong>{contractDealData.investmentAmount?.toLocaleString('vi-VN')} VND</strong>
+                                    </p>
+                                )}
+                            </div>
+                            <button className={contractStyles.closeBtn} onClick={handleCloseContractModal}>
+                                <X size={20} />
+                            </button>
+                        </div>
 
-                {/* Content: Two Column Layout or Full Width */}
-                <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                    {/* Left: Contract Preview */}
-                    <div
-                        style={{
-                            flex: 1,
-                            overflow: 'auto',
-                            padding: '20px',
-                            backgroundColor: '#f9fafb',
-                            borderRight: contractStatus === 'Contract_Signed' ? 'none' : '1px solid #e2e8f0',
-                        }}
-                    >
-                        <h3 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: '700', color: '#475569' }}>
-                            📄 Hợp đồng đầu tư
-                        </h3>
-                        {isLoadingContract ? (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: '#64748b' }}>
-                                    <Loader2 size={24} className={styles.spinner} />
-                                    <span>Đang tải hợp đồng...</span>
+                        {/* Body: Two Column / Stacked */}
+                        <div className={contractStyles.body}>
+                            {/* Left: Contract Preview */}
+                            <div className={contractStyles.previewColumn}>
+                                <div className={contractStyles.sectionTitle}>
+                                    <FileText size={16} /> Hợp đồng đầu tư
                                 </div>
+                                {isLoadingContract ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-secondary)' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                            <Loader2 size={24} className="animate-spin" />
+                                            <span>Đang tải hợp đồng...</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div
+                                        className={contractStyles.contractPaper}
+                                        dangerouslySetInnerHTML={{ __html: contractPreviewHtml }}
+                                    />
+                                )}
                             </div>
-                        ) : (
-                            <div
-                                style={{
-                                    backgroundColor: '#fff',
-                                    padding: '20px',
-                                    borderRadius: '6px',
-                                    border: '1px solid #e2e8f0',
-                                    lineHeight: '1.6',
-                                    fontSize: '13px',
-                                    color: '#334155',
-                                    maxHeight: '75vh',
-                                    overflowY: 'auto',
-                                    boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.05)'
-                                }}
-                                dangerouslySetInnerHTML={{ __html: contractPreviewHtml }}
-                            />
-                        )}
-                    </div>
 
-                    {/* Right: Signing Form - Only show when NOT Contract_Signed */}
-                    {contractStatus !== 'Contract_Signed' && (
-                    <div
-                        style={{
-                            flex: 1,
-                            overflow: 'auto',
-                            padding: '20px',
-                            backgroundColor: '#fff',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '16px',
-                        }}
-                    >
-                        <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#475569' }}>
-                            ✍️ Điều khoản ký kết
-                        </h3>
+                            {/* Right: Signing Form - Only show when NOT Signed */}
+                            {![3, 4, '3', '4', 'Contract_Signed', 'Minted_NFT'].includes(contractStatus) && (
+                                <div className={contractStyles.formColumn}>
+                                    <div className={contractStyles.sectionTitle}>
+                                        <Settings size={16} /> Điều khoản ký kết
+                                    </div>
 
-                        {/* Final Amount - Only for Investor */}
-                        {(!contractStatus || contractStatus < 2) && (
-                        <div>
-                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                                Số tiền cuối cùng (VNĐ) *
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                value={signFormData.finalAmount || ''}
-                                onChange={(e) => setSignFormData({ ...signFormData, finalAmount: e.target.value ? parseFloat(e.target.value) : 0 })}
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    fontSize: '13px',
-                                    border: '1px solid #cbd5e1',
-                                    borderRadius: '4px',
-                                    boxSizing: 'border-box',
-                                    fontFamily: 'inherit',
-                                }}
-                                placeholder="Nhập số tiền"
-                            />
+                                    {/* Final Amount - Only for Investor (or if editable) */}
+                                    {(!contractStatus || contractStatus < 2) && (
+                                        <>
+                                            <div className={styles.formGroup}>
+                                                <label>Số tiền cuối cùng (VND) *</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={signFormData.finalAmount || ''}
+                                                    onChange={(e) => setSignFormData({ ...signFormData, finalAmount: e.target.value ? parseFloat(e.target.value) : 0 })}
+                                                    placeholder="Nhập số tiền"
+                                                />
+                                            </div>
+
+                                            <div className={styles.formGroup}>
+                                                <label>Phần trăm cổ phần (%) *</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={signFormData.finalEquityPercentage || ''}
+                                                    onChange={(e) => setSignFormData({ ...signFormData, finalEquityPercentage: e.target.value ? parseFloat(e.target.value) : 0 })}
+                                                    placeholder="Nhập phần trăm"
+                                                />
+                                            </div>
+
+                                            <div className={styles.formGroup}>
+                                                <label>Điều khoản bổ sung</label>
+                                                <textarea
+                                                    value={signFormData.additionalTerms}
+                                                    onChange={(e) => setSignFormData({ ...signFormData, additionalTerms: e.target.value })}
+                                                    placeholder="Nhập các điều khoản bổ sung (nếu có)"
+                                                    rows={4}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* Signature Section */}
+                                    <div className={styles.formGroup}>
+                                        <label>Chữ ký (vẽ bên dưới) *</label>
+                                        <div className={contractStyles.signaturePaper}>
+                                            <SignatureCanvas
+                                                ref={signatureCanvasRef}
+                                                onEnd={handleSignatureChange}
+                                                penColor="#000"
+                                                canvasProps={{
+                                                    width: 400,
+                                                    height: 150,
+                                                    className: 'signature-canvas',
+                                                    style: {
+                                                        display: 'block',
+                                                        backgroundColor: '#fff',
+                                                        cursor: 'crosshair',
+                                                        touchAction: 'none'
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                        
+                                        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                            <button
+                                                type="button"
+                                                onClick={handleClearSignature}
+                                                className={styles.dangerBtn}
+                                                style={{ flex: 1, padding: '10px' }}
+                                            >
+                                                <Trash2 size={16} /> Xóa chữ ký
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleSaveSignature}
+                                                disabled={signFormData.signatureBase64 || isSignatureEmpty}
+                                                className={styles.primaryBtn}
+                                                style={{ 
+                                                    flex: 1, 
+                                                    padding: '10px',
+                                                    backgroundColor: signFormData.signatureBase64 ? '#10b981' : undefined,
+                                                    opacity: signFormData.signatureBase64 ? 0.8 : (isSignatureEmpty ? 0.5 : 1),
+                                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                                }}
+                                            >
+                                                {signFormData.signatureBase64 ? (
+                                                    <><CheckCircle size={16} /> Đã lưu chữ ký</>
+                                                ) : (
+                                                    <><Check size={16} /> Lưu chữ ký</>
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        <div className={contractStyles.signatureHint}>
+                                            <Info size={16} />
+                                            <div>
+                                                Vẽ chữ ký ở trên rồi click <b>"Lưu chữ ký"</b> để xác nhận.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        )}
 
-                        {/* Equity Percentage - Only for Investor */}
-                        {(!contractStatus || contractStatus < 2) && (
-                        <div>
-                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                                Phần trăm cổ phần (%) *
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                value={signFormData.finalEquityPercentage || ''}
-                                onChange={(e) => setSignFormData({ ...signFormData, finalEquityPercentage: e.target.value ? parseFloat(e.target.value) : 0 })}
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    fontSize: '13px',
-                                    border: '1px solid #cbd5e1',
-                                    borderRadius: '4px',
-                                    boxSizing: 'border-box',
-                                    fontFamily: 'inherit',
-                                }}
-                                placeholder="Nhập phần trăm"
-                            />
-                        </div>
-                        )}
+                        {/* Footer */}
+                        <div className={contractStyles.footer}>
+                            <button
+                                onClick={handleCloseContractModal}
+                                className={styles.secondaryBtn}
+                                style={{ padding: '10px 24px' }}
+                            >
+                                Hủy
+                            </button>
 
-                        {/* Additional Terms - Only for Investor */}
-                        {(!contractStatus || contractStatus < 2) && (
-                        <div>
-                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                                Điều khoản bổ sung
-                            </label>
-                            <textarea
-                                value={signFormData.additionalTerms}
-                                onChange={(e) => setSignFormData({ ...signFormData, additionalTerms: e.target.value })}
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    fontSize: '13px',
-                                    border: '1px solid #cbd5e1',
-                                    borderRadius: '4px',
-                                    boxSizing: 'border-box',
-                                    fontFamily: 'inherit',
-                                    minHeight: '80px',
-                                    resize: 'vertical',
-                                }}
-                                placeholder="Nhập các điều khoản bổ sung (nếu có)"
-                            />
-                        </div>
-                        )}
-
-                        {/* Signature */}
-                        <div>
-                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                                Chữ ký (vẽ bên dưới) *
-                            </label>
-                            <div style={{
-                                border: '2px dashed #cbd5e1',
-                                borderRadius: '4px',
-                                backgroundColor: '#f9fafb',
-                                overflow: 'hidden',
-                                marginBottom: '8px'
-                            }}>
-                                <SignatureCanvas
-                                    ref={signatureCanvasRef}
-                                    onEnd={handleSignatureChange}
-                                    penColor="#000"
-                                    canvasProps={{
-                                        width: 400,
-                                        height: 150,
-                                        className: 'signature-canvas',
-                                        style: { 
-                                            display: 'block',
-                                            backgroundColor: '#fff',
-                                            cursor: 'crosshair',
-                                            touchAction: 'none'
-                                        }
-                                    }}
-                                />
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                                <button
-                                    type="button"
-                                    onClick={handleClearSignature}
-                                    style={{
-                                        padding: '6px 12px',
-                                        backgroundColor: '#ef4444',
-                                        color: '#fff',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontWeight: '600',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                            {contractStatus === 'Contract_Signed' && contractDealData?.contractPdfUrl && (
+                                <a
+                                    href={contractDealData.contractPdfUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    download={`DEAL-${contractDealData.dealId}.pdf`}
+                                    className={styles.primaryBtn}
+                                    style={{ padding: '10px 24px', backgroundColor: '#3b82f6' }}
                                 >
-                                    🗑️ Xóa chữ ký
-                                </button>
+                                    <Download size={16} /> Tải hợp đồng
+                                </a>
+                            )}
+
+                            {contractStatus !== 'Contract_Signed' && (
                                 <button
-                                    type="button"
-                                    onClick={handleSaveSignature}
-                                    disabled={isSignatureEmpty}
-                                    style={{
-                                        padding: '6px 12px',
-                                        backgroundColor: isSignatureEmpty ? '#cbd5e1' : '#10b981',
-                                        color: '#fff',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontWeight: '600',
-                                        cursor: isSignatureEmpty ? 'not-allowed' : 'pointer',
-                                        transition: 'all 0.2s',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isSignatureEmpty) e.currentTarget.style.backgroundColor = '#059669';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isSignatureEmpty) e.currentTarget.style.backgroundColor = '#10b981';
-                                    }}
+                                    onClick={handleSignContractAsStartup}
+                                    disabled={isSigningContract}
+                                    className={styles.primaryBtn}
+                                    style={{ padding: '10px 32px' }}
                                 >
-                                    ✓ Lưu chữ ký
+                                    {isSigningContract ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin" />
+                                            Đang ký...
+                                        </>
+                                    ) : (
+                                        <><Check size={16} /> Ký (Startup)</>
+                                    )}
                                 </button>
-                            </div>
-                            <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>
-                                💡 Vẽ chữ ký ở trên rồi click "Lưu chữ ký" để xác nhận
-                            </p>
-                            {signFormData.signatureBase64 && (
-                                <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#10b981', fontWeight: '600' }}>
-                                    ✓ Chữ ký đã được lưu
-                                </p>
                             )}
                         </div>
                     </div>
-                    )}
                 </div>
+            )}
 
-                {/* Footer with Action Buttons */}
-                <div
-                    style={{
-                        padding: '16px 20px',
-                        borderTop: '1px solid #e2e8f0',
-                        display: 'flex',
-                        gap: '12px',
-                        justifyContent: 'flex-end',
-                        backgroundColor: '#f9fafb',
-                    }}
-                >
-                    <button
-                        onClick={handleCloseContractModal}
-                        style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#f1f5f9',
-                            color: '#475569',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '4px',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#e2e8f0';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#f1f5f9';
-                        }}
-                    >
-                        Hủy
-                    </button>
-
-                    {/* Download Button - Show when Contract_Signed */}
-                    {contractStatus === 'Contract_Signed' && contractDealData?.contractPdfUrl && (
-                        <a
-                            href={contractDealData.contractPdfUrl}
-                            download={`DEAL-${contractDealData.dealId}.pdf`}
-                            style={{
-                                padding: '8px 16px',
-                                backgroundColor: '#3b82f6',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                textDecoration: 'none',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#2563eb';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#3b82f6';
-                            }}
-                        >
-                            ⬇️ Tải hợp đồng
-                        </a>
-                    )}
-
-                    {/* View Button - Show when Contract_Signed */}
-                    {contractStatus === 'Contract_Signed' && (
-                        <button
-                            style={{
-                                padding: '8px 16px',
-                                backgroundColor: '#10b981',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#059669';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#10b981';
-                            }}
-                        >
-                            📄 Xem hợp đồng
-                        </button>
-                    )}
-
-                    {/* Sign Button - Show when NOT Contract_Signed */}
-                    {contractStatus !== 'Contract_Signed' && (
-                        <button
-                            onClick={handleSignContractAsStartup}
-                            disabled={isSigningContract}
-                            style={{
-                                padding: '8px 16px',
-                                backgroundColor: '#f59e0b',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                cursor: isSigningContract ? 'not-allowed' : 'pointer',
-                                transition: 'all 0.2s',
-                                opacity: isSigningContract ? 0.7 : 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!isSigningContract) {
-                                    e.currentTarget.style.backgroundColor = '#d97706';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!isSigningContract) {
-                                    e.currentTarget.style.backgroundColor = '#f59e0b';
-                                }
-                            }}
-                        >
-                            {isSigningContract ? (
-                                <>
-                                    <Loader2 size={14} className={styles.spinner} />
-                                    Đang ký...
-                                </>
-                            ) : (
-                                '✓ Ký (Startup)'
-                            )}
-                        </button>
-                    )}
-                </div>
-            </div>
-        </div>
-    )}
-
-                {/* PR News Section */}
-                {activeSection === 'pr_news' && (
-                    <PRNewsSection />
-                )}
 
     {showProjectForm && (
         <ProjectSubmissionForm
@@ -4059,6 +3822,18 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                     initialAdvisorId={bookingInitialAdvisorId}
                     onClose={() => setShowBookingWizard(false)}
                 />
+            )}
+
+            {/* PR News Section — direct child of container, no styles.content padding */}
+            {activeSection === 'pr_news' && (
+                <NewsPRSection user={user} onOpenChat={(chatSessionId, notification) => {
+                    setActiveChatSession({
+                        chatSessionId,
+                        displayName: notification?.title || 'Chat mới',
+                        currentUserId: user?.userId,
+                        sentTime: new Date().toISOString(),
+                    });
+                }} />
             )}
         </div>
     );

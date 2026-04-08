@@ -4,6 +4,8 @@ import { Search, CheckCircle, TrendingUp, MapPin, Building2, Filter, Flame, Wall
 import FilterModal from './FilterModal';
 import InvestorDetail from './InvestorDetail';
 import investorService from '../../services/investorService';
+import NotificationCenter from '../common/NotificationCenter';
+import FloatingChatWidget from '../common/FloatingChatWidget';
 import styles from './InvestorDiscovery.module.css';
 
 export default function InvestorDiscovery({ user, onShowLogin }) {
@@ -16,6 +18,7 @@ export default function InvestorDiscovery({ user, onShowLogin }) {
         fundingStatus: 'Tất cả trạng thái',
         minAiScore: 0
     });
+    const [activeChatSession, setActiveChatSession] = useState(null);
 
     const [investors, setInvestors] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -88,8 +91,22 @@ export default function InvestorDiscovery({ user, onShowLogin }) {
         <div className={styles.container}>
             {/* Unified Sticky Header */}
             <div className={styles.header}>
-                <h1 className={styles.headerTitle}>Tìm nhà đầu tư</h1>
-                <p className={styles.headerSubtitle}>Khám phá quỹ đầu tư và nhà đầu tư phù hợp với tiêu chí của bạn</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                        <h1 className={styles.headerTitle}>Tìm nhà đầu tư</h1>
+                        <p className={styles.headerSubtitle}>Khám phá quỹ đầu tư và nhà đầu tư phù hợp với tiêu chí của bạn</p>
+                    </div>
+                    <div style={{ padding: '4px' }}>
+                        <NotificationCenter onOpenChat={(chatSessionId, notification) => {
+                            setActiveChatSession({
+                                chatSessionId,
+                                displayName: notification?.title || 'Chat mới',
+                                currentUserId: user?.userId,
+                                sentTime: new Date().toISOString()
+                            });
+                        }} />
+                    </div>
+                </div>
                 
                 <div className={styles.searchRow}>
                     <div className={styles.searchContainer}>
@@ -218,6 +235,12 @@ export default function InvestorDiscovery({ user, onShowLogin }) {
                     ))
                 )}
             </div>
+            {activeChatSession && (
+                <FloatingChatWidget
+                    {...activeChatSession}
+                    onClose={() => setActiveChatSession(null)}
+                />
+            )}
         </div>
     );
 }
