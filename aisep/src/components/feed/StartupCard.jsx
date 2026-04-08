@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock, Heart, MessageSquare, TrendingUpIcon } from 'lucide-react';
+import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock, Heart, MessageSquare, TrendingUpIcon, MessageCircle, CheckCheck, AlertTriangle, HeartOff } from 'lucide-react';
 import Badge from '../common/Badge';
 import InvestmentModal from '../common/InvestmentModal';
 import styles from './StartupCard.module.css';
@@ -14,7 +14,7 @@ import dealsService from '../../services/dealsService';
 function StartupCard({ startup, isPremium = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), investors = [], onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
-  const [interestMessage, setInterestMessage] = useState('');
+  const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
   const [showRequestModal, setShowRequestModal] = useState(false);
   const [hasRequested, setHasRequested] = useState(false);
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
@@ -159,47 +159,39 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
   */
   
   // Handle interest button click - toggle follow/unfollow
+  const showToast = (message, type = 'success') => {
+    setToast({ visible: true, message, type });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, visible: false }));
+    }, 3000);
+  };
+
   const handleInterestClick = async (e) => {
     e.stopPropagation();
     if (!user) return;
     
-    console.log(`[StartupCard ${startup.id}] Interest click - current isInterested:`, isInterested);
-    
     setIsLoading(true);
     try {
       if (isInterested) {
-        // Already interested - unfollow
-        console.log(`[StartupCard ${startup.id}] Unfollowing...`);
         const response = await followerService.unfollowProject(startup.id);
-        console.log(`[StartupCard ${startup.id}] Unfollow response:`, response);
-        
         if (response && (response.success || response.data)) {
           setIsInterested(false);
-          setInterestMessage('✓ Đã bỏ theo dõi');
-          setTimeout(() => setInterestMessage(''), 3000);
+          showToast('Đã bỏ theo dõi', 'success');
         } else {
-          setInterestMessage('Lỗi: ' + (response?.message || 'Không thể xử lý yêu cầu'));
-          setTimeout(() => setInterestMessage(''), 3000);
+          showToast(response?.message || 'Không thể hủy quan tâm', 'error');
         }
       } else {
-        // Not interested yet - follow
-        console.log(`[StartupCard ${startup.id}] Following...`);
         const response = await followerService.followProject(startup.id);
-        console.log(`[StartupCard ${startup.id}] Follow response:`, response);
-        
         if (response && (response.success || response.data)) {
           setIsInterested(true);
-          setInterestMessage('✓ Đã thêm vào danh sách quan tâm');
-          setTimeout(() => setInterestMessage(''), 3000);
+          showToast('Đã thêm vào quan tâm', 'success');
         } else {
-          setInterestMessage('Lỗi: ' + (response?.message || 'Không thể xử lý yêu cầu'));
-          setTimeout(() => setInterestMessage(''), 3000);
+          showToast(response?.message || 'Không thể thêm quan tâm', 'error');
         }
       }
     } catch (error) {
       console.error(`[StartupCard ${startup.id}] Failed to toggle follow:`, error);
-      setInterestMessage('Lỗi: ' + (error?.message || 'Kết nối thất bại'));
-      setTimeout(() => setInterestMessage(''), 3000);
+      showToast('Kết nối thất bại', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -391,7 +383,7 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
       </div>
 
       {/* 3. Three-column Highlight Grid */}
-      <div className={styles.gridRow}>
+      <div className={styles.gridRow} onClick={(e) => e.stopPropagation()}>
         {/* Revenue */}
         <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(45, 126, 255, 0.08)', borderColor: 'rgba(45, 126, 255, 0.2)' }}>
           <div className={styles.boxIcon}><DollarSign size={20} style={{ color: '#2D7EFF' }} strokeWidth={2.5} /></div>
@@ -458,57 +450,33 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
         </div>
       )}
 
-      {/* 6. Interest Button for Investors */}
+      {/* 6. Action Buttons for Investors */}
       {isInvestor && (
         <>
-          <div style={{
-            marginTop: '16px',
-            paddingTop: '12px',
-            borderTop: '1px solid rgba(0, 0, 0, 0.05)',
-            display: 'flex',
-            gap: '12px',
-            alignItems: 'center',
-            flexWrap: 'wrap'
-          }}>
+          <div className={styles.actionButtonsRow} onClick={(e) => e.stopPropagation()}>
             {/* Follow/Unfollow Button */}
             <button
               onClick={handleInterestClick}
               disabled={isLoading}
-              style={{
-                flex: isInvestor ? 1 : 1,
-                minWidth: '100px',
-                padding: '10px 16px',
-                backgroundColor: isInterested ? '#dc2626' : '#2196F3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: isLoading ? 'wait' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                opacity: isLoading ? 0.7 : 1,
-                transition: 'all 0.2s'
-              }}
-              onMouseEnter={(e) => {
-                if (!isLoading) {
-                  e.target.style.backgroundColor = isInterested ? '#b91c1c' : '#1976D2';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!isLoading) {
-                  e.target.style.backgroundColor = isInterested ? '#dc2626' : '#2196F3';
-                }
-              }}
+              className={`${styles.pillButton} ${isInterested ? styles.btnFollowing : styles.btnFollow}`}
             >
-              <Heart 
-                size={16} 
-                fill={isInterested ? 'currentColor' : 'none'}
-                strokeWidth={2} 
-              />
-              {isLoading ? 'Đang xử lý...' : (isInterested ? 'Hủy quan tâm' : 'Quan tâm')}
+              {isInterested ? (
+                <>
+                  <div className={`${styles.stateLayer} ${styles.followingNormal}`}>
+                    <Heart size={18} fill="currentColor" strokeWidth={0} />
+                    <span>{isLoading ? 'Đang xử lý...' : 'Đang quan tâm'}</span>
+                  </div>
+                  <div className={`${styles.stateLayer} ${styles.followingHover}`}>
+                    <HeartOff size={18} strokeWidth={2} />
+                    <span>{isLoading ? 'Đang xử lý...' : 'Hủy theo dõi'}</span>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Heart size={18} strokeWidth={2} />
+                  <span>{isLoading ? 'Đang xử lý...' : 'Quan tâm'}</span>
+                </>
+              )}
             </button>
 
             {/* Request Info Button */}
@@ -518,62 +486,26 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
                 if (!hasRequested) setShowRequestModal(true);
               }}
               disabled={hasRequested}
-              style={{
-                flex: 1,
-                minWidth: '100px',
-                padding: '10px 16px',
-                backgroundColor: hasRequested ? '#10b981' : '#7c3aed',
-                color: 'white',
-                border: 'none',
-                borderRadius: '6px',
-                cursor: hasRequested ? 'not-allowed' : 'pointer',
-                fontSize: '14px',
-                fontWeight: '600',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                gap: '8px',
-                transition: 'all 0.2s',
-                opacity: hasRequested ? 0.8 : 1
-              }}
-              onMouseEnter={(e) => {
-                if (!hasRequested) {
-                  e.target.style.backgroundColor = '#6d28d9';
-                }
-              }}
-              onMouseLeave={(e) => {
-                if (!hasRequested) {
-                  e.target.style.backgroundColor = '#7c3aed';
-                }
-              }}
+              className={`${styles.pillButton} ${hasRequested ? styles.btnRequested : styles.btnRequest}`}
             >
-              <MessageSquare size={16} />
-              {hasRequested ? 'Đã yêu cầu' : 'Yêu cầu thông tin'}
+              <div className={styles.btnInner}>
+                {hasRequested ? <CheckCheck size={18} /> : <MessageCircle size={18} />}
+                <span className={styles.btnLabel}>
+                  <span className={styles.desktopText}>
+                    {hasRequested ? 'Đã yêu cầu thông tin' : 'Yêu cầu thông tin'}
+                  </span>
+                  <span className={styles.mobileText}>
+                    {hasRequested ? 'Đã yêu cầu' : 'Yêu cầu'}
+                  </span>
+                </span>
+              </div>
             </button>
 
             {/* Invest Button OR Investment Status Badge */}
             {investmentStatus ? (
-              // Show investment status badge
               <div
                 title={`Trạng thái: ${investmentStatus.status}\nDeal #${investmentStatus.dealId}`}
-                style={{
-                  flex: 1,
-                  minWidth: '100px',
-                  padding: '10px 16px',
-                  background: 'rgba(255, 255, 255, 0.1)',
-                  border: '1px solid rgba(200, 200, 200, 0.3)',
-                  borderRadius: '6px',
-                  color: '#888',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  cursor: 'default',
-                  transition: 'all 0.2s',
-                  whiteSpace: 'nowrap'
-                }}
+                className={styles.statusBadge}
               >
                 <span>
                   {investmentStatus.status === 'Pending' && '🟡'}
@@ -583,72 +515,37 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
                   {investmentStatus.status === 'Failed' && '🔴'}
                 </span>
                 <span>
-                  {investmentStatus.status === 'Pending' && 'Chờ xác nhận'}
-                  {investmentStatus.status === 'Confirmed' && 'Đã xác nhận'}
+                  {investmentStatus.status === 'Pending' && 'Đang chờ'}
+                  {investmentStatus.status === 'Confirmed' && 'Đã duyệt'}
                   {investmentStatus.status === 'Contract_Signed' && 'Đã ký kết'}
-                  {investmentStatus.status === 'Minted_NFT' && 'Đã mint NFT'}
+                  {investmentStatus.status === 'Minted_NFT' && 'Đã mint'}
                   {investmentStatus.status === 'Failed' && 'Thất bại'}
                 </span>
               </div>
             ) : investedProjectIds && investedProjectIds.has(startup.id) ? (
-              // Show invested status
-              <div
-                style={{
-                  flex: 1,
-                  minWidth: '100px',
-                  padding: '10px 16px',
-                  background: '#10b981',
-                  color: 'white',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  whiteSpace: 'nowrap',
-                  textAlign: 'center'
-                }}
-              >
-                <span>✅ Đã đầu tư</span>
+              <div className={`${styles.pillButton} ${styles.btnInvested}`}>
+                <TrendingUp size={18} /> Đã đầu tư
               </div>
             ) : (
-              // Show invest button
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   setShowInvestmentModal(true);
                 }}
-                style={{
-                  flex: 1,
-                  minWidth: '100px',
-                  padding: '10px 16px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  cursor: 'pointer',
-                  fontSize: '14px',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
-                  e.target.style.transform = 'translateY(-1px)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.boxShadow = 'none';
-                  e.target.style.transform = 'translateY(0)';
-                }}
+                className={`${styles.pillButton} ${styles.btnInvest}`}
               >
-                <TrendingUp size={16} />
+                <DollarSign size={18} />
                 Đầu tư
               </button>
             )}
+          </div>
+
+          {/* Micro-Toast Feedback */}
+          <div className={`${styles.toastContainer} ${toast.visible ? styles.toastVisible : ''}`}>
+            <div className={`${styles.toastContent} ${toast.type === 'error' ? styles.toastError : styles.toastSuccess}`}>
+              {toast.type === 'success' ? <CheckCheck size={16} /> : <AlertTriangle size={16} />}
+              {toast.message}
+            </div>
           </div>
 
           {/* RequestInfoModal */}
@@ -659,6 +556,7 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
             projectName={startup.name}
             onSuccess={() => {
               setHasRequested(true);
+              showToast('Đã gửi yêu cầu kết nối', 'success');
             }}
           />
 
@@ -670,26 +568,11 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
             startupName={startup.startupName || 'Startup'}
             onClose={() => setShowInvestmentModal(false)}
             onSuccess={() => {
-              console.log('[StartupCard] Investment successful!');
               onInvestmentSuccess?.();
+              showToast('Yêu cầu đầu tư thành công', 'success');
             }}
           />
         </>
-      )}
-
-      {/* Interest Message */}
-      {interestMessage && (
-        <div style={{
-          marginTop: '8px',
-          padding: '8px 12px',
-          backgroundColor: isInterested ? 'rgba(76, 175, 80, 0.1)' : 'rgba(244, 67, 54, 0.1)',
-          color: isInterested ? '#4caf50' : '#f44336',
-          borderRadius: '4px',
-          fontSize: '12px',
-          textAlign: 'center'
-        }}>
-          {interestMessage}
-        </div>
       )}
     </article>
   );

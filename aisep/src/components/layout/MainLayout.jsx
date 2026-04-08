@@ -21,6 +21,7 @@ import AdvisorDetailView from '../profile/AdvisorDetailView';
 import InvestorDiscovery from '../investors/InvestorDiscovery';
 import AIChatAssistant from '../../pages/AIChatAssistant';
 import AIEvaluationService from '../../services/AIEvaluationService';
+import FloatingChatWidget from '../common/FloatingChatWidget';
 
 import ProfileRequiredModal from '../startup/ProfileRequiredModal';
 import startupProfileService from '../../services/startupProfileService';
@@ -59,6 +60,7 @@ function MainLayout({
   const [hasStartupProfile, setHasStartupProfile] = useState(null);
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
+  const [activeChatSession, setActiveChatSession] = useState(null);
 
   const mainContentRef = useRef(null);
   const homeScrollPos = useRef(0);
@@ -710,6 +712,14 @@ function MainLayout({
                 onFilterChange={handleFilterChange}
                 activeFilters={activeFilters}
                 showStats={true}
+                onOpenChat={(chatSessionId, notification) => {
+                  setActiveChatSession({
+                    chatSessionId,
+                    displayName: notification?.title || 'Chat mới',
+                    currentUserId: user?.userId,
+                    sentTime: new Date().toISOString()
+                  });
+                }}
                 onShowProjectForm={() => {
                   const userRole = (user?.role !== undefined && user?.role !== null) ? user.role.toString().toLowerCase() : '';
                   if ((userRole === 'startup' || userRole === '0') && !hasStartupProfile) {

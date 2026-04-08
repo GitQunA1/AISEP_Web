@@ -147,7 +147,7 @@ const InvestmentModal = ({
   };
 
   return createPortal(
-    <div className={styles.backdrop} onClick={handleClose}>
+    <div className={styles.backdrop} onClick={(e) => { e.stopPropagation(); handleClose(); }}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
         {/* Header */}
         <div className={styles.header}>

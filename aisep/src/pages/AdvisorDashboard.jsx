@@ -18,6 +18,7 @@ import signalRService from '../services/signalRService';
 import BookingDetailModal from '../components/booking/BookingDetailModal';
 import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import CustomSelect from '../components/common/CustomSelect';
+import NewsPRSection from '../components/common/NewsPRSection';
 import ProjectDetailView from '../components/feed/ProjectDetailView';
 import WalletSection from '../components/advisor/WalletSection';
 
@@ -152,7 +153,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
 
     return (
         <div className={styles.container}>
-            {!activeSection.startsWith('project_') && (
+            {!activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
                 <FeedHeader
                     title={activeSection === 'wallet' ? "Ví & Thu nhập" : "Bảng điều khiển Cố vấn"}
                     subtitle={activeSection === 'wallet' 
@@ -230,7 +231,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                 </div>
             )}
 
-            <div className={styles.content} style={activeSection.startsWith('project_') ? { padding: 0 } : {}}>
+            <div className={styles.content} style={activeSection.startsWith('project_') ? { padding: 0 } : activeSection === 'pr_news' ? { padding: 0 } : {}}>
                 {activeSection === 'overview' && (
                     isNewAdvisor ? (
                         <div className={styles.emptyState} style={{ padding: '40px', background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px dashed var(--border-color)' }}>
@@ -290,6 +291,11 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                         <ReportsSection />
                     )
                 )}
+
+                {activeSection === 'pr_news' && (
+                    <NewsPRSection user={user} />
+                )}
+                
                 {activeSection === 'wallet' && (
                     isNewAdvisor ? (
                         <div className={styles.emptyState} style={{ padding: '40px' }}>

@@ -9,13 +9,14 @@
     padding: var(--spacing-md);
     background-color: var(--bg-primary);
     border-bottom: 1px solid var(--border-color);
+    width: 100% !important;
+    max-width: 100% !important;
 }
 
 .searchContainer {
     position: relative;
     width: 100%;
-    max-width: 650px;
-    margin: 0 auto;
+    margin: 0;
 }
 
 .searchIcon {
@@ -36,6 +37,7 @@
     color: var(--text-primary);
     font-size: 15px;
     transition: all 0.2s;
+    max-width: 100% !important;
 }
 
 .searchInput:focus {
@@ -52,19 +54,18 @@
     overflow-x: auto;
     white-space: nowrap;
     scrollbar-width: none;
-    /* Firefox */
+    width: 100% !important;
+    max-width: 100% !important;
 }
 
 .filterSection::-webkit-scrollbar {
     display: none;
-    /* Chrome, Safari */
 }
 
 .pills {
     display: flex;
     gap: 8px;
-    max-width: 650px;
-    margin: 0 auto;
+    margin: 0;
     padding: 0 16px;
 }
 

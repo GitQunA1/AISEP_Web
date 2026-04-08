@@ -18,7 +18,6 @@ import AdvisorProfilePage from './pages/AdvisorProfilePage';
 import AdvisorApprovalPage from './components/advisor/AdvisorApprovalPage';
 import ProjectDetailView from './components/feed/ProjectDetailView';
 import SessionExpiredModal from './components/auth/SessionExpiredModal';
-
 function App() {
   const [currentView, setCurrentView] = useState('main'); // 'login', 'main', 'roleSelection', 'register'
   const [selectedRole, setSelectedRole] = useState(null);

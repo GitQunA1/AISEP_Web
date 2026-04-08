@@ -30,20 +30,20 @@ function Sidebar({
   const { theme, toggleTheme } = useTheme();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Memoize navigation items to prevent unnecessary re-calculations and layout instability
   const navItems = React.useMemo(() => {
-    let items = [
+    const baseItems = [
       { icon: Compass, label: 'Home', displayLabel: 'Khám phá dự án', href: '#' },
       { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
-      { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#', hideFor: ['investor', 1] },
-      { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor', 2] },
+      { icon: Newspaper, label: 'PRNews', displayLabel: 'Tin tức', href: '#', showWhenLoggedIn: true },
+      { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#', hideFor: ['investor'] },
+      { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor'] },
     ];
 
-    const rStr = user?.role?.toString().toLowerCase() || '';
-    const rNum = user?.role !== undefined ? Number(user.role) : -1;
-    const isS = rStr === 'operationstaff' || rStr === 'operation_staff' || rStr === 'staff' || rNum === 3;
+    const roleStr = user?.role?.toString().toLowerCase() || '';
+    const roleNum = user?.role !== undefined ? Number(user.role) : -1;
+    const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
 
-    if (isS) {
+    if (isStaff) {
       const staffItems = [
         { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
         { icon: DollarSign, label: 'WithdrawRequest', displayLabel: 'Yêu cầu rút tiền', href: '#', showWhenLoggedIn: true },
@@ -57,10 +57,12 @@ function Sidebar({
         { icon: Shield, label: 'PackageManagement', displayLabel: 'Quản lý gói', href: '#', showWhenLoggedIn: true },
         { icon: History, label: 'SubscriptionHistory', displayLabel: 'Lịch sử đăng ký gói', href: '#', showWhenLoggedIn: true },
       ];
-      const otherItems = items.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
-      const homeItem = items.find(item => item.label === 'Home');
+      const otherItems = baseItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
+      const homeItem = baseItems.find(item => item.label === 'Home');
       return [...staffItems, homeItem, ...otherItems];
-    } else if (rStr === 'advisor' || rNum === 2) {
+    }
+
+    if (roleStr === 'advisor' || roleNum === 2) {
       const advisorItems = [
         { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
         { icon: CreditCard, label: 'Wallet', displayLabel: 'Ví & Thu nhập', href: '#', showWhenLoggedIn: true },
@@ -69,20 +71,24 @@ function Sidebar({
         { icon: Calendar, label: 'Availability', displayLabel: 'Lịch Rảnh', href: '#', showWhenLoggedIn: true },
         { icon: User, label: 'Profile', displayLabel: 'Hồ sơ', href: '#', showWhenLoggedIn: true },
       ];
-      const otherItems = items.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
-      const homeItem = items.find(item => item.label === 'Home');
+      const otherItems = baseItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
+      const homeItem = baseItems.find(item => item.label === 'Home');
       return [...advisorItems, homeItem, ...otherItems];
-    } else if (rStr === 'investor' || rNum === 1) {
+    }
+
+    if (roleStr === 'investor' || roleNum === 1) {
       const investorItems = [
         { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
         { icon: Calendar, label: 'Bookings', displayLabel: 'Lịch Tư Vấn', href: '#', showWhenLoggedIn: true },
       ];
-      const otherItems = items.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
-      const homeItem = items.find(item => item.label === 'Home');
+      const otherItems = baseItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
+      const homeItem = baseItems.find(item => item.label === 'Home');
       return [...investorItems, homeItem, ...otherItems];
     }
-    return items;
+
+    return baseItems;
   }, [user]);
+
 
   const menuRef = React.useRef(null);
   const [showTopFade, setShowTopFade] = useState(false);
@@ -161,6 +167,9 @@ function Sidebar({
     }
     if (label === 'PRManagement' && onShowDashboard) {
       onShowDashboard('pr_management');
+    }
+    if (label === 'PRNews' && onShowDashboard) {
+      onShowDashboard('pr_news');
     }
 
     // Navigate to home when clicking Home
@@ -283,6 +292,8 @@ function Sidebar({
                       if (activeView === 'dashboard_availability') return 'Availability';
                       if (activeView === 'dashboard_approve_bookings') return 'ApproveBookings';
                       if (activeView === 'dashboard_user_reports') return 'UserReports';
+                      if (activeView === 'dashboard_pr_management') return 'PRManagement';
+                      if (activeView === 'dashboard_pr_news') return 'PRNews';
                       if (activeView === 'dashboard_withdrawals') return 'WithdrawRequest';
                       if (activeView === 'dashboard_commission') return 'CommissionConfig';
                       if (activeView === 'dashboard_wallet') return 'Wallet';
@@ -292,6 +303,7 @@ function Sidebar({
                       if (activeView === 'advisors') return 'Advisors';
                       if (activeView === 'investors') return 'Investors';
                       if (activeView === 'subscription') return 'Subscription';
+                      if (activeView === 'news') return 'News';
                       return null;
                     };
                     const isActive = item.label === getActiveLabel();

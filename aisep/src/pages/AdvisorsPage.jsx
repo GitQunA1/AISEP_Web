@@ -4,6 +4,8 @@ import { Search, MapPin, Star, Users, DollarSign, CheckCircle, Filter, TrendingU
 import AdvisorFilterModal from '../components/profile/AdvisorFilterModal';
 import advisorService from '../services/advisorService';
 import BookingWizard from '../components/booking/BookingWizard';
+import NotificationCenter from '../components/common/NotificationCenter';
+import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import styles from './AdvisorsPage.module.css';
 
 export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
@@ -20,6 +22,7 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [showBookingWizard, setShowBookingWizard] = useState(false);
     const [wizardInitialAdvisorId, setWizardInitialAdvisorId] = useState(null);
+    const [activeChatSession, setActiveChatSession] = useState(null);
 
     const roleValue = user?.role;
     const roleStr = typeof roleValue === 'string' ? roleValue.toLowerCase() : '';
@@ -91,8 +94,22 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
         <div className={styles.container}>
             {/* ─── Unified Sticky Header ─── */}
             <div className={styles.header}>
-                <h1 className={styles.headerTitle}>Tìm cố vấn</h1>
-                <p className={styles.headerSubtitle}>Kết nối với các chuyên gia đã được xác minh để đẩy nhanh tăng trưởng</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                        <h1 className={styles.headerTitle}>Tìm cố vấn</h1>
+                        <p className={styles.headerSubtitle}>Kết nối với các chuyên gia đã được xác minh để đẩy nhanh tăng trưởng</p>
+                    </div>
+                    <div style={{ padding: '4px' }}>
+                        <NotificationCenter onOpenChat={(chatSessionId, notification) => {
+                            setActiveChatSession({
+                                chatSessionId,
+                                displayName: notification?.title || 'Chat mới',
+                                currentUserId: user?.userId,
+                                sentTime: new Date().toISOString()
+                            });
+                        }} />
+                    </div>
+                </div>
 
                 <div className={styles.searchRow}>
                     <div className={styles.searchContainer}>
@@ -238,6 +255,13 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
                         setShowBookingWizard(false);
                         setWizardInitialAdvisorId(null);
                     }}
+                />
+            )}
+
+            {activeChatSession && (
+                <FloatingChatWidget
+                    {...activeChatSession}
+                    onClose={() => setActiveChatSession(null)}
                 />
             )}
         </div>

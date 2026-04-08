@@ -52,12 +52,18 @@ const dealsService = {
 
   /**
    * Get all deals for current investor
+   * @param {object} params - Query params (pageNumber, pageSize, status, etc.)
    * @returns {Promise} - API response with deals list
    */
-  getInvestorDeals: async () => {
+  getInvestorDeals: async (params = {}) => {
     try {
-      console.log('[dealsService] GET /api/Deals - Starting request');
-      const response = await apiClient.get('/api/Deals');
+      // Default pageSize to 100 to fetch more deals at once (pagination)
+      const queryParams = { pageSize: 100, ...params };
+      const queryString = new URLSearchParams(queryParams).toString();
+      const url = queryString ? `/api/Deals?${queryString}` : '/api/Deals';
+      
+      console.log('[dealsService] GET /api/Deals - Starting request with params:', queryParams);
+      const response = await apiClient.get(url);
       console.log('[dealsService] GET /api/Deals - Response:', {
         success: response?.success,
         statusCode: response?.statusCode,
@@ -77,20 +83,26 @@ const dealsService = {
 
   /**
    * Get all signed deals (for staff/admin)
-   * @returns {Promise} - API response with all signed deals
+   * @param {object} params - Query params (pageNumber, pageSize, etc.)
+   * @returns {Promise} - API response with all deals (will be filtered client-side for Contract_Signed)
    */
-  getAllSignedDeals: async () => {
+  getAllSignedDeals: async (params = {}) => {
     try {
-      console.log('[dealsService] GET /api/Deals?status=3 - Fetching all signed contracts');
-      const response = await apiClient.get('/api/Deals?status=3');
-      console.log('[dealsService] GET /api/Deals?status=3 - Response:', {
+      // Default pageSize to 100 to fetch all deals without status filter
+      const queryParams = { pageSize: 100, ...params };
+      const queryString = new URLSearchParams(queryParams).toString();
+      const url = `/api/Deals?${queryString}`;
+      
+      console.log('[dealsService] GET /api/Deals - Fetching all deals with params:', queryParams);
+      const response = await apiClient.get(url);
+      console.log('[dealsService] GET /api/Deals - Response:', {
         success: response?.success,
         statusCode: response?.statusCode,
         dataLength: Array.isArray(response?.data) ? response.data.length : response?.data?.items?.length || 0
       });
       return response;
     } catch (error) {
-      console.error('[dealsService] GET /api/Deals?status=3 - Error:', {
+      console.error('[dealsService] GET /api/Deals - Error:', {
         status: error.response?.status,
         message: error.message,
         errorResponse: error.response?.data

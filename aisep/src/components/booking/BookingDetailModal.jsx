@@ -149,7 +149,7 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
             </button>
           )}
 
-          {userRole === 'Startup' && [2, 3, 'Confirmed', 'Completed'].includes(booking.status) && (
+          {['Startup', 'Investor'].includes(userRole) && [2, 'Confirmed'].includes(booking.status) && (
             <button
               className={`${styles.secondaryBtn} ${styles.dangerBtn}`}
               onClick={() => { onAction('complain', booking); onClose(); }}

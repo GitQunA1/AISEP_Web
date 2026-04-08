@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Rocket, Filter, TrendingUp, CheckCircle, Target, Building2 } from 'lucide-react';
+import { Search, MapPin, Rocket, Filter, TrendingUp, CheckCircle, Target, Building2, Newspaper, Calendar, User, ExternalLink } from 'lucide-react';
 import FeedHeader from '../components/feed/FeedHeader';
 import InvestmentModal from '../components/common/InvestmentModal';
 import startupProfileService from '../services/startupProfileService';
 import dealsService from '../services/dealsService';
+import prService from '../services/prService';
+import NotificationCenter from '../components/common/NotificationCenter';
+import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import styles from './DiscoveryHub.module.css';
 
 /**
@@ -17,29 +20,24 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
     const [activeIndustry, setActiveIndustry] = useState('Tất cả');
     const [investmentModal, setInvestmentModal] = useState(null); // { projectId, projectName, startupName }
     const [investmentStatusMap, setInvestmentStatusMap] = useState({}); // Map projectId -> {dealId, status}
+    const [prs, setPRs] = useState([]); // All PRs for news feed
+    const [isLoadingPRs, setIsLoadingPRs] = useState(false);
+    const [showAllPRs, setShowAllPRs] = useState(false); // Toggle for PR modal
+    const [activeChatSession, setActiveChatSession] = useState(null);
 
     const industries = ['Tất cả', 'FinTech', 'AgriTech', 'EdTech', 'HealthTech', 'SaaS', 'AI/ML', 'GreenTech'];
 
     // Check if current user is an investor
     const isInvestor = user && (user.role === 'Investor' || user.role === 1);
     
-    console.log('[DiscoveryHub] isInvestor check:', {
-        userExists: !!user,
-        userRole: user?.role,
-        isInvestor: isInvestor
-    });
-
     useEffect(() => {
         const fetchStartups = async () => {
             setIsLoading(true);
             try {
-                // Fetch with Sieve params if needed, but for now just get all
                 const response = await startupProfileService.getAllStartups();
                 const items = response?.data?.items || response?.items || [];
-                console.log('[DiscoveryHub] Fetched startups:', items.length);
                 setStartups(items);
                 
-                // After startups loaded, fetch investment status
                 if (isInvestor) {
                     fetchInvestmentStatusNow(items);
                 }
@@ -53,75 +51,31 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
         fetchStartups();
     }, [isInvestor]);
 
-    // Helper function to fetch investment status
     const fetchInvestmentStatusNow = async (startupsList = null) => {
-        console.log('[DiscoveryHub] fetchInvestmentStatusNow called:', { isInvestor, startupsList: startupsList?.length });
-        
         if (!isInvestor) {
-            console.log('[DiscoveryHub] Not an investor, setting empty map');
             setInvestmentStatusMap({});
             return;
         }
 
         try {
-            console.log('[DiscoveryHub] 🔍 Fetching investment status...');
             const dealsRes = await dealsService.getInvestorDeals();
-            console.log('[DiscoveryHub] Deals response:', dealsRes);
-            
             const deals = dealsRes?.data?.items || [];
-            console.log('[DiscoveryHub] Found deals count:', deals.length);
-            console.log('[DiscoveryHub] Deals details:', deals.map(d => ({
-                dealId: d.dealId,
-                projectId: d.projectId,
-                projectName: d.projectName,
-                status: d.status
-            })));
             
-            // Create maps: by projectId, projectName, and projectId as string
-            const statusMapByProjectId = {};
-            const statusMapByProjectName = {};
-            const statusMapByStartupName = {};
-            
+            const combinedMap = {};
             deals.forEach(deal => {
                 const dealInfo = {
                     dealId: deal.dealId,
                     status: deal.status,
                     projectId: deal.projectId,
                     projectName: deal.projectName,
-                    startupName: deal.startupName,
-                    investorConfirmed: deal.investorConfirmed,
-                    startupConfirmed: deal.startupConfirmed,
-                    amount: deal.amount,
-                    equityPercentage: deal.equityPercentage
+                    startupName: deal.startupName
                 };
                 
-                // Map by projectId (number)
-                statusMapByProjectId[deal.projectId] = dealInfo;
-                
-                // Map by projectId (string)
-                statusMapByProjectId[deal.projectId?.toString()] = dealInfo;
-                
-                // Map by projectName
-                if (deal.projectName) {
-                    console.log('[DiscoveryHub] Adding to projectName map:', deal.projectName.toLowerCase(), dealInfo);
-                    statusMapByProjectName[deal.projectName.toLowerCase()] = dealInfo;
-                }
-                
-                // Map by startupName
-                if (deal.startupName) {
-                    statusMapByStartupName[deal.startupName.toLowerCase()] = dealInfo;
-                }
+                if (deal.projectId) combinedMap[deal.projectId] = dealInfo;
+                if (deal.projectId) combinedMap[deal.projectId.toString()] = dealInfo;
+                if (deal.projectName) combinedMap[deal.projectName.toLowerCase()] = dealInfo;
+                if (deal.startupName) combinedMap[deal.startupName.toLowerCase()] = dealInfo;
             });
-            
-            // Merge all maps - prioritize by projectId, then projectName, then startupName
-            const combinedMap = { ...statusMapByProjectName, ...statusMapByStartupName, ...statusMapByProjectId };
-            
-            console.log('[DiscoveryHub] ✓ Investment status map created:');
-            console.log('  By projectId:', statusMapByProjectId);
-            console.log('  By projectName:', statusMapByProjectName);
-            console.log('  By startupName:', statusMapByStartupName);
-            console.log('  Combined map:', combinedMap);
-            console.log('  Final map keys:', Object.keys(combinedMap));
             
             setInvestmentStatusMap(combinedMap);
         } catch (error) {
@@ -130,235 +84,232 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
         }
     };
 
-    // Load investment status for all projects (if user is investor)
     useEffect(() => {
-        console.log('[DiscoveryHub] useEffect triggered:', {
-            isInvestor: isInvestor,
-            startupsLength: startups.length
-        });
-        
-        if (!isInvestor || startups.length === 0) {
-            console.log('[DiscoveryHub] Skipping investment status fetch - not investor or no startups');
-            return;
-        }
-
+        if (!isInvestor || startups.length === 0) return;
         fetchInvestmentStatusNow(startups);
     }, [isInvestor, startups.length]);
 
-    // Listen for new deal creation events to refresh investment status
     useEffect(() => {
-        if (!isInvestor) return;
-
-        const handleDealCreated = (event) => {
-            console.log('[DiscoveryHub] Deal created event received, refreshing status map:', event.detail);
-            // Refetch investment status when deal is created
-            const fetchUpdatedStatus = async () => {
-                try {
-                    const dealsRes = await dealsService.getInvestorDeals();
-                    const deals = dealsRes?.data?.items || [];
-                    
-                    // Build statusMap with same structure as fetchInvestmentStatusNow
-                    // Map by projectName (lowercase) for matching with startup.organizationName
-                    const statusMap = {};
-                    deals.forEach(deal => {
-                        const dealInfo = {
-                            dealId: deal.dealId,
-                            status: deal.status,
-                            projectName: deal.projectName,
-                            startupName: deal.startupName,
-                            projectId: deal.projectId,
-                            investorConfirmed: deal.investorConfirmed,
-                            startupConfirmed: deal.startupConfirmed,
-                            amount: deal.amount,
-                            equityPercentage: deal.equityPercentage
-                        };
-                        
-                        // Map by projectName (lowercase) - same as fetchInvestmentStatusNow
-                        if (deal.projectName) {
-                            statusMap[deal.projectName.toLowerCase()] = dealInfo;
-                        }
-                    });
-                    
-                    setInvestmentStatusMap(statusMap);
-                    console.log('[DiscoveryHub] ✓ Investment status updated after deal creation', { statusMap });
-                } catch (error) {
-                    console.error('[DiscoveryHub] Failed to update investment status:', error);
-                }
-            };
-            
-            fetchUpdatedStatus();
+        const fetchPRs = async () => {
+            setIsLoadingPRs(true);
+            try {
+                const response = await prService.getPRs();
+                let prList = response?.data?.items || response?.data || response?.items || response || [];
+                if (!Array.isArray(prList)) prList = [];
+                
+                const sortedPRs = prList.sort((a, b) => 
+                    new Date(b.publishedAt) - new Date(a.publishedAt)
+                );
+                setPRs(sortedPRs);
+            } catch (error) {
+                console.error('[DiscoveryHub] Failed to fetch PRs:', error);
+            } finally {
+                setIsLoadingPRs(false);
+            }
         };
 
-        window.addEventListener('deal_created', handleDealCreated);
-        return () => window.removeEventListener('deal_created', handleDealCreated);
-    }, [isInvestor]);
+        fetchPRs();
+    }, []);
 
-    // Local filtering logic
     const filteredStartups = startups.filter(startup => {
         const matchesSearch = (startup.organizationName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
             (startup.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
-
         const matchesIndustry = activeIndustry === 'Tất cả' || startup.industry === activeIndustry;
-
         return matchesSearch && matchesIndustry;
     });
 
     return (
         <div className={styles.container}>
-            <FeedHeader
-                title="Khám phá Startup"
-                subtitle="Tìm kiếm và kết nối với những ý tưởng đột phá nhất Việt Nam"
-                showFilter={false}
-            />
-
-            <div className={styles.searchSection}>
-                <div className={styles.searchContainer}>
-                    <Search className={styles.searchIcon} size={20} />
-                    <input
-                        type="text"
-                        placeholder="Tìm theo tên công ty hoặc lĩnh vực..."
-                        className={styles.searchInput}
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                    />
-                </div>
-            </div>
-
-            <div className={styles.filterSection}>
-                <div className={styles.pills}>
-                    {industries.map(industry => (
-                        <button
-                            key={industry}
-                            className={`${styles.pill} ${activeIndustry === industry ? styles.pillActive : ''}`}
-                            onClick={() => setActiveIndustry(industry)}
-                        >
-                            {industry}
-                        </button>
-                    ))}
-                </div>
-            </div>
-
-            <div className={styles.feed}>
-                {isLoading ? (
-                    <div className={styles.emptyState}>
-                        <p>Đang tải danh sách startup...</p>
+            {/* Unified Sticky Header */}
+            <header className={styles.header}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                        <h1 className={styles.headerTitle}>Khám phá Dự án</h1>
+                        <p className={styles.headerSubtitle}>Tìm kiếm và kết nối với các startup tiềm năng nhất</p>
                     </div>
-                ) : filteredStartups.length === 0 ? (
-                    <div className={styles.emptyState}>
-                        <Rocket size={48} className={styles.emptyIcon} />
-                        <h3>Không tìm thấy Startup</h3>
-                        <p>Hãy thử thay đổi tiêu chí tìm kiếm hoặc lọc theo ngành khác.</p>
-                    </div>
-                ) : (
-                    filteredStartups.map(startup => {
-                        // Match by organizationName since startup.id ≠ deal.projectId
-                        // deal.projectName from API = startup.organizationName (both are project names)
-                        let investmentStatus = null;
-                        
-                        // Try to match by organizationName (case-insensitive)
-                        if (startup.organizationName) {
-                            const orgNameLower = startup.organizationName.toLowerCase();
-                            investmentStatus = investmentStatusMap[orgNameLower];
-                            
-                            console.log('[DiscoveryHub] Render card:', {
-                                organizationName: startup.organizationName,
-                                orgNameLower: orgNameLower,
-                                mapKeys: Object.keys(investmentStatusMap),
-                                foundStatus: !!investmentStatus,
-                                investmentStatus: investmentStatus
+                    <div style={{ padding: '4px' }}>
+                        <NotificationCenter onOpenChat={(chatSessionId, notification) => {
+                            setActiveChatSession({
+                                chatSessionId,
+                                displayName: notification?.title || 'Chat mới',
+                                currentUserId: user?.userId,
+                                sentTime: new Date().toISOString()
                             });
-                        } else {
-                            console.log('[DiscoveryHub] Startup has no organizationName:', startup);
-                        }
-                        
-                        return (
-                        <div key={startup.startupId} className={styles.startupCard}>
-                            <div className={styles.cardHeader}>
-                                <div className={styles.avatar}>
-                                    {startup.logoUrl ? (
-                                        <img src={startup.logoUrl} alt={startup.organizationName} />
-                                    ) : (
-                                        <span>{(startup.organizationName || 'S').charAt(0).toUpperCase()}</span>
-                                    )}
-                                </div>
-                                <div className={styles.startupInfo}>
-                                    <div className={styles.nameRow}>
-                                        <h3 className={styles.startupName}>{startup.organizationName}</h3>
-                                        {startup.isVerified && <CheckCircle size={16} className={styles.verifiedIcon} />}
+                        }} />
+                    </div>
+                </div>
+
+                <div className={styles.searchRow}>
+                    <div className={styles.searchContainer}>
+                        <Search size={18} className={styles.searchIcon} />
+                        <input
+                            type="text"
+                            placeholder="Tìm tên dự án, lĩnh vực hoặc từ khóa..."
+                            className={styles.searchInput}
+                            value={searchQuery}
+                            onChange={(e) => setSearchQuery(e.target.value)}
+                        />
+                    </div>
+                    <div className={styles.filterGroup}>
+                        {industries.map(industry => (
+                            <button
+                                key={industry}
+                                className={`${styles.industryBtn} ${activeIndustry === industry ? styles.active : ''}`}
+                                onClick={() => setActiveIndustry(industry)}
+                            >
+                                {industry}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+            </header>
+
+            {/* Main Content Grid */}
+            <div style={{
+                display: 'grid',
+                gridTemplateColumns: '1fr 350px',
+                gap: '24px',
+                alignItems: 'flex-start'
+            }}>
+                {/* Left Column - Startup Stream */}
+                <div>
+                    {isLoading ? (
+                        <div className={styles.loadingState}>
+                            <Rocket size={32} className={styles.loadingIcon} />
+                            <p>Đang tìm kiếm dự án tiềm năng...</p>
+                        </div>
+                    ) : filteredStartups.length === 0 ? (
+                        <div className={styles.emptyState}>
+                            <Search size={48} color="var(--text-secondary)" />
+                            <h3>Không tìm thấy dự án phù hợp</h3>
+                            <p>Hãy thử thay đổi tiêu chí lọc hoặc từ khóa tìm kiếm</p>
+                        </div>
+                    ) : (
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+                            {filteredStartups.map(startup => {
+                                let investmentStatus = null;
+                                if (startup.organizationName) {
+                                    investmentStatus = investmentStatusMap[startup.organizationName.toLowerCase()];
+                                }
+
+                                return (
+                                    <div key={startup.startupId || startup.id} className={styles.startupCard}>
+                                        <div className={styles.cardHeader}>
+                                            <div className={styles.avatar}>
+                                                {startup.logoUrl ? (
+                                                    <img src={startup.logoUrl} alt={startup.organizationName} />
+                                                ) : (
+                                                    <span>{(startup.organizationName || 'S').charAt(0).toUpperCase()}</span>
+                                                )}
+                                            </div>
+                                            <div className={styles.startupInfo}>
+                                                <div className={styles.nameRow}>
+                                                    <h3 className={styles.startupName}>{startup.organizationName}</h3>
+                                                    {startup.isVerified && <CheckCircle size={16} className={styles.verifiedIcon} />}
+                                                </div>
+                                                <span className={styles.industryTag}>{startup.industry}</span>
+                                            </div>
+                                            <div className={styles.scoreBadge}>
+                                                <Target size={14} />
+                                                <span>{startup.aiScore || 'N/A'} AI Score</span>
+                                            </div>
+                                        </div>
+
+                                        <p className={styles.description}>
+                                            {startup.description || 'Chưa có mô tả chi tiết cho startup này.'}
+                                        </p>
+
+                                        <div className={styles.metadata}>
+                                            <div className={styles.metaItem}>
+                                                <MapPin size={14} />
+                                                <span>{startup.location || 'Chưa cập nhật'}</span>
+                                            </div>
+                                            <div className={styles.metaItem}>
+                                                <TrendingUp size={14} />
+                                                <span>{startup.developmentStage || 'Giai đoạn sớm'}</span>
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.actions}>
+                                            <button
+                                                className={styles.viewDetailsBtn}
+                                                onClick={() => onSelectStartup?.(startup.id || startup.startupId)}
+                                            >
+                                                Xem chi tiết
+                                            </button>
+                                            <button className={styles.followBtn}>Theo dõi</button>
+                                            {isInvestor && investmentStatus ? (
+                                                <div className={styles.investmentStatusBadge}>
+                                                    <span className={`${styles.statusIndicator} ${styles[`status_${investmentStatus.status?.toLowerCase()}`]}`}>
+                                                        {investmentStatus.status === 'Pending' ? '🟡' : '🟢'}
+                                                    </span>
+                                                    <span className={styles.statusText}>{investmentStatus.status}</span>
+                                                </div>
+                                            ) : isInvestor && (
+                                                <button
+                                                    className={styles.investBtn}
+                                                    onClick={() => setInvestmentModal({
+                                                        projectId: startup.id || startup.startupId,
+                                                        projectName: startup.organizationName,
+                                                        startupName: startup.organizationName
+                                                    })}
+                                                >
+                                                    Đầu tư
+                                                </button>
+                                            )}
+                                        </div>
                                     </div>
-                                    <span className={styles.industryTag}>{startup.industry}</span>
-                                </div>
-                                <div className={styles.scoreBadge}>
-                                    <Target size={14} />
-                                    <span>{startup.aiScore || 'N/A'} AI Score</span>
-                                </div>
-                            </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </div>
 
-                            <p className={styles.description}>
-                                {startup.description || 'Chưa có mô tả chi tiết cho startup này.'}
-                            </p>
+                {/* Right Column - PR News Sidebar */}
+                <aside style={{ position: 'sticky', top: '24px' }}>
+                    <div style={{
+                        backgroundColor: 'white',
+                        borderRadius: '12px',
+                        padding: '20px',
+                        border: '1px solid var(--border-color)',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                            <h2 style={{ fontSize: '16px', fontWeight: '700', margin: 0 }}>Tin tức mới nhất</h2>
+                            <Newspaper size={18} color="var(--primary-blue)" />
+                        </div>
 
-                            <div className={styles.metadata}>
-                                <div className={styles.metaItem}>
-                                    <MapPin size={14} />
-                                    <span>{startup.location || 'Chưa cập nhật'}</span>
-                                </div>
-                                <div className={styles.metaItem}>
-                                    <TrendingUp size={14} />
-                                    <span>{startup.developmentStage || 'Giai đoạn sớm'}</span>
-                                </div>
-                            </div>
-
-                            <div className={styles.actions}>
-                                <button
-                                    className={styles.viewDetailsBtn}
-                                    onClick={() => onSelectStartup?.(startup.id || startup.startupId)}
-                                >
-                                    Xem chi tiết
-                                </button>
-                                <button className={styles.followBtn}>Theo dõi</button>
-                                {isInvestor && investmentStatus ? (
-                                    // Show investment status badge when already invested
-                                    <div 
-                                        className={styles.investmentStatusBadge}
-                                        title={`Trạng thái: ${investmentStatus.status}\nDeal #${investmentStatus.dealId}`}
-                                    >
-                                        <span className={`${styles.statusIndicator} ${styles[`status_${investmentStatus.status?.toLowerCase()}`]}`}>
-                                            {investmentStatus.status === 'Pending' && '🟡'}
-                                            {investmentStatus.status === 'Confirmed' && '🟢'}
-                                            {investmentStatus.status === 'Contract_Signed' && '🟣'}
-                                            {investmentStatus.status === 'Minted_NFT' && '✨'}
-                                            {investmentStatus.status === 'Failed' && '🔴'}
-                                        </span>
-                                        <span className={styles.statusText}>
-                                            {investmentStatus.status === 'Pending' && 'Chờ xác nhận'}
-                                            {investmentStatus.status === 'Confirmed' && 'Đã xác nhận'}
-                                            {investmentStatus.status === 'Contract_Signed' && 'Đã ký kết'}
-                                            {investmentStatus.status === 'Minted_NFT' && 'Đã mint NFT'}
-                                            {investmentStatus.status === 'Failed' && 'Thất bại'}
-                                        </span>
+                        {isLoadingPRs ? (
+                            <div style={{ padding: '20px', textAlign: 'center' }}>Đang tải...</div>
+                        ) : prs.length === 0 ? (
+                            <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>Chưa có tin tức nào</div>
+                        ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                {prs.slice(0, 5).map(pr => (
+                                    <div key={pr.postPrId} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '12px' }}>
+                                        <h3 style={{ fontSize: '14px', fontWeight: '600', margin: '0 0 4px 0', lineHeight: '1.4' }}>{pr.title}</h3>
+                                        <div style={{ display: 'flex', gap: '8px', fontSize: '11px', color: 'var(--text-secondary)' }}>
+                                            <span>{pr.projectName}</span>
+                                            <span>•</span>
+                                            <span>{new Date(pr.publishedAt).toLocaleDateString()}</span>
+                                        </div>
                                     </div>
-                                ) : isInvestor && (
-                                    // Show investment button only if NOT invested
+                                ))}
+                                {prs.length > 5 && (
                                     <button
-                                        className={styles.investBtn}
-                                        onClick={() => setInvestmentModal({
-                                            projectId: startup.id || startup.startupId,
-                                            projectName: startup.organizationName,
-                                            startupName: startup.organizationName
-                                        })}
+                                        onClick={() => setShowAllPRs(true)}
+                                        style={{ border: 'none', background: 'none', color: 'var(--primary-blue)', fontWeight: '600', cursor: 'pointer', padding: 0 }}
                                     >
-                                        Đầu tư
+                                        Xem tất cả ({prs.length})
                                     </button>
                                 )}
                             </div>
-                        </div>
-                    );
-                    })
-                )}
+                        )}
+                    </div>
+                </aside>
             </div>
 
-            {/* Investment Modal */}
+            {/* Modals & Chat */}
             <InvestmentModal
                 isOpen={!!investmentModal}
                 projectId={investmentModal?.projectId}
@@ -367,10 +318,38 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
                 onClose={() => setInvestmentModal(null)}
                 onSuccess={() => {
                     setInvestmentModal(null);
-                    // Optional: Could refresh the startup list or show a notification
-                    console.log('[DiscoveryHub] Investment successful!');
+                    fetchInvestmentStatusNow(startups);
                 }}
             />
+
+            {showAllPRs && (
+                <div style={{ position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                    <div style={{ backgroundColor: 'white', borderRadius: '16px', width: '90%', maxWidth: '800px', maxHeight: '80vh', overflowY: 'auto', padding: '24px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
+                            <h2 style={{ fontSize: '20px', fontWeight: '800' }}>Tất cả tin tức</h2>
+                            <button onClick={() => setShowAllPRs(false)} style={{ border: 'none', background: 'none', cursor: 'pointer' }}>Đóng</button>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {prs.map(pr => (
+                                <div key={pr.postPrId} style={{ borderBottom: '1px solid var(--border-color)', paddingBottom: '16px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: '700', margin: '0 0 8px 0' }}>{pr.title}</h3>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>{pr.content}</p>
+                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '8px' }}>
+                                        {pr.projectName} • {new Date(pr.publishedAt).toLocaleDateString()}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {activeChatSession && (
+                <FloatingChatWidget
+                    {...activeChatSession}
+                    onClose={() => setActiveChatSession(null)}
+                />
+            )}
         </div>
     );
 };

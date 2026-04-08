@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User, Crown } from 'lucide-react';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User, Crown, DollarSign, Settings, Info, Download, Check } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
+import contractStyles from './ContractSigningModal.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
 import SuccessModal from '../components/common/SuccessModal';
@@ -11,6 +12,7 @@ import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import FeedHeader from '../components/feed/FeedHeader';
 import FloatingChatWidget from '../components/common/FloatingChatWidget';
+import NewsPRSection from '../components/common/NewsPRSection';
 import ProjectValidationService from '../services/ProjectValidation.js';
 import BlockchainService from '../services/BlockchainService.js';
 import AIEvaluationService from '../services/AIEvaluationService.js';
@@ -1546,14 +1548,15 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
     };
 
     return (
-        <div className={styles.container}>
-            {!activeSection.startsWith('project_') && (
+        <div className={styles.container} style={activeSection === 'pr_news' ? { minHeight: 'auto' } : {}}>
+
+            {!activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
                 <>
                     {/* Unified Header */}
                     <FeedHeader
                         title="Bảng điều khiển"
                         subtitle={`Xin chào, ${user?.name || 'Người sáng lập'}! Đây là tổng quan khởi nghiệp của bạn.`}
-                        showFilter={false} // No filter for dashboard
+                        showFilter={false}
                         user={user}
                         onOpenChat={(chatSessionId) => {
                             setActiveChatSession({
@@ -1564,124 +1567,124 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                             });
                         }}
                     />
+
+                    {!isLoadingInitialData && !startupProfile && (
+                        <StartupProfileBanner
+                            onRedirect={() => setActiveSection('complete-info')}
+                        />
+                    )}
+
+                    {/* Quick Stats */}
+                    <div className={`${styles.statsWrapper} ${activeSection !== 'overview' ? styles.statsCollapsed : ''}`}>
+                        <div className={styles.statsGrid}>
+                            <div className={styles.statCard}>
+                                <div className={`${styles.statIcon} ${styles.iconCyan}`}>
+                                    <Eye size={20} />
+                                </div>
+                                <div className={styles.statInfo}>
+                                    <div className={styles.statValue}>
+                                        {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.profileViews}
+                                    </div>
+                                    <div className={styles.statLabel}>Lượt xem hồ sơ</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={`${styles.statIcon} ${styles.iconYellow}`}>
+                                    <Users size={20} />
+                                </div>
+                                <div className={styles.statInfo}>
+                                    <div className={styles.statValue}>
+                                        {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.investorInterests}
+                                    </div>
+                                    <div className={styles.statLabel}>Nhà đầu tư quan tâm</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={`${styles.statIcon} ${styles.iconGreen}`}>
+                                    <FileText size={20} />
+                                </div>
+                                <div className={styles.statInfo}>
+                                    <div className={styles.statValue}>
+                                        {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.documentsUploaded}
+                                    </div>
+                                    <div className={styles.statLabel}>Tài liệu đã tải lên</div>
+                                </div>
+                            </div>
+
+                            <div className={styles.statCard}>
+                                <div className={`${styles.statIcon} ${styles.iconPurple}`}>
+                                    <TrendingUp size={20} />
+                                </div>
+                                <div className={styles.statInfo}>
+                                    <div className={styles.statValue}>
+                                        {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.aiScore}
+                                    </div>
+                                    <div className={styles.statLabel}>Điểm AI / 100</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Navigation Tabs */}
+                    <div className={styles.tabSwitcherWrapper}>
+                        {isMobile && showLeftTabIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorLeft}`} />}
+
+                        <div
+                            className={`${styles.tabs} ${styles.animatedTabs}`}
+                            ref={tabsRef}
+                            onScroll={checkTabScroll}
+                        >
+                        <button
+                            className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
+                            onClick={() => setActiveSection('overview')}
+                        >
+                            Tổng quan
+                        </button>
+                        <button
+                            className={`${styles.tab} ${activeSection === 'complete-info' ? styles.active : ''}`}
+                            onClick={() => setActiveSection('complete-info')}
+                        >
+                            Thông tin bổ sung
+                        </button>
+
+                        <button
+                            className={`${styles.tab} ${activeSection === 'my-projects' ? styles.active : ''}`}
+                            onClick={() => setActiveSection('my-projects')}
+                        >
+                            Dự án của tôi
+                        </button>
+                        <button
+                            className={`${styles.tab} ${activeSection === 'bookings' ? styles.active : ''}`}
+                            onClick={() => setActiveSection('bookings')}
+                        >
+                            Lịch tư vấn
+                        </button>
+                         <button
+                            className={`${styles.tab} ${activeSection === 'deals' ? styles.active : ''}`}
+                            onClick={() => setActiveSection('deals')}
+                        >
+                            Đầu tư
+                        </button>
+                        <button
+                            className={`${styles.tab} ${activeSection === 'connection-requests' ? styles.active : ''}`}
+                            onClick={() => setActiveSection('connection-requests')}
+                        >
+                            Yêu cầu thông tin
+                        </button>
+                        {/* Animated Indicator Line */}
+                        <div className={styles.tabIndicator} style={indicatorStyle} />
+                    </div>
+
+                        {isMobile && showRightTabIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorRight}`} />}
+                    </div>
                 </>
             )}
 
-            {!isLoadingInitialData && !startupProfile && (
-                <StartupProfileBanner
-                    onRedirect={() => setActiveSection('complete-info')}
-                />
-            )}
+            {activeSection !== 'pr_news' && (
+            <div className={styles.content}>
 
-            {/* Quick Stats (Collapsible) */}
-            <div className={`${styles.statsWrapper} ${activeSection !== 'overview' ? styles.collapsed : ''}`}>
-                <div className={styles.statsGrid}>
-                    <div className={styles.statCard}>
-                        <div className={`${styles.statIcon} ${styles.iconCyan}`}>
-                            <Eye size={20} />
-                        </div>
-                        <div className={styles.statInfo}>
-                            <div className={styles.statValue}>
-                                {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.profileViews}
-                            </div>
-                            <div className={styles.statLabel}>Lượt xem hồ sơ</div>
-                        </div>
-                    </div>
-
-                    <div className={styles.statCard}>
-                        <div className={`${styles.statIcon} ${styles.iconYellow}`}>
-                            <Users size={20} />
-                        </div>
-                        <div className={styles.statInfo}>
-                            <div className={styles.statValue}>
-                                {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.investorInterests}
-                            </div>
-                            <div className={styles.statLabel}>Nhà đầu tư quan tâm</div>
-                        </div>
-                    </div>
-
-                    <div className={styles.statCard}>
-                        <div className={`${styles.statIcon} ${styles.iconGreen}`}>
-                            <FileText size={20} />
-                        </div>
-                        <div className={styles.statInfo}>
-                            <div className={styles.statValue}>
-                                {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.documentsUploaded}
-                            </div>
-                            <div className={styles.statLabel}>Tài liệu đã tải lên</div>
-                        </div>
-                    </div>
-
-                    <div className={styles.statCard}>
-                        <div className={`${styles.statIcon} ${styles.iconPurple}`}>
-                            <TrendingUp size={20} />
-                        </div>
-                        <div className={styles.statInfo}>
-                            <div className={styles.statValue}>
-                                {isLoadingInitialData ? <Loader2 size={16} className="animate-spin" style={{ color: 'var(--text-secondary)' }} /> : dashboardData.aiScore}
-                            </div>
-                            <div className={styles.statLabel}>Điểm AI / 100</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            {!activeSection.startsWith('project_') && (
-                <div className={styles.tabSwitcherWrapper}>
-                    {isMobile && showLeftTabIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorLeft}`} />}
-
-                    <div
-                        className={`${styles.tabs} ${styles.animatedTabs}`}
-                        ref={tabsRef}
-                        onScroll={checkTabScroll}
-                    >
-                    <button
-                        className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
-                        onClick={() => setActiveSection('overview')}
-                    >
-                        Tổng quan
-                    </button>
-                    <button
-                        className={`${styles.tab} ${activeSection === 'complete-info' ? styles.active : ''}`}
-                        onClick={() => setActiveSection('complete-info')}
-                    >
-                        Thông tin bổ sung
-                    </button>
-
-                    <button
-                        className={`${styles.tab} ${activeSection === 'my-projects' ? styles.active : ''}`}
-                        onClick={() => setActiveSection('my-projects')}
-                    >
-                        Dự án của tôi
-                    </button>
-                    <button
-                        className={`${styles.tab} ${activeSection === 'connection-requests' ? styles.active : ''}`}
-                        onClick={() => setActiveSection('connection-requests')}
-                    >
-                        Yêu cầu thông tin
-                    </button>
-                    <button
-                        className={`${styles.tab} ${activeSection === 'bookings' ? styles.active : ''}`}
-                        onClick={() => setActiveSection('bookings')}
-                    >
-                        Lịch tư vấn
-                    </button>
-                     <button
-                        className={`${styles.tab} ${activeSection === 'deals' ? styles.active : ''}`}
-                        onClick={() => setActiveSection('deals')}
-                    >
-                        Đầu tư
-                    </button>
-                    {/* Animated Indicator Line */}
-                    <div className={styles.tabIndicator} style={indicatorStyle} />
-                </div>
-
-                {isMobile && showRightTabIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorRight}`} />}
-            </div>
-            )}
-
-            {/* Content Sections */}
-            <div className={styles.content} style={activeSection.startsWith('project_') ? { padding: 0 } : {}}>
                 {/* Startup Profile Form (Section View) */}
                 {activeSection === 'complete-info' && (
                     <div className={styles.section}>
@@ -2028,116 +2031,219 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
 
                 {/* Connection Requests Section - Investor inquiries */}
                 {activeSection === 'connection-requests' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>
-                                Yêu cầu thông tin từ nhà đầu tư
-                                {connectionRequests.filter(r => r.status === 'pending').length > 0 && (
-                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
-                                        {connectionRequests.filter(r => r.status === 'pending').length} Chờ xử lý
-                                    </span>
-                                )}
-                            </h3>
+                    <div className={styles.section} style={{ paddingBottom: '40px' }}>
+                        {/* Header Stats */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                            <div className={styles.card} style={{ padding: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <Users size={24} color="var(--primary-blue)" />
+                                    <div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng yêu cầu</div>
+                                        <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                            {connectionRequests.length}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={styles.card} style={{ padding: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <AlertCircle size={24} color="#f59e0b" />
+                                    <div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Chờ xử lý</div>
+                                        <div style={{ fontSize: '24px', fontWeight: '800', color: '#f59e0b' }}>
+                                            {connectionRequests.filter(r => r.status === 'pending').length}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={styles.card} style={{ padding: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <CheckCircle size={24} color="#10b981" />
+                                    <div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Đã chấp nhận</div>
+                                        <div style={{ fontSize: '24px', fontWeight: '800', color: '#10b981' }}>
+                                            {connectionRequests.filter(r => r.status === 'accepted').length}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                            <div className={styles.list}>
-                                {isLoadingRequests ? (
-                                    <div className={styles.loadingState}>
-                                        <Loader2 className={styles.spinner} size={24} />
-                                        <span>Đang tải danh sách yêu cầu...</span>
-                                    </div>
-                                ) : connectionRequests.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                        <p>Chưa có yêu cầu thông tin nào từ nhà đầu tư.</p>
-                                    </div>
-                                ) : (
-                                    connectionRequests.map(request => (
+                        {/* Loading State */}
+                        {isLoadingRequests && (
+                            <div className={styles.card} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+                                <Loader2 size={24} className={styles.spinner} style={{ marginRight: '12px' }} />
+                                <span style={{ color: 'var(--text-secondary)' }}>Đang tải danh sách yêu cầu...</span>
+                            </div>
+                        )}
+
+                        {/* Empty State */}
+                        {!isLoadingRequests && connectionRequests.length === 0 && (
+                            <div className={styles.card} style={{ padding: '40px', textAlign: 'center' }}>
+                                <Users size={48} style={{ margin: '0 auto 16px', color: 'var(--text-secondary)', opacity: 0.5 }} />
+                                <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Chưa có yêu cầu nào</h3>
+                                <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Khi nhà đầu tư gửi yêu cầu thông tin, chúng sẽ xuất hiện ở đây.</p>
+                            </div>
+                        )}
+
+                        {/* Requests Grid */}
+                        {!isLoadingRequests && connectionRequests.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                {connectionRequests.map(request => {
+                                    const statusConfig = {
+                                        'pending': { label: 'Chờ xử lý', color: '#f59e0b' },
+                                        'accepted': { label: 'Đã chấp nhận', color: '#10b981' },
+                                        'rejected': { label: 'Đã từ chối', color: '#ef4444' }
+                                    };
+                                    const statusInfo = statusConfig[request.status] || { label: 'Không xác định', color: '#64748b' };
+
+                                    return (
                                         <div
                                             key={request.connectionRequestId}
-                                            className={styles.listItem}
+                                            className={styles.card}
                                             style={{
-                                                borderLeft: 'none',
-                                                borderTop: `3px solid ${request.status === 'pending' ? '#0ea5e9' : request.status === 'accepted' ? '#10b981' : '#64748b'}`,
-                                                padding: '12px 16px',
-                                                backgroundColor: '#f8fafc'
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '12px',
+                                                borderLeft: '4px solid ' + statusInfo.color,
+                                                transition: 'all 0.2s ease'
                                             }}
                                         >
-                                            <div className={styles.listContent}>
-                                                {/* Header Row: Status + Investor Name + Date */}
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                                                    <span className={`${styles.badge} ${request.status === 'pending' ? styles.badgePending : request.status === 'accepted' ? styles.badgeSuccess : styles.badgeError}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
-                                                        {request.status === 'pending' ? '⏳ Đang chờ' : request.status === 'accepted' ? '✓ Đã chấp nhận' : '✗ Đã từ chối'}
-                                                    </span>
-                                                    <span style={{ fontSize: '12px', color: '#475569', backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                                                        NĐT: <strong>{request.investorName || 'Investor'}</strong>
-                                                    </span>
-                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                                                        {request.sentDate}
-                                                    </span>
+                                            {/* Header */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                                        {request.investorName || 'Nhà đầu tư'}
+                                                    </h4>
+                                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                        ID: #{request.connectionRequestId}
+                                                    </p>
                                                 </div>
-
+                                                <div style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    backgroundColor: statusInfo.color + '15',
+                                                    color: statusInfo.color,
+                                                    padding: '4px 12px',
+                                                    borderRadius: '12px',
+                                                    fontSize: '11px',
+                                                    fontWeight: '700'
+                                                }}>
+                                                    {statusInfo.label}
+                                                </div>
                                             </div>
 
-                                            {/* Actions */}
-                                            {request.status === 'pending' && (
-                                                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-                                                    <button
-                                                        style={{
-                                                            padding: '6px 12px',
-                                                            backgroundColor: '#0ea5e9',
-                                                            color: '#fff',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '4px',
-                                                            transition: 'all 0.2s',
-                                                            opacity: isRespondingToRequest === request.connectionRequestId ? 0.7 : 1
-                                                        }}
-                                                        onClick={() => handleApproveConnectionRequest(request.connectionRequestId)}
-                                                        disabled={isRespondingToRequest === request.connectionRequestId}
-                                                    >
-                                                        {isRespondingToRequest === request.connectionRequestId ? (
-                                                            <>
-                                                                <Loader2 size={12} className={styles.spinner} />
-                                                                Xử lý...
-                                                            </>
-                                                        ) : (
-                                                            <>✓ Chấp nhận</>
-                                                        )}
-                                                    </button>
-                                                    <button
-                                                        style={{
-                                                            padding: '6px 12px',
-                                                            backgroundColor: '#cbd5e1',
-                                                            color: '#475569',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            gap: '4px',
-                                                            transition: 'all 0.2s',
-                                                            opacity: isRespondingToRequest === request.connectionRequestId ? 0.7 : 1
-                                                        }}
-                                                        onClick={() => handleRejectConnectionRequest(request.connectionRequestId)}
-                                                        disabled={isRespondingToRequest === request.connectionRequestId}
-                                                    >
-                                                        {isRespondingToRequest === request.connectionRequestId ? 'Xử lý...' : '✗ Từ chối'}
-                                                    </button>
+                                            {/* Investor Info */}
+                                            <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '6px' }}>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                                                    <strong>Thông tin</strong>
+                                                </div>
+                                                <div style={{ fontSize: '13px', color: 'var(--text-primary)' }}>
+                                                    Yêu cầu thông tin từ nhà đầu tư
+                                                </div>
+                                            </div>
+
+                                            {/* Details */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                {request.sentDate && (
+                                                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '10px', borderRadius: '6px' }}>
+                                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Ngày gửi</div>
+                                                        <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                            {request.sentDate}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {request.status === 'accepted' && (
+                                                    <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '6px' }}>
+                                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Trạng thái</div>
+                                                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>
+                                                            ✓ Đã chấp nhận
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* Message (if available) */}
+                                            {request.message && (
+                                                <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '6px', fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', borderLeft: '3px solid var(--primary-blue)' }}>
+                                                    💬 {request.message}
                                                 </div>
                                             )}
 
-                                            {request.status === 'accepted' && (
-                                                <div style={{ display: 'flex', marginTop: '8px' }}>
+                                            {/* Actions */}
+                                            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', flexWrap: 'wrap' }}>
+                                                {request.status === 'pending' && (
+                                                    <>
+                                                        <button
+                                                            style={{
+                                                                flex: 1,
+                                                                padding: '8px 12px',
+                                                                backgroundColor: '#0ea5e9',
+                                                                color: '#fff',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: '4px',
+                                                                transition: 'all 0.2s',
+                                                                opacity: isRespondingToRequest === request.connectionRequestId ? 0.7 : 1
+                                                            }}
+                                                            onClick={() => handleApproveConnectionRequest(request.connectionRequestId)}
+                                                            disabled={isRespondingToRequest === request.connectionRequestId}
+                                                        >
+                                                            {isRespondingToRequest === request.connectionRequestId ? (
+                                                                <>
+                                                                    <Loader2 size={12} className={styles.spinner} />
+                                                                    Xử lý...
+                                                                </>
+                                                            ) : (
+                                                                <>✓ Chấp nhận</>
+                                                            )}
+                                                        </button>
+                                                        <button
+                                                            style={{
+                                                                flex: 1,
+                                                                padding: '8px 12px',
+                                                                backgroundColor: '#cbd5e1',
+                                                                color: '#475569',
+                                                                border: 'none',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px',
+                                                                fontWeight: '600',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: '4px',
+                                                                transition: 'all 0.2s',
+                                                                opacity: isRespondingToRequest === request.connectionRequestId ? 0.7 : 1
+                                                            }}
+                                                            onClick={() => handleRejectConnectionRequest(request.connectionRequestId)}
+                                                            disabled={isRespondingToRequest === request.connectionRequestId}
+                                                        >
+                                                            {isRespondingToRequest === request.connectionRequestId ? (
+                                                                <>
+                                                                    <Loader2 size={12} className={styles.spinner} />
+                                                                    Xử lý...
+                                                                </>
+                                                            ) : (
+                                                                <>✗ Từ chối</>
+                                                            )}
+                                                        </button>
+                                                    </>
+                                                )}
+
+                                                {request.status === 'accepted' && (
                                                     <button
                                                         style={{
-                                                            padding: '6px 16px',
-                                                            backgroundColor: '#0ea5e9',
+                                                            flex: 1,
+                                                            padding: '8px 12px',
+                                                            backgroundColor: '#10b981',
                                                             color: '#fff',
                                                             border: 'none',
                                                             borderRadius: '4px',
@@ -2146,6 +2252,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                             cursor: 'pointer',
                                                             display: 'flex',
                                                             alignItems: 'center',
+                                                            justifyContent: 'center',
                                                             gap: '4px',
                                                             transition: 'all 0.2s'
                                                         }}
@@ -2154,13 +2261,31 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                         <MessageSquare size={12} />
                                                         Bắt đầu chat
                                                     </button>
-                                                </div>
-                                            )}
+                                                )}
+
+                                                {request.status === 'rejected' && (
+                                                    <button
+                                                        style={{
+                                                            flex: 1,
+                                                            padding: '8px 12px',
+                                                            backgroundColor: 'var(--bg-secondary)',
+                                                            color: 'var(--text-secondary)',
+                                                            border: '1px solid var(--border-color)',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'default'
+                                                        }}
+                                                    >
+                                                        ✗ Đã từ chối
+                                                    </button>
+                                                )}
+                                            </div>
                                         </div>
-                                    ))
-                                )}
+                                    );
+                                })}
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
 
@@ -2185,106 +2310,158 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
 
                 {/* Deals Approval Section */}
                 {activeSection === 'deals' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>
-                                Đầu tư từ nhà đầu tư ({dealsToApprove.length} tổng)
-                                {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length > 0 && (
-                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ marginLeft: '12px' }}>
-                                        {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length} Chờ xử lý
-                                    </span>
-                                )}
-                            </h3>
+                    <div className={styles.section} style={{ paddingBottom: '40px' }}>
+                        {/* Header Stats */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                            <div className={styles.card} style={{ padding: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <DollarSign size={24} color="var(--primary-blue)" />
+                                    <div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng đầu tư</div>
+                                        <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                            {dealsToApprove.length}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={styles.card} style={{ padding: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <AlertCircle size={24} color="#f59e0b" />
+                                    <div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Chờ xử lý</div>
+                                        <div style={{ fontSize: '24px', fontWeight: '800', color: '#f59e0b' }}>
+                                            {dealsToApprove.filter(d => d.status === 'Pending' || d.status === 0).length}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className={styles.card} style={{ padding: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <CheckCircle size={24} color="#10b981" />
+                                    <div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Đã ký kết</div>
+                                        <div style={{ fontSize: '24px', fontWeight: '800', color: '#10b981' }}>
+                                            {dealsToApprove.filter(d => d.status === 'Contract_Signed' || d.status === 3).length}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-                            <div className={styles.list}>
-                                {isLoadingDeals ? (
-                                    <div className={styles.loadingState}>
-                                        <Loader2 className={styles.spinner} size={24} />
-                                        <span>Đang tải danh sách đầu tư...</span>
-                                    </div>
-                                ) : dealsToApprove.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                        <p>Không có đầu tư nào cần xử lý.</p>
-                                    </div>
-                                ) : (
-                                    dealsToApprove.map(deal => (
+                        {/* Loading State */}
+                        {isLoadingDeals && (
+                            <div className={styles.card} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+                                <Loader2 size={24} className={styles.spinner} style={{ marginRight: '12px' }} />
+                                <span style={{ color: 'var(--text-secondary)' }}>Đang tải danh sách đầu tư...</span>
+                            </div>
+                        )}
+
+                        {/* Empty State */}
+                        {!isLoadingDeals && dealsToApprove.length === 0 && (
+                            <div className={styles.card} style={{ padding: '40px', textAlign: 'center' }}>
+                                <DollarSign size={48} style={{ margin: '0 auto 16px', color: 'var(--text-secondary)', opacity: 0.5 }} />
+                                <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Chưa có đầu tư nào</h3>
+                                <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Khi có nhà đầu tư gửi đề nghị, danh sách sẽ xuất hiện ở đây.</p>
+                            </div>
+                        )}
+
+                        {/* Deals Grid */}
+                        {!isLoadingDeals && dealsToApprove.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                {dealsToApprove.map(deal => {
+                                    const statusMap = {
+                                        0: { label: 'Chờ xác nhận', color: '#f59e0b' },
+                                        'Pending': { label: 'Chờ xác nhận', color: '#f59e0b' },
+                                        1: { label: 'Đã xác nhận', color: '#10b981' },
+                                        'Confirmed': { label: 'Đã xác nhận', color: '#10b981' },
+                                        2: { label: 'Chờ ký từ Startup', color: '#f97316' },
+                                        'Waiting_For_Startup_Signature': { label: 'Chờ ký từ Startup', color: '#f97316' },
+                                        3: { label: 'Đã ký kết', color: '#667eea' },
+                                        'Contract_Signed': { label: 'Đã ký kết', color: '#667eea' },
+                                        4: { label: 'Đã mint NFT', color: '#8b5cf6' },
+                                        'Minted_NFT': { label: 'Đã mint NFT', color: '#8b5cf6' },
+                                        5: { label: 'Bị từ chối', color: '#ef4444' },
+                                        'Rejected': { label: 'Bị từ chối', color: '#ef4444' },
+                                        6: { label: 'Thất bại', color: '#dc2626' },
+                                        'Failed': { label: 'Thất bại', color: '#dc2626' }
+                                    };
+                                    const statusInfo = statusMap[deal.status] || { label: 'Không xác định', color: '#64748b' };
+
+                                    return (
                                         <div
                                             key={deal.dealId}
-                                            className={styles.listItem}
-                                            style={{ 
-                                                borderLeft: 'none',
-                                                borderTop: `3px solid ${deal.status === 'Pending' || deal.status === 0 ? '#0ea5e9' : '#10b981'}`,
-                                                padding: '12px 16px',
-                                                backgroundColor: '#f8fafc'
+                                            className={styles.card}
+                                            style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                gap: '12px',
+                                                borderLeft: '4px solid ' + statusInfo.color,
+                                                transition: 'all 0.2s ease'
                                             }}
                                         >
-                                            <div className={styles.listContent}>
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                                                    <span style={{ fontSize: '12px', color: '#475569', backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                                                        <strong>NĐT:</strong> {deal.investorName || 'Nhà đầu tư'}
-                                                    </span>
-                                                    {deal.investmentAmount && (
-                                                        <span style={{ fontSize: '12px', color: '#10b981', backgroundColor: '#f0fdf4', padding: '4px 8px', borderRadius: '4px', fontWeight: '600' }}>
-                                                            💰 {deal.investmentAmount.toLocaleString('vi-VN')} VNĐ
-                                                        </span>
-                                                    )}
-                                                    <span style={{ fontSize: '12px', color: '#64748b', backgroundColor: '#f8fafc', padding: '4px 8px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
-                                                        {deal.createdAt ? new Date(deal.createdAt).toLocaleDateString('vi-VN') : 'Ngày'}
-                                                    </span>
+                                            {/* Deal Header */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                                        {deal.projectName || 'Dự án không tên'}
+                                                    </h4>
+                                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                        Deal #{deal.dealId}
+                                                    </p>
                                                 </div>
+                                                <div style={{
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '4px',
+                                                    backgroundColor: statusInfo.color + '15',
+                                                    color: statusInfo.color,
+                                                    padding: '4px 12px',
+                                                    borderRadius: '12px',
+                                                    fontSize: '11px',
+                                                    fontWeight: '700'
+                                                }}>
+                                                    {statusInfo.label}
+                                                </div>
+                                            </div>
 
-                                                {deal.projectName && (
-                                                    <div style={{ marginBottom: '8px' }}>
-                                                        <span style={{ fontSize: '12px', color: '#475569' }}>
-                                                            <strong>Dự án:</strong> {deal.projectName}
-                                                        </span>
+                                            {/* Investor Info */}
+                                            <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '12px', borderRadius: '6px' }}>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '4px' }}>
+                                                    <strong>Nhà đầu tư</strong>
+                                                </div>
+                                                <div style={{ fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>
+                                                    {deal.investorName || 'Nhà đầu tư'}
+                                                </div>
+                                            </div>
+
+                                            {/* Deal Details */}
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                                                {deal.investmentAmount && (
+                                                    <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '6px' }}>
+                                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Số tiền</div>
+                                                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>
+                                                            {deal.investmentAmount.toLocaleString('vi-VN')} VNĐ
+                                                        </div>
                                                     </div>
                                                 )}
-
-                                                {/* Status Badge */}
-                                                {(deal.status === 'Pending' || deal.status === 0) && (
-                                                    <span className={`${styles.badge} ${styles.badgePending}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
-                                                        ⏳ Chờ xác nhận
-                                                    </span>
-                                                )}
-                                                {(deal.status === 'Confirmed' || deal.status === 1) && (
-                                                    <span className={`${styles.badge} ${styles.badgeSuccess}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
-                                                        ✓ Đã xác nhận
-                                                    </span>
-                                                )}
-                                                {(deal.status === 'Waiting_For_Startup_Signature' || deal.status === 2) && (
-                                                    <span style={{ fontSize: '11px', padding: '4px 8px', backgroundColor: '#f97316', color: '#fff', borderRadius: '4px', display: 'inline-block' }}>
-                                                        ⏳ Chờ ký từ Startup
-                                                    </span>
-                                                )}
-                                                {(deal.status === 'Contract_Signed' || deal.status === 3) && (
-                                                    <span style={{ fontSize: '11px', padding: '4px 8px', backgroundColor: '#667eea', color: '#fff', borderRadius: '4px', display: 'inline-block' }}>
-                                                        ✓ Đã ký kết
-                                                    </span>
-                                                )}
-                                                {(deal.status === 'Minted_NFT' || deal.status === 4) && (
-                                                    <span style={{ fontSize: '11px', padding: '4px 8px', backgroundColor: '#8b5cf6', color: '#fff', borderRadius: '4px', display: 'inline-block' }}>
-                                                        ✓ Đã mint NFT
-                                                    </span>
-                                                )}
-                                                {(deal.status === 'Rejected' || deal.status === 5) && (
-                                                    <span className={`${styles.badge} ${styles.badgeError}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
-                                                        ✗ Bị từ chối
-                                                    </span>
-                                                )}
-                                                {(deal.status === 'Failed' || deal.status === 6) && (
-                                                    <span className={`${styles.badge} ${styles.badgeError}`} style={{ fontSize: '11px', padding: '4px 8px' }}>
-                                                        ✗ Thất bại
-                                                    </span>
+                                                {deal.createdAt && (
+                                                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '10px', borderRadius: '6px' }}>
+                                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Ngày tạo</div>
+                                                        <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                            {new Date(deal.createdAt).toLocaleDateString('vi-VN')}
+                                                        </div>
+                                                    </div>
                                                 )}
                                             </div>
 
-                                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                                            {/* Actions */}
+                                            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', flexWrap: 'wrap' }}>
                                                 {(deal.status === 'Pending' || deal.status === 0) && (
                                                     <>
                                                         <button
                                                             style={{
-                                                                padding: '6px 12px',
+                                                                flex: 1,
+                                                                padding: '8px 12px',
                                                                 backgroundColor: '#10b981',
                                                                 color: '#fff',
                                                                 border: 'none',
@@ -2294,8 +2471,10 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                                 cursor: 'pointer',
                                                                 display: 'flex',
                                                                 alignItems: 'center',
+                                                                justifyContent: 'center',
                                                                 gap: '4px',
-                                                                transition: 'all 0.2s'
+                                                                transition: 'all 0.2s',
+                                                                opacity: isRespondingToDeal === deal.dealId ? 0.7 : 1
                                                             }}
                                                             onClick={() => handleApproveDeal(deal.dealId)}
                                                             disabled={isRespondingToDeal === deal.dealId}
@@ -2303,7 +2482,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                             {isRespondingToDeal === deal.dealId ? (
                                                                 <>
                                                                     <Loader2 size={12} className={styles.spinner} />
-                                                                    Đang xử lý...
+                                                                    Xử lý...
                                                                 </>
                                                             ) : (
                                                                 <>✓ Chấp nhận</>
@@ -2311,7 +2490,8 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                         </button>
                                                         <button
                                                             style={{
-                                                                padding: '6px 12px',
+                                                                flex: 1,
+                                                                padding: '8px 12px',
                                                                 backgroundColor: '#cbd5e1',
                                                                 color: '#475569',
                                                                 border: 'none',
@@ -2321,6 +2501,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                                 cursor: 'pointer',
                                                                 display: 'flex',
                                                                 alignItems: 'center',
+                                                                justifyContent: 'center',
                                                                 gap: '4px',
                                                                 transition: 'all 0.2s',
                                                                 opacity: isRespondingToDeal === deal.dealId ? 0.7 : 1
@@ -2331,7 +2512,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                             {isRespondingToDeal === deal.dealId ? (
                                                                 <>
                                                                     <Loader2 size={12} className={styles.spinner} />
-                                                                    Đang xử lý...
+                                                                    Xử lý...
                                                                 </>
                                                             ) : (
                                                                 <>✗ Từ chối</>
@@ -2343,7 +2524,8 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                 {(deal.status === 'Confirmed' || deal.status === 1) && (
                                                     <button
                                                         style={{
-                                                            padding: '6px 12px',
+                                                            flex: 1,
+                                                            padding: '8px 12px',
                                                             backgroundColor: '#0ea5e9',
                                                             color: '#fff',
                                                             border: 'none',
@@ -2353,6 +2535,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                             cursor: 'pointer',
                                                             display: 'flex',
                                                             alignItems: 'center',
+                                                            justifyContent: 'center',
                                                             gap: '4px',
                                                             transition: 'all 0.2s'
                                                         }}
@@ -2365,7 +2548,8 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                 {(deal.status === 'Waiting_For_Startup_Signature' || deal.status === 2) && (
                                                     <button
                                                         style={{
-                                                            padding: '6px 12px',
+                                                            flex: 1,
+                                                            padding: '8px 12px',
                                                             backgroundColor: '#0ea5e9',
                                                             color: '#fff',
                                                             border: 'none',
@@ -2375,19 +2559,21 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                             cursor: 'pointer',
                                                             display: 'flex',
                                                             alignItems: 'center',
+                                                            justifyContent: 'center',
                                                             gap: '4px',
                                                             transition: 'all 0.2s'
                                                         }}
                                                         onClick={() => handleShowContractPreview(deal)}
                                                     >
-                                                        ✓ Xem & Ký hợp đồng
+                                                        ✓ Xem & Ký
                                                     </button>
                                                 )}
 
                                                 {(deal.status === 'Contract_Signed' || deal.status === 3) && (
                                                     <button
                                                         style={{
-                                                            padding: '6px 12px',
+                                                            flex: 1,
+                                                            padding: '8px 12px',
                                                             backgroundColor: '#10b981',
                                                             color: '#fff',
                                                             border: 'none',
@@ -2397,24 +2583,45 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                             cursor: 'pointer',
                                                             display: 'flex',
                                                             alignItems: 'center',
+                                                            justifyContent: 'center',
                                                             gap: '4px',
                                                             transition: 'all 0.2s'
                                                         }}
                                                         onClick={() => handleShowContractPreview(deal)}
                                                     >
-                                                        📄 Xem hợp đồng đã ký
+                                                        📄 Xem hợp đồng
+                                                    </button>
+                                                )}
+
+                                                {(deal.status === 'Minted_NFT' || deal.status === 4 || deal.status === 'Rejected' || deal.status === 5 || deal.status === 'Failed' || deal.status === 6) && (
+                                                    <button
+                                                        style={{
+                                                            flex: 1,
+                                                            padding: '8px 12px',
+                                                            backgroundColor: 'var(--bg-secondary)',
+                                                            color: 'var(--text-secondary)',
+                                                            border: '1px solid var(--border-color)',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer'
+                                                        }}
+                                                        onClick={() => handleShowContractPreview(deal)}
+                                                    >
+                                                        📄 Chi tiết
                                                     </button>
                                                 )}
                                             </div>
                                         </div>
-                                    ))
-                                )}
+                                    );
+                                })}
                             </div>
-                        </div>
+                        )}
                     </div>
                 )}
 
             </div>
+            )}
 
             {/* Modal Overlay for Complete Info Form */}
             {showCompleteInfoForm && (
@@ -3284,429 +3491,199 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                 />
             )}
 
-    {/* Contract Preview Modal */}
-    {showContractModal && contractPreviewHtml && (
-        <div
-            style={{
-                position: 'fixed',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                zIndex: 1000,
-                padding: '16px',
-            }}
-            onClick={handleCloseContractModal}
-        >
-            <div
-                style={{
-                    backgroundColor: '#fff',
-                    borderRadius: '8px',
-                    width: '100%',
-                    maxWidth: '1000px',
-                    maxHeight: '90vh',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
-                }}
-                onClick={(e) => e.stopPropagation()}
-            >
-                {/* Header */}
-                <div
-                    style={{
-                        padding: '20px',
-                        borderBottom: '1px solid #e2e8f0',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                    }}
-                >
-                    <div>
-                        <h2 style={{ margin: '0 0 4px 0', fontSize: '18px', fontWeight: '700' }}>
-                            {contractStatus === 'Contract_Signed' ? 'Xem hợp đồng đã ký' : 'Ký hợp đồng đầu tư'}
-                        </h2>
-                        {contractDealData && (
-                            <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
-                                <strong>Nhà đầu tư:</strong> {contractDealData.investorName} • <strong>Số tiền:</strong> {contractDealData.investmentAmount?.toLocaleString('vi-VN')} VNĐ
-                            </p>
-                        )}
-                    </div>
-                    <button
-                        onClick={handleCloseContractModal}
-                        style={{
-                            background: 'none',
-                            border: 'none',
-                            fontSize: '24px',
-                            cursor: 'pointer',
-                            color: '#64748b',
-                        }}
-                    >
-                        ×
-                    </button>
-                </div>
+            {/* Contract Preview Modal - Modernized */}
+            {showContractModal && contractPreviewHtml && (
+                <div className={contractStyles.modalOverlay} onClick={handleCloseContractModal}>
+                    <div className={contractStyles.modalContent} onClick={(e) => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className={contractStyles.header}>
+                            <div className={contractStyles.headerInfo}>
+                                <h2>Ký hợp đồng đầu tư</h2>
+                                {contractDealData && (
+                                    <p>
+                                        Nhà đầu tư: <strong>{contractDealData.investorName || 'Nhà đầu tư'}</strong> • Số tiền: <strong>{contractDealData.investmentAmount?.toLocaleString('vi-VN')} VND</strong>
+                                    </p>
+                                )}
+                            </div>
+                            <button className={contractStyles.closeBtn} onClick={handleCloseContractModal}>
+                                <X size={20} />
+                            </button>
+                        </div>
 
-                {/* Content: Two Column Layout or Full Width */}
-                <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-                    {/* Left: Contract Preview */}
-                    <div
-                        style={{
-                            flex: 1,
-                            overflow: 'auto',
-                            padding: '20px',
-                            backgroundColor: '#f9fafb',
-                            borderRight: contractStatus === 'Contract_Signed' ? 'none' : '1px solid #e2e8f0',
-                        }}
-                    >
-                        <h3 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: '700', color: '#475569' }}>
-                            📄 Hợp đồng đầu tư
-                        </h3>
-                        {isLoadingContract ? (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px' }}>
-                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px', color: '#64748b' }}>
-                                    <Loader2 size={24} className={styles.spinner} />
-                                    <span>Đang tải hợp đồng...</span>
+                        {/* Body: Two Column / Stacked */}
+                        <div className={contractStyles.body}>
+                            {/* Left: Contract Preview */}
+                            <div className={contractStyles.previewColumn}>
+                                <div className={contractStyles.sectionTitle}>
+                                    <FileText size={16} /> Hợp đồng đầu tư
                                 </div>
+                                {isLoadingContract ? (
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-secondary)' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
+                                            <Loader2 size={24} className="animate-spin" />
+                                            <span>Đang tải hợp đồng...</span>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <div
+                                        className={contractStyles.contractPaper}
+                                        dangerouslySetInnerHTML={{ __html: contractPreviewHtml }}
+                                    />
+                                )}
                             </div>
-                        ) : (
-                            <div
-                                style={{
-                                    backgroundColor: '#fff',
-                                    padding: '20px',
-                                    borderRadius: '6px',
-                                    border: '1px solid #e2e8f0',
-                                    lineHeight: '1.6',
-                                    fontSize: '13px',
-                                    color: '#334155',
-                                    maxHeight: '75vh',
-                                    overflowY: 'auto',
-                                    boxShadow: 'inset 0 1px 3px rgba(0, 0, 0, 0.05)'
-                                }}
-                                dangerouslySetInnerHTML={{ __html: contractPreviewHtml }}
-                            />
-                        )}
-                    </div>
 
-                    {/* Right: Signing Form - Only show when NOT Contract_Signed */}
-                    {contractStatus !== 'Contract_Signed' && (
-                    <div
-                        style={{
-                            flex: 1,
-                            overflow: 'auto',
-                            padding: '20px',
-                            backgroundColor: '#fff',
-                            display: 'flex',
-                            flexDirection: 'column',
-                            gap: '16px',
-                        }}
-                    >
-                        <h3 style={{ margin: 0, fontSize: '13px', fontWeight: '700', color: '#475569' }}>
-                            ✍️ Điều khoản ký kết
-                        </h3>
+                            {/* Right: Signing Form - Only show when NOT Signed */}
+                            {![3, 4, '3', '4', 'Contract_Signed', 'Minted_NFT'].includes(contractStatus) && (
+                                <div className={contractStyles.formColumn}>
+                                    <div className={contractStyles.sectionTitle}>
+                                        <Settings size={16} /> Điều khoản ký kết
+                                    </div>
 
-                        {/* Final Amount - Only for Investor */}
-                        {(!contractStatus || contractStatus < 2) && (
-                        <div>
-                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                                Số tiền cuối cùng (VNĐ) *
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                value={signFormData.finalAmount || ''}
-                                onChange={(e) => setSignFormData({ ...signFormData, finalAmount: e.target.value ? parseFloat(e.target.value) : 0 })}
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    fontSize: '13px',
-                                    border: '1px solid #cbd5e1',
-                                    borderRadius: '4px',
-                                    boxSizing: 'border-box',
-                                    fontFamily: 'inherit',
-                                }}
-                                placeholder="Nhập số tiền"
-                            />
+                                    {/* Final Amount - Only for Investor (or if editable) */}
+                                    {(!contractStatus || contractStatus < 2) && (
+                                        <>
+                                            <div className={styles.formGroup}>
+                                                <label>Số tiền cuối cùng (VND) *</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={signFormData.finalAmount || ''}
+                                                    onChange={(e) => setSignFormData({ ...signFormData, finalAmount: e.target.value ? parseFloat(e.target.value) : 0 })}
+                                                    placeholder="Nhập số tiền"
+                                                />
+                                            </div>
+
+                                            <div className={styles.formGroup}>
+                                                <label>Phần trăm cổ phần (%) *</label>
+                                                <input
+                                                    type="number"
+                                                    step="0.01"
+                                                    value={signFormData.finalEquityPercentage || ''}
+                                                    onChange={(e) => setSignFormData({ ...signFormData, finalEquityPercentage: e.target.value ? parseFloat(e.target.value) : 0 })}
+                                                    placeholder="Nhập phần trăm"
+                                                />
+                                            </div>
+
+                                            <div className={styles.formGroup}>
+                                                <label>Điều khoản bổ sung</label>
+                                                <textarea
+                                                    value={signFormData.additionalTerms}
+                                                    onChange={(e) => setSignFormData({ ...signFormData, additionalTerms: e.target.value })}
+                                                    placeholder="Nhập các điều khoản bổ sung (nếu có)"
+                                                    rows={4}
+                                                />
+                                            </div>
+                                        </>
+                                    )}
+
+                                    {/* Signature Section */}
+                                    <div className={styles.formGroup}>
+                                        <label>Chữ ký (vẽ bên dưới) *</label>
+                                        <div className={contractStyles.signaturePaper}>
+                                            <SignatureCanvas
+                                                ref={signatureCanvasRef}
+                                                onEnd={handleSignatureChange}
+                                                penColor="#000"
+                                                canvasProps={{
+                                                    width: 400,
+                                                    height: 150,
+                                                    className: 'signature-canvas',
+                                                    style: {
+                                                        display: 'block',
+                                                        backgroundColor: '#fff',
+                                                        cursor: 'crosshair',
+                                                        touchAction: 'none'
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                        
+                                        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                            <button
+                                                type="button"
+                                                onClick={handleClearSignature}
+                                                className={styles.dangerBtn}
+                                                style={{ flex: 1, padding: '10px' }}
+                                            >
+                                                <Trash2 size={16} /> Xóa chữ ký
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={handleSaveSignature}
+                                                disabled={signFormData.signatureBase64 || isSignatureEmpty}
+                                                className={styles.primaryBtn}
+                                                style={{ 
+                                                    flex: 1, 
+                                                    padding: '10px',
+                                                    backgroundColor: signFormData.signatureBase64 ? '#10b981' : undefined,
+                                                    opacity: signFormData.signatureBase64 ? 0.8 : (isSignatureEmpty ? 0.5 : 1),
+                                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                                }}
+                                            >
+                                                {signFormData.signatureBase64 ? (
+                                                    <><CheckCircle size={16} /> Đã lưu chữ ký</>
+                                                ) : (
+                                                    <><Check size={16} /> Lưu chữ ký</>
+                                                )}
+                                            </button>
+                                        </div>
+
+                                        <div className={contractStyles.signatureHint}>
+                                            <Info size={16} />
+                                            <div>
+                                                Vẽ chữ ký ở trên rồi click <b>"Lưu chữ ký"</b> để xác nhận.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        )}
 
-                        {/* Equity Percentage - Only for Investor */}
-                        {(!contractStatus || contractStatus < 2) && (
-                        <div>
-                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                                Phần trăm cổ phần (%) *
-                            </label>
-                            <input
-                                type="number"
-                                step="0.01"
-                                value={signFormData.finalEquityPercentage || ''}
-                                onChange={(e) => setSignFormData({ ...signFormData, finalEquityPercentage: e.target.value ? parseFloat(e.target.value) : 0 })}
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    fontSize: '13px',
-                                    border: '1px solid #cbd5e1',
-                                    borderRadius: '4px',
-                                    boxSizing: 'border-box',
-                                    fontFamily: 'inherit',
-                                }}
-                                placeholder="Nhập phần trăm"
-                            />
-                        </div>
-                        )}
+                        {/* Footer */}
+                        <div className={contractStyles.footer}>
+                            <button
+                                onClick={handleCloseContractModal}
+                                className={styles.secondaryBtn}
+                                style={{ padding: '10px 24px' }}
+                            >
+                                Hủy
+                            </button>
 
-                        {/* Additional Terms - Only for Investor */}
-                        {(!contractStatus || contractStatus < 2) && (
-                        <div>
-                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                                Điều khoản bổ sung
-                            </label>
-                            <textarea
-                                value={signFormData.additionalTerms}
-                                onChange={(e) => setSignFormData({ ...signFormData, additionalTerms: e.target.value })}
-                                style={{
-                                    width: '100%',
-                                    padding: '8px 12px',
-                                    fontSize: '13px',
-                                    border: '1px solid #cbd5e1',
-                                    borderRadius: '4px',
-                                    boxSizing: 'border-box',
-                                    fontFamily: 'inherit',
-                                    minHeight: '80px',
-                                    resize: 'vertical',
-                                }}
-                                placeholder="Nhập các điều khoản bổ sung (nếu có)"
-                            />
-                        </div>
-                        )}
-
-                        {/* Signature */}
-                        <div>
-                            <label style={{ fontSize: '12px', fontWeight: '600', color: '#475569', display: 'block', marginBottom: '6px' }}>
-                                Chữ ký (vẽ bên dưới) *
-                            </label>
-                            <div style={{
-                                border: '2px dashed #cbd5e1',
-                                borderRadius: '4px',
-                                backgroundColor: '#f9fafb',
-                                overflow: 'hidden',
-                                marginBottom: '8px'
-                            }}>
-                                <SignatureCanvas
-                                    ref={signatureCanvasRef}
-                                    onEnd={handleSignatureChange}
-                                    penColor="#000"
-                                    canvasProps={{
-                                        width: 400,
-                                        height: 150,
-                                        className: 'signature-canvas',
-                                        style: { 
-                                            display: 'block',
-                                            backgroundColor: '#fff',
-                                            cursor: 'crosshair',
-                                            touchAction: 'none'
-                                        }
-                                    }}
-                                />
-                            </div>
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
-                                <button
-                                    type="button"
-                                    onClick={handleClearSignature}
-                                    style={{
-                                        padding: '6px 12px',
-                                        backgroundColor: '#ef4444',
-                                        color: '#fff',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontWeight: '600',
-                                        cursor: 'pointer',
-                                        transition: 'all 0.2s',
-                                    }}
-                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#dc2626'}
-                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#ef4444'}
+                            {contractStatus === 'Contract_Signed' && contractDealData?.contractPdfUrl && (
+                                <a
+                                    href={contractDealData.contractPdfUrl}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    download={`DEAL-${contractDealData.dealId}.pdf`}
+                                    className={styles.primaryBtn}
+                                    style={{ padding: '10px 24px', backgroundColor: '#3b82f6' }}
                                 >
-                                    🗑️ Xóa chữ ký
-                                </button>
+                                    <Download size={16} /> Tải hợp đồng
+                                </a>
+                            )}
+
+                            {contractStatus !== 'Contract_Signed' && (
                                 <button
-                                    type="button"
-                                    onClick={handleSaveSignature}
-                                    disabled={isSignatureEmpty}
-                                    style={{
-                                        padding: '6px 12px',
-                                        backgroundColor: isSignatureEmpty ? '#cbd5e1' : '#10b981',
-                                        color: '#fff',
-                                        border: 'none',
-                                        borderRadius: '4px',
-                                        fontSize: '12px',
-                                        fontWeight: '600',
-                                        cursor: isSignatureEmpty ? 'not-allowed' : 'pointer',
-                                        transition: 'all 0.2s',
-                                    }}
-                                    onMouseEnter={(e) => {
-                                        if (!isSignatureEmpty) e.currentTarget.style.backgroundColor = '#059669';
-                                    }}
-                                    onMouseLeave={(e) => {
-                                        if (!isSignatureEmpty) e.currentTarget.style.backgroundColor = '#10b981';
-                                    }}
+                                    onClick={handleSignContractAsStartup}
+                                    disabled={isSigningContract}
+                                    className={styles.primaryBtn}
+                                    style={{ padding: '10px 32px' }}
                                 >
-                                    ✓ Lưu chữ ký
+                                    {isSigningContract ? (
+                                        <>
+                                            <Loader2 size={16} className="animate-spin" />
+                                            Đang ký...
+                                        </>
+                                    ) : (
+                                        <><Check size={16} /> Ký (Startup)</>
+                                    )}
                                 </button>
-                            </div>
-                            <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#64748b' }}>
-                                💡 Vẽ chữ ký ở trên rồi click "Lưu chữ ký" để xác nhận
-                            </p>
-                            {signFormData.signatureBase64 && (
-                                <p style={{ margin: '6px 0 0 0', fontSize: '11px', color: '#10b981', fontWeight: '600' }}>
-                                    ✓ Chữ ký đã được lưu
-                                </p>
                             )}
                         </div>
                     </div>
-                    )}
                 </div>
+            )}
 
-                {/* Footer with Action Buttons */}
-                <div
-                    style={{
-                        padding: '16px 20px',
-                        borderTop: '1px solid #e2e8f0',
-                        display: 'flex',
-                        gap: '12px',
-                        justifyContent: 'flex-end',
-                        backgroundColor: '#f9fafb',
-                    }}
-                >
-                    <button
-                        onClick={handleCloseContractModal}
-                        style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#f1f5f9',
-                            color: '#475569',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '4px',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                        }}
-                        onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#e2e8f0';
-                        }}
-                        onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#f1f5f9';
-                        }}
-                    >
-                        Hủy
-                    </button>
-
-                    {/* Download Button - Show when Contract_Signed */}
-                    {contractStatus === 'Contract_Signed' && contractDealData?.contractPdfUrl && (
-                        <a
-                            href={contractDealData.contractPdfUrl}
-                            download={`DEAL-${contractDealData.dealId}.pdf`}
-                            style={{
-                                padding: '8px 16px',
-                                backgroundColor: '#3b82f6',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                                textDecoration: 'none',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#2563eb';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#3b82f6';
-                            }}
-                        >
-                            ⬇️ Tải hợp đồng
-                        </a>
-                    )}
-
-                    {/* View Button - Show when Contract_Signed */}
-                    {contractStatus === 'Contract_Signed' && (
-                        <button
-                            style={{
-                                padding: '8px 16px',
-                                backgroundColor: '#10b981',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                            }}
-                            onMouseEnter={(e) => {
-                                e.currentTarget.style.backgroundColor = '#059669';
-                            }}
-                            onMouseLeave={(e) => {
-                                e.currentTarget.style.backgroundColor = '#10b981';
-                            }}
-                        >
-                            📄 Xem hợp đồng
-                        </button>
-                    )}
-
-                    {/* Sign Button - Show when NOT Contract_Signed */}
-                    {contractStatus !== 'Contract_Signed' && (
-                        <button
-                            onClick={handleSignContractAsStartup}
-                            disabled={isSigningContract}
-                            style={{
-                                padding: '8px 16px',
-                                backgroundColor: '#f59e0b',
-                                color: '#fff',
-                                border: 'none',
-                                borderRadius: '4px',
-                                fontSize: '13px',
-                                fontWeight: '600',
-                                cursor: isSigningContract ? 'not-allowed' : 'pointer',
-                                transition: 'all 0.2s',
-                                opacity: isSigningContract ? 0.7 : 1,
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '6px',
-                            }}
-                            onMouseEnter={(e) => {
-                                if (!isSigningContract) {
-                                    e.currentTarget.style.backgroundColor = '#d97706';
-                                }
-                            }}
-                            onMouseLeave={(e) => {
-                                if (!isSigningContract) {
-                                    e.currentTarget.style.backgroundColor = '#f59e0b';
-                                }
-                            }}
-                        >
-                            {isSigningContract ? (
-                                <>
-                                    <Loader2 size={14} className={styles.spinner} />
-                                    Đang ký...
-                                </>
-                            ) : (
-                                '✓ Ký (Startup)'
-                            )}
-                        </button>
-                    )}
-                </div>
-            </div>
-        </div>
-    )}
 
     {showProjectForm && (
         <ProjectSubmissionForm
@@ -3845,6 +3822,18 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                     initialAdvisorId={bookingInitialAdvisorId}
                     onClose={() => setShowBookingWizard(false)}
                 />
+            )}
+
+            {/* PR News Section — direct child of container, no styles.content padding */}
+            {activeSection === 'pr_news' && (
+                <NewsPRSection user={user} onOpenChat={(chatSessionId, notification) => {
+                    setActiveChatSession({
+                        chatSessionId,
+                        displayName: notification?.title || 'Chat mới',
+                        currentUserId: user?.userId,
+                        sentTime: new Date().toISOString(),
+                    });
+                }} />
             )}
         </div>
     );
