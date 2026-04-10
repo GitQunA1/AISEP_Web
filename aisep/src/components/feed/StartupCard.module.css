@@ -565,3 +565,129 @@
     display: inline !important;
   }
 }
+
+/* 7. Social Proof Section (Redesign) */
+.socialProofRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.proofPill {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  height: 32px; /* Fixed height for consistency */
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--surface2, rgba(255, 255, 255, 0.04));
+  border: 1px solid var(--border-color);
+  box-sizing: border-box;
+  cursor: default;
+}
+
+.clickablePill {
+  cursor: pointer;
+}
+
+.followerPill {
+  color: #0097a7;
+  background: rgba(0, 151, 167, 0.05);
+  border-color: rgba(0, 151, 167, 0.35);
+}
+.followerPill:hover {
+  background: rgba(0, 151, 167, 0.1);
+  border-color: rgba(0, 151, 167, 0.5);
+}
+
+.investorPill {
+  color: #10b981;
+  background: rgba(16, 185, 129, 0.05);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+.investorPill:hover {
+  background: rgba(16, 185, 129, 0.1);
+  border-color: rgba(16, 185, 129, 0.5);
+}
+
+.pillLabel {
+  font-weight: 800;
+  margin-right: 4px;
+}
+
+.statText {
+  opacity: 0.85;
+  font-weight: 500;
+}
+
+.avatarStack {
+  display: flex;
+  align-items: center;
+}
+
+.stackedAvatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-primary);
+  margin-left: -10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-size: cover;
+  background-position: center;
+  background-color: #0097a7;
+  font-size: 11px;
+  color: white;
+  font-weight: bold;
+  position: relative;
+  box-shadow: 0 0 10px rgba(0,0,0,0.2);
+}
+
+.stackedAvatar:first-child {
+  margin-left: 0;
+}
+
+.moreCount {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-primary);
+  margin-left: -10px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1;
+}
+
+.investorName {
+  margin-left: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #10b981;
+}
+
+@media (max-width: 600px) {
+  .socialProofRow {
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .proofPill {
+    padding: 0 12px;
+    height: 30px;
+    font-size: 12px;
+  }
+  .stackedAvatar, .moreCount {
+    width: 22px;
+    height: 22px;
+    font-size: 9px;
+  }
+}

@@ -9,6 +9,7 @@ import FeedHeader from '../feed/FeedHeader';
 import StartupCard from '../feed/StartupCard';
 import ProjectDetailView from '../feed/ProjectDetailView';
 import StartupDetail from '../feed/StartupDetail';
+import InvestorDetail from '../investors/InvestorDetail';
 import ProjectSubmissionForm from '../startup/ProjectSubmissionForm';
 import investorService from '../../services/investorService';
 import projectSubmissionService from '../../services/projectSubmissionService';
@@ -22,6 +23,7 @@ import InvestorDiscovery from '../investors/InvestorDiscovery';
 import AIChatAssistant from '../../pages/AIChatAssistant';
 import AIEvaluationService from '../../services/AIEvaluationService';
 import FloatingChatWidget from '../common/FloatingChatWidget';
+import subscriptionService from '../../services/subscriptionService';
 
 import ProfileRequiredModal from '../startup/ProfileRequiredModal';
 import startupProfileService from '../../services/startupProfileService';
@@ -51,9 +53,15 @@ function MainLayout({
   activeView = 'main',
   isFullWidthContent = false
 }) {
-  const [isPremium] = useState(false);
+  const [userSubscription, setUserSubscription] = useState(null);
+  const isPaidUser = !!(user && userSubscription && 
+                      (userSubscription.status === 'Active' || userSubscription.status === 1 || userSubscription.status === 'active') && 
+                      userSubscription.packageName && 
+                      !userSubscription.packageName.toLowerCase().includes('miễn phí') &&
+                      !userSubscription.packageName.toLowerCase().includes('free'));
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedStartupProfileId, setSelectedStartupProfileId] = useState(null);
+  const [selectedInvestorProfileId, setSelectedInvestorProfileId] = useState(null);
   const [selectedProjectId, setSelectedProjectId] = useState(null);
   const [selectedAdvisor, setSelectedAdvisor] = useState(null);
   const [showProjectForm, setShowProjectForm] = useState(false);
@@ -67,6 +75,7 @@ function MainLayout({
   const prevViewRef = useRef({
     projectId: null,
     profileId: null,
+    investorId: null,
     advisor: null,
     activeView: activeView
   });
@@ -76,8 +85,8 @@ function MainLayout({
     const main = mainContentRef.current;
     const isMobile = window.innerWidth < 1024;
 
-    const isDetailView = !!(selectedProjectId || selectedStartupProfileId || selectedAdvisor);
-    const wasDetailView = !!(prevViewRef.current.projectId || prevViewRef.current.profileId || prevViewRef.current.advisor);
+    const isDetailView = !!(selectedProjectId || selectedStartupProfileId || selectedInvestorProfileId || selectedAdvisor);
+    const wasDetailView = !!(prevViewRef.current.projectId || prevViewRef.current.profileId || prevViewRef.current.investorId || prevViewRef.current.advisor);
     const viewChanged = activeView !== prevViewRef.current.activeView;
 
     // Helper to get/set scroll
@@ -122,6 +131,7 @@ function MainLayout({
     prevViewRef.current = {
       projectId: selectedProjectId,
       profileId: selectedStartupProfileId,
+      investorId: selectedInvestorProfileId,
       advisor: selectedAdvisor,
       activeView: activeView
     };
@@ -134,6 +144,7 @@ function MainLayout({
       if (window.location.pathname === '/' || window.location.pathname === '') {
         setSelectedProjectId(null);
         setSelectedStartupProfileId(null);
+        setSelectedInvestorProfileId(null);
         setSelectedAdvisor(null);
       } else if (window.location.pathname.startsWith('/projects/')) {
         const id = window.location.pathname.split('/')[2];
@@ -319,6 +330,24 @@ function MainLayout({
     fetchSentConnections();
   }, [user]);
 
+  // Fetch subscription status
+  useEffect(() => {
+    if (!user) {
+      setUserSubscription(null);
+      return;
+    }
+    const fetchSubscription = async () => {
+      try {
+        const subData = await subscriptionService.getMySubscription();
+        console.log('[MainLayout] User subscription:', subData);
+        setUserSubscription(subData);
+      } catch (error) {
+        console.error('[MainLayout] Failed to fetch subscription:', error);
+      }
+    };
+    fetchSubscription();
+  }, [user]);
+
   // Fetch invested projects for investors - runs once and caches the projectIds
   useEffect(() => {
     const isInvestor = user && (
@@ -364,58 +393,76 @@ function MainLayout({
   useEffect(() => {
     const fetchInvestorData = async () => {
       try {
-        const response = await dealsService.getInvestorDeals();
-        let deals = [];
-        if (response && response.data) {
-          if (response.data.items && Array.isArray(response.data.items)) {
-            deals = response.data.items;
-          } else if (Array.isArray(response.data)) {
-            deals = response.data;
+        console.log('[MainLayout] Fetching investor data and deals...');
+        const [dealsRes, profilesRes] = await Promise.all([
+          dealsService.getInvestorDeals(),
+          investorService.getAllInvestors({ pageSize: 100 })
+        ]);
+
+        // 1. Process investor profiles into a lookup map
+        const profileLookup = new Map();
+        const profiles = profilesRes?.items || profilesRes?.data?.items || (Array.isArray(profilesRes) ? profilesRes : []);
+        
+        profiles.forEach(p => {
+          const id = p.investorId || p.userId || p.id;
+          if (id) {
+            profileLookup.set(id.toString(), {
+              name: p.organizationName || p.userName || p.name || 'Nhà đầu tư',
+              avatar: p.profilePicture || p.avatar || null
+            });
           }
-        } else if (Array.isArray(response)) {
-          deals = response;
+        });
+
+        // 2. Process deals
+        let deals = [];
+        if (dealsRes && dealsRes.data) {
+          if (dealsRes.data.items && Array.isArray(dealsRes.data.items)) {
+            deals = dealsRes.data.items;
+          } else if (Array.isArray(dealsRes.data)) {
+            deals = dealsRes.data;
+          }
+        } else if (Array.isArray(dealsRes)) {
+          deals = dealsRes;
         }
 
-        // Filter for Contract_Signed status only
-        const contractSignedDeals = deals.filter(d => d.status === 'Contract_Signed' || d.status === 3);
+        // Filter for Contract_Signed status only (Status 3 = Contract_Signed)
+        const contractSignedDeals = deals.filter(d => 
+          d.status === 'Contract_Signed' || 
+          d.status === 3 || 
+          String(d.status) === '3'
+        );
         
-        // Group investors by project
-        const investorMap = new Map();
-        const investorSet = new Set(); // Track unique investors to avoid duplicates
+        // 3. Group investors by project using real profile data
+        const investorMapByProject = new Map();
+        const seenPairs = new Set(); // Track unique investor-project pairs
         
         contractSignedDeals.forEach(deal => {
           const pId = deal.projectId;
+          const invId = deal.investorId || deal.investor?.id || deal.investor?.investorId;
           
-          // Try to get investor info from deal
-          let investor = null;
-          if (deal.investor && typeof deal.investor === 'object') {
-            // If deal has investor object
-            investor = {
-              id: deal.investor.id || deal.investor.investorId || deal.investorId,
-              name: deal.investor.name || deal.investor.email || 'Investor',
-              avatar: deal.investor.profilePicture || deal.investor.avatar || null,
-              email: deal.investor.email
-            };
-          } else if (deal.investorId) {
-            // If only ID provided
-            investor = {
-              id: deal.investorId,
-              name: 'Investor',
-              avatar: null
-            };
-          }
+          if (!pId || !invId) return;
+
+          // Try to get real info from lookup map
+          const realProfile = profileLookup.get(invId.toString());
           
-          if (investor && !investorSet.has(investor.id + '-' + pId)) {
-            if (!investorMap.has(pId)) {
-              investorMap.set(pId, []);
+          let investorInfo = {
+            id: invId,
+            name: realProfile?.name || deal.investor?.name || deal.investor?.email || 'Nhà đầu tư',
+            avatar: realProfile?.avatar || deal.investor?.profilePicture || deal.investor?.avatar || null
+          };
+          
+          const pairKey = `${invId}-${pId}`;
+          if (!seenPairs.has(pairKey)) {
+            if (!investorMapByProject.has(pId)) {
+              investorMapByProject.set(pId, []);
             }
-            investorMap.get(pId).push(investor);
-            investorSet.add(investor.id + '-' + pId);
+            investorMapByProject.get(pId).push(investorInfo);
+            seenPairs.add(pairKey);
           }
         });
         
-        setInvestorsByProject(investorMap);
-        console.log('[MainLayout] Investors by project:', investorMap);
+        setInvestorsByProject(investorMapByProject);
+        console.log('[MainLayout] Updated investorsByProject with real profiles:', investorMapByProject);
       } catch (error) {
         console.error('[MainLayout] Failed to fetch investor data:', error);
         setInvestorsByProject(new Map());
@@ -691,10 +738,18 @@ function MainLayout({
             user={user}
             onShowLogin={onShowLogin}
           />
+        ) : selectedInvestorProfileId ? (
+          <InvestorDetail
+            investorId={selectedInvestorProfileId}
+            onBack={() => setSelectedInvestorProfileId(null)}
+            user={user}
+            onShowLogin={onShowLogin}
+          />
         ) : selectedProjectId ? (
           <ProjectDetailView
             projectId={selectedProjectId}
             user={user}
+            isPaidUser={isPaidUser}
             onShowLogin={onShowLogin}
             onBack={() => {
               setSelectedProjectId(null);
@@ -773,7 +828,7 @@ function MainLayout({
                       key={startup.id}
                       index={index}
                       startup={startup}
-                      isPremium={isPremium}
+                      isPaidUser={isPaidUser}
                       user={user}
                       followedProjectIds={followedProjectIds}
                       sentConnectionIds={sentConnectionIds}
@@ -781,12 +836,19 @@ function MainLayout({
                       investors={investorsByProject.get(startup.id) || []}
                       onInvestmentSuccess={refetchInvestedProjects}
                       isReturning={isReturning}
-                      onViewProfile={(id) => {
+                      onViewProfile={(id, type = 'startup') => {
                         // Save scroll position
                         const isMobile = window.innerWidth < 1024;
                         const scrollPos = isMobile ? window.scrollY : (mainContentRef.current ? mainContentRef.current.scrollTop : 0);
                         homeScrollPos.current = scrollPos;
-                        setSelectedStartupProfileId(id);
+
+                        if (type === 'investor') {
+                          setSelectedStartupProfileId(null);
+                          setSelectedInvestorProfileId(id);
+                        } else {
+                          setSelectedInvestorProfileId(null);
+                          setSelectedStartupProfileId(id);
+                        }
                       }}
                       onViewProject={(id) => {
                         // Capture scroll BEFORE state change

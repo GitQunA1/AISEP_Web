@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock, Heart, MessageSquare, TrendingUpIcon, MessageCircle, CheckCheck, AlertTriangle, HeartOff } from 'lucide-react';
+import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock, Heart, MessageSquare, TrendingUpIcon, MessageCircle, CheckCheck, AlertTriangle, HeartOff, Star, Briefcase } from 'lucide-react';
 import Badge from '../common/Badge';
 import InvestmentModal from '../common/InvestmentModal';
 import styles from './StartupCard.module.css';
@@ -11,7 +11,7 @@ import dealsService from '../../services/dealsService';
  * StartupCard Component - "Visual Priority (Concept C)"
  * Clean, full-width data density
  */
-function StartupCard({ startup, isPremium = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), investors = [], onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false }) {
+function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), investors = [], onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
@@ -225,14 +225,14 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
   const sid = startup.startupId || startup.userId || startup.id;
 
   const PremiumLock = () => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '12px', fontWeight: 'bold', color: '#ffad1f', background: 'rgba(255, 173, 31, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-      <Lock size={12} strokeWidth={2.5} /> Premium
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px', fontWeight: 'bold', color: '#ffad1f', background: 'rgba(255, 173, 31, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+      <Lock size={12} strokeWidth={2.5} /> {isPaidUser ? 'Mở khóa ngay' : 'Premium'}
     </div>
   );
 
   const PremiumLockText = () => (
     <span style={{ color: '#ffad1f', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-      <Lock size={12} strokeWidth={2.5} /> Yêu cầu Premium
+      <Lock size={12} strokeWidth={2.5} /> {isPaidUser ? 'Mở khóa ngay' : 'Yêu cầu Premium'}
     </span>
   );
 
@@ -316,56 +316,62 @@ function StartupCard({ startup, isPremium = false, user, followedProjectIds, sen
             {startup.description}
           </div>
 
-          {/* Follower Count */}
-          {startup.followerCount !== undefined && (
-            <div style={{ marginTop: '8px', fontSize: '13px', color: '#0097a7' }}>
-              ⭐ {startup.followerCount} người quan tâm
-            </div>
-          )}
+          {/* Social Proof Row (Followers & Investors) */}
+          {(startup.followerCount > 0 || (investors && investors.length > 0)) && (
+            <div className={styles.socialProofRow} onClick={(e) => e.stopPropagation()}>
+              {/* Follower Pill */}
+              {startup.followerCount > 0 && (
+                <div className={`${styles.proofPill} ${styles.followerPill}`}>
+                  <Star size={14} fill="currentColor" strokeWidth={0} />
+                  <span>
+                    <span className={styles.pillLabel}>{startup.followerCount}</span>
+                    <span className={styles.statText}>người quan tâm</span>
+                  </span>
+                </div>
+              )}
 
-          {/* Investor Avatars (Contract_Signed only) */}
-          {investors && investors.length > 0 && (
-            <div style={{ marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span style={{ fontSize: '13px', color: '#22c55e', fontWeight: '500' }}>
-                💼 {investors.length} nhà đầu tư:
-              </span>
-              <div style={{ display: 'flex', gap: '2px', alignItems: 'center' }}>
-                {investors.map((investor, idx) => (
-                  <div
-                    key={investor.id || idx}
-                    onClick={() => onViewProfile && onViewProfile(investor.id)}
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      borderRadius: '50%',
-                      backgroundColor: investor.avatar ? 'transparent' : '#0097a7',
-                      backgroundImage: investor.avatar ? `url(${investor.avatar})` : 'none',
-                      backgroundSize: 'cover',
-                      backgroundPosition: 'center',
-                      border: '1px solid #e5e7eb',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      color: 'white',
-                      fontWeight: 'bold',
-                      transition: 'transform 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      e.currentTarget.style.transform = 'scale(1.15)';
-                      e.currentTarget.style.zIndex = '10';
-                    }}
-                    onMouseLeave={(e) => {
-                      e.currentTarget.style.transform = 'scale(1)';
-                      e.currentTarget.style.zIndex = '1';
-                    }}
-                    title={investor.name || 'Investor'}
-                  >
-                    {!investor.avatar && investor.name?.charAt(0).toUpperCase()}
+              {/* Investor Pill */}
+              {investors && investors.length > 0 && (
+                <div 
+                  className={`${styles.proofPill} ${styles.investorPill} ${styles.clickablePill}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (investors.length === 1) {
+                      onViewProfile && onViewProfile(investors[0].id, 'investor');
+                    }
+                  }}
+                  title={investors.length === 1 ? `Xem hồ sơ ${investors[0].name}` : `${investors.length} nhà đầu tư chuyên nghiệp`}
+                >
+                  <Briefcase size={14} fill="currentColor" strokeWidth={0} />
+                  <span className={styles.statText} style={{ marginRight: '4px' }}>Được đầu tư bởi</span>
+                  
+                  <div className={styles.avatarStack}>
+                    {investors.slice(0, 3).map((investor, idx) => (
+                      <div
+                        key={investor.id || idx}
+                        className={styles.stackedAvatar}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onViewProfile && onViewProfile(investor.id, 'investor');
+                        }}
+                        style={{
+                          backgroundImage: investor.avatar ? `url(${investor.avatar})` : 'none',
+                        }}
+                        title={investor.name || 'Investor'}
+                      >
+                        {!investor.avatar && investor.name?.charAt(0).toUpperCase()}
+                      </div>
+                    ))}
+                    {investors.length > 3 && (
+                      <div className={styles.moreCount}>+{investors.length - 3}</div>
+                    )}
                   </div>
-                ))}
-              </div>
+
+                  {investors.length === 1 && (
+                    <span className={styles.investorName}>{investors[0].name}</span>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </div>
