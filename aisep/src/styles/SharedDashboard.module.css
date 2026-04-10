@@ -3759,14 +3759,8 @@
 .newsGrid {
     display: grid;
     gap: 16px;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     padding: 24px;
-}
-
-@media (max-width: 1200px) {
-    .newsGrid {
-        grid-template-columns: repeat(2, 1fr);
-    }
 }
 
 @media (max-width: 640px) {
@@ -3804,6 +3798,8 @@
 .newsThumbnailPlaceholder {
     width: 100%;
     aspect-ratio: 16 / 9;
+    flex-shrink: 0;
+    flex-grow: 0;
     background: var(--bg-hover);
     display: flex;
     align-items: center;

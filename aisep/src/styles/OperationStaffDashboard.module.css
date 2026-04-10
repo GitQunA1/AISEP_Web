@@ -325,6 +325,211 @@
     padding: 0;
 }
 
+/* PR Management Subtabs - Sleek Twitter/X Inspired */
+.prTabSwitcher {
+    display: flex;
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 24px;
+    gap: 32px;
+}
+
+.prTab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 4px;
+    background: transparent;
+    border: none;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s ease;
+}
+
+.prTab:hover {
+    color: var(--text-primary);
+    background-color: rgba(255, 255, 255, 0.03); /* subtle hover */
+}
+
+.prActiveTab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 16px 4px;
+    background: transparent;
+    border: none;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-primary);
+    cursor: pointer;
+    position: relative;
+}
+
+.prActiveTab::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    left: 0;
+    width: 100%;
+    height: 4px;
+    background-color: var(--primary-blue);
+    border-radius: 4px 4px 0 0;
+}
+
+.newsCountBadge {
+    background-color: var(--primary-blue);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 2px 8px;
+    border-radius: 99px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Redesigned PR Deals & News Cards - Sleek Outline Style */
+.sleekCard {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background-color: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    transition: background-color 0.2s ease;
+}
+
+.sleekCard:hover {
+    background-color: var(--bg-secondary);
+}
+
+.sleekCardOutline {
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 0;
+    overflow: hidden;
+    background: transparent;
+}
+
+.sleekCardOutline:hover {
+    background-color: var(--bg-secondary);
+}
+
+.sleekBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 99px;
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid var(--border-color);
+    background: transparent;
+}
+
+.sleekBadgeSuccess {
+    color: #10b981;
+    border-color: rgba(16, 185, 129, 0.3);
+}
+
+.sleekBadgeWarning {
+    color: #f59e0b;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.sleekCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.sleekCardTitle {
+    margin: 0 0 4px 0;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.sleekCardSubtitle {
+    margin: 0;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.sleekMetaBox {
+    background-color: rgba(255, 255, 255, 0.02);
+    border: 1px solid var(--border-color);
+    padding: 12px;
+    border-radius: 8px;
+}
+
+.sleekMetaLabel {
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.sleekMetaValue {
+    font-size: 13px;
+    color: var(--text-primary);
+    font-weight: 600;
+}
+
+.sleekButton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    border-radius: 99px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+}
+
+.sleekButtonPrimary {
+    background-color: var(--primary-blue);
+    color: white;
+}
+
+.sleekButtonPrimary:hover:not(:disabled) {
+    background-color: #1a8cd8;
+}
+
+.sleekButtonOutline {
+    background-color: transparent;
+    color: var(--text-primary);
+    border-color: var(--border-color);
+}
+
+.sleekButtonOutline:hover:not(:disabled) {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+.sleekButtonDanger {
+    background-color: transparent;
+    color: #ef4444;
+    border-color: rgba(239, 68, 68, 0.3);
+}
+
+.sleekButtonDanger:hover:not(:disabled) {
+    background-color: rgba(239, 68, 68, 0.1);
+}
+
+.sleekButton:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 /* Statistics section has special emphasis */
 .statisticsSection {
     position: relative;
@@ -1591,7 +1796,7 @@ btnReject {
 
 .staffModalTitleGrp {
     display: flex;
-    flex-direction: column;
+    align-items: center;
     gap: 8px;
     min-width: 0;
 }
