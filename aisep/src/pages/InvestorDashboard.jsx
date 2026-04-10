@@ -28,6 +28,7 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
     const [showRightTabIndicator, setShowRightTabIndicator] = useState(false);
     const [indicatorStyle, setIndicatorStyle] = useState({});
     const tabsRef = useRef(null);
+    const isFirstLoad = useRef(true);
     
     // Sync activeSection with initialSection prop
     React.useEffect(() => {
@@ -181,11 +182,16 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
     React.useEffect(() => {
         const initSignalR = async () => {
             try {
-                // Get JWT token from localStorage or auth context
                 const token = localStorage.getItem('aisep_token') || sessionStorage.getItem('token');
                 if (token && user?.userId) {
                     await signalRService.initialize(token);
                     console.log('[InvestorDashboard] SignalR initialized successfully');
+
+                    // Register listener for real-time background refreshes
+                    signalRService.onNotificationReceived((notif) => {
+                        console.log('[InvestorDashboard] SignalR notification received, triggering silent refresh');
+                        refreshDeals();
+                    });
                 }
             } catch (error) {
                 console.error('[InvestorDashboard] Failed to initialize SignalR:', error);
@@ -220,12 +226,13 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
         };
     }, []);
 
-    // Auto-refresh polling interval (every 5 seconds to keep data fresh)
+    // Silent background polling to keep all tabs fresh without disrupting the UI.
+    // fetchAllData is optimized to only show loading skeletons on the absolute first mount.
     React.useEffect(() => {
         const pollingInterval = setInterval(() => {
-            console.log('[InvestorDashboard] Auto-refresh polling triggered');
+            console.log('[InvestorDashboard] Silent background poll triggered');
             setRefreshTrigger(prev => prev + 1);
-        }, 5000); // 5 seconds
+        }, 5000); // 5 seconds - kept very fresh according to user request
 
         return () => {
             clearInterval(pollingInterval);
@@ -234,33 +241,22 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
 
     React.useEffect(() => {
         const fetchAllData = async () => {
-            setIsLoading(true);
+            // Only set total loading state on absolute first mount to avoid flashing/resetting the UI
+            if (isFirstLoad.current) {
+                setIsLoading(true);
+            }
+            
             try {
-                console.log('[InvestorDashboard] Starting parallel fetch of all data...');
-
-                // Fetch all 4 APIs in PARALLEL using Promise.all()
+                console.log('[InvestorDashboard] Starting fetch of all data (First load:', isFirstLoad.current, ')');
+                
                 const [followingRes, connectRes, dealsRes, profileRes] = await Promise.all([
-                    followerService.getMyFollowing().catch(err => {
-                        console.error('Failed to fetch following:', err);
-                        return null;
-                    }),
-                    connectionService.getMyConnectionRequests().catch(err => {
-                        console.error('Failed to fetch connection requests:', err);
-                        return null;
-                    }),
-                    dealsService.getInvestorDeals({ pageSize: 100 }).catch(err => {
-                        console.error('Failed to fetch deals:', err);
-                        return null;
-                    }),
-                    investorService.getMyProfile().catch(err => {
-                        console.error('Failed to fetch investor profile:', err);
-                        return null;
-                    })
+                    followerService.getMyFollowing().catch(err => null),
+                    connectionService.getMyConnectionRequests().catch(err => null),
+                    dealsService.getInvestorDeals({ pageSize: 100 }).catch(err => null),
+                    investorService.getMyProfile().catch(err => null)
                 ]);
 
-                console.log('[InvestorDashboard] Parallel fetch completed');
-
-                // Process Profile
+                // Update States... (Omitted logic remains same)
                 if (profileRes) {
                     setInvestorProfile(profileRes);
                     setPrefFormData({
@@ -277,15 +273,11 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                         typicalInvestmentSize: profileRes.typicalInvestmentSize || ''
                     });
 
-                    // Sync custom UI states
-                    // 1. Start with the primary single fields
                     let industries = [];
                     if (profileRes.focusIndustry) industries.push(profileRes.focusIndustry);
-                    
                     let stages = [];
                     if (profileRes.preferredStage) stages.push(profileRes.preferredStage);
 
-                    // 2. Supplement with multi-selection fields if they exist
                     if (profileRes.preferredIndustries) {
                         try {
                             const parsed = JSON.parse(profileRes.preferredIndustries);
@@ -313,85 +305,47 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                     setPreferredIndustries(industries);
                     setPreferredStages(stages);
                 }
-                if (followingRes && followingRes.data) {
-                    let followedProjects = [];
-                    if (followingRes.data.items && Array.isArray(followingRes.data.items)) {
-                        followedProjects = followingRes.data.items;
-                    } else if (Array.isArray(followingRes.data)) {
-                        followedProjects = followingRes.data;
-                    }
 
-                    const formattedInterests = followedProjects.map(project => ({
+                if (followingRes?.data) {
+                    let followedProjects = Array.isArray(followingRes.data.items) ? followingRes.data.items : Array.isArray(followingRes.data) ? followingRes.data : [];
+                    
+                    // Sort by newest to oldest based on followedAt
+                    followedProjects.sort((a, b) => new Date(b.followedAt) - new Date(a.followedAt));
+
+                    setSentInterests(followedProjects.map(project => ({
                         id: project.projectId,
                         projectId: project.projectId,
                         projectName: project.projectName,
                         projectImageUrl: project.projectImageUrl,
                         industry: project.industry,
-                        sentDate: new Date(project.followedAt).toLocaleString('vi-VN', {
-                            year: 'numeric',
-                            month: '2-digit',
-                            day: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                            second: '2-digit',
-                            hour12: false
-                        }),
+                        sentDate: new Date(project.followedAt).toLocaleString('vi-VN'),
                         followedAt: project.followedAt
-                    }));
-                    setSentInterests(formattedInterests);
-                } else {
-                    setSentInterests([]);
+                    })));
                 }
 
-                // Process Connection Requests
-                if (connectRes && connectRes.data && connectRes.data.items) {
-                    const formattedRequests = connectRes.data.items.map(request => {
-                        let formattedDate = '';
-                        if (request.responseDate) {
-                            formattedDate = new Date(request.responseDate).toLocaleString('vi-VN', {
-                                year: 'numeric',
-                                month: '2-digit',
-                                day: '2-digit',
-                                hour: '2-digit',
-                                minute: '2-digit',
-                                second: '2-digit',
-                                hour12: false
-                            });
-                        }
-                        return {
-                            id: request.connectionRequestId || request.id,
-                            connectionRequestId: request.connectionRequestId,
-                            projectId: request.projectId,
-                            projectName: request.projectName || 'Unknown Project',
-                            startupName: request.startupName || 'Unknown Startup',
-                            status: request.status || 'Pending',
-                            message: request.message || '',
-                            responseDate: formattedDate,
-                            responseDateRaw: request.responseDate,
-                            chatSessionId: request.chatSessionId || null
-                        };
-                    });
-                    setSentConnectionRequests(formattedRequests);
-                } else {
-                    setSentConnectionRequests([]);
+                if (connectRes?.data?.items) {
+                    setSentConnectionRequests(connectRes.data.items.map(request => ({
+                        id: request.connectionRequestId || request.id,
+                        connectionRequestId: request.connectionRequestId,
+                        projectId: request.projectId,
+                        projectName: request.projectName || 'Unknown Project',
+                        startupName: request.startupName || 'Unknown Startup',
+                        status: request.status || 'Pending',
+                        message: request.message || '',
+                        responseDate: request.responseDate ? new Date(request.responseDate).toLocaleString('vi-VN') : '',
+                        responseDateRaw: request.responseDate,
+                        chatSessionId: request.chatSessionId || null
+                    })));
                 }
 
-                // Process Deals - SIMPLE: just get raw data
-                let dealsData = [];
-                if (dealsRes?.data?.items && Array.isArray(dealsRes.data.items)) {
-                    dealsData = dealsRes.data.items;
-                } else if (Array.isArray(dealsRes?.data)) {
-                    dealsData = dealsRes.data;
-                } else if (Array.isArray(dealsRes)) {
-                    dealsData = dealsRes;
-                }
-                console.log(`[InvestorDashboard] Found ${dealsData.length} deals`);
+                let dealsData = dealsRes?.data?.items || dealsRes?.data || dealsRes || [];
+                if (!Array.isArray(dealsData)) dealsData = [];
                 setDeals(dealsData);
+
+                // Mark first load as complete
+                isFirstLoad.current = false;
             } catch (error) {
-                console.error('[InvestorDashboard] Failed to fetch investor data:', error);
-                setSentInterests([]);
-                setSentConnectionRequests([]);
-                setDeals([]);
+                console.error('[InvestorDashboard] Data fetch error:', error);
             } finally {
                 setIsLoading(false);
             }
@@ -961,7 +915,7 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                         {/* Requests Grid */}
                         {!isLoading && sentConnectionRequests.length > 0 && (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-                                {sentConnectionRequests.map(request => {
+                                {sentConnectionRequests.map((request, index) => {
                                     const statusConfig = {
                                         'Pending': { label: 'Chờ xử lý', color: '#f59e0b' },
                                         'Accepted': { label: 'Đã chấp nhận', color: '#10b981' },
@@ -973,13 +927,14 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                                     return (
                                         <div
                                             key={request.id || request.connectionRequestId}
-                                            className={styles.card}
+                                            className={`${styles.card} ${styles.itemAppear}`}
                                             style={{
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 gap: '12px',
                                                 borderLeft: '4px solid ' + statusInfo.color,
-                                                transition: 'all 0.2s ease'
+                                                transition: 'all 0.2s ease',
+                                                animationDelay: `${index * 0.05}s`
                                             }}
                                         >
                                             {/* Header */}
@@ -1165,17 +1120,18 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                         {/* Interests Grid */}
                         {!isLoading && sentInterests.length > 0 && (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-                                {sentInterests.map(interest => (
+                                {sentInterests.map((interest, index) => (
                                     <div
                                         key={interest.id}
-                                        className={styles.card}
+                                        className={`${styles.card} ${styles.itemAppear}`}
                                         style={{
                                             display: 'flex',
                                             flexDirection: 'column',
                                             gap: '12px',
                                             borderLeft: '4px solid #ec4899',
                                             transition: 'all 0.2s ease',
-                                            padding: '16px'
+                                            padding: '16px',
+                                            animationDelay: `${index * 0.05}s`
                                         }}
                                     >
                                         {/* Header */}
@@ -1337,7 +1293,7 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                         {/* Deals Grid */}
                         {!isLoading && deals.length > 0 && (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-                                {deals.map(deal => {
+                                {deals.map((deal, index) => {
                                     const statusMap = {
                                         'Pending': { label: 'Chờ xác nhận', color: '#f59e0b' },
                                         'Confirmed': { label: 'Đã xác nhận', color: '#10b981' },
@@ -1351,13 +1307,14 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                                     return (
                                         <div
                                             key={deal.dealId}
-                                            className={styles.card}
+                                            className={`${styles.card} ${styles.itemAppear}`}
                                             style={{
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 gap: '12px',
                                                 borderLeft: '4px solid ' + statusInfo.color,
-                                                transition: 'all 0.2s ease'
+                                                transition: 'all 0.2s ease',
+                                                animationDelay: `${index * 0.05}s`
                                             }}
                                         >
                                             {/* Deal Header */}
