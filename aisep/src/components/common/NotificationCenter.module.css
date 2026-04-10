@@ -163,6 +163,18 @@
   background-color: var(--bg-hover);
 }
 
+.notificationItem.deleting {
+  transform: translateX(100%);
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  border-bottom: 0;
+  margin: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
 .notificationItem.unread {
   background-color: rgba(29, 155, 240, 0.04);
 }
@@ -246,9 +258,37 @@
   opacity: 1;
 }
 
+/* On mobile/touch devices, the delete button should always be visible */
+@media (max-width: 1024px) {
+  .deleteBtn {
+    opacity: 0.8;
+  }
+}
+
 .deleteBtn:hover {
   background-color: rgba(244, 33, 46, 0.1);
   color: #f4212e;
+}
+
+.deleteBtn.loading {
+  opacity: 1;
+  color: var(--primary-blue);
+  cursor: default;
+}
+
+.deleteBtn.error {
+  opacity: 1;
+  color: #f4212e;
+  background-color: rgba(244, 33, 46, 0.1);
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .clearAllContainer {

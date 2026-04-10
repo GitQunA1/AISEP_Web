@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Bell, X, Trash2, Mail, Users, AlertTriangle, Info, CheckCheck, Briefcase, MessageCircle } from 'lucide-react';
+import { Bell, X, Trash2, Mail, Users, AlertTriangle, Info, CheckCheck, Briefcase, MessageCircle, Loader2 } from 'lucide-react';
 import styles from './NotificationCenter.module.css';
 import notificationService from '../../services/notificationService';
 import chatService from '../../services/chatService';
@@ -10,6 +10,9 @@ const NotificationCenter = ({ onOpenChat }) => {
   const [isClosing, setIsClosing] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [deletingIds, setDeletingIds] = useState(new Set());
+  const [loadingIds, setLoadingIds] = useState(new Set());
+  const [errorIds, setErrorIds] = useState(new Set());
   const signalRSubscribed = useRef(false);
 
   // Load notifications on mount and setup SignalR
@@ -145,15 +148,61 @@ const NotificationCenter = ({ onOpenChat }) => {
 
   const handleDeleteNotification = async (e, notificationId) => {
     e.stopPropagation();
+    
+    // Reset error state for this ID if it exists
+    setErrorIds(prev => {
+      const newSet = new Set(prev);
+      newSet.delete(notificationId);
+      return newSet;
+    });
+
+    // Add to loading set
+    setLoadingIds(prev => new Set(prev).add(notificationId));
+    
     try {
       await notificationService.deleteNotification(notificationId);
-      const deletedNotif = notifications.find(n => n.notificationId === notificationId);
-      setNotifications(prev => prev.filter(n => n.notificationId !== notificationId));
-      if (deletedNotif && !deletedNotif.isRead) {
-        setUnreadCount(Math.max(0, unreadCount - 1));
-      }
+      
+      // Successfully deleted, start exit animation
+      setLoadingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(notificationId);
+        return newSet;
+      });
+      setDeletingIds(prev => new Set(prev).add(notificationId));
+      
+      // Wait for animation to finish before removing from state
+      setTimeout(() => {
+        const deletedNotif = notifications.find(n => n.notificationId === notificationId);
+        setNotifications(prev => prev.filter(n => n.notificationId !== notificationId));
+        setDeletingIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(notificationId);
+          return newSet;
+        });
+        
+        if (deletedNotif && !deletedNotif.isRead) {
+          setUnreadCount(Math.max(0, unreadCount - 1));
+        }
+      }, 300);
     } catch (error) {
       console.error('Error deleting notification:', error);
+      
+      // Remove loading state and add error state
+      setLoadingIds(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(notificationId);
+        return newSet;
+      });
+      setErrorIds(prev => new Set(prev).add(notificationId));
+      
+      // Clear error state after 3 seconds
+      setTimeout(() => {
+        setErrorIds(prev => {
+          const newSet = new Set(prev);
+          newSet.delete(notificationId);
+          return newSet;
+        });
+      }, 3000);
     }
   };
 
@@ -231,8 +280,8 @@ const NotificationCenter = ({ onOpenChat }) => {
               {notifications.map(notification => (
                 <div
                   key={notification.notificationId}
-                  className={`${styles.notificationItem} ${notification.isRead ? styles.read : styles.unread}`}
-                  onClick={() => handleNotificationClick(notification)}
+                  className={`${styles.notificationItem} ${notification.isRead ? styles.read : styles.unread} ${deletingIds.has(notification.notificationId) ? styles.deleting : ''}`}
+                  onClick={() => !deletingIds.has(notification.notificationId) && handleNotificationClick(notification)}
                 >
                   <div className={styles.notificationIcon}>
                     {getNotificationIcon(notification)}
@@ -243,11 +292,18 @@ const NotificationCenter = ({ onOpenChat }) => {
                     <div className={styles.timestamp}>{formatTime(notification.createdAt)}</div>
                   </div>
                   <button
-                    className={styles.deleteBtn}
-                    onClick={(e) => handleDeleteNotification(e, notification.notificationId)}
-                    title="Xóa thông báo"
+                    className={`${styles.deleteBtn} ${loadingIds.has(notification.notificationId) ? styles.loading : ''} ${errorIds.has(notification.notificationId) ? styles.error : ''}`}
+                    onClick={(e) => !loadingIds.has(notification.notificationId) && handleDeleteNotification(e, notification.notificationId)}
+                    title={errorIds.has(notification.notificationId) ? "Lỗi khi xóa" : "Xóa thông báo"}
+                    disabled={loadingIds.has(notification.notificationId)}
                   >
-                    <Trash2 size={14} />
+                    {loadingIds.has(notification.notificationId) ? (
+                      <Loader2 size={14} className={styles.spinner} />
+                    ) : errorIds.has(notification.notificationId) ? (
+                      <AlertTriangle size={14} />
+                    ) : (
+                      <Trash2 size={14} />
+                    )}
                   </button>
                 </div>
               ))}

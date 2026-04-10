@@ -13,7 +13,7 @@ const notificationService = {
   getNotifications: async (params = {}) => {
     try {
       console.log('[notificationService] Fetching notifications', params);
-      const response = await apiClient.get('/api/notifications', { params });
+      const response = await apiClient.get('/api/Notifications', { params });
       console.log('[notificationService] Notifications response:', response);
       return response;
     } catch (error) {
@@ -31,7 +31,7 @@ const notificationService = {
   getNotification: async (notificationId) => {
     try {
       console.log('[notificationService] Fetching notification:', notificationId);
-      const response = await apiClient.get(`/api/notifications/${notificationId}`);
+      const response = await apiClient.get(`/api/Notifications/${notificationId}`);
       console.log('[notificationService] Notification response:', response);
       return response;
     } catch (error) {
@@ -49,7 +49,7 @@ const notificationService = {
   markAsRead: async (notificationId) => {
     try {
       console.log('[notificationService] Marking as read:', notificationId);
-      const response = await apiClient.put(`/api/notifications/${notificationId}/read`);
+      const response = await apiClient.put(`/api/Notifications/${notificationId}/read`);
       console.log('[notificationService] Mark as read response:', response);
       return response;
     } catch (error) {
@@ -66,7 +66,7 @@ const notificationService = {
   markAllAsRead: async () => {
     try {
       console.log('[notificationService] Marking all as read');
-      const response = await apiClient.put('/api/notifications/read-all');
+      const response = await apiClient.put('/api/Notifications/read-all');
       console.log('[notificationService] Mark all as read response:', response);
       return response;
     } catch (error) {
@@ -84,7 +84,7 @@ const notificationService = {
   deleteNotification: async (notificationId) => {
     try {
       console.log('[notificationService] Deleting notification:', notificationId);
-      const response = await apiClient.delete(`/api/notifications/${notificationId}`);
+      const response = await apiClient.delete(`/api/Notifications/${notificationId}`);
       console.log('[notificationService] Delete response:', response);
       return response;
     } catch (error) {
@@ -101,7 +101,7 @@ const notificationService = {
   getUnreadCount: async () => {
     try {
       console.log('[notificationService] Fetching unread count');
-      const response = await apiClient.get('/api/notifications/unread-count');
+      const response = await apiClient.get('/api/Notifications/unread-count');
       console.log('[notificationService] Unread count response:', response);
       return response;
     } catch (error) {
