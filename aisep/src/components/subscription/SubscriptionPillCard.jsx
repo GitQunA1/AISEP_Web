@@ -77,7 +77,7 @@ const SubscriptionPillCard = ({ user, onManage, isActive }) => {
                     subscription?.packageName && 
                     !subscription.packageName.toLowerCase().includes('cơ bản') && 
                     !subscription.packageName.toLowerCase().includes('basic');
-  const packageName = subscription?.packageName || (isPremium ? 'Premium Plan' : 'Gói Cơ bản');
+  const packageName = subscription?.packageName || (isPremium ? 'Premium Plan' : 'Gói Miễn phí');
   const expiryDate = subscription?.endDate ? new Date(subscription.endDate).toLocaleDateString('vi-VN') : null;
 
   return (
