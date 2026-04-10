@@ -6,6 +6,7 @@ import prService from '../../services/prService';
 import NewsCard from './NewsCard';
 import NewsDetailModal from './NewsDetailModal';
 import NotificationCenter from './NotificationCenter';
+import InvestorStatusBanner from './InvestorStatusBanner';
 
 /**
  * NewsPRSection – Redesigned Tin tức page shared across Startup, Advisor, Investor.
@@ -14,7 +15,7 @@ import NotificationCenter from './NotificationCenter';
  * Data from GET /api/PostPRs (prService.getPRs).
  * Clicking a card opens NewsDetailModal.
  */
-export default function NewsPRSection({ user, onOpenChat }) {
+export default function NewsPRSection({ user, onOpenChat, investorProfileStatus, investorProfileReason, onUpdateProfile }) {
     const [prNewsList, setPrNewsList] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -98,6 +99,14 @@ export default function NewsPRSection({ user, onOpenChat }) {
                     </div>
                 </div>
             </header>
+
+            {investorProfileStatus && (
+                <InvestorStatusBanner 
+                    status={investorProfileStatus}
+                    reason={investorProfileReason}
+                    onUpdateProfile={onUpdateProfile}
+                />
+            )}
 
             {/* News Grid */}
             <div className={styles.newsGrid}>

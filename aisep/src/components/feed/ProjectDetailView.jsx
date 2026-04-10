@@ -186,7 +186,7 @@ const MobileDocCard = ({ doc }) => (
 );
 
 /* ─── Main Component ─────────────────────────────────────── */
-export default function ProjectDetailView({ projectId, onBack, user, isPaidUser = false, onShowLogin, isFullView }) {
+export default function ProjectDetailView({ projectId, onBack, user, isPaidUser = false, onShowLogin, isFullView, isInvestorApproved = false }) {
   const [project, setProject] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [aiHistory, setAiHistory] = useState([]);
@@ -255,8 +255,12 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     if (!projectId || !user) return;
     setLoading(true); setError(null);
 
-    // Choose API based on isFullView prop
-    const fetchProjectData = isFullView
+    const roleStr = user?.role?.toString().toLowerCase() || '';
+    const roleNum = Number(user?.role);
+    const isBypassRole = roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 3 || roleNum === 2;
+
+    // Choose API based on isFullView prop OR role bypass
+    const fetchProjectData = (isFullView || isBypassRole)
       ? projectSubmissionService.getProjectById(projectId)
       : projectSubmissionService.getProjectNonPremiumById(projectId);
 
@@ -392,6 +396,13 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     : (project.startupPotentialScore ?? null);
 
   const PremiumBadge = ({ inline }) => {
+    const roleStr = user?.role?.toString().toLowerCase() || '';
+    const roleNum = Number(user?.role);
+    const isBypassRole = roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 3 || roleNum === 2;
+
+    // Don't show premium badge for bypass roles (they see real data)
+    if (isBypassRole) return null;
+
     const canUnlock = isPaidUser && user?.role === 'Investor';
     return (
       <div 
@@ -813,7 +824,13 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
                       justifyContent: 'flex-end'
                     }}>
                       <button
-                        onClick={() => setShowBookingWizard(true)}
+                        onClick={() => {
+                          if (!isInvestorApproved && (user.role?.toLowerCase() === 'investor' || user.role === 1)) {
+                            alert('Vui lòng hoàn thiện hồ sơ nhà đầu tư và chờ được phê duyệt để đặt lịch tư vấn.');
+                            return;
+                          }
+                          setShowBookingWizard(true);
+                        }}
                         style={{
                           display: 'flex', alignItems: 'center', gap: 10,
                           padding: '11px 24px', borderRadius: 12,

@@ -71,20 +71,58 @@ const investorService = {
     }
   },
 
-  /**
-   * Update investor profile details
-   * @param {number|string} investorId 
-   * @param {FormData|Object} data 
-   * @returns {Promise<Object>} Updated investor details
-   */
   updateInvestor: async (investorId, data) => {
     try {
-      // Backend expects [FromForm] so we use multipart/form-data if data is FormData
-      // Else apiClient handles JSON.
       const response = await apiClient.put(`/api/Investor/${investorId}`, data);
       return response;
     } catch (error) {
       console.error(`Error updating investor ${investorId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Create a new investor profile
+   * @param {FormData|Object} data 
+   * @returns {Promise<Object>} Created investor details
+   */
+  createInvestor: async (data) => {
+    try {
+      const response = await apiClient.post('/api/Investor', data);
+      return response;
+    } catch (error) {
+      console.error('Error creating investor profile:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Approve a pending investor (Staff only)
+   * @param {number|string} investorId 
+   * @returns {Promise<Object>} 
+   */
+  approveInvestor: async (investorId) => {
+    try {
+      const response = await apiClient.patch(`/api/Investor/${investorId}/approve`);
+      return response;
+    } catch (error) {
+      console.error(`Error approving investor ${investorId}:`, error);
+      throw error;
+    }
+  },
+
+  /**
+   * Reject a pending investor (Staff only)
+   * @param {number|string} investorId 
+   * @param {string} reason 
+   * @returns {Promise<Object>} 
+   */
+  rejectInvestor: async (investorId, reason) => {
+    try {
+      const response = await apiClient.patch(`/api/Investor/${investorId}/reject`, { reason });
+      return response;
+    } catch (error) {
+      console.error(`Error rejecting investor ${investorId}:`, error);
       throw error;
     }
   }

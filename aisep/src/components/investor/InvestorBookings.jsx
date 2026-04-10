@@ -11,6 +11,8 @@ import BookingWizard from '../booking/BookingWizard';
 import BookingDetailModal from '../booking/BookingDetailModal';
 import UserReportModal from '../booking/UserReportModal';
 import FeedHeader from '../feed/FeedHeader';
+import investorService from '../../services/investorService';
+import InvestorStatusBanner from '../common/InvestorStatusBanner';
 
 const BOOKING_STATUS_LABELS = {
     0: { label: 'Chờ xác nhận', cls: 'badgePending', color: 'var(--text-secondary)' },
@@ -27,13 +29,17 @@ const BOOKING_STATUS_LABELS = {
     NoResponse: { label: 'Không phản hồi', cls: 'badgeError', color: '#f4212e' },
 };
 
-export default function InvestorBookings({ user, onViewProject, initialFilterStatus, onFilterStatusChange }) {
+export default function InvestorBookings({ user, onViewProject, initialFilterStatus, onFilterStatusChange, onUpdateProfile }) {
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // Filter & Search State
     const [filterStatus, setFilterStatus] = useState(initialFilterStatus || 'ApprovedAwaitingPayment');
     const [searchTerm, setSearchTerm] = useState('');
+
+    // Profile Status State
+    const [investorProfileStatus, setInvestorProfileStatus] = useState(null);
+    const [investorProfileReason, setInvestorProfileReason] = useState(null);
 
     // UI state
     const [reportModal, setReportModal] = useState(null);
@@ -50,11 +56,22 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
     const loadBookings = useCallback(async (isSilent = false) => {
         if (!isSilent) setLoading(true);
         try {
-            const response = await bookingService.getMyCustomerBookings('', '-Id', 1, 100);
+            const [response, profileRes] = await Promise.all([
+                bookingService.getMyCustomerBookings('', '-Id', 1, 100).catch(() => []),
+                investorService.getMyProfile().catch(() => null)
+            ]);
             const items = response?.items ?? (Array.isArray(response) ? response : []);
             setBookings(items);
+
+            if (profileRes) {
+                setInvestorProfileStatus(profileRes.approvalStatus || 'Pending');
+                setInvestorProfileReason(profileRes.rejectionReason);
+            } else {
+                setInvestorProfileStatus('Missing');
+                setInvestorProfileReason(null);
+            }
         } catch (error) {
-            console.error('Failed to load investor bookings', error);
+            console.error('Failed to load investor bookings or profile', error);
         } finally {
             if (!isSilent) setLoading(false);
         }
@@ -193,6 +210,12 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
                         <RefreshCcw size={18} className={loading ? styles.xSpin : ''} />
                     </button>
                 }
+            />
+
+            <InvestorStatusBanner
+                status={investorProfileStatus}
+                reason={investorProfileReason}
+                onUpdateProfile={onUpdateProfile}
             />
 
             <div className={styles.dashboardContent}>

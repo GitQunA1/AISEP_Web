@@ -13,6 +13,7 @@ import startupProfileService from '../services/startupProfileService';
 import userReportService from '../services/userReportService';
 import dealsService from '../services/dealsService';
 import prService from '../services/prService';
+import investorService from '../services/investorService';
 import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/ProjectStatus';
 import AdvisorApprovalPage from '../components/advisor/AdvisorApprovalPage';
@@ -213,6 +214,79 @@ const BookingKanbanCard = ({ booking, status, onDetail }) => {
 };
 
 /**
+ * InvestorKanbanCard - Single card for the Investor Approval Kanban board
+ */
+const InvestorKanbanCard = ({ investor, status, onDetail, onApprove, onReject, processingId, processingAction }) => {
+    const isProcessing = processingId === investor.investorId;
+    
+    return (
+        <div className={local.bcard}>
+            <div className={`${local.bcardStrip} ${local[status]}`}></div>
+            <div className={local.bcardBody}>
+                <div className={local.bcardRow1}>
+                    <div className={local.bcardMainInfo}>
+                        <div className={local.bcardName} title={investor.organizationName || investor.fullName}>
+                            {investor.organizationName || investor.fullName || 'Nhà đầu tư'}
+                        </div>
+                        <span className={`${local.btag}`} style={{ 
+                            background: 'rgba(29, 155, 240, 0.1)', 
+                            color: '#1d9bf0' 
+                        }}>
+                             Nhà đầu tư
+                        </span>
+                    </div>
+                </div>
+
+                <div style={{ marginTop: '12px', marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: '600', width: '60px', flexShrink: 0, textTransform: 'uppercase' }}>Ví</span>
+                            <span style={{ color: 'var(--text-primary)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {investor.walletAddress ? `${investor.walletAddress.substring(0, 6)}...${investor.walletAddress.substring(investor.walletAddress.length - 4)}` : 'Chưa cập nhật'}
+                            </span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <span style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: '600', width: '60px', flexShrink: 0, textTransform: 'uppercase' }}>Ngân sách</span>
+                            <span style={{ color: '#10b981', fontWeight: '700' }}>
+                                {investor.maxInvestment ? `${Number(investor.maxInvestment).toLocaleString()} ₫` : 'N/A'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className={local.bcardActions}>
+                    <button 
+                        className={local.baBtn} 
+                        onClick={() => onDetail(investor)}
+                        title="Chi tiết"
+                    >
+                        Chi tiết
+                    </button>
+                    {status === 'pend' && (
+                        <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                            <button 
+                                className={`${local.baBtn} ${local.rej}`} 
+                                onClick={() => onReject(investor)}
+                                disabled={isProcessing}
+                            >
+                                {isProcessing && processingAction === 'reject' ? <Loader2 className="animate-spin" size={14} /> : <X size={14} />}
+                            </button>
+                            <button 
+                                className={`${local.baBtn} ${local.appr}`} 
+                                onClick={() => onApprove(investor.investorId)}
+                                disabled={isProcessing}
+                            >
+                                {isProcessing && processingAction === 'approve' ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle size={14} />}
+                            </button>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/**
  * UserReportCard - Redesigned report item with Twitter/X aesthetic
  */
 const UserReportCard = ({ report, onResolve, isProcessing }) => {
@@ -359,11 +433,9 @@ const EmptyState = ({ icon: Icon, title, message, onRetry, isError = false }) =>
 };
 
 
-/**
- * OperationStaffDashboard - Dashboard for Operation Staff
- * Features: Document verification, User approvals, Activity monitoring, Request management
- */
-function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
+
+
+const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
     // Safety check for styles
     const s = local || {};
     if (!local) {
@@ -467,6 +539,17 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
         return list;
     }, [userReports, searchTerm, reportFilter]);
 
+    // Investor Approval States
+    const [pendingInvestors, setPendingInvestors] = useState([]);
+    const [approvedInvestors, setApprovedInvestors] = useState([]);
+    const [rejectedInvestors, setRejectedInvestors] = useState([]);
+    const [isLoadingInvestors, setIsLoadingInvestors] = useState(false);
+    const [processingInvestorId, setProcessingInvestorId] = useState(null);
+    const [investorAction, setInvestorAction] = useState(null);
+    const [selectedInvestor, setSelectedInvestor] = useState(null);
+    const [showInvestorRejectModal, setShowInvestorRejectModal] = useState(false);
+    const [showInvestorDetailModal, setShowInvestorDetailModal] = useState(false);
+
     // PR Management state
     const [signedDeals, setSignedDeals] = useState([]);
     const [isLoadingSignedDeals, setIsLoadingSignedDeals] = useState(false);
@@ -523,6 +606,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             case 'withdrawals': return "Quản lý Rút tiền";
             case 'commission': return "Cấu hình Hoa hồng";
             case 'pr_management': return "Đăng bài PR - Dự án Đầu tư";
+            case 'investor_approval': return "Phê duyệt Nhà đầu tư";
             case 'analytics': return "Phân tích dữ liệu";
             case 'activity': return "Giám sát hoạt động";
             default: return "Bảng điều khiển Nhân viên";
@@ -541,6 +625,7 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
             case 'withdrawals': return "Phê duyệt và theo dõi các yêu cầu rút tiền của Advisor.";
             case 'commission': return "Điều chỉnh tỷ lệ phần trăm hoa hồng hệ thống áp dụng cho các phiên tư vấn.";
             case 'pr_management': return "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký).";
+            case 'investor_approval': return "Xem xét hồ sơ và phê duyệt tư cách nhà đầu tư trên hệ thống.";
             case 'analytics': return "Biểu đồ phân tích chuyên sâu về dữ liệu hệ thống.";
             case 'activity': return "Nhật ký hoạt động và giám sát thời gian thực.";
             default: return "Quản lý nền tảng và các yêu cầu phê duyệt.";
@@ -731,16 +816,8 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
     // Tự động tải dữ liệu cần thiết cho Statistics và các tab chính ngay khi component khởi tập (Mounting).
     // Giúp hiển thị số liệu thực ngay ở tab Tổng quan thay vì số 0.
     React.useEffect(() => {
-        const loadInitialData = () => {
-            fetchPendingProjects();
-            fetchApprovedProjects();
-            fetchRejectedProjects();
-            fetchBookings();
-            fetchPendingStartups();
-            fetchUserReports();
-            fetchSignedDeals();
-        };
-        loadInitialData();
+        fetchAllData();
+        fetchInvestors();
     }, []);
 
     // Refresh dữ liệu khi người dùng chủ động chuyển tab (nếu cần cập nhật mới nhất)
@@ -1155,6 +1232,100 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
         }
     };
 
+    /**
+     * fetchAllData - Aggregates data from all specific fetch functions
+     * to ensure the dashboard stats are up to date.
+     */
+    const fetchAllData = async () => {
+        try {
+            await Promise.all([
+                fetchPendingProjects(),
+                fetchApprovedProjects(),
+                fetchRejectedProjects(),
+                fetchPendingStartups(),
+                fetchUserReports(),
+                fetchBookings(),
+                fetchInvestors()
+            ]);
+        } catch (error) {
+            console.error('Error fetching all dashboard data:', error);
+        }
+    };
+
+    /**
+     * fetchInvestors - Fetches all investors and splits them by approval status
+     */
+    const fetchInvestors = async () => {
+        setIsLoadingInvestors(true);
+        try {
+            const response = await investorService.getAllInvestors({ pageSize: 100 });
+            const investors = response.items || [];
+            
+            setPendingInvestors(investors.filter(i => i.approvalStatus === 'Pending'));
+            setApprovedInvestors(investors.filter(i => i.approvalStatus === 'Approved'));
+            setRejectedInvestors(investors.filter(i => i.approvalStatus === 'Rejected'));
+        } catch (error) {
+            console.error('Error fetching investors:', error);
+        } finally {
+            setIsLoadingInvestors(false);
+        }
+    };
+
+    /**
+     * handleApproveInvestor - Approves an investor application
+     */
+    const handleApproveInvestor = async (investorId) => {
+        if (processingInvestorId) return;
+        setProcessingInvestorId(investorId);
+        setInvestorAction('approve');
+        try {
+            const response = await investorService.approveInvestor(investorId);
+            if (response.success || response.statusCode === 200) {
+                setModalType('success');
+                setModalMessage('✓ Nhà đầu tư đã được phê duyệt thành công!');
+                setShowModal(true);
+                fetchInvestors();
+            }
+        } catch (error) {
+            console.error('Error approving investor:', error);
+            setModalType('error');
+            setModalMessage('❌ Phê duyệt thất bại: ' + (error.message || 'Lỗi không xác định'));
+            setShowModal(true);
+        } finally {
+            setProcessingInvestorId(null);
+            setInvestorAction(null);
+        }
+    };
+
+    /**
+     * handleRejectInvestor - Rejects an investor application with a reason
+     */
+    const handleRejectInvestor = async (reason) => {
+        if (!selectedInvestor || processingInvestorId) return;
+        const investorId = selectedInvestor.investorId;
+        setProcessingInvestorId(investorId);
+        setInvestorAction('reject');
+        try {
+            const response = await investorService.rejectInvestor(investorId, reason);
+            if (response.success || response.statusCode === 200) {
+                setShowInvestorRejectModal(false);
+                setModalType('success');
+                setModalMessage('✓ Hồ sơ nhà đầu tư đã bị từ chối.');
+                setShowModal(true);
+                fetchInvestors();
+            }
+        } catch (error) {
+            console.error('Error rejecting investor:', error);
+            setModalType('error');
+            setModalMessage('❌ Từ chối thất bại: ' + (error.message || 'Lỗi không xác định'));
+            setShowModal(true);
+        } finally {
+            setProcessingInvestorId(null);
+            setInvestorAction(null);
+            setSelectedInvestor(null);
+        }
+    };
+
     const filterProjects = (projects) => {
         if (!searchTerm || !searchTerm.trim()) return projects || [];
         const lowerSearch = searchTerm.toLowerCase();
@@ -1170,87 +1341,60 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
     const filteredApproved = filterProjects(approvedProjects);
     const filteredRejected = filterProjects(rejectedProjects);
 
-    const headerSearchTerm = activeSection === 'project_management'
-        ? searchTerm
-        : activeSection === 'bookings'
-            ? bookingSearchTerm
-            : activeSection === 'pr_management'
-                ? prSearchTerm
-                : activeSection === 'withdrawals'
-                    ? withdrawSearchTerm
-                    : activeSection === 'commission'
-                        ? commissionSearchTerm
-                        : (activeSection === 'package_management' || activeSection === 'subscription_history')
-                            ? subscriptionSearchTerm
-                            : undefined;
-
-    const headerSearchPlaceholder = activeSection === 'project_management'
-        ? "Tìm kiếm dự án..."
-        : activeSection === 'bookings'
-            ? "Tìm kiếm booking..."
-            : activeSection === 'pr_management'
-                ? "Tìm kiếm dự án đã ký..."
-                : activeSection === 'withdrawals'
-                    ? "Tìm kiếm Advisor hoặc tài khoản..."
-                    : activeSection === 'commission'
-                        ? "Tìm kiếm lịch sử thay đổi..."
-                        : "Tìm kiếm...";
-
-    const headerSearchEnabled = ['project_management', 'bookings', 'pr_management', 'withdrawals', 'commission', 'package_management', 'subscription_history'].includes(activeSection);
-
     return (
         <div className={styles.container}>
-            {/* Unified Header */}
             {activeSection !== 'pr_news' && (
-            <FeedHeader
-                title={
-                    activeSection === 'subscription_history' ? "Lịch sử đăng ký gói" :
-                        (activeSection === 'package_management' ? "Quản lý Gói dịch vụ" :
-                            (activeSection === 'project_management' ? "Quản lý Dự án" :
-                                (activeSection === 'pr_management' ? "Đăng bài PR - Dự án Đầu tư" :
-                                    (activeSection === 'pr_news' ? "Tin tức PR" :
-                                        (activeSection === 'bookings' ? "Quản lý Booking" :
-                                            (activeSection === 'user_reports' ? "Quản lý báo cáo" :
-                                                (activeSection === 'advisor_approval' ? "Phê duyệt cố vấn" :
-                                                    (activeSection === 'statistics' ? "Thống kê hoạt động" : "Bảng điều khiển Nhân viên"))))))))
-                }
-                subtitle={
-                    activeSection === 'subscription_history' ? "Theo dõi và quản lý lịch sử thanh toán, gia hạn các gói dịch vụ của người dùng trên hệ thống." :
-                        activeSection === 'package_management' ? "Cấu hình hạn mức, thời hạn và giá cả cho các gói đăng ký trên toàn hệ thống AISEP." :
-                            activeSection === 'project_management' ? "Phê duyệt và quản lý các startup tham gia nền tảng." :
-                                activeSection === 'pr_management' ? "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký)." :
-                                    activeSection === 'pr_news' ? "Xem tất cả các bài PR đã được đăng lên hệ thống." :
-                                        activeSection === 'bookings' ? "Theo dõi và giám sát các lịch hẹn đào tạo trong hệ thống." :
-                                            activeSection === 'user_reports' ? "Giải quyết các báo cáo vi phạm và khiếu nại từ người dùng." :
-                                                activeSection === 'advisor_approval' ? "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn trên nền tảng AISEP." :
-                                                    activeSection === 'statistics' ? "Tổng quan về các số liệu tăng trưởng và hiệu suất nền tảng." :
-                                                        "Quản lý nền tảng và các yêu cầu phê duyệt."
-                }
-                showFilter={false}
-                user={user}
-                searchTerm={
-                    activeSection === 'project_management' ? searchTerm :
-                        (activeSection === 'bookings' ? bookingSearchTerm :
-                            (activeSection === 'pr_management' ? prSearchTerm :
-                                (activeSection === 'pr_news' ? prNewsSearchTerm :
-                                    (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : ''))))
-                }
-                onSearchChange={(val) => {
-                    if (activeSection === 'project_management') setSearchTerm(val);
-                    else if (activeSection === 'bookings') setBookingSearchTerm(val);
-                    else if (activeSection === 'pr_management') setPrSearchTerm(val);
-                    else if (activeSection === 'pr_news') setPrNewsSearchTerm(val);
-                    else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
-                }}
-                searchPlaceholder={
-                    activeSection === 'project_management' ? "Tìm kiếm dự án..." :
-                        (activeSection === 'bookings' ? "Tìm kiếm booking..." :
-                            (activeSection === 'pr_management' ? "Tìm kiếm dự án đã ký..." :
-                                (activeSection === 'pr_news' ? "Tìm kiếm bài PR..." :
-                                    "Tìm kiếm...")))
-                }
-                showNotification={true}
-            />
+                <FeedHeader
+                    title={
+                        activeSection === 'subscription_history' ? "Lịch sử đăng ký gói" :
+                            (activeSection === 'package_management' ? "Quản lý Gói dịch vụ" :
+                                (activeSection === 'project_management' ? "Quản lý Dự án" :
+                                    (activeSection === 'pr_management' ? "Đăng bài PR - Dự án Đầu tư" :
+                                        (activeSection === 'pr_news' ? "Tin tức PR" :
+                                            (activeSection === 'bookings' ? "Quản lý Booking" :
+                                                (activeSection === 'user_reports' ? "Quản lý báo cáo" :
+                                                    (activeSection === 'advisor_approval' ? "Phê duyệt cố vấn" :
+                                                        (activeSection === 'investor_approval' ? "Duyệt nhà đầu tư" :
+                                                            (activeSection === 'statistics' ? "Thống kê hoạt động" : "Bảng điều khiển Nhân viên")))))))))
+                    }
+                    subtitle={
+                        activeSection === 'subscription_history' ? "Theo dõi và quản lý lịch sử thanh toán, gia hạn các gói dịch vụ của người dùng trên hệ thống." :
+                            activeSection === 'package_management' ? "Cấu hình hạn mức, thời hạn và giá cả cho các gói đăng ký trên toàn hệ thống AISEP." :
+                                activeSection === 'project_management' ? "Phê duyệt và quản lý các startup tham gia nền tảng." :
+                                    activeSection === 'pr_management' ? "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký)." :
+                                        activeSection === 'pr_news' ? "Xem tất cả các bài PR đã được đăng lên hệ thống." :
+                                            activeSection === 'bookings' ? "Theo dõi và giám sát các lịch hẹn đào tạo trong hệ thống." :
+                                                activeSection === 'user_reports' ? "Giải quyết các báo cáo vi phạm và khiếu nại từ người dùng." :
+                                                    activeSection === 'advisor_approval' ? "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn trên nền tảng AISEP." :
+                                                        activeSection === 'investor_approval' ? "Phê duyệt hồ sơ đăng ký và năng lực tài chính của các nhà đầu tư." :
+                                                            activeSection === 'statistics' ? "Tổng quan về các số liệu tăng trưởng và hiệu suất nền tảng." :
+                                                                "Quản lý nền tảng và các yêu cầu phê duyệt."
+                    }
+                    showFilter={false}
+                    user={user}
+                    searchTerm={
+                        activeSection === 'project_management' ? searchTerm :
+                            (activeSection === 'bookings' ? bookingSearchTerm :
+                                (activeSection === 'pr_management' ? prSearchTerm :
+                                    (activeSection === 'pr_news' ? prNewsSearchTerm :
+                                        (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : ''))))
+                    }
+                    onSearchChange={(val) => {
+                        if (activeSection === 'project_management') setSearchTerm(val);
+                        else if (activeSection === 'bookings') setBookingSearchTerm(val);
+                        else if (activeSection === 'pr_management') setPrSearchTerm(val);
+                        else if (activeSection === 'pr_news') setPrNewsSearchTerm(val);
+                        else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
+                    }}
+                    searchPlaceholder={
+                        activeSection === 'project_management' ? "Tìm kiếm dự án..." :
+                            (activeSection === 'bookings' ? "Tìm kiếm booking..." :
+                                (activeSection === 'pr_management' ? "Tìm kiếm dự án đã ký..." :
+                                    (activeSection === 'pr_news' ? "Tìm kiếm bài PR..." :
+                                        "Tìm kiếm...")))
+                    }
+                    showNotification={true}
+                />
             )}
 
             {/* Navigation Tabs (Only for main statistics/analytics/activity) */}
@@ -1567,6 +1711,114 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                                             ? `${dashboardData.pendingApprovals} yêu cầu chờ xác nhận`
                                             : 'Tất cả người dùng đã được phê duyệt'}
                                     </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* INVESTOR APPROVAL KANBAN SECTION */}
+                {activeSection === 'investor_approval' && (
+                    <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, gap: 0 }}>
+                        <div className={local.boardGrid} style={{
+                            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+                            minHeight: isMobile ? 'auto' : 'calc(100vh - 150px)',
+                            margin: isMobile ? '0' : '-24px -24px -84px -24px'
+                        }}>
+                            {/* Column: Pending */}
+                            <div className={local.bcol}>
+                                {!isMobile && (
+                                    <div className={`${local.bcolHead} ${local.pend}`}>
+                                        <div className={local.bcolTitle}>
+                                            <div className={`${local.bctDot} ${local.pend}`}></div>
+                                            Chờ Duyệt
+                                        </div>
+                                        <div className={`${local.bcolN} ${local.pend}`}>{pendingInvestors.length}</div>
+                                    </div>
+                                )}
+                                <div className={local.bcolCards}>
+                                    {isLoadingInvestors ? (
+                                        <KanbanSkeleton count={3} />
+                                    ) : pendingInvestors.length === 0 ? (
+                                        <div className={local.colEmpty}>Không có hồ sơ chờ duyệt</div>
+                                    ) : (
+                                        pendingInvestors.map(i => (
+                                            <InvestorKanbanCard
+                                                key={i.investorId}
+                                                investor={i}
+                                                status="pend"
+                                                onDetail={(inv) => {
+                                                    setSelectedInvestor(inv);
+                                                    setShowInvestorDetailModal(true);
+                                                }}
+                                                onApprove={handleApproveInvestor}
+                                                onReject={(inv) => {
+                                                    setSelectedInvestor(inv);
+                                                    setShowInvestorRejectModal(true);
+                                                }}
+                                                processingId={processingInvestorId}
+                                                processingAction={investorAction}
+                                            />
+                                        ))
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Column: Approved */}
+                            <div className={local.bcol}>
+                                {!isMobile && (
+                                    <div className={`${local.bcolHead} ${local.apr}`}>
+                                        <div className={local.bcolTitle}>
+                                            <div className={`${local.bctDot} ${local.apr}`}></div>
+                                            Đã Duyệt
+                                        </div>
+                                        <div className={`${local.bcolN} ${local.apr}`}>{approvedInvestors.length}</div>
+                                    </div>
+                                )}
+                                <div className={local.bcolCards}>
+                                    {approvedInvestors.map(i => (
+                                        <InvestorKanbanCard
+                                            key={i.investorId}
+                                            investor={i}
+                                            status="apr"
+                                            onDetail={(inv) => {
+                                                setSelectedInvestor(inv);
+                                                setShowInvestorDetailModal(true);
+                                            }}
+                                        />
+                                    ))}
+                                    {approvedInvestors.length === 0 && !isLoadingInvestors && (
+                                        <div className={local.colEmpty}>Chưa có nhà đầu tư nào</div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Column: Rejected */}
+                            <div className={local.bcol}>
+                                {!isMobile && (
+                                    <div className={`${local.bcolHead} ${local.rej}`}>
+                                        <div className={local.bcolTitle}>
+                                            <div className={`${local.bctDot} ${local.rej}`}></div>
+                                            Đã Từ Chối
+                                        </div>
+                                        <div className={`${local.bcolN} ${local.rej}`}>{rejectedInvestors.length}</div>
+                                    </div>
+                                )}
+                                <div className={local.bcolCards}>
+                                    {rejectedInvestors.map(i => (
+                                        <InvestorKanbanCard
+                                            key={i.investorId}
+                                            investor={i}
+                                            status="rej"
+                                            onDetail={(inv) => {
+                                                setSelectedInvestor(inv);
+                                                setShowInvestorDetailModal(true);
+                                            }}
+                                        />
+                                    ))}
+                                    {rejectedInvestors.length === 0 && !isLoadingInvestors && (
+                                        <div className={local.colEmpty}>Trống</div>
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -3426,6 +3678,84 @@ function OperationStaffDashboard({ user, initialSection = 'statistics' }) {
                     isHistoryMode={true}
                     projectName={detailProject?.projectName || 'Dự án'}
                 />
+            )}
+
+            {/* Investor Reject Modal */}
+            {showInvestorRejectModal && selectedInvestor && (
+                <RejectionReasonModal
+                    projectName={selectedInvestor.organizationName || selectedInvestor.userFullName}
+                    onSubmit={(reason) => {
+                        handleRejectInvestor(selectedInvestor.investorId, reason);
+                    }}
+                    onCancel={() => {
+                        setShowInvestorRejectModal(false);
+                        setSelectedInvestor(null);
+                    }}
+                />
+            )}
+
+            {/* Investor Detail Modal */}
+            {showInvestorDetailModal && selectedInvestor && (
+                <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && setShowInvestorDetailModal(false)}>
+                    <div className={styles.modalContent} style={{ maxWidth: '600px', width: '92%' }}>
+                        <div className={local.staffModalHeader}>
+                            <div className={local.staffModalTitleGrp}>
+                                <h2 className={local.staffModalTitleText}>Chi tiết Nhà đầu tư</h2>
+                                <span className={local.bookingBadgeConfirmed} style={{ background: 'rgba(29, 155, 240, 0.1)', color: 'var(--primary-blue)', width: 'fit-content' }}>
+                                    Mã: {selectedInvestor.investorId}
+                                </span>
+                            </div>
+                            <button onClick={() => setShowInvestorDetailModal(false)} className={local.staffModalCloseBtn}>
+                                <X size={24} />
+                            </button>
+                        </div>
+                        <div style={{ padding: '24px', overflowY: 'auto' }}>
+                            <div style={{ display: 'grid', gap: '20px' }}>
+                                <div>
+                                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Tên tổ chức/Cá nhân</label>
+                                    <p style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.organizationName || selectedInvestor.userFullName}</p>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Email</label>
+                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.userEmail || '-'}</p>
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Số điện thoại</label>
+                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.phoneNumber || '-'}</p>
+                                    </div>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Khẩu vị đầu tư</label>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', lineHeight: 1.5 }}>{selectedInvestor.investmentTaste || '-'}</p>
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Lĩnh vực quan tâm</label>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.focusIndustry || '-'}</p>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Số tiền đầu tư tối thiểu</label>
+                                        <p style={{ fontSize: '14px', fontWeight: '700', color: '#10b981', margin: '4px 0 0 0' }}>{selectedInvestor.minInvestment ? Number(selectedInvestor.minInvestment).toLocaleString() : '0'} ₫</p>
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Số tiền đầu tư tối đa</label>
+                                        <p style={{ fontSize: '14px', fontWeight: '700', color: '#10b981', margin: '4px 0 0 0' }}>{selectedInvestor.maxInvestment ? Number(selectedInvestor.maxInvestment).toLocaleString() : 'Không giới hạn'} ₫</p>
+                                    </div>
+                                </div>
+                                {selectedInvestor.approvalStatus === 'Rejected' && selectedInvestor.rejectionReason && (
+                                    <div style={{ padding: '12px', backgroundColor: 'rgba(244, 33, 46, 0.05)', borderRadius: '8px', border: '1px solid rgba(244, 33, 46, 0.1)' }}>
+                                        <label style={{ fontSize: '11px', color: '#f4212e', textTransform: 'uppercase', fontWeight: '700' }}>Lý do từ chối</label>
+                                        <p style={{ fontSize: '13px', color: '#f4212e', margin: '4px 0 0 0' }}>{selectedInvestor.rejectionReason}</p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', backgroundColor: 'var(--bg-secondary)', borderRadius: '0 0 16px 16px' }}>
+                            <button onClick={() => setShowInvestorDetailModal(false)} className={styles.secondaryBtn}>Đóng</button>
+                        </div>
+                    </div>
+                </div>
             )}
 
             {/* Global PR News Section */}

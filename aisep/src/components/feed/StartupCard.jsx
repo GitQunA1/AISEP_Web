@@ -11,7 +11,7 @@ import dealsService from '../../services/dealsService';
  * StartupCard Component - "Visual Priority (Concept C)"
  * Clean, full-width data density
  */
-function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), investors = [], onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false }) {
+function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), investors = [], onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false, isInvestorApproved = false }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
@@ -224,17 +224,27 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
   // Robust ID extraction for navigation
   const sid = startup.startupId || startup.userId || startup.id;
 
-  const PremiumLock = () => (
-    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px', fontWeight: 'bold', color: '#ffad1f', background: 'rgba(255, 173, 31, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-      <Lock size={12} strokeWidth={2.5} /> {isPaidUser ? 'Mở khóa ngay' : 'Premium'}
-    </div>
-  );
+  const roleStr = user?.role?.toString().toLowerCase() || '';
+  const roleNum = Number(user?.role);
+  const isBypassRole = roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 3 || roleNum === 2;
 
-  const PremiumLockText = () => (
-    <span style={{ color: '#ffad1f', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-      <Lock size={12} strokeWidth={2.5} /> {isPaidUser ? 'Mở khóa ngay' : 'Yêu cầu Premium'}
-    </span>
-  );
+  const PremiumLock = () => {
+    if (isBypassRole) return <div style={{ fontSize: '15px' }}>—</div>;
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px', fontWeight: 'bold', color: '#ffad1f', background: 'rgba(255, 173, 31, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+        <Lock size={12} strokeWidth={2.5} /> {isPaidUser ? 'Mở khóa ngay' : 'Premium'}
+      </div>
+    );
+  };
+
+  const PremiumLockText = () => {
+    if (isBypassRole) return <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>—</span>;
+    return (
+      <span style={{ color: '#ffad1f', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+        <Lock size={12} strokeWidth={2.5} /> {isPaidUser ? 'Mở khóa ngay' : 'Yêu cầu Premium'}
+      </span>
+    );
+  };
 
   return (
     <article 
@@ -489,10 +499,14 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
             <button
               onClick={(e) => {
                 e.stopPropagation();
+                if (!isInvestorApproved) {
+                  showToast('Vui lòng hoàn thiện hồ sơ để yêu cầu kết nối', 'error');
+                  return;
+                }
                 if (!hasRequested) setShowRequestModal(true);
               }}
               disabled={hasRequested}
-              className={`${styles.pillButton} ${hasRequested ? styles.btnRequested : styles.btnRequest}`}
+              className={`${styles.pillButton} ${hasRequested ? styles.btnRequested : styles.btnRequest} ${!isInvestorApproved ? styles.btnDisabled : ''}`}
             >
               <div className={styles.btnInner}>
                 {hasRequested ? <CheckCheck size={18} /> : <MessageCircle size={18} />}
@@ -536,9 +550,13 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
               <button
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (!isInvestorApproved) {
+                    showToast('Vui lòng hoàn thiện hồ sơ để đề xuất đầu tư', 'error');
+                    return;
+                  }
                   setShowInvestmentModal(true);
                 }}
-                className={`${styles.pillButton} ${styles.btnInvest}`}
+                className={`${styles.pillButton} ${styles.btnInvest} ${!isInvestorApproved ? styles.btnDisabled : ''}`}
               >
                 <DollarSign size={18} />
                 Đầu tư

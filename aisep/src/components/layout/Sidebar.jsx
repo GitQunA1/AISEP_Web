@@ -53,7 +53,8 @@ function Sidebar({
         { icon: Newspaper, label: 'PRManagement', displayLabel: 'Đăng bài PR', href: '#', showWhenLoggedIn: true },
         { icon: AlertCircle, label: 'UserReports', displayLabel: 'Báo cáo vi phạm', href: '#', showWhenLoggedIn: true },
         { icon: ShieldCheck, label: 'Approvals', displayLabel: 'Phê duyệt Startup', href: '#', showWhenLoggedIn: true },
-        { icon: Award, label: 'AdvisorApproval', displayLabel: 'Phê duyệt cố vấn', href: '#', showWhenLoggedIn: true },
+        { icon: ShieldCheck, label: 'AdvisorApproval', displayLabel: 'Phê duyệt cố vấn', href: '#', showWhenLoggedIn: true },
+        { icon: ShieldCheck, label: 'InvestorApproval', displayLabel: 'Phê duyệt nhà đầu tư', href: '#', showWhenLoggedIn: true },
         { icon: Shield, label: 'PackageManagement', displayLabel: 'Quản lý gói', href: '#', showWhenLoggedIn: true },
         { icon: History, label: 'SubscriptionHistory', displayLabel: 'Lịch sử đăng ký gói', href: '#', showWhenLoggedIn: true },
       ];
@@ -145,6 +146,9 @@ function Sidebar({
     }
     if (label === 'ApproveBookings' && onShowDashboard) {
       onShowDashboard('approve_bookings');
+    }
+    if (label === 'InvestorApproval' && onShowDashboard) {
+      onShowDashboard('investor_approval');
     }
 
     if (label === 'UserReports' && onShowDashboard) {
@@ -299,6 +303,7 @@ function Sidebar({
                       if (activeView === 'dashboard_wallet') return 'Wallet';
                       if (activeView === 'dashboard_package_management') return 'PackageManagement';
                       if (activeView === 'dashboard_subscription_history') return 'SubscriptionHistory';
+                      if (activeView === 'dashboard_investor_approval') return 'InvestorApproval';
                       if (activeView === 'profile') return 'Profile';
                       if (activeView === 'advisors') return 'Advisors';
                       if (activeView === 'investors') return 'Investors';

@@ -260,3 +260,102 @@
   animation: spin 1s linear infinite;
   opacity: 0.7;
 }
+
+/* Status Banner Styles */
+.statusBanner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  margin: 16px 20px;
+  border-radius: 16px;
+  border: 1px solid transparent;
+  animation: fadeInDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  position: sticky;
+  top: 16px;
+  z-index: 100;
+  box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(8px);
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.bannerWarning {
+  background-color: rgba(255, 247, 237, 0.9);
+  border-color: #ffedd5;
+  color: #9a3412;
+}
+
+.bannerError {
+  background-color: rgba(254, 242, 242, 0.9);
+  border-color: #fee2e2;
+  color: #991b1b;
+}
+
+.bannerIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.bannerText {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.bannerText strong {
+  font-weight: 700;
+  display: block;
+  margin-bottom: 2px;
+}
+
+.bannerActionBtn {
+  background-color: white;
+  border: 1px solid currentColor;
+  color: inherit;
+  padding: 8px 16px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.bannerWarning .bannerActionBtn:hover {
+  background-color: #9a3412;
+  color: white;
+  border-color: #9a3412;
+}
+
+.bannerError .bannerActionBtn:hover {
+  background-color: #991b1b;
+  color: white;
+  border-color: #991b1b;
+}
+
+@media (max-width: 600px) {
+  .statusBanner {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 12px;
+  }
+  
+  .bannerActionBtn {
+    width: 100%;
+    text-align: center;
+  }
+}
+
