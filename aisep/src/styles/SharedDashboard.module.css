@@ -3907,4 +3907,96 @@
     color: var(--text-secondary);
     font-size: 14px;
 }
+
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+/* GLOBAL ONBOARDING / STATUS BANNER      */
+/* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
+.onboardingBanner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 18px 32px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  border-left: 5px solid var(--primary-blue);
+  margin: 0;
+  position: relative;
+  overflow: hidden;
+  animation: slideDownBanner 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  box-sizing: border-box;
+  z-index: 40;
+}
+
+.onboardingBanner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, rgba(29, 155, 240, 0.08) 0%, transparent 60%);
+  pointer-events: none;
+}
+
+.bannerPending {
+  border-left-color: #f59e0b;
+}
+
+.bannerPending::before {
+  background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, transparent 60%);
+}
+
+.bannerRejected {
+  border-left-color: #ef4444;
+}
+
+.bannerRejected::before {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, transparent 60%);
+}
+
+.bannerActionBtn {
+  background-color: var(--primary-blue);
+  color: white;
+  border: none;
+  font-weight: 700;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(29, 155, 240, 0.2);
+}
+
+.bannerActionBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(29, 155, 240, 0.3);
+  background-color: #1a8cd8;
+}
+
+@keyframes slideDownBanner {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (max-width: 1024px) {
+  .onboardingBanner {
+    padding: 16px 24px;
+  }
+}
+
+@media (max-width: 768px) {
+  .onboardingBanner {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px 20px;
+    gap: 16px;
+  }
+  
+  .bannerActionBtn {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 

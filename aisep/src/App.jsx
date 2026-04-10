@@ -259,6 +259,7 @@ function App() {
                       onViewProject={(pid) => setCurrentView('dashboard_project_' + pid)} 
                       initialFilterStatus={lastInvestorBookingFilter}
                       onFilterStatusChange={setLastInvestorBookingFilter}
+                      onUpdateProfile={() => setCurrentView('dashboard_preferences')}
                     />
                   );
                 }

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare, TrendingUpIcon, Loader2, Crown, X, Info, Calendar, PieChart, ArrowRight, FileText, Check, Users, AlertCircle, RefreshCw, Trash2, Settings, Download } from 'lucide-react';
+import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare, TrendingUpIcon, Loader2, Crown, X, Info, Calendar, PieChart, ArrowRight, FileText, Check, Users, AlertCircle, RefreshCw, Trash2, Settings, Download, XCircle, Clock, Shield, ChevronRight } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
 import contractStyles from './ContractSigningModal.module.css';
@@ -12,6 +12,7 @@ import chatService from '../services/chatService';
 import signalRService from '../services/signalRService';
 import dealsService from '../services/dealsService';
 import SuccessModal from '../components/common/SuccessModal';
+import InvestorStatusBanner from '../components/common/InvestorStatusBanner';
 import apiDebug from '../utils/apiDebug';
 import { apiClient } from '../services/apiClient';
 import enumService from '../services/enumService';
@@ -29,6 +30,7 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
     const [indicatorStyle, setIndicatorStyle] = useState({});
     const tabsRef = useRef(null);
     const isFirstLoad = useRef(true);
+    const [investorProfile, setInvestorProfile] = useState(null);
     
     // Sync activeSection with initialSection prop
     React.useEffect(() => {
@@ -105,13 +107,13 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
     const [successMessage, setSuccessMessage] = useState('');
 
     // Dashboard Data States
-    const [investorProfile, setInvestorProfile] = useState(null);
     const [prefFormData, setPrefFormData] = useState({
         organizationName: '',
         investmentTaste: '',
         walletAddress: '',
         investmentAmount: 0,
-        riskTolerance: 1,
+        investmentDate: null,
+        riskTolerance: 1, // Medium
         investmentRegion: '',
         focusIndustry: 0,
         preferredStage: 0,
@@ -622,39 +624,43 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
 
     const handleUpdatePreferences = async (e) => {
         if (e) e.preventDefault();
-        if (!investorProfile?.investorId) {
-            console.error('[InvestorDashboard] Cannot update: No investor profile loaded');
-            return;
-        }
-
+        
         setIsUpdatingPrefs(true);
         try {
-            console.log('[InvestorDashboard] Updating preferences...');
+            console.log('[InvestorDashboard] Saving profile...');
             
-            // Prepare the payload
-            const updateData = {
-                ...prefFormData,
-                // Primary single fields (as expected by some backend models)
-                focusIndustry: preferredIndustries.length > 0 ? preferredIndustries[0] : '',
-                preferredStage: preferredStages.length > 0 ? preferredStages[0] : '',
-                // Detailed multi-selection fields (stringified JSON)
-                preferredIndustries: JSON.stringify(preferredIndustries),
-                preferredStages: JSON.stringify(preferredStages)
-            };
+            // Prepare the payload as FormData because backend uses [FromForm]
+            const formData = new FormData();
+            formData.append('organizationName', prefFormData.organizationName || '');
+            formData.append('investmentTaste', prefFormData.investmentTaste || '');
+            formData.append('walletAddress', prefFormData.walletAddress || '');
+            formData.append('investmentAmount', prefFormData.investmentAmount || 0);
+            if (prefFormData.investmentDate) formData.append('investmentDate', prefFormData.investmentDate);
+            formData.append('riskTolerance', prefFormData.riskTolerance);
+            formData.append('investmentRegion', prefFormData.investmentRegion || '');
+            formData.append('focusIndustry', prefFormData.focusIndustry);
+            formData.append('preferredStage', prefFormData.preferredStage);
+            formData.append('previousInvestments', prefFormData.previousInvestments || '');
 
-            console.log('[InvestorDashboard] Sending update payload:', updateData);
-            
-            const response = await investorService.updateInvestor(investorProfile.investorId, updateData);
+            let response;
+            if (investorProfile?.investorId) {
+                // Update mode
+                response = await investorService.updateInvestor(investorProfile.investorId, formData);
+                setSuccessMessage('Hồ sơ nhà đầu tư của bạn đã được cập nhật thành công và đang chờ xét duyệt!');
+            } else {
+                // Create mode
+                response = await investorService.createInvestor(formData);
+                setSuccessMessage('Hồ sơ nhà đầu tư của bạn đã được tạo thành công và đang chờ xét duyệt!');
+            }
             
             if (response) {
-                setSuccessMessage('Sở thích của bạn đã được cập nhật thành công!');
                 setShowSuccessModal(true);
-                // Refresh profile to ensure data sync
                 setRefreshTrigger(prev => prev + 1);
             }
         } catch (error) {
-            console.error('[InvestorDashboard] Failed to update preferences:', error);
-            alert('Lỗi: Không thể cập nhật sở thích. Vui lòng thử lại sau.');
+            console.error('[InvestorDashboard] Failed to save profile:', error);
+            const msg = error?.response?.data?.message || 'Không thể lưu hồ sơ. Vui lòng thử lại sau.';
+            alert(`Lỗi: ${msg}`);
         } finally {
             setIsUpdatingPrefs(false);
         }
@@ -716,7 +722,16 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                             });
                         }}
                     />
+                    <InvestorStatusBanner
+                        status={investorProfile ? (investorProfile.approvalStatus || 'Pending') : (isLoading ? null : 'Missing')}
+                        reason={investorProfile?.rejectionReason}
+                        onUpdateProfile={() => setActiveSection('preferences')}
+                    />
+                </>
+            )}
 
+            {activeSection !== 'pr_news' && (
+                <>
                     {/* Stats Section */}
                     <div className={`${styles.statsWrapper} ${activeSection !== 'overview' ? styles.statsCollapsed : ''}`}>
                         <div className={styles.statsGrid}>
@@ -778,7 +793,7 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                                 className={`${styles.tab} ${activeSection === 'preferences' ? styles.active : ''}`}
                                 onClick={() => setActiveSection('preferences')}
                             >
-                                Sở thích
+                                Hồ sơ Nhà đầu tư
                             </button>
 
                             {/* Animated Indicator Line */}
@@ -1454,63 +1469,141 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                     </div>
                 )}
 
-                {/* Preferences Section */}
+                {/* Preferences / Profile Section */}
                 {activeSection === 'preferences' && (
                     <div className={styles.section}>
+
+                        {!investorProfile && !isLoading && (
+                            <div className={styles.card} style={{ marginBottom: '20px', backgroundColor: 'rgba(245, 158, 11, 0.05)', border: '1px dashed #f59e0b' }}>
+                                <div style={{ padding: '20px', display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
+                                    <AlertCircle size={24} color="#f59e0b" style={{ marginTop: '2px' }} />
+                                    <div>
+                                        <h4 style={{ margin: '0 0 4px 0', color: '#f59e0b', fontWeight: '800' }}>Chưa có hồ sơ nhà đầu tư</h4>
+                                        <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-secondary)', lineHeight: '1.5' }}>
+                                            Vui lòng hoàn thiện hồ sơ bên dưới để nhân viên kiểm duyệt. Bạn chỉ có thể thực hiện kết nối và đầu tư sau khi hồ sơ được phê duyệt.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Sở thích đầu tư</h3>
+                            <h3 className={styles.cardTitle}>{investorProfile ? 'Cập nhật hồ sơ nhà đầu tư' : 'Hoàn thiện hồ sơ nhà đầu tư'}</h3>
                             <form className={styles.form} onSubmit={handleUpdatePreferences}>
+                                <div className={styles.formGrid} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+                                    <div className={styles.formGroup}>
+                                        <label>Tên tổ chức / Cá nhân *</label>
+                                        <input 
+                                            type="text" required
+                                            value={prefFormData.organizationName}
+                                            onChange={(e) => setPrefFormData({ ...prefFormData, organizationName: e.target.value })}
+                                            placeholder="Tên công ty hoặc tên cá nhân đầu tư"
+                                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                        />
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label>Địa chỉ Ví Blockchain *</label>
+                                        <input 
+                                            type="text" required
+                                            value={prefFormData.walletAddress}
+                                            onChange={(e) => setPrefFormData({ ...prefFormData, walletAddress: e.target.value })}
+                                            placeholder="0x..."
+                                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                        />
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label>Ngân sách đầu tư (VNĐ) *</label>
+                                        <input 
+                                            type="number" required min="0"
+                                            value={prefFormData.investmentAmount}
+                                            onChange={(e) => setPrefFormData({ ...prefFormData, investmentAmount: e.target.value })}
+                                            placeholder="Số tiền bạn dự kiến đầu tư"
+                                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                        />
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label>Khu vực đầu tư</label>
+                                        <input 
+                                            type="text"
+                                            value={prefFormData.investmentRegion}
+                                            onChange={(e) => setPrefFormData({ ...prefFormData, investmentRegion: e.target.value })}
+                                            placeholder="VD: Việt Nam, Đông Nam Á..."
+                                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className={styles.formGrid} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+                                    <div className={styles.formGroup}>
+                                        <label>Mức độ chấp nhận rủi ro</label>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            {[0, 1, 2].map(r => (
+                                                <button
+                                                    key={r} type="button"
+                                                    onClick={() => setPrefFormData({ ...prefFormData, riskTolerance: r })}
+                                                    style={{
+                                                        flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                                                        backgroundColor: prefFormData.riskTolerance === r ? 'var(--primary-blue)' : 'var(--bg-secondary)',
+                                                        color: prefFormData.riskTolerance === r ? '#fff' : 'var(--text-secondary)',
+                                                        fontSize: '13px', fontWeight: '600', transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    {r === 0 ? 'Thấp' : r === 1 ? 'Trung bình' : 'Cao'}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label>Giai đoạn ưu tiên</label>
+                                        <select 
+                                            value={prefFormData.preferredStage}
+                                            onChange={(e) => setPrefFormData({ ...prefFormData, preferredStage: parseInt(e.target.value) })}
+                                            style={{ width: '100%', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                        >
+                                            <option value={0}>Ý tưởng (Idea)</option>
+                                            <option value={1}>Sản phẩm khả thi (MVP)</option>
+                                            <option value={2}>Tăng trưởng (Growth)</option>
+                                        </select>
+                                    </div>
+
+                                    <div className={styles.formGroup}>
+                                        <label>Lĩnh vực quan tâm chính</label>
+                                        <select 
+                                            value={prefFormData.focusIndustry}
+                                            onChange={(e) => setPrefFormData({ ...prefFormData, focusIndustry: parseInt(e.target.value) })}
+                                            style={{ width: '100%', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                        >
+                                            {availableIndustries.map(opt => (
+                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+
                                 <div className={styles.formGroup} style={{ marginBottom: '24px' }}>
-                                    <label style={{ display: 'block', marginBottom: '12px', fontSize: '15px' }}>Ngành ưu tiên</label>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                                        {availableIndustries.length > 0 ? (
-                                            availableIndustries.map(option => (
-                                                <PreferenceChip 
-                                                    key={option.value}
-                                                    label={INDUSTRY_MAP[option.label] || option.label}
-                                                    selected={preferredIndustries.includes(option.label)}
-                                                    onClick={() => toggleIndustry(option.label)}
-                                                />
-                                            ))
-                                        ) : (
-                                            <div style={{ color: 'var(--text-secondary)', fontSize: '14px', fontStyle: 'italic' }}>Đang tải danh sách lĩnh vực...</div>
-                                        )}
-                                    </div>
+                                    <label>Gu đầu tư / Chiến lược *</label>
+                                    <textarea 
+                                        required rows={4}
+                                        value={prefFormData.investmentTaste}
+                                        onChange={(e) => setPrefFormData({ ...prefFormData, investmentTaste: e.target.value })}
+                                        placeholder="Mô tả gu đầu tư, các tiêu chí lựa chọn startup của bạn..."
+                                        style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                    />
                                 </div>
 
-                                <div className={styles.formGroup} style={{ marginBottom: '32px' }}>
-                                    <label style={{ display: 'block', marginBottom: '12px', fontSize: '15px' }}>Giai đoạn ưu tiên</label>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
-                                        {stageOptions.map(option => (
-                                            <PreferenceChip 
-                                                key={option.value}
-                                                label={option.label}
-                                                selected={preferredStages.includes(option.value)}
-                                                onClick={() => toggleStage(option.value)}
-                                            />
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className={styles.formRow} style={{ marginBottom: '24px' }}>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ marginBottom: '8px' }}>Điểm AI tối thiểu</label>
-                                        <input 
-                                            type="number" min="0" max="100" 
-                                            value={prefFormData.minAIScore} 
-                                            onChange={(e) => setPrefFormData({ ...prefFormData, minAIScore: parseInt(e.target.value) || 0 })}
-                                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
-                                        />
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ marginBottom: '8px' }}>Quy mô đầu tư thông thường</label>
-                                        <input 
-                                            type="text" placeholder="VD: 250 triệu - 1 tỷ VND" 
-                                            value={prefFormData.typicalInvestmentSize}
-                                            onChange={(e) => setPrefFormData({ ...prefFormData, typicalInvestmentSize: e.target.value })}
-                                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
-                                        />
-                                    </div>
+                                <div className={styles.formGroup} style={{ marginBottom: '24px' }}>
+                                    <label>Kinh nghiệm đầu tư trước đây</label>
+                                    <textarea 
+                                        rows={3}
+                                        value={prefFormData.previousInvestments}
+                                        onChange={(e) => setPrefFormData({ ...prefFormData, previousInvestments: e.target.value })}
+                                        placeholder="Liệt kê các danh mục đầu tư hoặc kinh nghiệm nổi bật..."
+                                        style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                    />
                                 </div>
 
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '32px' }}>
@@ -1518,10 +1611,10 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                                         type="submit" 
                                         className={styles.primaryBtn} 
                                         disabled={isUpdatingPrefs}
-                                        style={{ padding: '12px 32px', height: 'auto', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}
+                                        style={{ padding: '14px 40px', height: 'auto', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 4px 12px rgba(29, 155, 240, 0.3)' }}
                                     >
-                                        {isUpdatingPrefs && <Loader2 size={16} className="animate-spin" />}
-                                        Lưu sở thích
+                                        {isUpdatingPrefs ? <Loader2 size={18} className="animate-spin" /> : <Shield size={18} />}
+                                        {investorProfile ? 'Cập nhật hồ sơ' : 'Gửi hồ sơ duyệt'}
                                     </button>
                                 </div>
                             </form>
@@ -1532,7 +1625,11 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                 {activeSection === 'pr_news' && (
                     <NewsPRSection user={user} onOpenChat={(sessionId) => {
                         setActiveChatSession({ chatSessionId: sessionId, displayName: 'Thông báo', currentUserId: user?.userId, sentTime: new Date().toISOString() });
-                    }} />
+                    }} 
+                    investorProfileStatus={investorProfile ? (investorProfile.approvalStatus || 'Pending') : (isLoading ? null : 'Missing')}
+                    investorProfileReason={investorProfile?.rejectionReason}
+                    onUpdateProfile={() => setActiveSection('preferences')}
+                    />
                 )}
 
                 <FloatingChatWidget

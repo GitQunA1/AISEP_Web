@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Rocket, Loader } from 'lucide-react';
+import { Rocket, Loader, AlertCircle, ChevronRight } from 'lucide-react';
 import styles from './MainLayout.module.css';
+import sharedStyles from '../../styles/SharedDashboard.module.css';
 import Sidebar from './Sidebar';
 import RightPanel from './RightPanel';
 import TopBar from './TopBar';
@@ -16,6 +17,9 @@ import projectSubmissionService from '../../services/projectSubmissionService';
 import followerService from '../../services/followerService';
 import connectionService from '../../services/connectionService';
 import dealsService from '../../services/dealsService';
+import apiDebug from '../../utils/apiDebug';
+import { apiClient } from '../../services/apiClient';
+import InvestorStatusBanner from '../common/InvestorStatusBanner';
 import AdvisorsPage from '../../pages/AdvisorsPage';
 import advisorService from '../../services/advisorService';
 import AdvisorDetailView from '../profile/AdvisorDetailView';
@@ -53,6 +57,7 @@ function MainLayout({
   activeView = 'main',
   isFullWidthContent = false
 }) {
+  const token = localStorage.getItem('aisep_token') || sessionStorage.getItem('token');
   const [userSubscription, setUserSubscription] = useState(null);
   const isPaidUser = !!(user && userSubscription && 
                       (userSubscription.status === 'Active' || userSubscription.status === 1 || userSubscription.status === 'active') && 
@@ -176,6 +181,8 @@ function MainLayout({
   const [sentConnectionIds, setSentConnectionIds] = useState(new Set()); // Cache for connection status
   const [investedProjectIds, setInvestedProjectIds] = useState(new Set()); // Cache for already invested projects
   const [investorsByProject, setInvestorsByProject] = useState(new Map()); // Map: projectId -> array of investor objects (Contract_Signed only)
+  const [investorProfileStatus, setInvestorProfileStatus] = useState(null); // 'Pending', 'Approved', 'Rejected', 'Missing' or null
+  const [investorProfile, setInvestorProfile] = useState(null);
 
   // Refetch invested projects (called after successful investment)
   const refetchInvestedProjects = useCallback(async () => {
@@ -480,9 +487,17 @@ function MainLayout({
       setIsLoading(true);
       setFeedError(null);
       try {
+        const roleStr = user?.role?.toString().toLowerCase() || '';
+        const roleNum = Number(user?.role);
+        const isBypassRole = roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 3 || roleNum === 2;
+
+        const projectsPromise = isBypassRole 
+          ? projectSubmissionService.getApprovedProjects() 
+          : projectSubmissionService.getAllProjects();
+
         // Fetch both projects and startup profiles with large pageSize to ensure all are joined
         const [projectsRes, startupsRes] = await Promise.all([
-          projectSubmissionService.getAllProjects(),
+          projectsPromise,
           startupProfileService.getAllStartups({ pageSize: 100 })
         ]);
 
@@ -594,9 +609,27 @@ function MainLayout({
       }
     };
 
+    const fetchInvestorProfile = async () => {
+      const isInvestor = user?.role === 'Investor' || user?.role === 1 || String(user?.role) === '1';
+      if (token && isInvestor) {
+        try {
+          const res = await investorService.getMyProfile();
+          setInvestorProfile(res);
+          setInvestorProfileStatus(res?.approvalStatus || 'Pending');
+        } catch (error) {
+          if (error.response?.status === 404) {
+            setInvestorProfileStatus('Missing');
+          } else {
+            console.error('[MainLayout] Failed to fetch investor profile:', error);
+          }
+        }
+      }
+    };
+
     fetchFeed();
     fetchStats();
-  }, [showAdvisors, showInvestors, user]);
+    fetchInvestorProfile();
+  }, [showAdvisors, showInvestors, user, token]);
 
   // 2. Define Handlers
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -703,6 +736,7 @@ function MainLayout({
         key={activeView}
         className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} ${isFullWidthContent ? styles.fullWidthContent : ''} view-enter`}
       >
+
         {/* Feed Content or Profile Page */}
         {(activeView === 'profile' || activeView === 'subscription' || activeView.startsWith('dashboard')) && children ? (
           children
@@ -718,6 +752,9 @@ function MainLayout({
             <AdvisorsPage
               user={user}
               onShowLogin={onShowLogin}
+              investorProfileStatus={investorProfileStatus}
+              investorProfileReason={investorProfile?.rejectionReason}
+              onUpdateProfile={() => onShowDashboard('preferences')}
               onSelectAdvisor={(advisor) => {
                 // Save scroll position
                 const isMobile = window.innerWidth < 1024;
@@ -751,6 +788,12 @@ function MainLayout({
             user={user}
             isPaidUser={isPaidUser}
             onShowLogin={onShowLogin}
+            isInvestorApproved={investorProfileStatus === 'Approved'}
+            isFullView={(() => {
+              const roleStr = user?.role?.toString().toLowerCase() || '';
+              const roleNum = Number(user?.role);
+              return roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 3 || roleNum === 2;
+            })()}
             onBack={() => {
               setSelectedProjectId(null);
               if (window.location.pathname.startsWith('/projects/')) {
@@ -797,6 +840,15 @@ function MainLayout({
                   }, {})
                 }
               />
+
+              {/* Status Alert Banner (Discovery Tab) */}
+              {(user?.role === 'Investor' || user?.role === 1 || String(user?.role) === '1') && (
+                <InvestorStatusBanner
+                  status={investorProfileStatus}
+                  reason={investorProfile?.rejectionReason}
+                  onUpdateProfile={() => onShowDashboard('preferences')}
+                />
+              )}
 
               {showProfileModal && (
                 <ProfileRequiredModal

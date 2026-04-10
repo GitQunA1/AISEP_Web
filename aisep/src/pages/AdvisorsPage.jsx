@@ -6,9 +6,10 @@ import advisorService from '../services/advisorService';
 import BookingWizard from '../components/booking/BookingWizard';
 import NotificationCenter from '../components/common/NotificationCenter';
 import FloatingChatWidget from '../components/common/FloatingChatWidget';
+import InvestorStatusBanner from '../components/common/InvestorStatusBanner';
 import styles from './AdvisorsPage.module.css';
 
-export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
+export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin, investorProfileStatus, investorProfileReason, onUpdateProfile }) {
     const [advisors, setAdvisors] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -144,6 +145,12 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin }) {
                     </div>
                 </div>
             </div>
+
+            <InvestorStatusBanner
+                status={investorProfileStatus}
+                reason={investorProfileReason}
+                onUpdateProfile={onUpdateProfile}
+            />
 
             {/* Mobile portal modal */}
             {isFilterOpen && createPortal(

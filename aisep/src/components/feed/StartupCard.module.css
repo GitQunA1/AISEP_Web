@@ -406,6 +406,13 @@
   transform: scale(0.96);
 }
 
+.btnDisabled {
+  opacity: 0.4 !important;
+  cursor: not-allowed !important;
+  filter: grayscale(0.8);
+  pointer-events: auto; /* Keep auto for custom click handler toast */
+}
+
 /* Follow Variant */
 .btnFollow {
   background-color: transparent;
