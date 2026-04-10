@@ -27,7 +27,8 @@ function FeedHeader({
   onSearchChange,
   searchPlaceholder = "Tìm kiếm dự án...",
   onOpenChat,
-  customAction = null
+  customAction = null,
+  showNotification = false
 }) {
   return (
     <div className={styles.container}>
@@ -68,7 +69,7 @@ function FeedHeader({
                 </button>
               )}
               {customAction}
-              {onOpenChat && <NotificationCenter onOpenChat={onOpenChat} />}
+              {(onOpenChat || showNotification) && <NotificationCenter onOpenChat={onOpenChat} />}
             </div>
           </div>
         </div>

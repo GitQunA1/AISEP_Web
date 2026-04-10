@@ -48,7 +48,7 @@
 .searchWrapper {
   position: relative;
   width: 100%;
-  max-width: 420px;
+  max-width: 360px; /* Reduced from 420px to move left and spare space for noti button */
   min-width: 200px;
   display: flex;
   align-items: center;
