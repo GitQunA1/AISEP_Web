@@ -120,7 +120,7 @@ const SubscriptionPillCard = ({ user, onManage, isActive }) => {
                     <div className={styles.packageValue}>{packageName.replace('Gói ', '')}</div>
                   </>
                 ) : (
-                  packageName
+                  <span className={styles.truncatedText}>{packageName}</span>
                 )}
               </div>
               {expiryDate && (

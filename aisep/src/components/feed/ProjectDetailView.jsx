@@ -7,6 +7,9 @@ import bookingService from '../../services/bookingService';
 import ProfileErrorScreen from '../common/ProfileErrorScreen';
 import AuthRequirementScreen from '../common/AuthRequirementScreen';
 import ProfileLoading from '../common/ProfileLoading';
+import subscriptionService from '../../services/subscriptionService';
+import paymentService from '../../services/paymentService';
+import UnlockConfirmationModal from '../common/UnlockConfirmationModal';
 
 /* ─── Design tokens (hardcoded to guarantee correct rendering) ─── */
 const T = {
@@ -183,7 +186,7 @@ const MobileDocCard = ({ doc }) => (
 );
 
 /* ─── Main Component ─────────────────────────────────────── */
-export default function ProjectDetailView({ projectId, onBack, user, onShowLogin, isFullView }) {
+export default function ProjectDetailView({ projectId, onBack, user, isPaidUser = false, onShowLogin, isFullView }) {
   const [project, setProject] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [aiHistory, setAiHistory] = useState([]);
@@ -192,6 +195,55 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
   const [error, setError] = useState(null);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 850);
   const [showBookingWizard, setShowBookingWizard] = useState(false);
+
+  // Quota & Unlock State
+  const [subscription, setSubscription] = useState(null);
+  const [investorPackages, setInvestorPackages] = useState([]);
+  const [showUnlockConfirm, setShowUnlockConfirm] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
+  const [isLoadingQuota, setIsLoadingQuota] = useState(true);
+
+  const fetchQuotaData = async () => {
+    const isInvestor = user?.role?.toLowerCase() === 'investor';
+    if (!user || !isInvestor || !isPaidUser) {
+      setIsLoadingQuota(false);
+      return;
+    }
+    try {
+      setIsLoadingQuota(true);
+      const [subRes, pkgRes] = await Promise.all([
+        subscriptionService.getMySubscription(),
+        paymentService.getInvestorPackages()
+      ]);
+      
+      console.log('[ProjectDetailView] Raw SubRes:', subRes);
+      console.log('[ProjectDetailView] Raw PkgRes:', pkgRes);
+
+      // Robust extraction: Handle both { success, data } and direct data objects
+      const finalSub = subRes?.data && typeof subRes.data === 'object' && !Array.isArray(subRes.data) 
+        ? subRes.data 
+        : subRes;
+        
+      const finalPkgs = pkgRes?.data && Array.isArray(pkgRes.data)
+        ? pkgRes.data
+        : (Array.isArray(pkgRes) ? pkgRes : []);
+
+      console.log('[ProjectDetailView] Final Subscription:', finalSub);
+      console.log('[ProjectDetailView] Final Packages:', finalPkgs);
+
+      if (finalSub && typeof finalSub === 'object') setSubscription(finalSub);
+      if (finalPkgs.length > 0) setInvestorPackages(finalPkgs);
+    } catch (err) {
+      console.error("Error fetching quota data:", err);
+    } finally {
+      setIsLoadingQuota(false);
+    }
+  };
+
+  // Initial fetch on mount
+  useEffect(() => {
+    fetchQuotaData();
+  }, [user, isPaidUser]);
 
   useEffect(() => {
     const onResize = () => setIsMobile(window.innerWidth <= 850);
@@ -257,7 +309,49 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
       setError(is401 ? 'Unauthorized' : (err?.message || 'Lỗi khi tải dự án.'));
     })
       .finally(() => setLoading(false));
-  }, [projectId, user]);
+  }, [projectId, user, isFullView]);
+
+  const handleUnlockClick = (e) => {
+    if (e) e.stopPropagation();
+    if (!isPaidUser) return;
+    fetchQuotaData(); // Refresh data when opening
+    setShowUnlockConfirm(true);
+  };
+
+  const confirmUnlock = async () => {
+    if (isUnlocking) return;
+    setIsUnlocking(true);
+    try {
+      const res = await projectSubmissionService.getProjectById(projectId);
+      if (res?.success && res?.data) {
+        const d = res.data;
+        setProject({
+          ...d,
+          name: d.projectName || 'Dự án',
+          stage: d.developmentStage || 'Ý tưởng',
+          status: d.status || 'Pending',
+          tags: d.keySkills ? d.keySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
+        });
+        setShowUnlockConfirm(false);
+        // Optional: Refresh subscription to update quota
+        subscriptionService.getMySubscription().then(setSubscription).catch(() => {});
+      } else {
+        alert(res?.message || "Không thể mở khóa dự án này.");
+      }
+    } catch (err) {
+      console.error("Unlock Error:", err);
+      const msg = err?.response?.data?.message || err?.message || "Lỗi khi mở khóa dự án.";
+      alert(msg);
+    } finally {
+      setIsUnlocking(false);
+    }
+  };
+
+  // Calculate remaining quota
+  const currentPackage = investorPackages.find(p => p.packageId === subscription?.packageId);
+  const maxViews = currentPackage?.maxProjectViews || 0;
+  const usedViews = subscription?.usedProjectViews || 0;
+  const remainingViews = Math.max(0, maxViews - usedViews);
 
   /* ── Auth screen ── */
   if (!user || error === 'Unauthorized') {
@@ -297,24 +391,36 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
     ? (aiHistory[0].potentialScore ?? aiHistory[0].startupScore ?? null)
     : (project.startupPotentialScore ?? null);
 
-  const PremiumBadge = ({ inline }) => (
-    <div style={{
-      display: inline ? 'inline-flex' : 'flex',
-      alignItems: 'center',
-      gap: 6,
-      fontSize: 12,
-      fontWeight: 700,
-      color: '#ffad1f',
-      background: 'rgba(255, 173, 31, 0.12)',
-      padding: '4px 10px',
-      borderRadius: 6,
-      border: '1px solid rgba(255, 173, 31, 0.2)',
-      marginTop: inline ? 0 : 4,
-      width: inline ? 'auto' : 'fit-content'
-    }}>
-      <Lock size={13} strokeWidth={2.5} /> Premium
-    </div>
-  );
+  const PremiumBadge = ({ inline }) => {
+    const canUnlock = isPaidUser && user?.role === 'Investor';
+    return (
+      <div 
+        onClick={canUnlock ? handleUnlockClick : undefined}
+        style={{
+          display: inline ? 'inline-flex' : 'flex',
+          alignItems: 'center',
+          justifyContent: inline ? 'flex-start' : 'center',
+          gap: 6,
+          fontSize: 12,
+          fontWeight: 700,
+          color: '#ffad1f',
+          background: 'rgba(255, 173, 31, 0.12)',
+          padding: '4px 10px',
+          borderRadius: 6,
+          border: '1px solid rgba(255, 173, 31, 0.2)',
+          marginTop: inline ? 0 : 4,
+          width: inline ? 'auto' : 'fit-content',
+          cursor: canUnlock ? 'pointer' : 'default',
+          transition: 'all 0.2s',
+          userSelect: 'none'
+        }}
+        onMouseEnter={e => canUnlock && (e.currentTarget.style.background = 'rgba(255, 173, 31, 0.2)')}
+        onMouseLeave={e => canUnlock && (e.currentTarget.style.background = 'rgba(255, 173, 31, 0.12)')}
+      >
+        <Lock size={13} strokeWidth={2.5} /> {isPaidUser ? 'Mở khóa ngay' : 'Premium'}
+      </div>
+    );
+  };
 
   return (
     <div className="project-detail-view" style={{
@@ -922,6 +1028,18 @@ export default function ProjectDetailView({ projectId, onBack, user, onShowLogin
           user={user}
           initialProjectId={projectId}
           initialAdvisorId={project.assignedAdvisorId}
+        />
+      )}
+      {showUnlockConfirm && (
+        <UnlockConfirmationModal
+          isOpen={showUnlockConfirm}
+          onClose={() => setShowUnlockConfirm(false)}
+          onConfirm={confirmUnlock}
+          isUnlocking={isUnlocking}
+          isLoadingQuota={isLoadingQuota}
+          projectName={project?.name}
+          remainingViews={remainingViews}
+          packageName={subscription?.packageName}
         />
       )}
     </div>
