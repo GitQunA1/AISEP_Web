@@ -18,9 +18,14 @@ function relativeTime(dateString) {
  * NewsCard — Unified news card using site CSS variable palette.
  * Props: thumbnail, category, title, description, source, timestamp, onClick
  */
-export default function NewsCard({ thumbnail, category, title, description, source, timestamp, onClick }) {
+export default function NewsCard({ thumbnail, category, title, description, source, timestamp, onClick, index = 0 }) {
     return (
-        <div className={styles.newsCard} onClick={onClick} role="button" tabIndex={0}
+        <div 
+            className={`${styles.newsCard} ${styles.itemAppear}`} 
+            onClick={onClick} 
+            role="button" 
+            tabIndex={0}
+            style={{ animationDelay: `${index * 0.05}s` }}
             onKeyDown={e => e.key === 'Enter' && onClick?.()}>
             {thumbnail ? (
                 <img

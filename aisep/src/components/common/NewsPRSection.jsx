@@ -134,9 +134,10 @@ export default function NewsPRSection({ user, onOpenChat }) {
                     </div>
                 )}
 
-                {!isLoading && filteredNews.map(pr => (
+                {!isLoading && filteredNews.map((pr, index) => (
                     <NewsCard
                         key={pr.postPrId || pr.id}
+                        index={index}
                         thumbnail={pr.projectImage || pr.imageUrl || null}
                         category={pr.category || 'Đầu tư'}
                         title={pr.title}
