@@ -23,7 +23,10 @@ export default function SubscriptionPaymentModal({
   const hasCalledSuccess = useRef(false);
   // Robust check for any active subscription name
   const effectiveActiveName = String(activePackageName || '').trim();
-  const hasAlreadyActiveSub = effectiveActiveName !== '' && effectiveActiveName !== 'null';
+  const hasAlreadyActiveSub = effectiveActiveName !== '' && 
+                              effectiveActiveName !== 'null' && 
+                              effectiveActiveName !== 'Miễn phí' && 
+                              effectiveActiveName !== 'Cơ bản';
 
   console.log('SubscriptionModal DEBUG:', { 
     newPkg: packageName, 
@@ -101,7 +104,7 @@ export default function SubscriptionPaymentModal({
                 <AlertCircle size={20} className={styles.warningIcon} />
                 <div className={styles.warningContent}>
                   <p className={styles.warningText}>
-                    Gói đăng ký <strong>{activePackageName || 'Cơ bản'}</strong> của bạn đang hoạt động. 
+                    Gói đăng ký <strong>{activePackageName || 'Miễn phí'}</strong> của bạn đang hoạt động. 
                     Nếu bạn tiếp tục thực hiện mua gói <strong>{packageName}</strong>, các ưu đãi trong gói đăng ký hiện tại của bạn sẽ không được bảo lưu.
                   </p>
                 </div>

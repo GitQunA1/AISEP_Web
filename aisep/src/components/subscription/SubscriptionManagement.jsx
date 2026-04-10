@@ -3,7 +3,7 @@ import {
   Sparkles, Crown, Check, ShieldCheck, 
   ArrowRight, Loader2, CreditCard, 
   Calendar, Zap, Eye, Ticket,
-  X, AlertCircle, CheckCircle2, ChevronRight
+  X, AlertCircle, CheckCircle2, ChevronRight, ChevronDown
 } from 'lucide-react';
 import styles from './SubscriptionManagement.module.css';
 import subscriptionService from '../../services/subscriptionService';
@@ -20,6 +20,7 @@ const SubscriptionManagement = ({ user }) => {
   const [checkoutData, setCheckoutData] = useState(null); 
   const [isProcessing, setIsProcessing] = useState(false);
   const [selectedPackageName, setSelectedPackageName] = useState('');
+  const upgradeSectionRef = React.useRef(null);
 
   // Role check
   const roleStr = user?.role?.toString().toLowerCase() || '';
@@ -71,6 +72,10 @@ const SubscriptionManagement = ({ user }) => {
     window.dispatchEvent(new CustomEvent('SUBSCRIPTION_UPDATED'));
   }, [fetchData]);
 
+  const scrollToUpgrade = () => {
+    upgradeSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   if (loading) {
     return (
       <div className={styles.container} style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '60vh' }}>
@@ -84,12 +89,18 @@ const SubscriptionManagement = ({ user }) => {
                     !subscription.packageName.toLowerCase().includes('cơ bản') && 
                     !subscription.packageName.toLowerCase().includes('basic');
 
+  const isLocked = !subscription || subscription.data === null || !subscription.packageName;
+
+  // Find the details of the currently active package to get max quota limits
+  const activePackage = packages.find(p => p.packageId === subscription?.packageId);
+
+
   return (
     <div className={styles.container}>
       {/* Header */}
       <header className={styles.header}>
         <h1 className={styles.title}>Quản lý gói dịch vụ</h1>
-        <p className={styles.subtitle}>Kiểm tra hiện trạng và nâng cấp các quyền lợi Premium chuyên sâu</p>
+        <p className={styles.subtitle}>Kiểm tra hiện trạng và nâng cấp các quyền lợi Gói dịch vụ chuyên sâu</p>
       </header>
 
       {/* Hero Overview: Status & Usage */}
@@ -97,10 +108,10 @@ const SubscriptionManagement = ({ user }) => {
         {/* Current Plan Card */}
         <div className={`${styles.card} ${styles.planCard}`}>
           <div className={`${styles.planBadge} ${isPremium ? styles.premiumBadge : styles.basicBadge}`}>
-            {subscription?.packageName || 'Gói Cơ bản'}
+            {subscription?.packageName || 'Gói Miễn phí'}
           </div>
           <h2 style={{ margin: '20px 0 12px', fontSize: '1.4rem', fontWeight: 800 }}>
-             Bạn đang dùng gói {subscription?.packageName || 'Cơ bản'}
+             Bạn đang dùng gói {subscription?.packageName || 'Miễn phí'}
           </h2>
           
           <div style={{ color: 'var(--text-secondary)', fontSize: '0.95rem', lineHeight: 1.6 }}>
@@ -118,10 +129,14 @@ const SubscriptionManagement = ({ user }) => {
             )}
           </div>
 
-          <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: (subscription && (subscription.status === 1 || subscription.status === 'Active')) ? '#10b981' : 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600 }}>
+          <div style={{ marginTop: '20px', display: 'flex', alignItems: 'center', gap: '8px', color: (subscription && (subscription.status === 1 || subscription.status === 'Active')) ? '#10b981' : 'var(--text-secondary)', fontSize: '0.9rem', fontWeight: 600, marginBottom: '24px' }}>
              {(subscription && (subscription.status === 1 || subscription.status === 'Active')) ? <CheckCircle2 size={16} /> : <AlertCircle size={16} />}
              {(subscription && (subscription.status === 1 || subscription.status === 'Active')) ? 'Gói đang hoạt động' : 'Hãy nâng cấp để có thêm quyền lợi'}
           </div>
+
+          <button className={styles.explorerBtn} onClick={scrollToUpgrade}>
+            Khám phá các gói dịch vụ <ChevronRight size={18} />
+          </button>
         </div>
 
         {/* Real-time Usage Limits */}
@@ -133,35 +148,41 @@ const SubscriptionManagement = ({ user }) => {
             <UsageItem 
               icon={<Zap size={18} />} 
               label="Yêu cầu AI (Phân tích)" 
-              used={subscription?.usedAiRequests || 0} 
-              total={subscription?.maxAiRequests || 5} 
+              used={subscription?.usedAiRequests ?? 0} 
+              total={activePackage?.maxAiRequests ?? 0} 
               isPremium={isPremium}
+              isLocked={isLocked}
             />
             <UsageItem 
               icon={<Eye size={18} />} 
               label="Lượt xem dự án" 
-              used={subscription?.usedProjectViews || 0} 
-              total={subscription?.maxProjectViews || 20} 
+              used={subscription?.usedProjectViews ?? 0} 
+              total={activePackage?.maxProjectViews ?? 0} 
               isPremium={isPremium}
+              isLocked={isLocked}
             />
             <UsageItem 
               icon={<Ticket size={18} />} 
               label="Booking miễn phí" 
-              used={subscription ? (subscription.freeBookingCount - subscription.remainingFreeBookings) : 0} 
-              total={subscription?.freeBookingCount || 0} 
+              used={activePackage ? (activePackage.freeBookingCount - (subscription?.remainingFreeBookings ?? 0)) : 0} 
+              total={activePackage?.freeBookingCount ?? 0} 
               isPremium={isPremium}
-              reverse={true}
-              remaining={subscription?.remainingFreeBookings}
+              isLocked={isLocked}
             />
           </div>
+          {isLocked && (
+            <div style={{ marginTop: '20px', fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center', backgroundColor: 'rgba(29, 155, 240, 0.05)', border: '1px dashed rgba(29, 155, 240, 0.2)', padding: '12px', borderRadius: '12px' }}>
+              Hãy nâng cấp gói để nhận hạn mức sử dụng hàng tháng.
+            </div>
+          )}
         </div>
       </section>
 
       {/* Upgrade Options: Pricing Table */}
-      <section className={styles.upgradeSection}>
+      <section className={styles.upgradeSection} ref={upgradeSectionRef}>
         <div className={styles.pricingHeader}>
-          <h2 style={{ fontSize: '1.4rem', fontWeight: 800 }}>Mở khóa thêm quyền lợi</h2>
-          <p style={{ color: 'var(--text-secondary)' }}>Chọn gói phù hợp nhất với nhu cầu tăng trưởng của bạn</p>
+          <h2 className={styles.title}>Mở khóa thêm quyền lợi</h2>
+          <p className={styles.subtitle}>Chọn gói phù hợp nhất với nhu cầu tăng trưởng của bạn</p>
         </div>
 
         <div className={styles.pricingGrid}>
@@ -213,7 +234,7 @@ const SubscriptionManagement = ({ user }) => {
         <SubscriptionPaymentModal 
           checkoutData={checkoutData}
           packageName={selectedPackageName}
-          activePackageName={subscription?.packageName || 'Cơ bản'}
+          activePackageName={subscription?.packageName || 'Miễn phí'}
           isPremium={!selectedPackageName.toLowerCase().includes('cơ bản') && !selectedPackageName.toLowerCase().includes('basic')}
           onClose={handleModalClose}
           onSuccess={handlePaymentSuccess}
@@ -223,29 +244,53 @@ const SubscriptionManagement = ({ user }) => {
   );
 };
 
-const UsageItem = ({ icon, label, used, total, isPremium, reverse, remaining }) => {
+const UsageItem = ({ icon, label, used, total, isPremium, reverse, remaining, isLocked }) => {
   const percentage = total > 0 ? (used / total) * 100 : 0;
-  const displayUsed = reverse ? remaining : used;
+  const displayUsed = reverse ? (remaining ?? 0) : used;
   const displayLabel = reverse ? 'Còn trống' : 'Đã sử dụng';
 
   return (
-    <div className={styles.usageItem}>
+    <div className={`${styles.usageItem} ${isLocked ? styles.lockedItem : ''}`}>
       <div className={styles.usageHeader}>
         <div className={styles.usageLabel}>
-          {icon}
-          <span>{label}</span>
+          <div className={styles.usageIconBox}>
+            {isLocked ? <Crown size={18} opacity={0.5} /> : icon}
+          </div>
+          <div className={styles.usageLabelText}>
+            <span className={styles.usageLabelTitle}>{label}</span>
+            <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+              {isLocked ? 'Tính năng Gói dịch vụ' : (reverse ? 'Gói ưu đãi' : 'Hạn mức tháng')}
+            </span>
+          </div>
         </div>
-        <span className={styles.usageValue}>{displayUsed}/{total}</span>
+        <div className={styles.usageValue}>
+          {isLocked ? (
+             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+               <span style={{ fontSize: '0.8rem', fontWeight: 800, color: 'var(--primary-blue)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Chưa mở khóa</span>
+             </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+               <span style={{ fontSize: '0.9rem', fontWeight: 800, color: 'var(--text-primary)' }}>{displayUsed}/{total}</span>
+               <span style={{ fontSize: '0.7rem', opacity: 0.6 }}>{displayLabel.toLowerCase()}</span>
+            </div>
+          )}
+        </div>
       </div>
+
       <div className={styles.progressBar}>
         <div 
-          className={`${styles.progressFill} ${isPremium ? styles.premiumFill : ''}`} 
-          style={{ width: `${Math.min(percentage, 100)}%` }}
+          className={`${styles.progressFill} ${isPremium ? styles.premiumFill : ''} ${isLocked ? styles.lockedFill : ''}`} 
+          style={{ width: isLocked ? '0%' : `${Math.min(percentage, 100)}%` }}
         />
       </div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
-        <span>{displayLabel}</span>
-        <span>{Math.round(percentage)}%</span>
+
+      <div className={styles.usageFooter}>
+        <span className={styles.footerLabel}>
+          {isLocked ? 'Yêu cầu Gói dịch vụ' : displayLabel}
+        </span>
+        <span className={styles.footerPercent}>
+          {isLocked ? '---' : `${Math.round(percentage)}%`}
+        </span>
       </div>
     </div>
   );
