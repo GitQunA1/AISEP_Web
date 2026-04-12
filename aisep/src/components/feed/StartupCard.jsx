@@ -499,10 +499,11 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                if (!isInvestorApproved) {
-                  showToast('Vui lòng hoàn thiện hồ sơ để yêu cầu kết nối', 'error');
-                  return;
-                }
+                // ⚠️ TẠMTHỜI: Comment check isInvestorApproved để test chức năng
+                // if (!isInvestorApproved) {
+                //   showToast('Vui lòng hoàn thiện hồ sơ để yêu cầu kết nối', 'error');
+                //   return;
+                // }
                 if (!hasRequested) setShowRequestModal(true);
               }}
               disabled={hasRequested}
@@ -550,10 +551,11 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
               <button
                 onClick={(e) => {
                   e.stopPropagation();
-                  if (!isInvestorApproved) {
-                    showToast('Vui lòng hoàn thiện hồ sơ để đề xuất đầu tư', 'error');
-                    return;
-                  }
+                  // ⚠️ TẠMTHỜI: Comment check isInvestorApproved để test chức năng đầu tư
+                  // if (!isInvestorApproved) {
+                  //   showToast('Vui lòng hoàn thiện hồ sơ để đề xuất đầu tư', 'error');
+                  //   return;
+                  // }
                   setShowInvestmentModal(true);
                 }}
                 className={`${styles.pillButton} ${styles.btnInvest} ${!isInvestorApproved ? styles.btnDisabled : ''}`}

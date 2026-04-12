@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare, TrendingUpIcon, Loader2, Crown, X, Info, Calendar, PieChart, ArrowRight, FileText, Check, Users, AlertCircle, RefreshCw, Trash2, Settings, Download, XCircle, Clock, Shield, ChevronRight } from 'lucide-react';
+import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare, TrendingUpIcon, Loader2, Crown, X, Info, Calendar, PieChart, ArrowRight, FileText, Check, Users, AlertCircle, RefreshCw, Trash2, Settings, Download, XCircle, Clock, Shield, ChevronRight, GripVertical } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
 import contractStyles from './ContractSigningModal.module.css';
@@ -17,6 +17,8 @@ import apiDebug from '../utils/apiDebug';
 import { apiClient } from '../services/apiClient';
 import enumService from '../services/enumService';
 import investorService from '../services/investorService';
+import blockchainOwnershipService from '../services/blockchainOwnershipService';
+import BlockchainOwnershipModal from '../components/common/BlockchainOwnershipModal';
 
 /**
  * InvestorDashboard - Comprehensive dashboard for investors
@@ -93,6 +95,14 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
     const [contractDealData, setContractDealData] = useState(null);
     const [contractStatus, setContractStatus] = useState(null);
     const [isSigningContract, setIsSigningContract] = useState(false);
+
+    // Blockchain Ownership Transfer States
+    const [showBlockchainOwnershipModal, setShowBlockchainOwnershipModal] = useState(false);
+    const [blockchainOwnershipData, setBlockchainOwnershipData] = useState(null);
+    const [isLoadingBlockchainOwnership, setIsLoadingBlockchainOwnership] = useState(false);
+    const [blockchainOwnershipError, setBlockchainOwnershipError] = useState(null);
+    const [selectedDealForOwnership, setSelectedDealForOwnership] = useState(null);
+    const blockchainPollingIntervalRef = useRef(null);
 
     // Detail Modal States
     const [showDetailModal, setShowDetailModal] = useState(false);
@@ -238,6 +248,17 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
 
         return () => {
             clearInterval(pollingInterval);
+        };
+    }, []);
+
+    // Cleanup blockchain polling interval on unmount
+    React.useEffect(() => {
+        return () => {
+            if (blockchainPollingIntervalRef.current) {
+                clearInterval(blockchainPollingIntervalRef.current);
+                blockchainPollingIntervalRef.current = null;
+                console.log('[InvestorDashboard] Cleaned up blockchain polling interval on unmount');
+            }
         };
     }, []);
 
@@ -594,6 +615,74 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
         signatureDataRef.current = ''; // Clear ref
         if (signatureCanvasRef.current) {
             signatureCanvasRef.current.clear();
+        }
+    };
+
+    const handleCheckBlockchainOwnership = async (deal) => {
+        console.log('[InvestorDashboard] handleCheckBlockchainOwnership called for deal:', deal.dealId);
+        
+        if (!deal.dealId) {
+            console.error('[InvestorDashboard] Deal ID not found');
+            return;
+        }
+
+        setSelectedDealForOwnership(deal);
+        setShowBlockchainOwnershipModal(true);
+        setIsLoadingBlockchainOwnership(true);
+        setBlockchainOwnershipError(null);
+        setBlockchainOwnershipData(null);
+
+        // Clear any existing polling interval
+        if (blockchainPollingIntervalRef.current) {
+            clearInterval(blockchainPollingIntervalRef.current);
+        }
+
+        try {
+            // Start polling for blockchain status
+            console.log('[InvestorDashboard] Starting to poll blockchain status for deal:', deal.dealId);
+            
+            const pollResult = await blockchainOwnershipService.pollBlockchainStatus(
+                deal.dealId,
+                (updateInfo) => {
+                    console.log('[InvestorDashboard] Polling update:', updateInfo);
+                    
+                    if (updateInfo.status === 'polling' || updateInfo.status === 'completed') {
+                        setBlockchainOwnershipData(updateInfo.data);
+                        setIsLoadingBlockchainOwnership(updateInfo.status === 'polling');
+                    } else if (updateInfo.status === 'error') {
+                        setBlockchainOwnershipError(updateInfo.error);
+                        setIsLoadingBlockchainOwnership(false);
+                    }
+                }
+            );
+
+            console.log('[InvestorDashboard] Polling result:', pollResult);
+            
+            if (pollResult.status === 'completed' || pollResult.status === 'timeout') {
+                setBlockchainOwnershipData(pollResult.data);
+                setIsLoadingBlockchainOwnership(false);
+            } else if (pollResult.status === 'error') {
+                setBlockchainOwnershipError(pollResult.error);
+                setIsLoadingBlockchainOwnership(false);
+            }
+        } catch (error) {
+            console.error('[InvestorDashboard] Error checking blockchain ownership:', error);
+            setBlockchainOwnershipError(error.message || 'Không thể kiểm tra trạng thái blockchain.');
+            setIsLoadingBlockchainOwnership(false);
+        }
+    };
+
+    const handleCloseBlockchainOwnershipModal = () => {
+        setShowBlockchainOwnershipModal(false);
+        setBlockchainOwnershipData(null);
+        setBlockchainOwnershipError(null);
+        setSelectedDealForOwnership(null);
+        setIsLoadingBlockchainOwnership(false);
+
+        // Clear polling interval
+        if (blockchainPollingIntervalRef.current) {
+            clearInterval(blockchainPollingIntervalRef.current);
+            blockchainPollingIntervalRef.current = null;
         }
     };
 
@@ -1460,6 +1549,41 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                                                         <FileText size={12} /> Xem hợp đồng
                                                     </button>
                                                 )}
+
+                                                {(isContractSigned || deal.status === 'Contract_Signed' || deal.status === 3) && (
+                                                    <button
+                                                        style={{
+                                                            flex: 1,
+                                                            padding: '8px 12px',
+                                                            backgroundColor: '#3b82f6',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '4px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '4px',
+                                                            transition: 'all 0.2s',
+                                                            opacity: isLoadingBlockchainOwnership && selectedDealForOwnership?.dealId === deal.dealId ? 0.7 : 1
+                                                        }}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleCheckBlockchainOwnership(deal);
+                                                        }}
+                                                        disabled={isLoadingBlockchainOwnership && selectedDealForOwnership?.dealId === deal.dealId}
+                                                        title="Xác thực chuyển giao quyền sở hữu trên blockchain"
+                                                    >
+                                                        {isLoadingBlockchainOwnership && selectedDealForOwnership?.dealId === deal.dealId ? (
+                                                            <Loader2 size={12} className="animate-spin" />
+                                                        ) : (
+                                                            <Shield size={12} />
+                                                        )}
+                                                        Xác thực Quyền sở hữu
+                                                    </button>
+                                                )}
                                             </div>
                                         </div>
                                     );
@@ -1842,6 +1966,16 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                     onClose={() => setShowSuccessModal(false)}
                 />
             )}
+
+            {/* Blockchain Ownership Transfer Modal */}
+            <BlockchainOwnershipModal
+                isOpen={showBlockchainOwnershipModal}
+                ownershipData={blockchainOwnershipData}
+                onClose={handleCloseBlockchainOwnershipModal}
+                isLoading={isLoadingBlockchainOwnership}
+                error={blockchainOwnershipError}
+                dealId={selectedDealForOwnership?.dealId}
+            />
 
             {/* Detail Modal */}
             {/* Standardized Detail Modal */}

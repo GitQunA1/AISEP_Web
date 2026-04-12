@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, ArrowLeft, ClipboardList, TrendingUp, Sword, FolderOpen, Users, DollarSign, BarChart3, Zap, User, Lock, Star, BadgeCheck, Calendar } from 'lucide-react';
+import { Loader2, ArrowLeft, ClipboardList, TrendingUp, Sword, FolderOpen, Users, DollarSign, BarChart3, Zap, User, Lock, Star, BadgeCheck, Calendar, Shield } from 'lucide-react';
 import BookingWizard from '../booking/BookingWizard';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import AIEvaluationService from '../../services/AIEvaluationService';
 import bookingService from '../../services/bookingService';
+import blockchainVerificationService from '../../services/blockchainVerificationService';
 import ProfileErrorScreen from '../common/ProfileErrorScreen';
 import AuthRequirementScreen from '../common/AuthRequirementScreen';
 import ProfileLoading from '../common/ProfileLoading';
+import BlockchainVerificationModal from '../common/BlockchainVerificationModal';
 import subscriptionService from '../../services/subscriptionService';
 import paymentService from '../../services/paymentService';
 import UnlockConfirmationModal from '../common/UnlockConfirmationModal';
@@ -203,6 +205,12 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [isLoadingQuota, setIsLoadingQuota] = useState(true);
 
+  // Blockchain Verification State
+  const [showBlockchainModal, setShowBlockchainModal] = useState(false);
+  const [blockchainData, setBlockchainData] = useState(null);
+  const [isLoadingBlockchain, setIsLoadingBlockchain] = useState(false);
+  const [blockchainError, setBlockchainError] = useState(null);
+
   const fetchQuotaData = async () => {
     const isInvestor = user?.role?.toLowerCase() === 'investor';
     if (!user || !isInvestor || !isPaidUser) {
@@ -348,6 +356,32 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
       alert(msg);
     } finally {
       setIsUnlocking(false);
+    }
+  };
+
+  // Handle Blockchain Verification
+  const handleBlockchainVerification = async () => {
+    if (isLoadingBlockchain || !projectId) return;
+
+    setIsLoadingBlockchain(true);
+    setBlockchainError(null);
+
+    try {
+      console.log('[ProjectDetailView] Verifying blockchain for projectId:', projectId);
+      const response = await blockchainVerificationService.verifyProjectBlockchain(projectId);
+      console.log('[ProjectDetailView] Blockchain verification response:', response);
+
+      setBlockchainData(response);
+      setShowBlockchainModal(true);
+    } catch (err) {
+      console.error('[ProjectDetailView] Blockchain verification error:', err);
+      const errorMsg = err?.response?.data?.message || 
+                       err?.message || 
+                       'Không thể xác minh dự án trên blockchain';
+      setBlockchainError(errorMsg);
+      setShowBlockchainModal(true);
+    } finally {
+      setIsLoadingBlockchain(false);
     }
   };
 
@@ -533,6 +567,44 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
             ✓ Đã được duyệt
           </span>
         )}
+
+        {/* Blockchain Verification Button */}
+        <button
+          onClick={handleBlockchainVerification}
+          disabled={isLoadingBlockchain}
+          title="Xác minh blockchain"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 14px',
+            borderRadius: 8,
+            fontSize: 12,
+            fontWeight: 700,
+            background: '#f0f7ff',
+            color: '#1d9bf0',
+            border: '1px solid rgba(29, 155, 240, 0.3)',
+            cursor: isLoadingBlockchain ? 'not-allowed' : 'pointer',
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s',
+            opacity: isLoadingBlockchain ? 0.6 : 1,
+          }}
+          onMouseEnter={(e) => !isLoadingBlockchain && (e.currentTarget.style.background = '#e0f0ff')}
+          onMouseLeave={(e) => !isLoadingBlockchain && (e.currentTarget.style.background = '#f0f7ff')}
+        >
+          {isLoadingBlockchain ? (
+            <>
+              <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />
+              Đang kiểm tra...
+            </>
+          ) : (
+            <>
+              <Shield size={14} />
+              🔗 Xác minh
+            </>
+          )}
+        </button>
       </div>
 
       {/* ════════════════════════
@@ -825,10 +897,11 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
                     }}>
                       <button
                         onClick={() => {
-                          if (!isInvestorApproved && (user.role?.toLowerCase() === 'investor' || user.role === 1)) {
-                            alert('Vui lòng hoàn thiện hồ sơ nhà đầu tư và chờ được phê duyệt để đặt lịch tư vấn.');
-                            return;
-                          }
+                          // ⚠️ TẠMTHỜI: Comment check isInvestorApproved để test booking
+                          // if (!isInvestorApproved && (user.role?.toLowerCase() === 'investor' || user.role === 1)) {
+                          //   alert('Vui lòng hoàn thiện hồ sơ nhà đầu tư và chờ được phê duyệt để đặt lịch tư vấn.');
+                          //   return;
+                          // }
                           setShowBookingWizard(true);
                         }}
                         style={{
@@ -1057,6 +1130,19 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           projectName={project?.name}
           remainingViews={remainingViews}
           packageName={subscription?.packageName}
+        />
+      )}
+      {showBlockchainModal && (
+        <BlockchainVerificationModal
+          isOpen={showBlockchainModal}
+          verificationData={blockchainData}
+          isLoading={isLoadingBlockchain}
+          error={blockchainError}
+          onClose={() => {
+            setShowBlockchainModal(false);
+            setBlockchainData(null);
+            setBlockchainError(null);
+          }}
         />
       )}
     </div>
