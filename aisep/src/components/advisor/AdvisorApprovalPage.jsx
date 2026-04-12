@@ -7,6 +7,7 @@ import SuccessModal from '../common/SuccessModal';
 import ErrorModal from '../common/ErrorModal';
 import RejectionReasonModal from '../common/RejectionReasonModal';
 import FeedHeader from '../feed/FeedHeader';
+import staffLocal from '../../styles/OperationStaffDashboard.module.css';
 
 /**
  * AdvisorDetailModal - Detailed view of an advisor profile for staff review
@@ -92,10 +93,10 @@ const AdvisorDetailModal = ({ advisor, onClose, onApprove, onReject, processingI
                         <div className={local.detailSection}>
                             <h3 className={local.sectionTitle}>CHỨNG CHỈ & BẰNG CẤP</h3>
                             {advisor.certifications ? (
-                                <a 
-                                    href={advisor.certifications} 
-                                    target="_blank" 
-                                    rel="noreferrer" 
+                                <a
+                                    href={advisor.certifications}
+                                    target="_blank"
+                                    rel="noreferrer"
                                     className={local.certLink}
                                 >
                                     <FileText size={18} />
@@ -117,7 +118,7 @@ const AdvisorDetailModal = ({ advisor, onClose, onApprove, onReject, processingI
                     <button onClick={onClose} className={local.secondaryBtn}>Đóng</button>
                     {isPending && (
                         <div className={local.footerActions}>
-                            <button 
+                            <button
                                 className={`${local.dangerBtn} ${processingId !== null ? local.btnDisabled : ''}`}
                                 onClick={() => onReject(advisor)}
                                 disabled={processingId !== null}
@@ -129,7 +130,7 @@ const AdvisorDetailModal = ({ advisor, onClose, onApprove, onReject, processingI
                                 )}
                                 Từ chối
                             </button>
-                            <button 
+                            <button
                                 className={`${local.approveBtn} ${processingId !== null ? local.btnDisabled : ''}`}
                                 onClick={() => onApprove(advisor.advisorId)}
                                 disabled={processingId !== null}
@@ -158,14 +159,14 @@ export default function AdvisorApprovalPage({ user }) {
 
     // Modal states
     const [showModal, setShowModal] = useState(false);
-    const [modalType, setModalType] = useState('success'); 
+    const [modalType, setModalType] = useState('success');
     const [modalMessage, setModalMessage] = useState('');
     const [showRejectionModal, setShowRejectionModal] = useState(false);
     const [selectedAdvisor, setSelectedAdvisor] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
 
     // Mobile UI state
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
     const [activeMobileTab, setActiveMobileTab] = useState('Pending');
 
     // Mobile Tab Scroll Tracking
@@ -183,15 +184,15 @@ export default function AdvisorApprovalPage({ user }) {
 
     useEffect(() => {
         const handleResize = () => {
-            setIsMobile(window.innerWidth <= 1024);
+            setIsMobile(window.innerWidth < 1024);
             checkTabScroll();
         };
         window.addEventListener('resize', handleResize);
         fetchAdvisors();
-        
+
         // Initial scroll check
         const timer = setTimeout(checkTabScroll, 100);
-        
+
         return () => {
             window.removeEventListener('resize', handleResize);
             clearTimeout(timer);
@@ -204,7 +205,7 @@ export default function AdvisorApprovalPage({ user }) {
             // Fetch all advisors and sort client-side for the Kanban board
             const response = await advisorService.getAllAdvisors({ pageSize: 100 });
             const allAdvisors = response?.data?.items || [];
-            
+
             setAdvisors({
                 pending: allAdvisors.filter(a => a.approvalStatus === 'Pending'),
                 approved: allAdvisors.filter(a => a.approvalStatus === 'Approved'),
@@ -277,15 +278,15 @@ export default function AdvisorApprovalPage({ user }) {
     const filterAdvisors = (list) => {
         if (!searchTerm.trim()) return list;
         const low = searchTerm.toLowerCase();
-        return list.filter(a => 
-            (a.userName || '').toLowerCase().includes(low) || 
+        return list.filter(a =>
+            (a.userName || '').toLowerCase().includes(low) ||
             (a.expertise || '').toLowerCase().includes(low)
         );
     };
 
     return (
         <div className={local.container}>
-            <FeedHeader 
+            <FeedHeader
                 title="Duyệt hồ sơ Cố vấn"
                 subtitle="Quản lý và phê duyệt đội ngũ chuyên gia cố vấn cho nền tảng."
                 showFilter={false}
@@ -293,6 +294,7 @@ export default function AdvisorApprovalPage({ user }) {
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
                 searchPlaceholder="Tìm kiếm tên hoặc chuyên môn..."
+                showNotification={true}
             />
 
             <div className={local.section}>
@@ -300,7 +302,7 @@ export default function AdvisorApprovalPage({ user }) {
                 {isMobile && (
                     <div className={local.tabSwitcherWrapper}>
                         {showLeftTabIndicator && <div className={`${local.scrollIndicator} ${local.scrollIndicatorLeft}`} />}
-                        <div 
+                        <div
                             className={local.mobileTabSwitcher}
                             ref={tabSwitcherRef}
                             onScroll={checkTabScroll}
@@ -325,7 +327,7 @@ export default function AdvisorApprovalPage({ user }) {
                     </div>
                 )}
 
-                <div className={local.boardGrid}>
+                <div className={staffLocal.inv_boardGridScrollable} style={{ flexFlow: isMobile ? 'column' : 'row nowrap' }}>
                     {/* Columns */}
                     {[
                         { id: 'Pending', name: 'Chờ duyệt', list: advisors.pending, color: 'pending', status: 'pend' },
@@ -333,9 +335,9 @@ export default function AdvisorApprovalPage({ user }) {
                         { id: 'Rejected', name: 'Từ chối', list: advisors.rejected, color: 'rejected', status: 'rej' }
                     ].map(col => (
                         (!isMobile || activeMobileTab === col.id) && (
-                            <div key={col.id} className={local.bcol}>
+                            <div key={col.id} className={`${staffLocal.inv_col} ${staffLocal.inv_scrollCol}`}>
                                 {!isMobile && (
-                                    <div className={`${local.bcolHead} ${local[col.status]}`}>
+                                    <div className={`${staffLocal.inv_colHead} ${staffLocal[col.status]}`}>
                                         <div className={local.bcolTitle}>
                                             <div className={`${local.bctDot} ${local[col.status]}`}></div>
                                             {col.name}
@@ -343,21 +345,21 @@ export default function AdvisorApprovalPage({ user }) {
                                         <div className={`${local.bcolN} ${local[col.status]}`}>{col.list.length}</div>
                                     </div>
                                 )}
-                                <div className={local.bcolCards}>
+                                <div className={staffLocal.inv_scrollCardsContainer}>
                                     {isLoading ? (
-                                        [1,2,3].map(i => <div key={i} className={local.skeletonCard}><div className={local.shimmer} /></div>)
+                                        [1, 2, 3].map(i => <div key={i} className={local.skeletonCard}><div className={local.shimmer} /></div>)
                                     ) : (
                                         filterAdvisors(col.list).length === 0 ? (
-                                            <div className={local.emptyStateContainer}>
-                                                <Archive size={40} opacity={0.3} />
+                                            <div className={staffLocal.inv_emptyState}>
+                                                <Archive size={40} className={staffLocal.inv_emptyIcon} />
                                                 <p>Trống</p>
                                             </div>
                                         ) : (
                                             filterAdvisors(col.list).map(advisor => (
-                                                <AdvisorKanbanCard 
+                                                <AdvisorKanbanCard
                                                     key={advisor.advisorId}
                                                     advisor={advisor}
-                                                    status={col.id}
+                                                    status={col.status}
                                                     onDetail={() => openDetails(advisor)}
                                                     onApprove={() => handleApprove(advisor.advisorId)}
                                                     onReject={() => handleReject(advisor)}
@@ -377,7 +379,7 @@ export default function AdvisorApprovalPage({ user }) {
 
             {/* Modals */}
             {showDetailModal && (
-                <AdvisorDetailModal 
+                <AdvisorDetailModal
                     advisor={selectedAdvisor}
                     onClose={() => setShowDetailModal(false)}
                     onApprove={handleApprove}
@@ -388,7 +390,7 @@ export default function AdvisorApprovalPage({ user }) {
             )}
 
             {showRejectionModal && selectedAdvisor && (
-                <RejectionReasonModal 
+                <RejectionReasonModal
                     projectName={selectedAdvisor.userName || selectedAdvisor.fullName}
                     onCancel={() => setShowRejectionModal(false)}
                     onSubmit={(reason) => handleReject(selectedAdvisor, reason)}

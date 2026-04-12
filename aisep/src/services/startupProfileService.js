@@ -141,10 +141,25 @@ const startupProfileService = {
    */
   rejectStartup: async (id, reason) => {
     try {
-      return await apiClient.patch(`/api/Startups/${id}/reject`, { reason });
+      const response = await apiClient.patch(`/api/Startups/${id}/reject`, { reason });
+      return response;
     } catch (error) {
       console.error(`Error rejecting startup ${id}:`, error);
       throw error;
+    }
+  },
+
+  /**
+   * Fetch the startup profile of the current authenticated user
+   * @returns {Promise<Object|null>} The startup object or null
+   */
+  getStartupMe: async () => {
+    try {
+      const response = await apiClient.get('/api/Startups/me');
+      return response?.data ?? null;
+    } catch (error) {
+      console.error('Error fetching current startup profile:', error);
+      return null;
     }
   }
 };

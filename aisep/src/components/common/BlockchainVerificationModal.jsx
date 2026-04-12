@@ -7,10 +7,21 @@ import styles from './BlockchainVerificationModal.module.css';
  * BlockchainVerificationModal - Display blockchain verification details
  * Shows: authentication status, transaction hash, timestamp, and message
  */
-export default function BlockchainVerificationModal({ isOpen, verificationData, onClose, documentName }) {
+export default function BlockchainVerificationModal({ isOpen, verificationData, onClose, documentName, isLoading, error }) {
     const [copied, setCopied] = React.useState(false);
 
-    if (!isOpen || !verificationData) return null;
+    if (!isOpen) return null;
+
+    // Extract data from API response format
+    const apiData = verificationData?.data || verificationData || {};
+    const isFullyVerified = apiData.isFullyVerified;
+    const totalDocs = apiData.totalDocuments || 1;
+    const verifiedDocs = apiData.verifiedDocuments || 0;
+    const docDetails = apiData.verifiedDocumentDetails || [];
+    const firstDoc = docDetails[0] || {};
+    const txHash = firstDoc.txHash;
+    const timestamp = firstDoc.timestampOnBlockchain;
+    const signerAddress = firstDoc.signerAddress;
 
     const truncateName = (name, maxLength = 16) => {
         if (!name || name.length <= maxLength) return name;
@@ -23,14 +34,14 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
     };
 
     const handleViewOnEtherscan = () => {
-        if (verificationData.txHash) {
-            window.open(`https://sepolia.etherscan.io/tx/${verificationData.txHash}`, '_blank');
+        if (txHash) {
+            window.open(`https://sepolia.etherscan.io/tx/${txHash}`, '_blank');
         }
     };
 
     const handleCopyTxHash = () => {
-        if (verificationData.txHash) {
-            navigator.clipboard.writeText(verificationData.txHash);
+        if (txHash) {
+            navigator.clipboard.writeText(txHash);
             setCopied(true);
             setTimeout(() => setCopied(false), 2000);
         }
@@ -43,7 +54,11 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                 <div className={styles.modalHeader}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <div className={styles.headerIcon}>
-                            {verificationData.isAuthentic ? (
+                            {isLoading ? (
+                                <Activity size={24} color="var(--primary-blue)" />
+                            ) : error ? (
+                                <AlertCircle size={24} color="#f4212e" />
+                            ) : isFullyVerified ? (
                                 <Check size={24} color="var(--score-good)" />
                             ) : (
                                 <AlertCircle size={24} color="var(--score-medium)" />
@@ -63,65 +78,122 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
 
                 {/* Main Content */}
                 <div className={styles.modalBody}>
-                    {/* Authentication Status */}
-                    <div className={styles.statusSection}>
-                        <div className={`${styles.statusBox} ${verificationData.isAuthentic ? styles.statusAuthentic : styles.statusNotAuthentic}`}>
-                            <div className={styles.statusLabel}>Tình trạng xác thực</div>
-                            <div className={styles.statusValue}>
-                                {verificationData.isAuthentic ? 'Đã xác thực' : 'Chưa xác thực'}
+                    {isLoading && (
+                        <div className={styles.loadingContainer}>
+                            <div className={styles.loadingSpinner} />
+                            <p className={styles.loadingText}>Đang xác minh...</p>
+                        </div>
+                    )}
+
+                    {error && (
+                        <div className={styles.errorBox}>
+                            <AlertCircle size={20} style={{ color: 'var(--score-poor)', flexShrink: 0, marginTop: '2px' }} />
+                            <div>
+                                <div className={styles.errorTitle}>Lỗi xác minh</div>
+                                <div className={styles.errorText}>{error}</div>
                             </div>
                         </div>
-                    </div>
+                    )}
 
-                    {/* Verification Message */}
-                    <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>Thông điệp xác thực</h3>
-                        <div className={styles.messageBox}>
-                            <p>{verificationData.message}</p>
-                        </div>
-                    </div>
-
-                    {/* Transaction Hash */}
-                    <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>Mã giao dịch Blockchain</h3>
-                        <div className={styles.txHashContainer}>
-                            <code className={styles.txHash}>{verificationData.txHash}</code>
-                            <button
-                                className={styles.copyBtn}
-                                onClick={handleCopyTxHash}
-                                title="Copy transaction hash"
-                            >
-                                <Copy size={16} />
-                                {copied ? 'Đã sao chép' : 'Sao chép'}
-                            </button>
-                        </div>
-                    </div>
-
-                    {/* Timestamp */}
-                    <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>Thời gian xác thực</h3>
-                        <div className={styles.timestampBox}>
-                            <span className={styles.timestamp} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                <Activity size={16} color="var(--primary-blue)" />
-                                {verificationData.timestampOnBlockchain}
-                            </span>
-                        </div>
-                    </div>
-
-                    {/* Details Grid */}
-                    <div className={styles.detailsGrid}>
-                        <div className={styles.detailItem}>
-                            <div className={styles.detailLabel}>Dữ liệu hợp lệ</div>
-                            <div className={styles.detailValue}>
-                                {verificationData.isAuthentic ? 'Có' : 'Không'}
+                    {!isLoading && !error && (
+                        <>
+                            {/* Authentication Status */}
+                            <div className={styles.statusSection}>
+                                <div className={`${styles.statusBox} ${isFullyVerified ? styles.statusAuthentic : styles.statusNotAuthentic}`}>
+                                    <div className={styles.statusLabel}>Tình trạng xác thực</div>
+                                    <div className={styles.statusValue}>
+                                        {isFullyVerified ? '✓ Đã xác thực' : 'Chưa xác thực'}
+                                    </div>
+                                </div>
                             </div>
-                        </div>
-                        <div className={styles.detailItem}>
-                            <div className={styles.detailLabel}>Bảo vệ blockchain</div>
-                            <div className={styles.detailValue}>Có</div>
-                        </div>
-                    </div>
+
+                            {/* Document Stats */}
+                            <div style={{
+                                display: 'grid',
+                                gridTemplateColumns: '1fr 1fr',
+                                gap: '12px',
+                                marginBottom: '20px'
+                            }}>
+                                <div className={styles.infoItem}>
+                                    <div className={styles.infoLabel}>Tổng tài liệu</div>
+                                    <div className={styles.infoValue}>{totalDocs}</div>
+                                </div>
+                                <div className={styles.infoItem}>
+                                    <div className={styles.infoLabel}>Đã xác minh</div>
+                                    <div className={`${styles.infoValue}`} style={{ color: 'var(--score-good)' }}>{verifiedDocs}</div>
+                                </div>
+                            </div>
+
+                            {/* Transaction Hash */}
+                            {txHash && (
+                                <div className={styles.section}>
+                                    <h3 className={styles.sectionTitle}>Mã giao dịch Blockchain</h3>
+                                    <div className={styles.txHashContainer}>
+                                        <code className={styles.txHash} style={{ wordBreak: 'break-all' }}>{txHash}</code>
+                                        <button
+                                            className={styles.copyBtn}
+                                            onClick={handleCopyTxHash}
+                                            title="Copy transaction hash"
+                                        >
+                                            <Copy size={16} />
+                                            {copied ? 'Đã sao chép' : 'Sao chép'}
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Signer Address */}
+                            {signerAddress && (
+                                <div className={styles.section}>
+                                    <h3 className={styles.sectionTitle}>Địa chỉ ký (Signer)</h3>
+                                    <div className={styles.txHashContainer}>
+                                        <code className={styles.txHash} style={{ wordBreak: 'break-all', fontSize: '12px' }}>{signerAddress}</code>
+                                        <button
+                                            className={styles.copyBtn}
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(signerAddress);
+                                                setCopied(true);
+                                                setTimeout(() => setCopied(false), 2000);
+                                            }}
+                                            title="Copy signer address"
+                                        >
+                                            <Copy size={16} />
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Timestamp */}
+                            {timestamp && (
+                                <div className={styles.section}>
+                                    <h3 className={styles.sectionTitle}>Thời gian xác thực</h3>
+                                    <div className={styles.infoItem} style={{ fontSize: '14px' }}>
+                                        {new Date(timestamp).toLocaleString('vi-VN')}
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
                 </div>
+
+                {/* Info Box - Guide */}
+                {!isLoading && !error && txHash && (
+                    <div className={styles.guideBox}>
+                        <span style={{ fontSize: '18px', flexShrink: 0 }}>ℹ️</span>
+                        <div>
+                            <strong>Hướng dẫn:</strong> Bạn có thể copy mã giao dịch (TX Hash) ở trên và kiểm tra chi tiết trên{' '}
+                            <a 
+                                href="https://sepolia.etherscan.io/" 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className={styles.guideLink}
+                            >
+                                Sepolia Etherscan
+                            </a>
+                            {' '}để xác nhận độc lập
+                        </div>
+                    </div>
+                )}
 
                 {/* Footer */}
                 <div className={styles.modalFooter}>
@@ -129,7 +201,7 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                         <Shield size={16} /> Tài liệu này được bảo vệ bởi công nghệ Blockchain
                     </span>
                     <div className={styles.footerButtons}>
-                        {verificationData.txHash && (
+                        {txHash && (
                             <button className={styles.secondaryBtn} onClick={handleViewOnEtherscan}>
                                 <ExternalLink size={16} style={{ marginRight: '8px' }} />
                                 Xem trên Etherscan
@@ -140,6 +212,12 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                         </button>
                     </div>
                 </div>
+
+                <style>{`
+                    @keyframes spin {
+                        to { transform: rotate(360deg); }
+                    }
+                `}</style>
             </div>
         </div>,
         document.body

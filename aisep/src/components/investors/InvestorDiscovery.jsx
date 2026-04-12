@@ -44,7 +44,7 @@ export default function InvestorDiscovery({ user, onShowLogin }) {
                         location: inv.investmentRegion || 'Hồ Chí Minh, VN',
                         portfolioSize: '25 portfolio',
                         ticketSize: inv.investmentAmount ? `${(inv.investmentAmount/1000000).toFixed(0)}tr - ${(inv.investmentAmount/500000).toFixed(0)}tr USD` : '50K - 500K USD',
-                        verified: true
+                        verified: inv.status === 'Approved'
                     }));
                     setInvestors(formatted);
                 }

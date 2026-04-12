@@ -73,7 +73,12 @@ const investorService = {
 
   updateInvestor: async (investorId, data) => {
     try {
-      const response = await apiClient.put(`/api/Investor/${investorId}`, data);
+      const isFormData = data instanceof FormData;
+      const response = await apiClient.put(`/api/Investor/${investorId}`, data, {
+        headers: {
+          'Content-Type': isFormData ? 'multipart/form-data' : 'application/json'
+        }
+      });
       return response;
     } catch (error) {
       console.error(`Error updating investor ${investorId}:`, error);
@@ -88,7 +93,12 @@ const investorService = {
    */
   createInvestor: async (data) => {
     try {
-      const response = await apiClient.post('/api/Investor', data);
+      const isFormData = data instanceof FormData;
+      const response = await apiClient.post('/api/Investor', data, {
+        headers: {
+          'Content-Type': isFormData ? 'multipart/form-data' : 'application/json'
+        }
+      });
       return response;
     } catch (error) {
       console.error('Error creating investor profile:', error);

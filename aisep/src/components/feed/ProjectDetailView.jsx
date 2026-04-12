@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, ArrowLeft, ClipboardList, TrendingUp, Sword, FolderOpen, Users, DollarSign, BarChart3, Zap, User, Lock, Star, BadgeCheck, Calendar } from 'lucide-react';
+import { Loader2, ArrowLeft, ClipboardList, TrendingUp, Sword, FolderOpen, Users, DollarSign, BarChart3, Zap, User, Lock, Star, BadgeCheck, Calendar, Shield, Image as ImageIcon, ImageOff, X, Maximize2 } from 'lucide-react';
 import BookingWizard from '../booking/BookingWizard';
 import projectSubmissionService from '../../services/projectSubmissionService';
+import startupProfileService from '../../services/startupProfileService';
 import AIEvaluationService from '../../services/AIEvaluationService';
 import bookingService from '../../services/bookingService';
+import blockchainVerificationService from '../../services/blockchainVerificationService';
 import ProfileErrorScreen from '../common/ProfileErrorScreen';
 import AuthRequirementScreen from '../common/AuthRequirementScreen';
 import ProfileLoading from '../common/ProfileLoading';
+import BlockchainVerificationModal from '../common/BlockchainVerificationModal';
 import subscriptionService from '../../services/subscriptionService';
 import paymentService from '../../services/paymentService';
 import UnlockConfirmationModal from '../common/UnlockConfirmationModal';
@@ -186,7 +189,7 @@ const MobileDocCard = ({ doc }) => (
 );
 
 /* ─── Main Component ─────────────────────────────────────── */
-export default function ProjectDetailView({ projectId, onBack, user, isPaidUser = false, onShowLogin, isFullView, isInvestorApproved = false }) {
+export default function ProjectDetailView({ projectId, onBack, user, isPaidUser = false, onShowLogin, isFullView, isInvestorApproved = false, onUnlock }) {
   const [project, setProject] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [aiHistory, setAiHistory] = useState([]);
@@ -195,6 +198,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   const [error, setError] = useState(null);
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 850);
   const [showBookingWizard, setShowBookingWizard] = useState(false);
+  const [showFullscreenImage, setShowFullscreenImage] = useState(false);
 
   // Quota & Unlock State
   const [subscription, setSubscription] = useState(null);
@@ -203,17 +207,28 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   const [isUnlocking, setIsUnlocking] = useState(false);
   const [isLoadingQuota, setIsLoadingQuota] = useState(true);
 
+  // Blockchain Verification State
+  const [showBlockchainModal, setShowBlockchainModal] = useState(false);
+  const [blockchainData, setBlockchainData] = useState(null);
+  const [isLoadingBlockchain, setIsLoadingBlockchain] = useState(false);
+  const [blockchainError, setBlockchainError] = useState(null);
+  const [myStartupProfile, setMyStartupProfile] = useState(null);
+
   const fetchQuotaData = async () => {
-    const isInvestor = user?.role?.toLowerCase() === 'investor';
-    if (!user || !isInvestor || !isPaidUser) {
+    const role = user?.role?.toString().toLowerCase();
+    const isEligible = role === 'investor' || role === 'startup' || role === '0' || role === '1';
+    
+    if (!user || !isEligible || !isPaidUser) {
       setIsLoadingQuota(false);
       return;
     }
     try {
       setIsLoadingQuota(true);
+      const isStartup = role === 'startup' || role === '0';
+      
       const [subRes, pkgRes] = await Promise.all([
         subscriptionService.getMySubscription(),
-        paymentService.getInvestorPackages()
+        isStartup ? paymentService.getStartupPackages() : paymentService.getInvestorPackages()
       ]);
       
       console.log('[ProjectDetailView] Raw SubRes:', subRes);
@@ -243,6 +258,12 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   // Initial fetch on mount
   useEffect(() => {
     fetchQuotaData();
+    
+    // Fetch startup profile if user is a Startup
+    const isStartup = user?.role?.toString().toLowerCase() === 'startup' || Number(user?.role) === 2;
+    if (isStartup) {
+      startupProfileService.getStartupMe().then(setMyStartupProfile).catch(() => {});
+    }
   }, [user, isPaidUser]);
 
   useEffect(() => {
@@ -259,61 +280,81 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     const roleNum = Number(user?.role);
     const isBypassRole = roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 3 || roleNum === 2;
 
-    // Choose API based on isFullView prop OR role bypass
-    const fetchProjectData = (isFullView || isBypassRole)
-      ? projectSubmissionService.getProjectById(projectId)
-      : projectSubmissionService.getProjectNonPremiumById(projectId);
+    const fetchData = async () => {
+      try {
+        // Step 1: Always fetch Non-Premium data first to check unlock/ownership
+        const pRes = await projectSubmissionService.getProjectNonPremiumById(projectId);
+        
+        if (!pRes?.success || !pRes?.data) {
+          throw new Error(pRes?.message || 'Không tìm thấy thông tin dự án.');
+        }
 
-    Promise.all([
-      fetchProjectData,
-      projectSubmissionService.getDocuments(projectId).catch(() => null),
-      AIEvaluationService.getProjectAnalysisHistory(projectId).catch(() => null),
-      bookingService.getAllBookings('', '-Id', 1, 1000).catch(() => null),
-    ]).then(([pRes, dRes, aRes, bRes]) => {
-      if (pRes?.success && pRes?.data) {
-        const d = pRes.data;
+        let projectData = pRes.data;
+        const isStartupOwner = projectData.startupId && myStartupProfile && projectData.startupId === myStartupProfile.id;
+        const shouldFetchFull = isFullView || isBypassRole || projectData.isUnlockedByCurrentUser || isStartupOwner;
+
+        // Step 2: If unlocked or owned, fetch full data
+        if (shouldFetchFull) {
+          const fullRes = await projectSubmissionService.getProjectById(projectId);
+          if (fullRes?.success && fullRes?.data) {
+            projectData = fullRes.data;
+          }
+        }
+
+        // Apply project data
         setProject({
-          ...d,
-          name: d.projectName || 'Dự án',
-          stage: d.developmentStage || 'Ý tưởng',
-          status: d.status || 'Pending',
-          tags: d.keySkills ? d.keySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
+          ...projectData,
+          name: projectData.projectName || 'Dự án',
+          stage: projectData.developmentStage || 'Ý tưởng',
+          status: projectData.status || 'Pending',
+          tags: projectData.keySkills ? projectData.keySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
         });
-      } else {
-        const msg = pRes?.message || 'Không tìm thấy thông tin dự án.';
-        setError(msg);
-      }
-      const rawDocs = dRes?.data?.items ?? (Array.isArray(dRes?.data) ? dRes?.data : []);
-      const truncateName = (name, max = 28) => {
-        if (!name || name.length <= max) return name;
-        const ext = name.includes('.') ? '.' + name.split('.').pop() : '';
-        const base = name.slice(0, name.length - ext.length);
-        return base.slice(0, max - ext.length - 1) + '\u2026' + ext;
-      };
-      setDocuments(rawDocs.map(doc => ({
-        id: doc.documentId,
-        name: truncateName(doc.fileName || doc.documentType),
-        fullName: doc.fileName || doc.documentType,
-        type: doc.documentType,
-        date: new Date(doc.verifiedAt || doc.uploadedAt || new Date()).toLocaleDateString('vi-VN'),
-        url: doc.fileUrl,
-      })));
-      setAiHistory(aRes?.data || []);
 
-      // Bookings: Filter by current projectId since backend filter might not be reliable
-      const bItems = bRes?.data?.items || bRes?.items || (Array.isArray(bRes) ? bRes : []);
-      const filteredBookings = bItems.filter(b =>
-        String(b.projectId) === String(projectId) ||
-        (b.projectId === projectId)
-      );
-      setAdvisorBookings(filteredBookings);
-    }).catch(err => {
-      console.error("ProjectDetailView Fetch Error:", err);
-      const is401 = err?.message?.includes('401') || err?.response?.status === 401;
-      setError(is401 ? 'Unauthorized' : (err?.message || 'Lỗi khi tải dự án.'));
-    })
-      .finally(() => setLoading(false));
-  }, [projectId, user, isFullView]);
+        // Fetch other related data
+        const [dRes, aRes, bRes] = await Promise.all([
+          projectSubmissionService.getDocuments(projectId).catch(() => null),
+          AIEvaluationService.getProjectAnalysisHistory(projectId).catch(() => null),
+          bookingService.getAllBookings('', '-Id', 1, 1000).catch(() => null),
+        ]);
+
+        // Documents
+        const rawDocs = dRes?.data?.items ?? (Array.isArray(dRes?.data) ? dRes?.data : []);
+        const truncateName = (name, max = 28) => {
+          if (!name || name.length <= max) return name;
+          const ext = name.includes('.') ? '.' + name.split('.').pop() : '';
+          const base = name.slice(0, name.length - ext.length);
+          return base.slice(0, max - ext.length - 1) + '\u2026' + ext;
+        };
+        setDocuments(rawDocs.map(doc => ({
+          id: doc.documentId,
+          name: truncateName(doc.fileName || doc.documentType),
+          fullName: doc.fileName || doc.documentType,
+          type: doc.documentType,
+          date: new Date(doc.verifiedAt || doc.uploadedAt || new Date()).toLocaleDateString('vi-VN'),
+          url: doc.fileUrl,
+        })));
+
+        // AI History
+        setAiHistory(aRes?.data || []);
+
+        // Bookings
+        const bItems = bRes?.data?.items || bRes?.items || (Array.isArray(bRes) ? bRes : []);
+        const filteredBookings = bItems.filter(b =>
+          String(b.projectId) === String(projectId) || (b.projectId === projectId)
+        );
+        setAdvisorBookings(filteredBookings);
+
+      } catch (err) {
+        console.error("ProjectDetailView Fetch Error:", err);
+        const is401 = err?.message?.includes('401') || err?.response?.status === 401;
+        setError(is401 ? 'Unauthorized' : (err?.message || 'Lỗi khi tải dự án.'));
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [projectId, user, isFullView, myStartupProfile]);
 
   const handleUnlockClick = (e) => {
     if (e) e.stopPropagation();
@@ -337,6 +378,9 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           tags: d.keySkills ? d.keySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
         });
         setShowUnlockConfirm(false);
+        // Sync with parent state for real-time feed update
+        if (onUnlock) onUnlock(projectId);
+        
         // Optional: Refresh subscription to update quota
         subscriptionService.getMySubscription().then(setSubscription).catch(() => {});
       } else {
@@ -348,6 +392,32 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
       alert(msg);
     } finally {
       setIsUnlocking(false);
+    }
+  };
+
+  // Handle Blockchain Verification
+  const handleBlockchainVerification = async () => {
+    if (isLoadingBlockchain || !projectId) return;
+
+    setIsLoadingBlockchain(true);
+    setBlockchainError(null);
+
+    try {
+      console.log('[ProjectDetailView] Verifying blockchain for projectId:', projectId);
+      const response = await blockchainVerificationService.verifyProjectBlockchain(projectId);
+      console.log('[ProjectDetailView] Blockchain verification response:', response);
+
+      setBlockchainData(response);
+      setShowBlockchainModal(true);
+    } catch (err) {
+      console.error('[ProjectDetailView] Blockchain verification error:', err);
+      const errorMsg = err?.response?.data?.message || 
+                       err?.message || 
+                       'Không thể xác minh dự án trên blockchain';
+      setBlockchainError(errorMsg);
+      setShowBlockchainModal(true);
+    } finally {
+      setIsLoadingBlockchain(false);
     }
   };
 
@@ -403,7 +473,8 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     // Don't show premium badge for bypass roles (they see real data)
     if (isBypassRole) return null;
 
-    const canUnlock = isPaidUser && user?.role === 'Investor';
+    const role = user?.role?.toString().toLowerCase();
+    const canUnlock = isPaidUser && (role === 'investor' || role === 'startup' || role === '0' || role === '1');
     return (
       <div 
         onClick={canUnlock ? handleUnlockClick : undefined}
@@ -533,6 +604,44 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
             ✓ Đã được duyệt
           </span>
         )}
+
+        {/* Blockchain Verification Button */}
+        <button
+          onClick={handleBlockchainVerification}
+          disabled={isLoadingBlockchain}
+          title="Xác minh blockchain"
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 6,
+            padding: '6px 14px',
+            borderRadius: 8,
+            fontSize: 12,
+            fontWeight: 700,
+            background: T.blueDim,
+            color: T.blue,
+            border: `1px solid ${T.blueDim}`,
+            cursor: isLoadingBlockchain ? 'not-allowed' : 'pointer',
+            flexShrink: 0,
+            whiteSpace: 'nowrap',
+            transition: 'all 0.2s',
+            opacity: isLoadingBlockchain ? 0.6 : 1,
+          }}
+          onMouseEnter={(e) => !isLoadingBlockchain && (e.currentTarget.style.background = 'rgba(29, 155, 240, 0.2)')}
+          onMouseLeave={(e) => !isLoadingBlockchain && (e.currentTarget.style.background = T.blueDim)}
+        >
+          {isLoadingBlockchain ? (
+            <>
+              <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} />
+              Đang kiểm tra...
+            </>
+          ) : (
+            <>
+              <Shield size={14} />
+              🔗 Xác minh
+            </>
+          )}
+        </button>
       </div>
 
       {/* ════════════════════════
@@ -670,6 +779,89 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
                   {DISP(project.solutionDescription)}
                 </Field>
               </FieldGrid>
+            </SectionBody>
+          </SectionCard>
+
+          {/* 1.5 · Hình ảnh dự án */}
+          <SectionCard>
+            <SectionHeader><ImageIcon size={14} style={{ color: T.green }} /> Hình ảnh dự án</SectionHeader>
+            <SectionBody style={{ padding: 12 }}>
+              {project.projectImageUrl ? (
+                <div 
+                  style={{
+                    position: 'relative',
+                    borderRadius: 12,
+                    overflow: 'hidden',
+                    cursor: 'zoom-in',
+                    aspectRatio: '16/9',
+                    background: '#000',
+                    border: `1px solid ${T.border}`,
+                    transition: 'transform 0.3s ease',
+                  }}
+                  onClick={() => setShowFullscreenImage(true)}
+                  onMouseEnter={(e) => { e.currentTarget.style.transform = 'scale(1.01)'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.transform = 'scale(1)'; }}
+                >
+                  <img 
+                    src={project.projectImageUrl} 
+                    alt={project.projectName} 
+                    style={{
+                      width: '100%',
+                      height: '100%',
+                      objectFit: 'cover',
+                      display: 'block',
+                      opacity: 0.9,
+                    }}
+                  />
+                  <div style={{
+                    position: 'absolute',
+                    bottom: 12,
+                    right: 12,
+                    width: 36,
+                    height: 36,
+                    borderRadius: 10,
+                    background: 'rgba(0,0,0,0.4)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    color: '#fff',
+                  }}>
+                    <Maximize2 size={18} />
+                  </div>
+                </div>
+              ) : (
+                <div style={{
+                  height: 180,
+                  borderRadius: 12,
+                  background: `linear-gradient(135deg, ${T.surface3}, ${T.bg})`,
+                  border: `1px dashed ${T.border}`,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: 12,
+                  color: T.textDim,
+                }}>
+                  <div style={{
+                    width: 50,
+                    height: 50,
+                    borderRadius: '50%',
+                    background: T.surface,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: `1px solid ${T.border}`,
+                  }}>
+                    <ImageOff size={24} strokeWidth={1.5} />
+                  </div>
+                  <div style={{ textAlign: 'center' }}>
+                    <div style={{ fontSize: 13, fontWeight: 700, color: T.textMuted }}>Dự án chưa có hình ảnh</div>
+                    <div style={{ fontSize: 11, marginTop: 4, opacity: 0.7 }}>Hình ảnh giúp dự án thu hút nhà đầu tư hơn</div>
+                  </div>
+                </div>
+              )}
             </SectionBody>
           </SectionCard>
 
@@ -1058,6 +1250,93 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           remainingViews={remainingViews}
           packageName={subscription?.packageName}
         />
+      )}
+      {showBlockchainModal && (
+        <BlockchainVerificationModal
+          isOpen={showBlockchainModal}
+          verificationData={blockchainData}
+          isLoading={isLoadingBlockchain}
+          error={blockchainError}
+          onClose={() => {
+            setShowBlockchainModal(false);
+            setBlockchainData(null);
+            setBlockchainError(null);
+          }}
+        />
+      )}
+
+      {/* Lightbox / Fullscreen Image Viewer */}
+      {showFullscreenImage && project?.projectImageUrl && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0, left: 0, right: 0, bottom: 0,
+            zIndex: 100000,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+            animation: 'fadeInPD 0.3s ease',
+          }}
+          onClick={() => setShowFullscreenImage(false)}
+        >
+          <div style={{
+            position: 'absolute',
+            top: 0, left: 0, right: 0, bottom: 0,
+            backgroundColor: 'rgba(0,0,0,0.9)',
+            backdropFilter: 'blur(8px)',
+          }} />
+          
+          <button 
+            onClick={() => setShowFullscreenImage(false)}
+            style={{
+              position: 'absolute',
+              top: 24, right: 24,
+              width: 44, height: 44,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.1)',
+              border: '1px solid rgba(255,255,255,0.2)',
+              color: '#fff',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              zIndex: 10,
+              transition: 'all 0.2s',
+            }}
+          >
+            <X size={24} />
+          </button>
+
+          <div 
+            style={{
+              position: 'relative',
+              maxWidth: '90%',
+              maxHeight: '85vh',
+              zIndex: 5,
+              animation: 'scaleUpPD 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <img 
+              src={project.projectImageUrl} 
+              alt={project.projectName} 
+              style={{
+                maxWidth: '100%',
+                maxHeight: '80vh',
+                borderRadius: 12,
+                boxShadow: '0 24px 48px rgba(0,0,0,0.5)',
+                objectFit: 'contain',
+                border: '1px solid rgba(255,255,255,0.1)',
+              }}
+            />
+          </div>
+
+          <style>{`
+            @keyframes fadeInPD { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes scaleUpPD { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+          `}</style>
+        </div>
       )}
     </div>
   );

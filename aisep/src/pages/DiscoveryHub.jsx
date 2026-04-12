@@ -3,6 +3,7 @@ import { Search, MapPin, Rocket, Filter, TrendingUp, CheckCircle, Target, Buildi
 import FeedHeader from '../components/feed/FeedHeader';
 import InvestmentModal from '../components/common/InvestmentModal';
 import startupProfileService from '../services/startupProfileService';
+import projectSubmissionService from '../services/projectSubmissionService';
 import dealsService from '../services/dealsService';
 import prService from '../services/prService';
 import NotificationCenter from '../components/common/NotificationCenter';
@@ -24,17 +25,33 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
     const [isLoadingPRs, setIsLoadingPRs] = useState(false);
     const [showAllPRs, setShowAllPRs] = useState(false); // Toggle for PR modal
     const [activeChatSession, setActiveChatSession] = useState(null);
+    const [myStartupProfile, setMyStartupProfile] = useState(null);
 
     const industries = ['Tất cả', 'FinTech', 'AgriTech', 'EdTech', 'HealthTech', 'SaaS', 'AI/ML', 'GreenTech'];
 
-    // Check if current user is an investor
     const isInvestor = user && (user.role === 'Investor' || user.role === 1);
+    const isStartup = user && (user.role === 'Startup' || user.role === 2);
     
     useEffect(() => {
-        const fetchStartups = async () => {
+        const fetchMyStartup = async () => {
+            if (isStartup) {
+                try {
+                    const profile = await startupProfileService.getStartupMe();
+                    setMyStartupProfile(profile);
+                } catch (error) {
+                    console.error("Failed to fetch my startup profile:", error);
+                }
+            }
+        };
+        fetchMyStartup();
+    }, [isStartup]);
+
+    useEffect(() => {
+        const fetchProjects = async () => {
             setIsLoading(true);
             try {
-                const response = await startupProfileService.getAllStartups();
+                // Fetch projects instead of startups
+                const response = await projectSubmissionService.getAllProjects();
                 const items = response?.data?.items || response?.items || [];
                 setStartups(items);
                 
@@ -42,13 +59,13 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
                     fetchInvestmentStatusNow(items);
                 }
             } catch (error) {
-                console.error("Failed to fetch startups:", error);
+                console.error("Failed to fetch projects:", error);
             } finally {
                 setIsLoading(false);
             }
         };
 
-        fetchStartups();
+        fetchProjects();
     }, [isInvestor]);
 
     const fetchInvestmentStatusNow = async (startupsList = null) => {
@@ -112,8 +129,8 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
     }, []);
 
     const filteredStartups = startups.filter(startup => {
-        const matchesSearch = (startup.organizationName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
-            (startup.description?.toLowerCase() || '').includes(searchQuery.toLowerCase());
+        const matchesSearch = (startup.projectName?.toLowerCase() || '').includes(searchQuery.toLowerCase()) ||
+            (startup.shortDescription?.toLowerCase() || '').includes(searchQuery.toLowerCase());
         const matchesIndustry = activeIndustry === 'Tất cả' || startup.industry === activeIndustry;
         return matchesSearch && matchesIndustry;
     });
@@ -193,30 +210,30 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
                                 }
 
                                 return (
-                                    <div key={startup.startupId || startup.id} className={styles.startupCard}>
+                                    <div key={startup.projectId} className={styles.startupCard}>
                                         <div className={styles.cardHeader}>
                                             <div className={styles.avatar}>
-                                                {startup.logoUrl ? (
-                                                    <img src={startup.logoUrl} alt={startup.organizationName} />
+                                                {startup.projectImageUrl ? (
+                                                    <img src={startup.projectImageUrl} alt={startup.projectName} />
                                                 ) : (
-                                                    <span>{(startup.organizationName || 'S').charAt(0).toUpperCase()}</span>
+                                                    <span>{(startup.projectName || 'P').charAt(0).toUpperCase()}</span>
                                                 )}
                                             </div>
                                             <div className={styles.startupInfo}>
                                                 <div className={styles.nameRow}>
-                                                    <h3 className={styles.startupName}>{startup.organizationName}</h3>
+                                                    <h3 className={styles.startupName}>{startup.projectName}</h3>
                                                     {startup.isVerified && <CheckCircle size={16} className={styles.verifiedIcon} />}
                                                 </div>
                                                 <span className={styles.industryTag}>{startup.industry}</span>
                                             </div>
                                             <div className={styles.scoreBadge}>
                                                 <Target size={14} />
-                                                <span>{startup.aiScore || 'N/A'} AI Score</span>
+                                                <span>{startup.startupPotentialScore || 'N/A'} AI Score</span>
                                             </div>
                                         </div>
 
                                         <p className={styles.description}>
-                                            {startup.description || 'Chưa có mô tả chi tiết cho startup này.'}
+                                            {startup.shortDescription || 'Chưa có mô tả chi tiết cho dự án này.'}
                                         </p>
 
                                         <div className={styles.metadata}>
@@ -233,9 +250,9 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
                                         <div className={styles.actions}>
                                             <button
                                                 className={styles.viewDetailsBtn}
-                                                onClick={() => onSelectStartup?.(startup.id || startup.startupId)}
+                                                onClick={() => onSelectStartup?.(startup.projectId)}
                                             >
-                                                Xem chi tiết
+                                                { (isStartup && myStartupProfile && startup.startupId === myStartupProfile.id) || startup.isUnlockedByCurrentUser ? "Xem chi tiết" : "Mở khóa ngay" }
                                             </button>
                                             <button className={styles.followBtn}>Theo dõi</button>
                                             {isInvestor && investmentStatus ? (

@@ -59,11 +59,11 @@ function MainLayout({
 }) {
   const token = localStorage.getItem('aisep_token') || sessionStorage.getItem('token');
   const [userSubscription, setUserSubscription] = useState(null);
-  const isPaidUser = !!(user && userSubscription && 
-                      (userSubscription.status === 'Active' || userSubscription.status === 1 || userSubscription.status === 'active') && 
-                      userSubscription.packageName && 
-                      !userSubscription.packageName.toLowerCase().includes('miễn phí') &&
-                      !userSubscription.packageName.toLowerCase().includes('free'));
+  const isPaidUser = !!(user && userSubscription &&
+    (userSubscription.status === 'Active' || userSubscription.status === 1 || userSubscription.status === 'active') &&
+    userSubscription.packageName &&
+    !userSubscription.packageName.toLowerCase().includes('miễn phí') &&
+    !userSubscription.packageName.toLowerCase().includes('free'));
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [selectedStartupProfileId, setSelectedStartupProfileId] = useState(null);
   const [selectedInvestorProfileId, setSelectedInvestorProfileId] = useState(null);
@@ -74,6 +74,7 @@ function MainLayout({
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [isReturning, setIsReturning] = useState(false);
   const [activeChatSession, setActiveChatSession] = useState(null);
+  const [myStartupProfileId, setMyStartupProfileId] = useState(null);
 
   const mainContentRef = useRef(null);
   const homeScrollPos = useRef(0);
@@ -187,9 +188,9 @@ function MainLayout({
   // Refetch invested projects (called after successful investment)
   const refetchInvestedProjects = useCallback(async () => {
     const isInvestor = user && (
-      user.role === 'investor' || 
-      user.role === 'Investor' || 
-      user.role === 1 || 
+      user.role === 'investor' ||
+      user.role === 'Investor' ||
+      user.role === 1 ||
       String(user.role) === '1'
     );
 
@@ -237,6 +238,9 @@ function MainLayout({
           const profile = await startupProfileService.getStartupProfileByUserId(user.userId);
           const hasProfile = !!profile;
           setHasStartupProfile(hasProfile);
+          if (profile) {
+            setMyStartupProfileId(profile.startupId || profile.id);
+          }
 
           // If redirected with setup=true and no profile, show modal
           const params = new URLSearchParams(window.location.search);
@@ -358,9 +362,9 @@ function MainLayout({
   // Fetch invested projects for investors - runs once and caches the projectIds
   useEffect(() => {
     const isInvestor = user && (
-      user.role === 'investor' || 
-      user.role === 'Investor' || 
-      user.role === 1 || 
+      user.role === 'investor' ||
+      user.role === 'Investor' ||
+      user.role === 1 ||
       String(user.role) === '1'
     );
 
@@ -373,7 +377,7 @@ function MainLayout({
       try {
         const response = await dealsService.getInvestorDeals();
         console.log('[MainLayout] Investor deals response:', response);
-        
+
         let deals = [];
         if (response && response.data) {
           if (response.data.items && Array.isArray(response.data.items)) {
@@ -382,7 +386,7 @@ function MainLayout({
             deals = response.data;
           }
         }
-        
+
         // Extract projectIds into a Set for O(1) lookup
         const ids = new Set(deals.map(d => d.projectId));
         console.log('[MainLayout] Invested project IDs:', ids);
@@ -409,7 +413,7 @@ function MainLayout({
         // 1. Process investor profiles into a lookup map
         const profileLookup = new Map();
         const profiles = profilesRes?.items || profilesRes?.data?.items || (Array.isArray(profilesRes) ? profilesRes : []);
-        
+
         profiles.forEach(p => {
           const id = p.investorId || p.userId || p.id;
           if (id) {
@@ -433,31 +437,31 @@ function MainLayout({
         }
 
         // Filter for Contract_Signed status only (Status 3 = Contract_Signed)
-        const contractSignedDeals = deals.filter(d => 
-          d.status === 'Contract_Signed' || 
-          d.status === 3 || 
+        const contractSignedDeals = deals.filter(d =>
+          d.status === 'Contract_Signed' ||
+          d.status === 3 ||
           String(d.status) === '3'
         );
-        
+
         // 3. Group investors by project using real profile data
         const investorMapByProject = new Map();
         const seenPairs = new Set(); // Track unique investor-project pairs
-        
+
         contractSignedDeals.forEach(deal => {
           const pId = deal.projectId;
           const invId = deal.investorId || deal.investor?.id || deal.investor?.investorId;
-          
+
           if (!pId || !invId) return;
 
           // Try to get real info from lookup map
           const realProfile = profileLookup.get(invId.toString());
-          
+
           let investorInfo = {
             id: invId,
             name: realProfile?.name || deal.investor?.name || deal.investor?.email || 'Nhà đầu tư',
             avatar: realProfile?.avatar || deal.investor?.profilePicture || deal.investor?.avatar || null
           };
-          
+
           const pairKey = `${invId}-${pId}`;
           if (!seenPairs.has(pairKey)) {
             if (!investorMapByProject.has(pId)) {
@@ -467,7 +471,7 @@ function MainLayout({
             seenPairs.add(pairKey);
           }
         });
-        
+
         setInvestorsByProject(investorMapByProject);
         console.log('[MainLayout] Updated investorsByProject with real profiles:', investorMapByProject);
       } catch (error) {
@@ -491,8 +495,8 @@ function MainLayout({
         const roleNum = Number(user?.role);
         const isBypassRole = roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 3 || roleNum === 2;
 
-        const projectsPromise = isBypassRole 
-          ? projectSubmissionService.getApprovedProjects() 
+        const projectsPromise = isBypassRole
+          ? projectSubmissionService.getApprovedProjects()
           : projectSubmissionService.getAllProjects();
 
         // Fetch both projects and startup profiles with large pageSize to ensure all are joined
@@ -615,7 +619,11 @@ function MainLayout({
         try {
           const res = await investorService.getMyProfile();
           setInvestorProfile(res);
-          setInvestorProfileStatus(res?.approvalStatus || 'Pending');
+          if (res) {
+            setInvestorProfileStatus(res.status || res.approvalStatus || 'Pending');
+          } else {
+            setInvestorProfileStatus('Missing');
+          }
         } catch (error) {
           if (error.response?.status === 404) {
             setInvestorProfileStatus('Missing');
@@ -696,6 +704,13 @@ function MainLayout({
 
     setFilteredStartups(filtered);
   }, [allStartups, activeFilters, searchQuery]);
+
+  const handleProjectUnlock = useCallback((projectId) => {
+    console.log('[MainLayout] Syncing unlock state for project:', projectId);
+    setAllStartups(prev => prev.map(s => 
+      String(s.id) === String(projectId) ? { ...s, isUnlockedByCurrentUser: true } : s
+    ));
+  }, []);
 
   return (
     <div className={`${styles.mainContainer} ${showAI ? styles.aiMode : ''}`}>
@@ -794,6 +809,7 @@ function MainLayout({
               const roleNum = Number(user?.role);
               return roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 3 || roleNum === 2;
             })()}
+            onUnlock={handleProjectUnlock}
             onBack={() => {
               setSelectedProjectId(null);
               if (window.location.pathname.startsWith('/projects/')) {
@@ -887,6 +903,8 @@ function MainLayout({
                       investedProjectIds={investedProjectIds}
                       investors={investorsByProject.get(startup.id) || []}
                       onInvestmentSuccess={refetchInvestedProjects}
+                      isInvestorApproved={investorProfileStatus === 'Approved'}
+                      myStartupProfileId={myStartupProfileId}
                       isReturning={isReturning}
                       onViewProfile={(id, type = 'startup') => {
                         // Save scroll position
@@ -978,8 +996,8 @@ function MainLayout({
                             activeView === 'dashboard_availability' ? 'Availability' :
                               activeView === 'dashboard_reports' ? 'Reports' :
                                 activeView === 'dashboard_approvals' ? 'Approvals' :
-                                activeView === 'dashboard_approve_bookings' ? 'ApproveBookings' :
-                                  activeView === 'dashboard_activity' ? 'Activity' : 'Dashboard'
+                                  activeView === 'dashboard_approve_bookings' ? 'ApproveBookings' :
+                                    activeView === 'dashboard_activity' ? 'Activity' : 'Dashboard'
                   ) : activeView === 'profile' ? 'Profile' : ''
         }
       />

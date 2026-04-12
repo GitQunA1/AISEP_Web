@@ -42,8 +42,8 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
     const avaClasses = [local.maB, local.maP, local.maG, local.maPk, local.maO];
 
     return (
-        <div className={local.bcard}>
-            <div className={`${local.bcardStrip} ${local[status]}`}></div>
+        <div className={local.inv_card}>
+            <div className={`${local.inv_cardStrip} ${local[status]}`}></div>
             <div className={local.bcardBody}>
                 <div className={local.bcardRow1}>
                     <div className={local.bcardMainInfo}>
@@ -150,8 +150,8 @@ const BookingKanbanCard = ({ booking, status, onDetail }) => {
     }
 
     return (
-        <div className={local.bcard}>
-            <div className={`${local.bcardStrip} ${local[localStatus]}`}></div>
+        <div className={local.inv_card}>
+            <div className={`${local.inv_cardStrip} ${local[localStatus]}`}></div>
             <div className={local.bcardBody}>
                 <div className={local.bcardRow1}>
                     <div className={local.bcardMainInfo}>
@@ -218,21 +218,22 @@ const BookingKanbanCard = ({ booking, status, onDetail }) => {
  */
 const InvestorKanbanCard = ({ investor, status, onDetail, onApprove, onReject, processingId, processingAction }) => {
     const isProcessing = processingId === investor.investorId;
-    
+    const isAnyProcessing = !!processingId;
+
     return (
-        <div className={local.bcard}>
-            <div className={`${local.bcardStrip} ${local[status]}`}></div>
+        <div className={local.inv_card}>
+            <div className={`${local.inv_cardStrip} ${local[status]}`}></div>
             <div className={local.bcardBody}>
                 <div className={local.bcardRow1}>
                     <div className={local.bcardMainInfo}>
                         <div className={local.bcardName} title={investor.organizationName || investor.fullName}>
                             {investor.organizationName || investor.fullName || 'Nhà đầu tư'}
                         </div>
-                        <span className={`${local.btag}`} style={{ 
-                            background: 'rgba(29, 155, 240, 0.1)', 
-                            color: '#1d9bf0' 
-                        }}>
-                             Nhà đầu tư
+                        <span className={`${local.inv_btag} ${status === 'apr' ? local.inv_btag_apr : local.btagGrowth}`} style={status !== 'apr' ? {
+                            background: 'rgba(29, 155, 240, 0.1)',
+                            color: '#1d9bf0'
+                        } : {}}>
+                            Nhà đầu tư
                         </span>
                     </div>
                 </div>
@@ -255,26 +256,27 @@ const InvestorKanbanCard = ({ investor, status, onDetail, onApprove, onReject, p
                 </div>
 
                 <div className={local.bcardActions}>
-                    <button 
-                        className={local.baBtn} 
+                    <button
+                        className={`${local.baBtn} ${isAnyProcessing ? local.inv_btnDisabled : ''}`}
                         onClick={() => onDetail(investor)}
                         title="Chi tiết"
+                        disabled={isAnyProcessing}
                     >
                         Chi tiết
                     </button>
                     {status === 'pend' && (
                         <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
-                            <button 
-                                className={`${local.baBtn} ${local.rej}`} 
+                            <button
+                                className={`${local.baBtn} ${local.rej} ${isAnyProcessing ? (isProcessing && processingAction === 'reject' ? local.inv_btnLoading : local.inv_btnDisabled) : ''}`}
                                 onClick={() => onReject(investor)}
-                                disabled={isProcessing}
+                                disabled={isAnyProcessing}
                             >
                                 {isProcessing && processingAction === 'reject' ? <Loader2 className="animate-spin" size={14} /> : <X size={14} />}
                             </button>
-                            <button 
-                                className={`${local.baBtn} ${local.appr}`} 
+                            <button
+                                className={`${local.baBtn} ${local.appr} ${isAnyProcessing ? (isProcessing && processingAction === 'approve' ? local.inv_btnLoading : local.inv_btnDisabled) : ''}`}
                                 onClick={() => onApprove(investor.investorId)}
-                                disabled={isProcessing}
+                                disabled={isAnyProcessing}
                             >
                                 {isProcessing && processingAction === 'approve' ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle size={14} />}
                             </button>
@@ -505,7 +507,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
     const [bookingFilters, setBookingFilters] = useState('');
     const [bookingPage, setBookingPage] = useState(1);
     const [bookingSearchTerm, setBookingSearchTerm] = useState('');
-    const [activeMobileBookingTab, setActiveMobileBookingTab] = useState('pend'); // 'pend', 'conf', 'comp'
+    const [activeMobileBookingTab, setActiveMobileBookingTab] = useState('all'); // 'all', 'pend', 'conf', 'comp', 'canc'
     const [bookingsError, setBookingsError] = useState(null);
     const [projectsError, setProjectsError] = useState(null);
 
@@ -575,11 +577,12 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
     const [editContent, setEditContent] = useState('');
 
     // Mobile States
-    const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
     const [activeMobileTab, setActiveMobileTab] = useState('pend'); // 'pend', 'appr', 'rej'
+    const [activeMobileInvTab, setActiveMobileInvTab] = useState('pend'); // 'pend', 'apr', 'rej'
 
     useEffect(() => {
-        const handleResize = () => setIsMobile(window.innerWidth <= 1024);
+        const handleResize = () => setIsMobile(window.innerWidth < 1024);
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
@@ -593,6 +596,34 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
     const [showBookingModal, setShowBookingModal] = useState(false);
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [isLoadingBookingDetail, setIsLoadingBookingDetail] = useState(false);
+
+    // Handle Scroll for Kanban Lanes (Faded effect)
+    const handleLaneScroll = (e) => {
+        const { scrollTop, scrollHeight, clientHeight } = e.target;
+        const topFade = Math.min(scrollTop, 40);
+        const bottomFade = Math.min(scrollHeight - scrollTop - clientHeight, 40);
+
+        e.target.style.setProperty('--top-fade', `${topFade}px`);
+        e.target.style.setProperty('--bottom-fade', `${bottomFade}px`);
+    };
+
+    // Initialize fades on mount or when section changes to investor_approval
+    useEffect(() => {
+        if (activeSection === 'investor_approval' || activeSection === 'bookings') {
+            // Wait for DOM to render
+            setTimeout(() => {
+                const selector = activeSection === 'investor_approval' ? `.${local.inv_scrollCardsContainer}` : '#bookingScrollContainer';
+                const containers = document.querySelectorAll(selector);
+                containers.forEach(el => {
+                    const { scrollTop, scrollHeight, clientHeight } = el;
+                    const topFade = Math.min(scrollTop, 40);
+                    const bottomFade = Math.min(scrollHeight - scrollTop - clientHeight, 40);
+                    el.style.setProperty('--top-fade', `${topFade}px`);
+                    el.style.setProperty('--bottom-fade', `${bottomFade}px`);
+                });
+            }, 100);
+        }
+    }, [activeSection, pendingInvestors, approvedInvestors, rejectedInvestors, allBookings, activeMobileInvTab, activeMobileBookingTab, isMobile]);
 
     const getSectionTitle = (section) => {
         switch (section) {
@@ -705,10 +736,11 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
         setIsLoadingBookings(true);
         setBookingsError(null);
         try {
-            // Fetch all bookings at once for client-side filtering and counting
             const response = await bookingService.getAllBookings('', '', 1, 100);
             if (response && response.items) {
-                setAllBookings(response.items || []);
+                let bookings = response.items || [];
+                bookings.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+                setAllBookings(bookings);
             } else {
                 setBookingsError('Không thể tải dữ liệu booking. Vui lòng thử lại sau.');
             }
@@ -753,7 +785,8 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
         try {
             const response = await projectSubmissionService.getPendingProjects();
             if (response.success && response.data) {
-                const projects = response.data.items || [];
+                let projects = response.data.items || [];
+                projects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
                 setPendingProjects(projects);
             } else {
                 setProjectsError('Không thể tải danh sách dự án chờ xử lý.');
@@ -772,7 +805,8 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
         try {
             const response = await projectSubmissionService.getApprovedProjects();
             if (response.success && response.data) {
-                const projects = response.data.items || [];
+                let projects = response.data.items || [];
+                projects.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
                 setApprovedProjects(projects);
             }
         } catch (error) {
@@ -788,7 +822,8 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
         try {
             const response = await projectSubmissionService.getRejectedProjects();
             if (response.success && response.data) {
-                const projects = response.data.items || [];
+                let projects = response.data.items || [];
+                projects.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
                 setRejectedProjects(projects);
             }
         } catch (error) {
@@ -804,7 +839,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
         try {
             const response = await startupProfileService.getAllStartups();
             const items = Array.isArray(response) ? response : (response?.data?.items || response?.items || []);
-            const unverified = items.filter(s => s.approvalStatus === 'Pending' || s.approvalStatus === 'Unverified');
+            const unverified = items.filter(s => (s.status || s.approvalStatus) === 'Pending' || (s.status || s.approvalStatus) === 'Unverified');
             setPendingStartups(unverified);
         } catch (error) {
             console.error('Error fetching pending startups:', error);
@@ -1260,10 +1295,10 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
         try {
             const response = await investorService.getAllInvestors({ pageSize: 100 });
             const investors = response.items || [];
-            
-            setPendingInvestors(investors.filter(i => i.approvalStatus === 'Pending'));
-            setApprovedInvestors(investors.filter(i => i.approvalStatus === 'Approved'));
-            setRejectedInvestors(investors.filter(i => i.approvalStatus === 'Rejected'));
+
+            setPendingInvestors(investors.filter(i => (i.status || i.approvalStatus) === 'Pending'));
+            setApprovedInvestors(investors.filter(i => (i.status || i.approvalStatus) === 'Approved'));
+            setRejectedInvestors(investors.filter(i => (i.status || i.approvalStatus) === 'Rejected'));
         } catch (error) {
             console.error('Error fetching investors:', error);
         } finally {
@@ -1342,8 +1377,15 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
     const filteredRejected = filterProjects(rejectedProjects);
 
     return (
-        <div className={styles.container}>
-            {activeSection !== 'pr_news' && (
+        <div className={styles.container} style={{ 
+            paddingBottom: isMobile ? '120px' : '24px',
+            minHeight: isMobile ? '100dvh' : '100vh',
+            height: isMobile ? '100dvh' : '100vh',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+        }}>
+            {!['pr_news', 'advisor_approval'].includes(activeSection) && (
                 <FeedHeader
                     title={
                         activeSection === 'subscription_history' ? "Lịch sử đăng ký gói" :
@@ -1423,1393 +1465,1319 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
             {/* Content Sections */}
             {activeSection !== 'pr_news' && (
-            <div className={styles.content}>
-                {/* FINANCIAL SECTIONS */}
-                {activeSection === 'withdrawals' && (
-                    <div className={styles.section}>
-                        <WithdrawManagement searchTerm={withdrawSearchTerm} />
-                    </div>
-                )}
-                {activeSection === 'commission' && (
-                    <div className={styles.section}>
-                        <CommissionManagement searchTerm={commissionSearchTerm} />
-                    </div>
-                )}
-
-                {/* STATISTICS SECTION */}
-                {activeSection === 'statistics' && (
-                    <div className={styles.section}>
-                        <div className={s.statisticsSection}>
-                            {/* Main KPI Cards Grid */}
-                            <div className={s.statsGrid}>
-                                {/* Total Projects Card */}
-                                <div className={s.kpiCard}>
-                                    <div className={s.kpiHeader}>
-                                        <span className={s.statLabel}>Tổng dự án</span>
-                                        <span className={s.statValue}>
-                                            {dashboardData.pendingProjects + dashboardData.approvedProjects + dashboardData.rejectedProjects}
-                                        </span>
-                                    </div>
-                                    <div className={s.kpiBreakdown}>
-                                        <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><CheckCircle size={14} color="#10b981" /> Phê duyệt</span><strong>{dashboardData.approvedProjects}</strong></div>
-                                        <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><History size={14} color="#f59e0b" /> Chờ xử lý</span><strong>{dashboardData.pendingProjects}</strong></div>
-                                        <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><X size={14} color="#ef4444" /> Từ chối</span><strong>{dashboardData.rejectedProjects}</strong></div>
-                                    </div>
-                                </div>
-
-                                {/* Approval Rate Card */}
-                                <div className={s.kpiCard}>
-                                    <div className={s.kpiHeader}>
-                                        <span className={s.statLabel}>Tỉ lệ chấp thuận</span>
-                                        <span className={s.statValue}>
-                                            {dashboardData.pendingProjects + dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
-                                                ? Math.round((dashboardData.approvedProjects / (dashboardData.pendingProjects + dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
-                                                : 0}%
-                                        </span>
-                                    </div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                        <TrendingUp size={14} /> Hiệu quả phê duyệt hệ thống
-                                    </div>
-                                </div>
-
-                                {/* Pending Items Card */}
-                                <div className={s.kpiCard}>
-                                    <div className={s.kpiHeader}>
-                                        <span className={s.statLabel}>Chờ xử lý</span>
-                                        <span className={s.statValue}>
-                                            {dashboardData.pendingProjects + dashboardData.pendingApprovals}
-                                        </span>
-                                    </div>
-                                    <div className={s.kpiBreakdown}>
-                                        <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FileCheck size={14} /> Dự án</span><strong>{dashboardData.pendingProjects}</strong></div>
-                                        <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Users size={14} /> Người dùng</span><strong>{dashboardData.pendingApprovals}</strong></div>
-                                    </div>
-                                </div>
-
-                                {/* System Health Card */}
-                                <div className={s.kpiCard}>
-                                    <div className={s.kpiHeader}>
-                                        <span className={s.statLabel}>Tính khỏe hệ thống</span>
-                                        <span className={s.statValue}>{systemHealth}%</span>
-                                    </div>
-                                    <div style={{
-                                        fontSize: '11px',
-                                        fontWeight: '700',
-                                        marginTop: '12px',
-                                        padding: '4px 10px',
-                                        backgroundColor: systemHealth > 80 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
-                                        color: systemHealth > 80 ? '#10b981' : '#f59e0b',
-                                        borderRadius: '20px',
-                                        display: 'inline-flex',
-                                        alignItems: 'center',
-                                        gap: '4px'
-                                    }}>
-                                        {systemHealth > 80 ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
-                                        {systemHealth > 80 ? 'Bình thường' : 'Cần chú ý'}
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Detailed Stats Row */}
-                            <div className={styles.card} style={{ gridColumn: '1 / -1', border: '1px solid var(--border-color)', background: 'transparent' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                                    <Activity size={18} color="var(--primary-blue)" />
-                                    <h3 style={{ fontSize: '15px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>
-                                        Chỉ số hiệu suất chi tiết
-                                    </h3>
-                                </div>
-                                <div className={s.detailedStatsRow}>
-                                    <div className={s.statItem}>
-                                        <div className={s.statLabel}>Dự án chờ xử lý</div>
-                                        <div className={s.statValue}>{dashboardData.pendingProjects}</div>
-                                        <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '2px', marginTop: '12px' }}>
-                                            <div style={{ height: '100%', width: dashboardData.pendingProjects > 10 ? '100%' : (dashboardData.pendingProjects * 10) + '%', backgroundColor: '#f59e0b', borderRadius: '2px' }}></div>
-                                        </div>
-                                    </div>
-                                    <div className={s.statItem}>
-                                        <div className={s.statLabel}>Người dùng chờ phê duyệt</div>
-                                        <div className={s.statValue}>{dashboardData.pendingApprovals}</div>
-                                        <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '2px', marginTop: '12px' }}>
-                                            <div style={{ height: '100%', width: dashboardData.pendingApprovals > 10 ? '100%' : (dashboardData.pendingApprovals * 10) + '%', backgroundColor: 'var(--primary-blue)', borderRadius: '2px' }}></div>
-                                        </div>
-                                    </div>
-                                    <div className={s.statItem}>
-                                        <div className={s.statLabel}>Dự án phê duyệt</div>
-                                        <div className={s.statValue}>{dashboardData.approvedProjects}</div>
-                                    </div>
-                                    <div className={s.statItem}>
-                                        <div className={s.statLabel}>Dự án từ chối</div>
-                                        <div className={s.statValue} style={{ color: '#ef4444' }}>{dashboardData.rejectedProjects}</div>
-                                    </div>
-                                    <div className={s.statItem}>
-                                        <div className={s.statLabel}>Thời gian TB (giờ)</div>
-                                        <div className={s.statValue}>{dashboardData.avgApprovalTime || '-'}</div>
-                                    </div>
-                                </div>
-                            </div>
+                <div className={styles.content}>
+                    {/* FINANCIAL SECTIONS */}
+                    {activeSection === 'withdrawals' && (
+                        <div className={styles.section}>
+                            <WithdrawManagement searchTerm={withdrawSearchTerm} />
                         </div>
-                    </div>
-                )}
+                    )}
+                    {activeSection === 'commission' && (
+                        <div className={styles.section}>
+                            <CommissionManagement searchTerm={commissionSearchTerm} />
+                        </div>
+                    )}
 
-                {/* ANALYTICS SECTION */}
-                {activeSection === 'analytics' && (
-                    <div className={styles.section}>
-                        <div className={s.analyticsSection}>
-                            {/* Main Analytics Grid */}
-                            <div className={s.analyticsGrid}>
-                                {/* Project Distribution (Donut Chart) */}
-                                <div className={styles.card}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
-                                        <PieChart size={18} color="var(--primary-blue)" />
-                                        <h3 style={{ fontSize: '15px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>
-                                            Phân bổ trạng thái dự án
-                                        </h3>
+                    {/* STATISTICS SECTION */}
+                    {activeSection === 'statistics' && (
+                        <div className={styles.section}>
+                            <div className={s.statisticsSection}>
+                                {/* Main KPI Cards Grid */}
+                                <div className={s.statsGrid}>
+                                    {/* Total Projects Card */}
+                                    <div className={s.kpiCard}>
+                                        <div className={s.kpiHeader}>
+                                            <span className={s.statLabel}>Tổng dự án</span>
+                                            <span className={s.statValue}>
+                                                {dashboardData.pendingProjects + dashboardData.approvedProjects + dashboardData.rejectedProjects}
+                                            </span>
+                                        </div>
+                                        <div className={s.kpiBreakdown}>
+                                            <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><CheckCircle size={14} color="#10b981" /> Phê duyệt</span><strong>{dashboardData.approvedProjects}</strong></div>
+                                            <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><History size={14} color="#f59e0b" /> Chờ xử lý</span><strong>{dashboardData.pendingProjects}</strong></div>
+                                            <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><X size={14} color="#ef4444" /> Từ chối</span><strong>{dashboardData.rejectedProjects}</strong></div>
+                                        </div>
                                     </div>
 
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
-                                        {/* Minimalist CSS Donut */}
-                                        <div style={{
-                                            width: '120px',
-                                            height: '120px',
-                                            borderRadius: '50%',
-                                            border: '12px solid #10b981',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            justifyContent: 'center',
-                                            flexShrink: 0,
-                                            position: 'relative'
-                                        }}>
-                                            <div style={{ textAlign: 'center' }}>
-                                                <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                                                    {dashboardData.approvedProjects + dashboardData.pendingProjects + dashboardData.rejectedProjects}
-                                                </div>
-                                                <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tổng</div>
-                                            </div>
+                                    {/* Approval Rate Card */}
+                                    <div className={s.kpiCard}>
+                                        <div className={s.kpiHeader}>
+                                            <span className={s.statLabel}>Tỉ lệ chấp thuận</span>
+                                            <span className={s.statValue}>
+                                                {dashboardData.pendingProjects + dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
+                                                    ? Math.round((dashboardData.approvedProjects / (dashboardData.pendingProjects + dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
+                                                    : 0}%
+                                            </span>
                                         </div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', marginTop: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                            <TrendingUp size={14} /> Hiệu quả phê duyệt hệ thống
+                                        </div>
+                                    </div>
 
-                                        {/* Legend */}
-                                        <div style={{ flex: 1 }} className={s.legendList}>
-                                            <div className={s.legendItem}>
-                                                <div className={s.legendLabel}>
-                                                    <div className={s.indicatorCircle} style={{ backgroundColor: '#10b981' }}></div>
-                                                    Phê duyệt
-                                                </div>
-                                                <div className={s.legendValue}>{dashboardData.approvedProjects}</div>
-                                            </div>
-                                            <div className={s.legendItem}>
-                                                <div className={s.legendLabel}>
-                                                    <div className={s.indicatorCircle} style={{ backgroundColor: '#f59e0b' }}></div>
-                                                    Chờ xử lý
-                                                </div>
-                                                <div className={s.legendValue}>{dashboardData.pendingProjects}</div>
-                                            </div>
-                                            <div className={s.legendItem}>
-                                                <div className={s.legendLabel}>
-                                                    <div className={s.indicatorCircle} style={{ backgroundColor: '#ef4444' }}></div>
-                                                    Từ chối
-                                                </div>
-                                                <div className={s.legendValue}>{dashboardData.rejectedProjects}</div>
-                                            </div>
+                                    {/* Pending Items Card */}
+                                    <div className={s.kpiCard}>
+                                        <div className={s.kpiHeader}>
+                                            <span className={s.statLabel}>Chờ xử lý</span>
+                                            <span className={s.statValue}>
+                                                {dashboardData.pendingProjects + dashboardData.pendingApprovals}
+                                            </span>
+                                        </div>
+                                        <div className={s.kpiBreakdown}>
+                                            <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><FileCheck size={14} /> Dự án</span><strong>{dashboardData.pendingProjects}</strong></div>
+                                            <div><span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}><Users size={14} /> Người dùng</span><strong>{dashboardData.pendingApprovals}</strong></div>
+                                        </div>
+                                    </div>
+
+                                    {/* System Health Card */}
+                                    <div className={s.kpiCard}>
+                                        <div className={s.kpiHeader}>
+                                            <span className={s.statLabel}>Tính khỏe hệ thống</span>
+                                            <span className={s.statValue}>{systemHealth}%</span>
+                                        </div>
+                                        <div style={{
+                                            fontSize: '11px',
+                                            fontWeight: '700',
+                                            marginTop: '12px',
+                                            padding: '4px 10px',
+                                            backgroundColor: systemHealth > 80 ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                                            color: systemHealth > 80 ? '#10b981' : '#f59e0b',
+                                            borderRadius: '20px',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px'
+                                        }}>
+                                            {systemHealth > 80 ? <CheckCircle size={12} /> : <AlertCircle size={12} />}
+                                            {systemHealth > 80 ? 'Bình thường' : 'Cần chú ý'}
                                         </div>
                                     </div>
                                 </div>
 
-                                {/* Performance Metrics */}
-                                <div className={styles.card}>
+                                {/* Detailed Stats Row */}
+                                <div className={styles.card} style={{ gridColumn: '1 / -1', border: '1px solid var(--border-color)', background: 'transparent' }}>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
                                         <Activity size={18} color="var(--primary-blue)" />
                                         <h3 style={{ fontSize: '15px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>
-                                            Chỉ số hiệu suất
+                                            Chỉ số hiệu suất chi tiết
                                         </h3>
                                     </div>
-
-                                    <div className={s.performanceGrid}>
-                                        <div className={s.progressWrapper}>
-                                            <div className={s.progressLabelRow}>
-                                                <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Tỉ lệ phê duyệt</span>
-                                                <span style={{ fontSize: '14px', fontWeight: '700', color: '#10b981' }}>
-                                                    {dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
-                                                        ? Math.round((dashboardData.approvedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
-                                                        : 0}%
-                                                </span>
-                                            </div>
-                                            <div className={s.progressTrack}>
-                                                <div className={s.progressFill} style={{
-                                                    width: (dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
-                                                        ? Math.round((dashboardData.approvedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
-                                                        : 0) + '%',
-                                                    backgroundColor: '#10b981'
-                                                }}></div>
+                                    <div className={s.detailedStatsRow}>
+                                        <div className={s.statItem}>
+                                            <div className={s.statLabel}>Dự án chờ xử lý</div>
+                                            <div className={s.statValue}>{dashboardData.pendingProjects}</div>
+                                            <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '2px', marginTop: '12px' }}>
+                                                <div style={{ height: '100%', width: dashboardData.pendingProjects > 10 ? '100%' : (dashboardData.pendingProjects * 10) + '%', backgroundColor: '#f59e0b', borderRadius: '2px' }}></div>
                                             </div>
                                         </div>
-
-                                        <div className={s.progressWrapper}>
-                                            <div className={s.progressLabelRow}>
-                                                <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Tỉ lệ hoàn thành</span>
-                                                <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--primary-blue)' }}>
-                                                    {dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects > 0
-                                                        ? Math.round(((dashboardData.approvedProjects + dashboardData.rejectedProjects) / (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects)) * 100)
-                                                        : 0}%
-                                                </span>
-                                            </div>
-                                            <div className={s.progressTrack}>
-                                                <div className={s.progressFill} style={{
-                                                    width: (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects > 0
-                                                        ? Math.round(((dashboardData.approvedProjects + dashboardData.rejectedProjects) / (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects)) * 100)
-                                                        : 0) + '%'
-                                                }}></div>
+                                        <div className={s.statItem}>
+                                            <div className={s.statLabel}>Người dùng chờ phê duyệt</div>
+                                            <div className={s.statValue}>{dashboardData.pendingApprovals}</div>
+                                            <div style={{ width: '100%', height: '4px', backgroundColor: 'var(--bg-tertiary)', borderRadius: '2px', marginTop: '12px' }}>
+                                                <div style={{ height: '100%', width: dashboardData.pendingApprovals > 10 ? '100%' : (dashboardData.pendingApprovals * 10) + '%', backgroundColor: 'var(--primary-blue)', borderRadius: '2px' }}></div>
                                             </div>
                                         </div>
-
-                                        <div className={s.progressWrapper}>
-                                            <div className={s.progressLabelRow}>
-                                                <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Tỉ lệ từ chối</span>
-                                                <span style={{ fontSize: '14px', fontWeight: '700', color: '#ef4444' }}>
-                                                    {dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
-                                                        ? Math.round((dashboardData.rejectedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
-                                                        : 0}%
-                                                </span>
-                                            </div>
-                                            <div className={s.progressTrack}>
-                                                <div className={s.progressFill} style={{
-                                                    width: (dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
-                                                        ? Math.round((dashboardData.rejectedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
-                                                        : 0) + '%',
-                                                    backgroundColor: '#ef4444'
-                                                }}></div>
-                                            </div>
+                                        <div className={s.statItem}>
+                                            <div className={s.statLabel}>Dự án phê duyệt</div>
+                                            <div className={s.statValue}>{dashboardData.approvedProjects}</div>
                                         </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Action Summary Row */}
-                            <div className={s.summaryGrid}>
-                                <div className={s.summaryCard}>
-                                    <div className={s.summaryIndicator} style={{ backgroundColor: '#f59e0b' }}></div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Briefcase size={16} color="#f59e0b" />
-                                        <div className={s.summaryTitle}>Duyệt dự án</div>
-                                    </div>
-                                    <div className={s.summaryValue}>{dashboardData.pendingProjects}</div>
-                                    <div className={s.summaryText}>
-                                        {dashboardData.pendingProjects > 0
-                                            ? `${dashboardData.pendingProjects} dự án đang chờ phê duyệt của bạn`
-                                            : 'Không có dự án nào chờ xử lý'}
-                                    </div>
-                                </div>
-
-                                <div className={s.summaryCard}>
-                                    <div className={s.summaryIndicator} style={{ backgroundColor: 'var(--primary-blue)' }}></div>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <Users size={16} color="var(--primary-blue)" />
-                                        <div className={s.summaryTitle}>Phân bổ người dùng</div>
-                                    </div>
-                                    <div className={s.summaryValue}>{dashboardData.pendingApprovals}</div>
-                                    <div className={s.summaryText}>
-                                        {dashboardData.pendingApprovals > 0
-                                            ? `${dashboardData.pendingApprovals} yêu cầu chờ xác nhận`
-                                            : 'Tất cả người dùng đã được phê duyệt'}
+                                        <div className={s.statItem}>
+                                            <div className={s.statLabel}>Dự án từ chối</div>
+                                            <div className={s.statValue} style={{ color: '#ef4444' }}>{dashboardData.rejectedProjects}</div>
+                                        </div>
+                                        <div className={s.statItem}>
+                                            <div className={s.statLabel}>Thời gian TB (giờ)</div>
+                                            <div className={s.statValue}>{dashboardData.avgApprovalTime || '-'}</div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* INVESTOR APPROVAL KANBAN SECTION */}
-                {activeSection === 'investor_approval' && (
-                    <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, gap: 0 }}>
-                        <div className={local.boardGrid} style={{
-                            gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
-                            minHeight: isMobile ? 'auto' : 'calc(100vh - 150px)',
-                            margin: isMobile ? '0' : '-24px -24px -84px -24px'
-                        }}>
-                            {/* Column: Pending */}
-                            <div className={local.bcol}>
-                                {!isMobile && (
-                                    <div className={`${local.bcolHead} ${local.pend}`}>
-                                        <div className={local.bcolTitle}>
-                                            <div className={`${local.bctDot} ${local.pend}`}></div>
-                                            Chờ Duyệt
+                    {/* ANALYTICS SECTION */}
+                    {activeSection === 'analytics' && (
+                        <div className={styles.section}>
+                            <div className={s.analyticsSection}>
+                                {/* Main Analytics Grid */}
+                                <div className={s.analyticsGrid}>
+                                    {/* Project Distribution (Donut Chart) */}
+                                    <div className={styles.card}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                                            <PieChart size={18} color="var(--primary-blue)" />
+                                            <h3 style={{ fontSize: '15px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>
+                                                Phân bổ trạng thái dự án
+                                            </h3>
                                         </div>
-                                        <div className={`${local.bcolN} ${local.pend}`}>{pendingInvestors.length}</div>
+
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '32px' }}>
+                                            {/* Minimalist CSS Donut */}
+                                            <div style={{
+                                                width: '120px',
+                                                height: '120px',
+                                                borderRadius: '50%',
+                                                border: '12px solid #10b981',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                flexShrink: 0,
+                                                position: 'relative'
+                                            }}>
+                                                <div style={{ textAlign: 'center' }}>
+                                                    <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                                        {dashboardData.approvedProjects + dashboardData.pendingProjects + dashboardData.rejectedProjects}
+                                                    </div>
+                                                    <div style={{ fontSize: '10px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Tổng</div>
+                                                </div>
+                                            </div>
+
+                                            {/* Legend */}
+                                            <div style={{ flex: 1 }} className={s.legendList}>
+                                                <div className={s.legendItem}>
+                                                    <div className={s.legendLabel}>
+                                                        <div className={s.indicatorCircle} style={{ backgroundColor: '#10b981' }}></div>
+                                                        Phê duyệt
+                                                    </div>
+                                                    <div className={s.legendValue}>{dashboardData.approvedProjects}</div>
+                                                </div>
+                                                <div className={s.legendItem}>
+                                                    <div className={s.legendLabel}>
+                                                        <div className={s.indicatorCircle} style={{ backgroundColor: '#f59e0b' }}></div>
+                                                        Chờ xử lý
+                                                    </div>
+                                                    <div className={s.legendValue}>{dashboardData.pendingProjects}</div>
+                                                </div>
+                                                <div className={s.legendItem}>
+                                                    <div className={s.legendLabel}>
+                                                        <div className={s.indicatorCircle} style={{ backgroundColor: '#ef4444' }}></div>
+                                                        Từ chối
+                                                    </div>
+                                                    <div className={s.legendValue}>{dashboardData.rejectedProjects}</div>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                )}
-                                <div className={local.bcolCards}>
-                                    {isLoadingInvestors ? (
-                                        <KanbanSkeleton count={3} />
-                                    ) : pendingInvestors.length === 0 ? (
-                                        <div className={local.colEmpty}>Không có hồ sơ chờ duyệt</div>
-                                    ) : (
-                                        pendingInvestors.map(i => (
-                                            <InvestorKanbanCard
-                                                key={i.investorId}
-                                                investor={i}
-                                                status="pend"
-                                                onDetail={(inv) => {
-                                                    setSelectedInvestor(inv);
-                                                    setShowInvestorDetailModal(true);
-                                                }}
-                                                onApprove={handleApproveInvestor}
-                                                onReject={(inv) => {
-                                                    setSelectedInvestor(inv);
-                                                    setShowInvestorRejectModal(true);
-                                                }}
-                                                processingId={processingInvestorId}
-                                                processingAction={investorAction}
-                                            />
-                                        ))
-                                    )}
+
+                                    {/* Performance Metrics */}
+                                    <div className={styles.card}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px' }}>
+                                            <Activity size={18} color="var(--primary-blue)" />
+                                            <h3 style={{ fontSize: '15px', fontWeight: '700', margin: 0, color: 'var(--text-primary)' }}>
+                                                Chỉ số hiệu suất
+                                            </h3>
+                                        </div>
+
+                                        <div className={s.performanceGrid}>
+                                            <div className={s.progressWrapper}>
+                                                <div className={s.progressLabelRow}>
+                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Tỉ lệ phê duyệt</span>
+                                                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#10b981' }}>
+                                                        {dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
+                                                            ? Math.round((dashboardData.approvedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
+                                                            : 0}%
+                                                    </span>
+                                                </div>
+                                                <div className={s.progressTrack}>
+                                                    <div className={s.progressFill} style={{
+                                                        width: (dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
+                                                            ? Math.round((dashboardData.approvedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
+                                                            : 0) + '%',
+                                                        backgroundColor: '#10b981'
+                                                    }}></div>
+                                                </div>
+                                            </div>
+
+                                            <div className={s.progressWrapper}>
+                                                <div className={s.progressLabelRow}>
+                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Tỉ lệ hoàn thành</span>
+                                                    <span style={{ fontSize: '14px', fontWeight: '700', color: 'var(--primary-blue)' }}>
+                                                        {dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects > 0
+                                                            ? Math.round(((dashboardData.approvedProjects + dashboardData.rejectedProjects) / (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects)) * 100)
+                                                            : 0}%
+                                                    </span>
+                                                </div>
+                                                <div className={s.progressTrack}>
+                                                    <div className={s.progressFill} style={{
+                                                        width: (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects > 0
+                                                            ? Math.round(((dashboardData.approvedProjects + dashboardData.rejectedProjects) / (dashboardData.approvedProjects + dashboardData.rejectedProjects + dashboardData.pendingProjects)) * 100)
+                                                            : 0) + '%'
+                                                    }}></div>
+                                                </div>
+                                            </div>
+
+                                            <div className={s.progressWrapper}>
+                                                <div className={s.progressLabelRow}>
+                                                    <span style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-secondary)' }}>Tỉ lệ từ chối</span>
+                                                    <span style={{ fontSize: '14px', fontWeight: '700', color: '#ef4444' }}>
+                                                        {dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
+                                                            ? Math.round((dashboardData.rejectedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
+                                                            : 0}%
+                                                    </span>
+                                                </div>
+                                                <div className={s.progressTrack}>
+                                                    <div className={s.progressFill} style={{
+                                                        width: (dashboardData.approvedProjects + dashboardData.rejectedProjects > 0
+                                                            ? Math.round((dashboardData.rejectedProjects / (dashboardData.approvedProjects + dashboardData.rejectedProjects)) * 100)
+                                                            : 0) + '%',
+                                                        backgroundColor: '#ef4444'
+                                                    }}></div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
-                            </div>
 
-                            {/* Column: Approved */}
-                            <div className={local.bcol}>
-                                {!isMobile && (
-                                    <div className={`${local.bcolHead} ${local.apr}`}>
-                                        <div className={local.bcolTitle}>
-                                            <div className={`${local.bctDot} ${local.apr}`}></div>
-                                            Đã Duyệt
+                                {/* Action Summary Row */}
+                                <div className={s.summaryGrid}>
+                                    <div className={s.summaryCard}>
+                                        <div className={s.summaryIndicator} style={{ backgroundColor: '#f59e0b' }}></div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Briefcase size={16} color="#f59e0b" />
+                                            <div className={s.summaryTitle}>Duyệt dự án</div>
                                         </div>
-                                        <div className={`${local.bcolN} ${local.apr}`}>{approvedInvestors.length}</div>
+                                        <div className={s.summaryValue}>{dashboardData.pendingProjects}</div>
+                                        <div className={s.summaryText}>
+                                            {dashboardData.pendingProjects > 0
+                                                ? `${dashboardData.pendingProjects} dự án đang chờ phê duyệt của bạn`
+                                                : 'Không có dự án nào chờ xử lý'}
+                                        </div>
                                     </div>
-                                )}
-                                <div className={local.bcolCards}>
-                                    {approvedInvestors.map(i => (
-                                        <InvestorKanbanCard
-                                            key={i.investorId}
-                                            investor={i}
-                                            status="apr"
-                                            onDetail={(inv) => {
-                                                setSelectedInvestor(inv);
-                                                setShowInvestorDetailModal(true);
-                                            }}
-                                        />
-                                    ))}
-                                    {approvedInvestors.length === 0 && !isLoadingInvestors && (
-                                        <div className={local.colEmpty}>Chưa có nhà đầu tư nào</div>
-                                    )}
-                                </div>
-                            </div>
 
-                            {/* Column: Rejected */}
-                            <div className={local.bcol}>
-                                {!isMobile && (
-                                    <div className={`${local.bcolHead} ${local.rej}`}>
-                                        <div className={local.bcolTitle}>
-                                            <div className={`${local.bctDot} ${local.rej}`}></div>
-                                            Đã Từ Chối
+                                    <div className={s.summaryCard}>
+                                        <div className={s.summaryIndicator} style={{ backgroundColor: 'var(--primary-blue)' }}></div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <Users size={16} color="var(--primary-blue)" />
+                                            <div className={s.summaryTitle}>Phân bổ người dùng</div>
                                         </div>
-                                        <div className={`${local.bcolN} ${local.rej}`}>{rejectedInvestors.length}</div>
+                                        <div className={s.summaryValue}>{dashboardData.pendingApprovals}</div>
+                                        <div className={s.summaryText}>
+                                            {dashboardData.pendingApprovals > 0
+                                                ? `${dashboardData.pendingApprovals} yêu cầu chờ xác nhận`
+                                                : 'Tất cả người dùng đã được phê duyệt'}
+                                        </div>
                                     </div>
-                                )}
-                                <div className={local.bcolCards}>
-                                    {rejectedInvestors.map(i => (
-                                        <InvestorKanbanCard
-                                            key={i.investorId}
-                                            investor={i}
-                                            status="rej"
-                                            onDetail={(inv) => {
-                                                setSelectedInvestor(inv);
-                                                setShowInvestorDetailModal(true);
-                                            }}
-                                        />
-                                    ))}
-                                    {rejectedInvestors.length === 0 && !isLoadingInvestors && (
-                                        <div className={local.colEmpty}>Trống</div>
-                                    )}
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* Project Management Section (All statuses) */}
-                {/* Project Management Kanban Board */}
-                {activeSection === 'project_management' && (
-                    <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, gap: 0 }}>
+                    {activeSection === 'investor_approval' && (
+                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, gap: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                            {/* Mobile Tab Switcher */}
+                            {isMobile && (
+                                <div className={local.mobileTabSwitcher} style={{ marginBottom: '16px', flexShrink: 0 }}>
+                                    {[
+                                        { id: 'pend', label: 'Chờ Duyệt', count: pendingInvestors.length, status: 'pend' },
+                                        { id: 'apr', label: 'Đã Duyệt', count: approvedInvestors.length, status: 'appr' },
+                                        { id: 'rej', label: 'Từ Chối', count: rejectedInvestors.length, status: 'rej' }
+                                    ].map(tab => (
+                                        <button
+                                            key={tab.id}
+                                            className={`${local.mobileTab} ${activeMobileInvTab === tab.id ? local.activeMobileTab : ''}`}
+                                            onClick={() => setActiveMobileInvTab(tab.id)}
+                                            data-status={tab.status}
+                                        >
+                                            <div className={`${local.bctDot} ${tab.id === 'apr' ? local.inv_dot_apr : local[tab.status]}`}></div>
+                                            <span>{tab.label}</span>
+                                            <span className={local.mobileTabCount}>{tab.count}</span>
+                                        </button>
+                                    ))}
+                                </div>
+                            )}
 
-                        {/* Mobile Tab Switcher */}
-                        {isMobile && (
-                            <div className={local.mobileTabSwitcher}>
-                                <button
-                                    className={`${local.mobileTab} ${activeMobileTab === 'pend' ? local.activeMobileTab : ''}`}
-                                    onClick={() => setActiveMobileTab('pend')}
-                                    data-status="pend"
-                                >
-                                    <div className={`${local.bctDot} ${local.pend}`}></div>
-                                    <span>Chờ Xử Lý</span>
-                                    <span className={local.mobileTabCount}>{filteredPending.length}</span>
-                                </button>
-                                <button
-                                    className={`${local.mobileTab} ${activeMobileTab === 'appr' ? local.activeMobileTab : ''}`}
-                                    onClick={() => setActiveMobileTab('appr')}
-                                    data-status="appr"
-                                >
-                                    <div className={`${local.bctDot} ${local.appr}`}></div>
-                                    <span>Đã Duyệt</span>
-                                    <span className={local.mobileTabCount}>{filteredApproved.length}</span>
-                                </button>
-                                <button
-                                    className={`${local.mobileTab} ${activeMobileTab === 'rej' ? local.activeMobileTab : ''}`}
-                                    onClick={() => setActiveMobileTab('rej')}
-                                    data-status="rej"
-                                >
-                                    <div className={`${local.bctDot} ${local.rej}`}></div>
-                                    <span>Từ Chối</span>
-                                    <span className={local.mobileTabCount}>{filteredRejected.length}</span>
-                                </button>
-                            </div>
-                        )}
-
-                        {projectsError ? (
-                            <div className={local.errorWrapper}>
-                                <EmptyState
-                                    icon={AlertCircle}
-                                    title="Lỗi tải dữ liệu"
-                                    message={projectsError}
-                                    isError={true}
-                                    onRetry={() => {
-                                        setProjectsError(null);
-                                        fetchPendingProjects();
-                                        fetchApprovedProjects();
-                                        fetchRejectedProjects();
-                                    }}
-                                />
-                            </div>
-                        ) : (
-                            <div className={local.boardGrid}>
-                                {/* Pending Column */}
-                                {(!isMobile || activeMobileTab === 'pend') && (
-                                    <div className={local.bcol}>
+                            <div className={local.inv_boardGridScrollable} onScroll={handleLaneScroll} style={{ 
+                                flex: 1,
+                                minHeight: 0,
+                                flexFlow: isMobile ? 'column' : 'row nowrap',
+                                margin: isMobile ? '0' : '0 -24px -24px -24px'
+                            }}>
+                                {/* Column: Pending */}
+                                {(!isMobile || activeMobileInvTab === 'pend') && (
+                                    <div className={`${local.inv_col} ${local.inv_scrollCol}`}>
                                         {!isMobile && (
-                                            <div className={`${local.bcolHead} ${local.pend}`}>
+                                            <div className={`${local.inv_colHead} ${local.pend}`}>
                                                 <div className={local.bcolTitle}>
                                                     <div className={`${local.bctDot} ${local.pend}`}></div>
-                                                    Chờ Xử Lý
+                                                    Chờ Duyệt
                                                 </div>
-                                                <div className={`${local.bcolN} ${local.pend}`}>{filteredPending.length}</div>
+                                                <div className={`${local.bcolN} ${local.pend}`}>{pendingInvestors.length}</div>
                                             </div>
                                         )}
-                                        <div className={local.bcolCards}>
-                                            {isLoadingProjects ? (
+                                        <div className={local.inv_scrollCardsContainer} onScroll={handleLaneScroll}>
+                                            {isLoadingInvestors ? (
                                                 <KanbanSkeleton count={3} />
-                                            ) : (filteredPending.length === 0 ? (
-                                                <EmptyState
-                                                    icon={searchTerm ? Search : Archive}
-                                                    title={searchTerm ? "Không tìm thấy" : "Trống"}
-                                                    message={searchTerm ? `Không tìm thấy dự án nào khớp với "${searchTerm}"` : 'Không có dự án chờ xử lý'}
-                                                />
+                                            ) : pendingInvestors.length === 0 ? (
+                                                <div className={local.inv_emptyState}>
+                                                    <Archive size={40} className={local.inv_emptyIcon} />
+                                                    <p>Không có hồ sơ chờ duyệt</p>
+                                                </div>
                                             ) : (
-                                                filteredPending.map(project => (
-                                                    <ProjectKanbanCard
-                                                        key={project.projectId}
-                                                        project={project}
+                                                pendingInvestors.map(i => (
+                                                    <InvestorKanbanCard
+                                                        key={i.investorId}
+                                                        investor={i}
                                                         status="pend"
-                                                        onDetail={() => openDetailModal(project)}
-                                                        onApprove={() => handleApproveProject(project.projectId)}
-                                                        onReject={() => handleRejectProject(project.projectId)}
-                                                        processingProjectId={processingProjectId}
-                                                        processingAction={processingAction}
+                                                        onDetail={(inv) => {
+                                                            setSelectedInvestor(inv);
+                                                            setShowInvestorDetailModal(true);
+                                                        }}
+                                                        onApprove={handleApproveInvestor}
+                                                        onReject={(inv) => {
+                                                            setSelectedInvestor(inv);
+                                                            setShowInvestorRejectModal(true);
+                                                        }}
+                                                        processingId={processingInvestorId}
+                                                        processingAction={investorAction}
                                                     />
                                                 ))
-                                            ))}
+                                            )}
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Approved Column */}
-                                {(!isMobile || activeMobileTab === 'appr') && (
-                                    <div className={local.bcol}>
+                                {/* Column: Approved */}
+                                {(!isMobile || activeMobileInvTab === 'apr') && (
+                                    <div className={`${local.inv_col} ${local.inv_scrollCol}`}>
                                         {!isMobile && (
-                                            <div className={`${local.bcolHead} ${local.appr}`}>
+                                            <div className={`${local.inv_colHead} ${local.apr}`}>
                                                 <div className={local.bcolTitle}>
-                                                    <div className={`${local.bctDot} ${local.appr}`}></div>
+                                                    <div className={`${local.bctDot} ${local.inv_dot_apr}`}></div>
                                                     Đã Duyệt
                                                 </div>
-                                                <div className={`${local.bcolN} ${local.appr}`}>{filteredApproved.length}</div>
+                                                <div className={`${local.bcolN} ${local.inv_n_apr}`}>{approvedInvestors.length}</div>
                                             </div>
                                         )}
-                                        <div className={local.bcolCards}>
-                                            {isLoadingProjects ? (
-                                                <KanbanSkeleton count={2} />
-                                            ) : (filteredApproved.length === 0 ? (
-                                                <EmptyState
-                                                    icon={searchTerm ? Search : Archive}
-                                                    title={searchTerm ? "Không tìm thấy" : "Trống"}
-                                                    message={searchTerm ? `Không tìm thấy dự án nào khớp với "${searchTerm}"` : 'Chưa có dự án nào được duyệt'}
+                                        <div className={local.inv_scrollCardsContainer} onScroll={handleLaneScroll}>
+                                            {approvedInvestors.map(i => (
+                                                <InvestorKanbanCard
+                                                    key={i.investorId}
+                                                    investor={i}
+                                                    status="apr"
+                                                    onDetail={(inv) => {
+                                                        setSelectedInvestor(inv);
+                                                        setShowInvestorDetailModal(true);
+                                                    }}
+                                                    processingId={processingInvestorId}
+                                                    processingAction={investorAction}
                                                 />
-                                            ) : (
-                                                filteredApproved.map(project => (
-                                                    <ProjectKanbanCard
-                                                        key={project.projectId}
-                                                        project={project}
-                                                        status="appr"
-                                                        onDetail={() => openDetailModal(project)}
-                                                    />
-                                                ))
                                             ))}
+                                            {approvedInvestors.length === 0 && !isLoadingInvestors && (
+                                                <div className={local.inv_emptyState}>
+                                                    <Archive size={40} className={local.inv_emptyIcon} />
+                                                    <p>Chưa có nhà đầu tư nào</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
 
-                                {/* Rejected Column */}
-                                {(!isMobile || activeMobileTab === 'rej') && (
-                                    <div className={local.bcol}>
+                                {/* Column: Rejected */}
+                                {(!isMobile || activeMobileInvTab === 'rej') && (
+                                    <div className={`${local.inv_col} ${local.inv_scrollCol}`}>
                                         {!isMobile && (
-                                            <div className={`${local.bcolHead} ${local.rej}`}>
+                                            <div className={`${local.inv_colHead} ${local.rej}`}>
                                                 <div className={local.bcolTitle}>
                                                     <div className={`${local.bctDot} ${local.rej}`}></div>
-                                                    Từ Chối
+                                                    Đã Từ Chối
                                                 </div>
-                                                <div className={`${local.bcolN} ${local.rej}`}>{filteredRejected.length}</div>
+                                                <div className={`${local.bcolN} ${local.rej}`}>{rejectedInvestors.length}</div>
                                             </div>
                                         )}
-                                        <div className={local.bcolCards}>
-                                            {isLoadingProjects ? (
-                                                <KanbanSkeleton count={1} />
-                                            ) : (filteredRejected.length === 0 ? (
-                                                <EmptyState
-                                                    icon={searchTerm ? Search : Archive}
-                                                    title={searchTerm ? "Không tìm thấy" : "Trống"}
-                                                    message={searchTerm ? `Không tìm thấy dự án nào khớp với "${searchTerm}"` : 'Chưa có dự án nào bị từ chối'}
+                                        <div className={local.inv_scrollCardsContainer} onScroll={handleLaneScroll}>
+                                            {rejectedInvestors.map(i => (
+                                                <InvestorKanbanCard
+                                                    key={i.investorId}
+                                                    investor={i}
+                                                    status="rej"
+                                                    onDetail={(inv) => {
+                                                        setSelectedInvestor(inv);
+                                                        setShowInvestorDetailModal(true);
+                                                    }}
+                                                    processingId={processingInvestorId}
+                                                    processingAction={investorAction}
                                                 />
-                                            ) : (
-                                                filteredRejected.map(project => (
-                                                    <ProjectKanbanCard
-                                                        key={project.projectId}
-                                                        project={project}
-                                                        status="rej"
-                                                        onDetail={() => openDetailModal(project)}
-                                                    />
-                                                ))
                                             ))}
+                                            {rejectedInvestors.length === 0 && !isLoadingInvestors && (
+                                                <div className={local.inv_emptyState}>
+                                                    <Archive size={40} className={local.inv_emptyIcon} />
+                                                    <p>Danh sách trống</p>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
                             </div>
-                        )}
-                    </div>
-                )}
-
-                {/* PR Management Section (Overhauled with Subtabs and Sleek UI) */}
-                {activeSection === 'pr_management' && (
-                    <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, margin: '-24px' }}>
-                        {/* Sleek Subtab Switcher */}
-                        <div className={styles.tabs} style={{ marginBottom: '8px' }}>
-                            <button
-                                className={`${styles.tab} ${activePRTab === 'posting' ? styles.active : ''}`}
-                                onClick={() => setActivePRTab('posting')}
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                            >
-                                Đăng bài PR
-                            </button>
-                            <button
-                                className={`${styles.tab} ${activePRTab === 'news' ? styles.active : ''}`}
-                                onClick={() => setActivePRTab('news')}
-                                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                            >
-                                Tin tức
-                                {prNewsList.length > 0 && <span className={local.newsCountBadge}>{prNewsList.length}</span>}
-                            </button>
                         </div>
+                    )}
 
-                        {activePRTab === 'posting' && (
-                            <div key="posting" className={styles.section} style={{ padding: '0 24px 24px 24px' }}>
+                    {/* Project Management Section (All statuses) */}
+                    {/* Project Management Kanban Board */}
+                    {activeSection === 'project_management' && (
+                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, gap: 0, flex: 1, minHeight: 0 }}>
 
-                        {/* Header Stats */}
-                        <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <Newspaper size={24} color="var(--primary-blue)" />
-                                <div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Dự án đã ký</div>
-                                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-primary)' }}>{signedDeals.length}</div>
+                            {/* Mobile Tab Switcher */}
+                            {isMobile && (
+                                <div className={local.mobileTabSwitcher}>
+                                    <button
+                                        className={`${local.mobileTab} ${activeMobileTab === 'pend' ? local.activeMobileTab : ''}`}
+                                        onClick={() => setActiveMobileTab('pend')}
+                                        data-status="pend"
+                                    >
+                                        <div className={`${local.bctDot} ${local.pend}`}></div>
+                                        <span>Chờ Xử Lý</span>
+                                        <span className={local.mobileTabCount}>{filteredPending.length}</span>
+                                    </button>
+                                    <button
+                                        className={`${local.mobileTab} ${activeMobileTab === 'appr' ? local.activeMobileTab : ''}`}
+                                        onClick={() => setActiveMobileTab('appr')}
+                                        data-status="appr"
+                                    >
+                                        <div className={`${local.bctDot} ${local.appr}`}></div>
+                                        <span>Đã Duyệt</span>
+                                        <span className={local.mobileTabCount}>{filteredApproved.length}</span>
+                                    </button>
+                                    <button
+                                        className={`${local.mobileTab} ${activeMobileTab === 'rej' ? local.activeMobileTab : ''}`}
+                                        onClick={() => setActiveMobileTab('rej')}
+                                        data-status="rej"
+                                    >
+                                        <div className={`${local.bctDot} ${local.rej}`}></div>
+                                        <span>Từ Chối</span>
+                                        <span className={local.mobileTabCount}>{filteredRejected.length}</span>
+                                    </button>
                                 </div>
+                            )}
+
+                            {projectsError ? (
+                                <div className={local.errorWrapper}>
+                                    <EmptyState
+                                        icon={AlertCircle}
+                                        title="Lỗi tải dữ liệu"
+                                        message={projectsError}
+                                        isError={true}
+                                        onRetry={() => {
+                                            setProjectsError(null);
+                                            fetchPendingProjects();
+                                            fetchApprovedProjects();
+                                            fetchRejectedProjects();
+                                        }}
+                                    />
+                                </div>
+                            ) : (
+                                <div className={local.inv_boardGridScrollable} style={{
+                                    flexFlow: isMobile ? 'column' : 'row nowrap',
+                                    margin: isMobile ? '0' : '0 -24px -24px -24px'
+                                }}>
+                                    {/* Pending Column */}
+                                    {(!isMobile || activeMobileTab === 'pend') && (
+                                        <div className={`${local.inv_col} ${local.inv_scrollCol}`}>
+                                            {!isMobile && (
+                                                <div className={`${local.inv_colHead} ${local.pend}`}>
+                                                    <div className={local.bcolTitle}>
+                                                        <div className={`${local.bctDot} ${local.pend}`}></div>
+                                                        Chờ Xử Lý
+                                                    </div>
+                                                    <div className={`${local.bcolN} ${local.pend}`}>{filteredPending.length}</div>
+                                                </div>
+                                            )}
+                                            <div className={local.inv_scrollCardsContainer} onScroll={handleLaneScroll}>
+                                                {isLoadingProjects ? (
+                                                    <KanbanSkeleton count={3} />
+                                                ) : (filteredPending.length === 0 ? (
+                                                    <div className={local.inv_emptyState}>
+                                                        <Archive size={40} className={local.inv_emptyIcon} />
+                                                        <p>{searchTerm ? 'Không tìm thấy kết quả' : 'Trống'}</p>
+                                                    </div>
+                                                ) : (
+                                                    filteredPending.map(project => (
+                                                        <ProjectKanbanCard
+                                                            key={project.projectId}
+                                                            project={project}
+                                                            status="pend"
+                                                            onDetail={() => openDetailModal(project)}
+                                                            onApprove={() => handleApproveProject(project.projectId)}
+                                                            onReject={() => handleRejectProject(project.projectId)}
+                                                            processingProjectId={processingProjectId}
+                                                            processingAction={processingAction}
+                                                        />
+                                                    ))
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Approved Column */}
+                                    {(!isMobile || activeMobileTab === 'appr') && (
+                                        <div className={`${local.inv_col} ${local.inv_scrollCol}`}>
+                                            {!isMobile && (
+                                                <div className={`${local.inv_colHead} ${local.appr}`}>
+                                                    <div className={local.bcolTitle}>
+                                                        <div className={`${local.bctDot} ${local.appr}`}></div>
+                                                        Đã Duyệt
+                                                    </div>
+                                                    <div className={`${local.bcolN} ${local.appr}`}>{filteredApproved.length}</div>
+                                                </div>
+                                            )}
+                                            <div className={local.inv_scrollCardsContainer} onScroll={handleLaneScroll}>
+                                                {isLoadingProjects ? (
+                                                    <KanbanSkeleton count={2} />
+                                                ) : (filteredApproved.length === 0 ? (
+                                                    <div className={local.inv_emptyState}>
+                                                        <Archive size={40} className={local.inv_emptyIcon} />
+                                                        <p>{searchTerm ? 'Không tìm thấy kết quả' : 'Trống'}</p>
+                                                    </div>
+                                                ) : (
+                                                    filteredApproved.map(project => (
+                                                        <ProjectKanbanCard
+                                                            key={project.projectId}
+                                                            project={project}
+                                                            status="appr"
+                                                            onDetail={() => openDetailModal(project)}
+                                                        />
+                                                    ))
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Rejected Column */}
+                                    {(!isMobile || activeMobileTab === 'rej') && (
+                                        <div className={`${local.inv_col} ${local.inv_scrollCol}`}>
+                                            {!isMobile && (
+                                                <div className={`${local.inv_colHead} ${local.rej}`}>
+                                                    <div className={local.bcolTitle}>
+                                                        <div className={`${local.bctDot} ${local.rej}`}></div>
+                                                        Từ Chối
+                                                    </div>
+                                                    <div className={`${local.bcolN} ${local.rej}`}>{filteredRejected.length}</div>
+                                                </div>
+                                            )}
+                                            <div className={local.inv_scrollCardsContainer} onScroll={handleLaneScroll}>
+                                                {isLoadingProjects ? (
+                                                    <KanbanSkeleton count={1} />
+                                                ) : (filteredRejected.length === 0 ? (
+                                                    <div className={local.inv_emptyState}>
+                                                        <Archive size={40} className={local.inv_emptyIcon} />
+                                                        <p>{searchTerm ? 'Không tìm thấy kết quả' : 'Trống'}</p>
+                                                    </div>
+                                                ) : (
+                                                    filteredRejected.map(project => (
+                                                        <ProjectKanbanCard
+                                                            key={project.projectId}
+                                                            project={project}
+                                                            status="rej"
+                                                            onDetail={() => openDetailModal(project)}
+                                                        />
+                                                    ))
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* PR Management Section (Overhauled with Subtabs and Sleek UI) */}
+                    {activeSection === 'pr_management' && (
+                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, margin: '-24px' }}>
+                            {/* Sleek Subtab Switcher */}
+                            <div className={styles.tabs} style={{ marginBottom: '8px' }}>
+                                <button
+                                    className={`${styles.tab} ${activePRTab === 'posting' ? styles.active : ''}`}
+                                    onClick={() => setActivePRTab('posting')}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                >
+                                    Đăng bài PR
+                                </button>
+                                <button
+                                    className={`${styles.tab} ${activePRTab === 'news' ? styles.active : ''}`}
+                                    onClick={() => setActivePRTab('news')}
+                                    style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                >
+                                    Tin tức
+                                    {prNewsList.length > 0 && <span className={local.newsCountBadge}>{prNewsList.length}</span>}
+                                </button>
                             </div>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                <CheckCircle size={24} color="#10b981" />
-                                <div>
-                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Sẵn sàng PR</div>
-                                    <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>
-                                        {signedDeals.filter(d => d.project).length}
+
+                            {activePRTab === 'posting' && (
+                                <div key="posting" className={styles.section} style={{ padding: '0 24px 24px 24px' }}>
+
+                                    {/* Header Stats */}
+                                    <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <Newspaper size={24} color="var(--primary-blue)" />
+                                            <div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Dự án đã ký</div>
+                                                <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-primary)' }}>{signedDeals.length}</div>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <CheckCircle size={24} color="#10b981" />
+                                            <div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Sẵn sàng PR</div>
+                                                <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>
+                                                    {signedDeals.filter(d => d.project).length}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
+
+                                    {/* Error State */}
+                                    {signedDealsError && (
+                                        <div className={local.errorWrapper} style={{ marginBottom: '20px' }}>
+                                            <EmptyState
+                                                icon={AlertCircle}
+                                                title="Lỗi tải dữ liệu"
+                                                message={signedDealsError}
+                                                isError={true}
+                                                onRetry={fetchSignedDeals}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Loading State */}
+                                    {isLoadingSignedDeals && (
+                                        <div className={styles.card}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '12px' }}>
+                                                <Loader2 size={20} className="animate-spin" />
+                                                <span style={{ color: 'var(--text-secondary)' }}>Đang tải dữ liệu...</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Empty State */}
+                                    {!isLoadingSignedDeals && signedDeals.length === 0 && (
+                                        <div className={styles.card}>
+                                            <EmptyState
+                                                icon={Archive}
+                                                title="Không có dự án"
+                                                message="Hiện không có dự án nào đã ký hợp đồng thành công. Khi có dự án được ký bởi cả 2 bên, chúng sẽ xuất hiện ở đây."
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Deals List */}
+                                    {!isLoadingSignedDeals && signedDeals.length > 0 && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                            {signedDeals
+                                                .filter(deal => {
+                                                    if (!prSearchTerm.trim()) return true;
+                                                    const search = prSearchTerm.toLowerCase();
+                                                    return (
+                                                        deal.projectName?.toLowerCase().includes(search) ||
+                                                        deal.investorName?.toLowerCase().includes(search) ||
+                                                        deal.dealId?.toString().includes(search)
+                                                    );
+                                                })
+                                                .map(deal => (
+                                                    <div key={deal.dealId} className={local.sleekCard}>
+                                                        {/* Deal Header */}
+                                                        <div className={local.sleekCardHeader}>
+                                                            <div>
+                                                                <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                                                    {deal.projectName || 'Dự án không tên'}
+                                                                </h4>
+                                                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                                    Deal #{deal.dealId}
+                                                                </p>
+                                                            </div>
+                                                            <div style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                gap: '4px',
+                                                                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                                                color: '#10b981',
+                                                                padding: '4px 12px',
+                                                                borderRadius: '12px',
+                                                                fontSize: '11px',
+                                                                fontWeight: '700',
+                                                                whiteSpace: 'nowrap'
+                                                            }}>
+                                                                <CheckCircle size={12} />
+                                                                Đã ký
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Project Info */}
+                                                        <div className={local.sleekMetaBox}>
+                                                            <div className={local.sleekMetaLabel}>Tên startup</div>
+                                                            <p style={{
+                                                                margin: 0,
+                                                                fontSize: '13px',
+                                                                color: 'var(--text-primary)',
+                                                                lineHeight: '1.4',
+                                                                display: '-webkit-box',
+                                                                WebkitLineClamp: 2,
+                                                                WebkitBoxOrient: 'vertical',
+                                                                overflow: 'hidden'
+                                                            }}>
+                                                                {deal.startupName || 'Không có tên'}
+                                                            </p>
+                                                        </div>
+
+                                                        {/* Investor & Investment Info */}
+                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                                                            <div>
+                                                                <div className={local.sleekMetaLabel}>Nhà đầu tư</div>
+                                                                <div className={local.sleekMetaValue} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                    {deal.investorName || 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div className={local.sleekMetaLabel}>Số tiền</div>
+                                                                <div className={local.sleekMetaValue}>
+                                                                    {deal.amount ? `${Number(deal.amount).toLocaleString('vi-VN')}` : 'N/A'} <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>VND</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Dates */}
+                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
+                                                            <div>
+                                                                <div className={local.sleekMetaLabel}>Ngày tạo</div>
+                                                                <div className={local.sleekMetaValue}>
+                                                                    {deal.dealDate ? new Date(deal.dealDate).toLocaleDateString('vi-VN') : 'N/A'}
+                                                                </div>
+                                                            </div>
+                                                            <div>
+                                                                <div className={local.sleekMetaLabel}>Ngày ký</div>
+                                                                <div className={local.sleekMetaValue}>
+                                                                    {deal.startupSignedAt ? new Date(deal.startupSignedAt).toLocaleDateString('vi-VN') : 'Vừa xong'}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Action Button - PR Posting */}
+                                                        <div style={{ marginTop: '4px' }}>
+                                                            <button
+                                                                className={`${local.sleekButton} ${local.sleekButtonPrimary}`}
+                                                                style={{ width: '100%' }}
+                                                                onClick={() => {
+                                                                    setSelectedDealForPR(deal);
+                                                                    setPrFormData({ title: '', content: '' });
+                                                                    setShowPRModal(true);
+                                                                }}
+                                                                disabled={isSubmittingPR || processingDealId === deal.dealId}
+                                                            >
+                                                                {processingDealId === deal.dealId ? (
+                                                                    <>
+                                                                        <Loader2 size={16} className="animate-spin" />
+                                                                        Đang xử lý...
+                                                                    </>
+                                                                ) : (
+                                                                    <>
+                                                                        <Send size={16} />
+                                                                        Đăng PR
+                                                                    </>
+                                                                )}
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
+                            )}
+
+                            {/* News Section */}
+                            {activePRTab === 'news' && (
+                                <div key="news" className={styles.section} style={{ padding: '0 24px 24px 24px' }}>
+
+                                    {/* News Header Stats */}
+                                    <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <Newspaper size={24} color="var(--primary-blue)" />
+                                            <div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng PR được đăng</div>
+                                                <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-primary)' }}>{prNewsList.length}</div>
+                                            </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <CheckCircle size={24} color="#10b981" />
+                                            <div>
+                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Đã xuất bản</div>
+                                                <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>
+                                                    {prNewsList.filter(pr => pr.publishedAt).length}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Error State */}
+                                    {prNewsError && (
+                                        <div className={local.errorWrapper} style={{ marginBottom: '20px' }}>
+                                            <EmptyState
+                                                icon={AlertCircle}
+                                                title="Lỗi tải dữ liệu"
+                                                message={prNewsError}
+                                                isError={true}
+                                                onRetry={fetchPRNews}
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* Loading State */}
+                                    {isLoadingPRNews && (
+                                        <div className={styles.card}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '12px' }}>
+                                                <Loader2 size={20} className="animate-spin" />
+                                                <span style={{ color: 'var(--text-secondary)' }}>Đang tải dữ liệu...</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Empty State */}
+                                    {!isLoadingPRNews && prNewsList.length === 0 && (
+                                        <div className={styles.card}>
+                                            <EmptyState
+                                                icon={Archive}
+                                                title="Chưa có PR được đăng"
+                                                message="Hiện chưa có bài PR nào được đăng. Hãy đăng bài PR từ tab 'Đăng bài PR'."
+                                            />
+                                        </div>
+                                    )}
+
+                                    {/* PR News List */}
+                                    {!isLoadingPRNews && prNewsList.length > 0 && (
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                            {prNewsList
+                                                .filter(pr => {
+                                                    if (!prNewsSearchTerm.trim()) return true;
+                                                    const search = prNewsSearchTerm.toLowerCase();
+                                                    return (
+                                                        pr.title?.toLowerCase().includes(search) ||
+                                                        pr.content?.toLowerCase().includes(search) ||
+                                                        pr.projectName?.toLowerCase().includes(search) ||
+                                                        pr.investorName?.toLowerCase().includes(search)
+                                                    );
+                                                })
+                                                .map(pr => (
+                                                    <div key={pr.postPrId} className={local.sleekCard}>
+                                                        {/* PR Image or Placeholder */}
+                                                        {pr.projectImage ? (
+                                                            <img
+                                                                src={pr.projectImage}
+                                                                alt={pr.projectName}
+                                                                style={{
+                                                                    width: '100%',
+                                                                    height: '180px',
+                                                                    objectFit: 'cover',
+                                                                    borderRadius: '8px'
+                                                                }}
+                                                            />
+                                                        ) : (
+                                                            <div style={{
+                                                                width: '100%',
+                                                                height: '180px',
+                                                                backgroundColor: 'var(--bg-secondary)',
+                                                                borderRadius: '8px',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                color: 'var(--text-secondary)',
+                                                                fontSize: '13px',
+                                                                border: '1px dashed var(--border-color)'
+                                                            }}>
+                                                                Tin đăng này chưa có hình ảnh đính kèm.
+                                                            </div>
+                                                        )}
+
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                            {/* PR Header */}
+                                                            <div className={local.sleekCardHeader}>
+                                                                <div style={{ flex: 1 }}>
+                                                                    <h4 className={local.sleekCardTitle} style={{ minHeight: '40px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+                                                                        {pr.title}
+                                                                    </h4>
+                                                                    <p className={local.sleekCardSubtitle} style={{ minHeight: '18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                                        {pr.projectName}
+                                                                    </p>
+                                                                </div>
+                                                                <div className={`${local.sleekBadge} ${pr.status === 'Pending' ? local.sleekBadgeWarning : local.sleekBadgeSuccess}`}>
+                                                                    {pr.status === 'Pending' ? <Clock size={12} /> : <CheckCircle size={12} />}
+                                                                    {pr.status === 'Pending' ? 'Chờ duyệt' : 'Đã xuất bản'}
+                                                                </div>
+                                                            </div>
+
+                                                            {/* PR Content Preview */}
+                                                            <p style={{
+                                                                margin: 0,
+                                                                fontSize: '13px',
+                                                                color: 'var(--text-secondary)',
+                                                                lineHeight: '1.5',
+                                                                display: '-webkit-box',
+                                                                WebkitLineClamp: 3,
+                                                                WebkitBoxOrient: 'vertical',
+                                                                overflow: 'hidden',
+                                                                height: '60px'
+                                                            }}>
+                                                                {pr.content}
+                                                            </p>
+
+                                                            {/* PR Meta Info */}
+                                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
+                                                                <div>
+                                                                    <div className={local.sleekMetaLabel}>Startup</div>
+                                                                    <div className={local.sleekMetaValue}>
+                                                                        {pr.startupName}
+                                                                    </div>
+                                                                </div>
+
+                                                                <div>
+                                                                    <div className={local.sleekMetaLabel}>Nhà đầu tư</div>
+                                                                    <div className={local.sleekMetaValue}>
+                                                                        {pr.investorName}
+                                                                    </div>
+                                                                </div>
+
+                                                                <div style={{ gridColumn: '1 / -1' }}>
+                                                                    <div className={local.sleekMetaLabel}>Ngày đăng</div>
+                                                                    <div className={local.sleekMetaValue} style={{ fontSize: '12px' }}>
+                                                                        {pr.publishedAt ? new Date(pr.publishedAt).toLocaleDateString('vi-VN') : 'Chưa xuất bản'}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Action Buttons */}
+                                                                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', marginTop: '12px' }}>
+                                                                    <button
+                                                                        onClick={() => handleOpenEditPR(pr)}
+                                                                        className={`${local.sleekButton} ${local.sleekButtonOutline}`}
+                                                                        style={{ flex: 1 }}
+                                                                    >
+                                                                        <Edit2 size={14} /> Chỉnh sửa
+                                                                    </button>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setSelectedPRForDelete(pr);
+                                                                            setShowDeletePRModal(true);
+                                                                        }}
+                                                                        disabled={processingPRId === pr.postPrId}
+                                                                        className={`${local.sleekButton} ${local.sleekButtonDanger}`}
+                                                                        style={{ flex: 1 }}
+                                                                    >
+                                                                        {processingPRId === pr.postPrId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Xóa
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
+                    )}
 
-                        {/* Error State */}
-                        {signedDealsError && (
-                            <div className={local.errorWrapper} style={{ marginBottom: '20px' }}>
-                                <EmptyState
-                                    icon={AlertCircle}
-                                    title="Lỗi tải dữ liệu"
-                                    message={signedDealsError}
-                                    isError={true}
-                                    onRetry={fetchSignedDeals}
-                                />
+
+                    {/* Booking Management Section */}
+                    {activeSection === 'bookings' && (
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
+                            <div className={styles.tabs} style={{ margin: '0 -24px 16px -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                                <button className={`${styles.tab} ${activeMobileBookingTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileBookingTab('all')}>
+                                    Tất cả
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{filterBookings(allBookings).length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileBookingTab === 'pend' ? styles.active : ''}`} onClick={() => setActiveMobileBookingTab('pend')}>
+                                    <div className={`${local.bctDot} ${local.pend}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Chờ xác nhận
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{pendingBookingsList.length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileBookingTab === 'conf' ? styles.active : ''}`} onClick={() => setActiveMobileBookingTab('conf')}>
+                                    <div className={`${local.bctDot} ${local.conf}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Đã xác nhận
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{confirmedBookingsList.length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileBookingTab === 'comp' ? styles.active : ''}`} onClick={() => setActiveMobileBookingTab('comp')}>
+                                    <div className={`${local.bctDot} ${local.comp}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Hoàn thành
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{completedBookingsList.length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileBookingTab === 'canc' ? styles.active : ''}`} onClick={() => setActiveMobileBookingTab('canc')}>
+                                    <div className={`${local.bctDot} ${local.rej}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Đã hủy
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{cancelledBookingsList.length}</span>
+                                </button>
                             </div>
-                        )}
 
-                        {/* Loading State */}
-                        {isLoadingSignedDeals && (
-                            <div className={styles.card}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '12px' }}>
-                                    <Loader2 size={20} className="animate-spin" />
-                                    <span style={{ color: 'var(--text-secondary)' }}>Đang tải dữ liệu...</span>
+                            {bookingsError ? (
+                                <div className={local.errorWrapper}>
+                                    <EmptyState
+                                        icon={AlertCircle}
+                                        title="Lỗi tải dữ liệu"
+                                        message={bookingsError}
+                                        isError={true}
+                                        onRetry={() => {
+                                            setBookingsError(null);
+                                            fetchBookings();
+                                        }}
+                                    />
                                 </div>
-                            </div>
-                        )}
+                            ) : (
+                                <div 
+                                    id="bookingScrollContainer"
+                                    onScroll={handleLaneScroll}
+                                    style={{ 
+                                        flex: 1, 
+                                        overflowY: 'auto', 
+                                        paddingRight: '4px', 
+                                        paddingBottom: '24px',
+                                        maskImage: 'linear-gradient(to bottom, transparent 0%, black var(--top-fade, 0px), black calc(100% - var(--bottom-fade, 0px)), transparent 100%)',
+                                        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black var(--top-fade, 0px), black calc(100% - var(--bottom-fade, 0px)), transparent 100%)',
+                                        transition: 'mask-image 0.2s ease, -webkit-mask-image 0.2s ease'
+                                    }}
+                                >
+                                    {isLoadingBookings ? (
+                                        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                                            <Loader2 size={24} className="animate-spin" style={{ color: 'var(--text-secondary)' }} />
+                                        </div>
+                                    ) : (
+                                        (() => {
+                                            const baseList = activeMobileBookingTab === 'pend' ? pendingBookingsList :
+                                                activeMobileBookingTab === 'conf' ? confirmedBookingsList :
+                                                activeMobileBookingTab === 'comp' ? completedBookingsList :
+                                                activeMobileBookingTab === 'canc' ? cancelledBookingsList :
+                                                filterBookings(allBookings);
+                                            
+                                            // Explicit safety sort: Newest to Oldest based on updatedAt or createdAt
+                                            const activeList = [...baseList].sort((a, b) => {
+                                                const dateB = new Date(b.updatedAt || b.createdAt || b.startTime || 0);
+                                                const dateA = new Date(a.updatedAt || a.createdAt || a.startTime || 0);
+                                                return dateB - dateA;
+                                            });
 
-                        {/* Empty State */}
-                        {!isLoadingSignedDeals && signedDeals.length === 0 && (
+                                            if (activeList.length === 0) {
+                                                return (
+                                                    <div className={local.inv_emptyState} style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
+                                                        <Archive size={40} className={local.inv_emptyIcon} />
+                                                        <p>{bookingSearchTerm ? 'Không tìm thấy kết quả phù hợp' : 'Không có booking nào'}</p>
+                                                    </div>
+                                                );
+                                            }
+
+                                            return (
+                                                <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                                    {activeList.map(booking => (
+                                                        <BookingKanbanCard
+                                                            key={booking.id}
+                                                            booking={booking}
+                                                            status={booking.status === 'Pending' ? 'pend' : booking.status === 'Confirmed' ? 'conf' : booking.status === 'Completed' ? 'comp' : 'canc'}
+                                                            onDetail={() => handleViewBookingDetails(booking.id)}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            );
+                                        })()
+                                    )}
+                                </div>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Startup Approvals Section */}
+                    {activeSection === 'approvals' && (
+                        <div className={styles.section}>
                             <div className={styles.card}>
-                                <EmptyState
-                                    icon={Archive}
-                                    title="Không có dự án"
-                                    message="Hiện không có dự án nào đã ký hợp đồng thành công. Khi có dự án được ký bởi cả 2 bên, chúng sẽ xuất hiện ở đây."
-                                />
-                            </div>
-                        )}
+                                <h3 className={styles.cardTitle}>
+                                    Phê duyệt Startup
+                                    {dashboardData.pendingApprovals > 0 && (
+                                        <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginLeft: '12px' }}>
+                                            {dashboardData.pendingApprovals} Chờ xử lý
+                                        </span>
+                                    )}
+                                </h3>
 
-                        {/* Deals List */}
-                        {!isLoadingSignedDeals && signedDeals.length > 0 && (
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-                                {signedDeals
-                                    .filter(deal => {
-                                        if (!prSearchTerm.trim()) return true;
-                                        const search = prSearchTerm.toLowerCase();
-                                        return (
-                                            deal.projectName?.toLowerCase().includes(search) ||
-                                            deal.investorName?.toLowerCase().includes(search) ||
-                                            deal.dealId?.toString().includes(search)
-                                        );
-                                    })
-                                    .map(deal => (
-                                        <div key={deal.dealId} className={local.sleekCard}>
-                                            {/* Deal Header */}
-                                            <div className={local.sleekCardHeader}>
-                                                <div>
-                                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
-                                                        {deal.projectName || 'Dự án không tên'}
+                                <div className={styles.list}>
+                                    {isLoadingStartups ? (
+                                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                            <Loader2 size={24} className={styles.spinner} style={{ margin: '0 auto 12px' }} />
+                                            <p>Đang tải dữ liệu...</p>
+                                        </div>
+                                    ) : pendingStartups.length === 0 ? (
+                                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                            <p>Chưa có yêu cầu phê duyệt Startup nào.</p>
+                                        </div>
+                                    ) : pendingStartups.map(startup => (
+                                        <div key={startup?.id || Math.random()} className={styles.listItem}>
+                                            <div className={styles.listContent} style={{ width: '100%' }}>
+                                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                                    <h4 className={styles.listTitle} style={{ margin: 0 }}>
+                                                        {startup?.companyName || startup?.name || 'Công ty khởi nghiệp'}
                                                     </h4>
-                                                    <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                                        Deal #{deal.dealId}
-                                                    </p>
+                                                    <span className={`${styles.badge} ${styles.badgePending}`}>
+                                                        {startup?.industry || 'Chưa xác định'}
+                                                    </span>
                                                 </div>
-                                                <div style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: '4px',
-                                                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                                    color: '#10b981',
-                                                    padding: '4px 12px',
-                                                    borderRadius: '12px',
-                                                    fontSize: '11px',
-                                                    fontWeight: '700',
-                                                    whiteSpace: 'nowrap'
-                                                }}>
-                                                    <CheckCircle size={12} />
-                                                    Đã ký
+                                                <div className={styles.listMeta} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                    <span>Người đại diện: {startup?.founder || startup?.representName || 'Chưa cập nhật'}</span>
+                                                    <span>Email: {startup?.email || 'Chưa cập nhật'}</span>
+                                                    <span>Ngày đăng ký: {startup?.createdAt ? new Date(startup.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</span>
                                                 </div>
                                             </div>
-
-                                            {/* Project Info */}
-                                            <div className={local.sleekMetaBox}>
-                                                <div className={local.sleekMetaLabel}>Tên startup</div>
-                                                <p style={{
-                                                    margin: 0,
-                                                    fontSize: '13px',
-                                                    color: 'var(--text-primary)',
-                                                    lineHeight: '1.4',
-                                                    display: '-webkit-box',
-                                                    WebkitLineClamp: 2,
-                                                    WebkitBoxOrient: 'vertical',
-                                                    overflow: 'hidden'
-                                                }}>
-                                                    {deal.startupName || 'Không có tên'}
-                                                </p>
-                                            </div>
-
-                                            {/* Investor & Investment Info */}
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-                                                <div>
-                                                    <div className={local.sleekMetaLabel}>Nhà đầu tư</div>
-                                                    <div className={local.sleekMetaValue} style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                        {deal.investorName || 'N/A'}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div className={local.sleekMetaLabel}>Số tiền</div>
-                                                    <div className={local.sleekMetaValue}>
-                                                        {deal.amount ? `${Number(deal.amount).toLocaleString('vi-VN')}` : 'N/A'} <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>VND</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Dates */}
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
-                                                <div>
-                                                    <div className={local.sleekMetaLabel}>Ngày tạo</div>
-                                                    <div className={local.sleekMetaValue}>
-                                                        {deal.dealDate ? new Date(deal.dealDate).toLocaleDateString('vi-VN') : 'N/A'}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <div className={local.sleekMetaLabel}>Ngày ký</div>
-                                                    <div className={local.sleekMetaValue}>
-                                                        {deal.startupSignedAt ? new Date(deal.startupSignedAt).toLocaleDateString('vi-VN') : 'Vừa xong'}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Action Button - PR Posting */}
-                                            <div style={{ marginTop: '4px' }}>
+                                            <div className={styles.listActions}>
                                                 <button
-                                                    className={`${local.sleekButton} ${local.sleekButtonPrimary}`}
-                                                    style={{ width: '100%' }}
-                                                    onClick={() => {
-                                                        setSelectedDealForPR(deal);
-                                                        setPrFormData({ title: '', content: '' });
-                                                        setShowPRModal(true);
-                                                    }}
-                                                    disabled={isSubmittingPR || processingDealId === deal.dealId}
+                                                    className={`${styles.primaryBtn} ${processingProjectId !== null ? local.btnDisabled : ''}`}
+                                                    style={{ borderRadius: '99px', padding: '6px 16px', fontSize: '13px' }}
+                                                    onClick={() => handleApproveStartup(startup?.id)}
+                                                    disabled={processingProjectId !== null}
                                                 >
-                                                    {processingDealId === deal.dealId ? (
-                                                        <>
-                                                            <Loader2 size={16} className="animate-spin" />
-                                                            Đang xử lý...
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <Send size={16} />
-                                                            Đăng PR
-                                                        </>
-                                                    )}
+                                                    Phê duyệt
+                                                </button>
+                                                <button
+                                                    className={`${styles.secondaryBtn} ${processingProjectId !== null ? local.btnDisabled : ''}`}
+                                                    style={{ borderRadius: '99px', padding: '6px 16px', fontSize: '13px', color: 'var(--staff-danger)' }}
+                                                    onClick={() => handleRejectStartup(startup?.id, null)}
+                                                    disabled={processingProjectId !== null}
+                                                >
+                                                    Từ chối
                                                 </button>
                                             </div>
                                         </div>
                                     ))}
+                                </div>
                             </div>
-                        )}
                         </div>
-                        )}
+                    )}
 
-                        {/* News Section */}
-                        {activePRTab === 'news' && (
-                        <div key="news" className={styles.section} style={{ padding: '0 24px 24px 24px' }}>
+                    {/* User Reports Section */}
+                    {activeSection === 'user_reports' && (
+                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
+                            <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-color)', width: 'fit-content', marginBottom: '12px' }}>
+                                {[
+                                    { id: 'All', label: 'Tất cả' },
+                                    { id: 'Pending', label: 'Chờ xử lý' },
+                                    { id: 'Resolved', label: 'Đã duyệt' },
+                                    { id: 'Dismissed', label: 'Từ chối' }
+                                ].map(tab => {
+                                    const count = tab.id === 'All'
+                                        ? (userReports?.length || 0)
+                                        : (userReports?.filter(r => r.status === tab.id).length || 0);
 
-                            {/* News Header Stats */}
-                            <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <Newspaper size={24} color="var(--primary-blue)" />
-                                    <div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng PR được đăng</div>
-                                        <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-primary)' }}>{prNewsList.length}</div>
-                                    </div>
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                    <CheckCircle size={24} color="#10b981" />
-                                    <div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Đã xuất bản</div>
-                                        <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>
-                                            {prNewsList.filter(pr => pr.publishedAt).length}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                                    const isActive = reportFilter === tab.id;
 
-                            {/* Error State */}
-                            {prNewsError && (
-                                <div className={local.errorWrapper} style={{ marginBottom: '20px' }}>
-                                    <EmptyState
-                                        icon={AlertCircle}
-                                        title="Lỗi tải dữ liệu"
-                                        message={prNewsError}
-                                        isError={true}
-                                        onRetry={fetchPRNews}
-                                    />
-                                </div>
-                            )}
-
-                            {/* Loading State */}
-                            {isLoadingPRNews && (
-                                <div className={styles.card}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '12px' }}>
-                                        <Loader2 size={20} className="animate-spin" />
-                                        <span style={{ color: 'var(--text-secondary)' }}>Đang tải dữ liệu...</span>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Empty State */}
-                            {!isLoadingPRNews && prNewsList.length === 0 && (
-                                <div className={styles.card}>
-                                    <EmptyState
-                                        icon={Archive}
-                                        title="Chưa có PR được đăng"
-                                        message="Hiện chưa có bài PR nào được đăng. Hãy đăng bài PR từ tab 'Đăng bài PR'."
-                                    />
-                                </div>
-                            )}
-
-                            {/* PR News List */}
-                            {!isLoadingPRNews && prNewsList.length > 0 && (
-                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-                                    {prNewsList
-                                        .filter(pr => {
-                                            if (!prNewsSearchTerm.trim()) return true;
-                                            const search = prNewsSearchTerm.toLowerCase();
-                                            return (
-                                                pr.title?.toLowerCase().includes(search) ||
-                                                pr.content?.toLowerCase().includes(search) ||
-                                                pr.projectName?.toLowerCase().includes(search) ||
-                                                pr.investorName?.toLowerCase().includes(search)
-                                            );
-                                        })
-                                        .map(pr => (
-                                            <div key={pr.postPrId} className={local.sleekCard}>
-                                                {/* PR Image or Placeholder */}
-                                                {pr.projectImage ? (
-                                                    <img
-                                                        src={pr.projectImage}
-                                                        alt={pr.projectName}
-                                                        style={{
-                                                            width: '100%',
-                                                            height: '180px',
-                                                            objectFit: 'cover',
-                                                            borderRadius: '8px'
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <div style={{
-                                                        width: '100%',
-                                                        height: '180px',
-                                                        backgroundColor: 'var(--bg-secondary)',
-                                                        borderRadius: '8px',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        color: 'var(--text-secondary)',
-                                                        fontSize: '13px',
-                                                        border: '1px dashed var(--border-color)'
-                                                    }}>
-                                                        Tin đăng này chưa có hình ảnh đính kèm.
-                                                    </div>
-                                                )}
-
-                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                    {/* PR Header */}
-                                                    <div className={local.sleekCardHeader}>
-                                                        <div style={{ flex: 1 }}>
-                                                            <h4 className={local.sleekCardTitle} style={{ minHeight: '40px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                                {pr.title}
-                                                            </h4>
-                                                            <p className={local.sleekCardSubtitle} style={{ minHeight: '18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                                {pr.projectName}
-                                                            </p>
-                                                        </div>
-                                                        <div className={`${local.sleekBadge} ${pr.status === 'Pending' ? local.sleekBadgeWarning : local.sleekBadgeSuccess}`}>
-                                                            {pr.status === 'Pending' ? <Clock size={12} /> : <CheckCircle size={12} />}
-                                                            {pr.status === 'Pending' ? 'Chờ duyệt' : 'Đã xuất bản'}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* PR Content Preview */}
-                                                    <p style={{
-                                                        margin: 0,
-                                                        fontSize: '13px',
-                                                        color: 'var(--text-secondary)',
-                                                        lineHeight: '1.5',
-                                                        display: '-webkit-box',
-                                                        WebkitLineClamp: 3,
-                                                        WebkitBoxOrient: 'vertical',
-                                                        overflow: 'hidden',
-                                                        height: '60px'
-                                                    }}>
-                                                        {pr.content}
-                                                    </p>
-
-                                                    {/* PR Meta Info */}
-                                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
-                                                        <div>
-                                                            <div className={local.sleekMetaLabel}>Startup</div>
-                                                            <div className={local.sleekMetaValue}>
-                                                                {pr.startupName}
-                                                            </div>
-                                                        </div>
-
-                                                        <div>
-                                                            <div className={local.sleekMetaLabel}>Nhà đầu tư</div>
-                                                            <div className={local.sleekMetaValue}>
-                                                                {pr.investorName}
-                                                            </div>
-                                                        </div>
-
-                                                        <div style={{ gridColumn: '1 / -1' }}>
-                                                            <div className={local.sleekMetaLabel}>Ngày đăng</div>
-                                                            <div className={local.sleekMetaValue} style={{ fontSize: '12px' }}>
-                                                                {pr.publishedAt ? new Date(pr.publishedAt).toLocaleDateString('vi-VN') : 'Chưa xuất bản'}
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Action Buttons */}
-                                                        <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', marginTop: '12px' }}>
-                                                            <button
-                                                                onClick={() => handleOpenEditPR(pr)}
-                                                                className={`${local.sleekButton} ${local.sleekButtonOutline}`}
-                                                                style={{ flex: 1 }}
-                                                            >
-                                                                <Edit2 size={14} /> Chỉnh sửa
-                                                            </button>
-                                                            <button
-                                                                onClick={() => {
-                                                                    setSelectedPRForDelete(pr);
-                                                                    setShowDeletePRModal(true);
-                                                                }}
-                                                                disabled={processingPRId === pr.postPrId}
-                                                                className={`${local.sleekButton} ${local.sleekButtonDanger}`}
-                                                                style={{ flex: 1 }}
-                                                            >
-                                                                {processingPRId === pr.postPrId ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Xóa
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                </div>
-                            )}
-                        </div>
-                        )}
-                    </div>
-                )}
-
-
-                {/* Booking Management Section */}
-                {activeSection === 'bookings' && (
-                    <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, gap: 0 }}>
-
-                        {/* Mobile Tab Switcher for Bookings */}
-                        {isMobile && (
-                            <div className={local.tabSwitcherWrapper}>
-                                {showLeftTabIndicator && <div className={`${local.scrollIndicator} ${local.scrollIndicatorLeft}`} />}
-                                <div
-                                    className={local.mobileTabSwitcher}
-                                    data-tabs="4"
-                                    ref={tabSwitcherRef}
-                                    onScroll={checkTabScroll}
-                                >
-                                    <button
-                                        className={`${local.mobileTab} ${activeMobileBookingTab === 'pend' ? local.activeMobileTab : ''}`}
-                                        onClick={() => setActiveMobileBookingTab('pend')}
-                                        data-status="pend"
-                                    >
-                                        <div className={`${local.bctDot} ${local.pend}`}></div>
-                                        <span>Chờ xác nhận</span>
-                                        <span className={local.mobileTabCount}>{pendingBookingsList.length}</span>
-                                    </button>
-                                    <button
-                                        className={`${local.mobileTab} ${activeMobileBookingTab === 'conf' ? local.activeMobileTab : ''}`}
-                                        onClick={() => setActiveMobileBookingTab('conf')}
-                                        data-status="conf"
-                                    >
-                                        <div className={`${local.bctDot} ${local.conf}`}></div>
-                                        <span>Đã xác nhận</span>
-                                        <span className={local.mobileTabCount}>{confirmedBookingsList.length}</span>
-                                    </button>
-                                    <button
-                                        className={`${local.mobileTab} ${activeMobileBookingTab === 'comp' ? local.activeMobileTab : ''}`}
-                                        onClick={() => setActiveMobileBookingTab('comp')}
-                                        data-status="comp"
-                                    >
-                                        <div className={`${local.bctDot} ${local.comp}`}></div>
-                                        <span>Hoàn thành</span>
-                                        <span className={local.mobileTabCount}>{completedBookingsList.length}</span>
-                                    </button>
-                                    <button
-                                        className={`${local.mobileTab} ${activeMobileBookingTab === 'canc' ? local.activeMobileTab : ''}`}
-                                        onClick={() => setActiveMobileBookingTab('canc')}
-                                        data-status="rej"
-                                    >
-                                        <div className={`${local.bctDot} ${local.rej}`}></div>
-                                        <span>Đã hủy</span>
-                                        <span className={local.mobileTabCount}>{cancelledBookingsList.length}</span>
-                                    </button>
-                                </div>
-                                {showRightTabIndicator && <div className={`${local.scrollIndicator} ${local.scrollIndicatorRight}`} />}
-                            </div>
-                        )}
-
-                        {bookingsError ? (
-                            <div className={local.errorWrapper}>
-                                <EmptyState
-                                    icon={AlertCircle}
-                                    title="Lỗi tải dữ liệu"
-                                    message={bookingsError}
-                                    isError={true}
-                                    onRetry={() => {
-                                        setBookingsError(null);
-                                        fetchBookings();
-                                    }}
-                                />
-                            </div>
-                        ) : (
-                            <div className={local.boardGrid} style={{
-                                gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)',
-                                minHeight: isMobile ? 'auto' : 'calc(100vh - 150px)',
-                                overflowX: isMobile ? 'hidden' : 'auto',
-                                margin: isMobile ? '0' : '-24px -24px -84px -24px'
-                            }}>
-                                {/* Pending Bookings Column */}
-                                {(!isMobile || activeMobileBookingTab === 'pend') && (
-                                    <div className={local.bcol}>
-                                        {!isMobile && (
-                                            <div className={`${local.bcolHead} ${local.pend}`}>
-                                                <div className={local.bcolTitle}>
-                                                    <div className={`${local.bctDot} ${local.pend}`}></div>
-                                                    Chờ xác nhận
-                                                </div>
-                                                <div className={`${local.bcolN} ${local.pend}`}>{pendingBookingsList.length}</div>
-                                            </div>
-                                        )}
-                                        <div className={local.bcolCards}>
-                                            {isLoadingBookings ? (
-                                                <KanbanSkeleton count={3} />
-                                            ) : (pendingBookingsList.length === 0 ? (
-                                                <EmptyState
-                                                    icon={bookingSearchTerm ? Search : Archive}
-                                                    title={bookingSearchTerm ? "Không tìm thấy" : "Trống"}
-                                                    message={bookingSearchTerm ? `Không tìm thấy booking nào khớp với "${bookingSearchTerm}"` : 'Không có booking chờ xác nhận'}
-                                                />
-                                            ) : (
-                                                pendingBookingsList.map(booking => (
-                                                    <BookingKanbanCard
-                                                        key={booking.id}
-                                                        booking={booking}
-                                                        status="pend"
-                                                        onDetail={() => handleViewBookingDetails(booking.id)}
-                                                    />
-                                                ))
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Confirmed Bookings Column */}
-                                {(!isMobile || activeMobileBookingTab === 'conf') && (
-                                    <div className={local.bcol}>
-                                        {!isMobile && (
-                                            <div className={`${local.bcolHead} ${local.conf}`}>
-                                                <div className={local.bcolTitle}>
-                                                    <div className={`${local.bctDot} ${local.conf}`}></div>
-                                                    Đã xác nhận
-                                                </div>
-                                                <div className={`${local.bcolN} ${local.conf}`}>{confirmedBookingsList.length}</div>
-                                            </div>
-                                        )}
-                                        <div className={local.bcolCards}>
-                                            {isLoadingBookings ? (
-                                                <KanbanSkeleton count={2} />
-                                            ) : (confirmedBookingsList.length === 0 ? (
-                                                <EmptyState
-                                                    icon={bookingSearchTerm ? Search : Archive}
-                                                    title={bookingSearchTerm ? "Không tìm thấy" : "Trống"}
-                                                    message={bookingSearchTerm ? `Không tìm thấy booking nào khớp with "${bookingSearchTerm}"` : 'Chưa có booking nào được xác nhận'}
-                                                />
-                                            ) : (
-                                                confirmedBookingsList.map(booking => (
-                                                    <BookingKanbanCard
-                                                        key={booking.id}
-                                                        booking={booking}
-                                                        status="conf"
-                                                        onDetail={() => handleViewBookingDetails(booking.id)}
-                                                    />
-                                                ))
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Completed Bookings Column */}
-                                {(!isMobile || activeMobileBookingTab === 'comp') && (
-                                    <div className={local.bcol}>
-                                        {!isMobile && (
-                                            <div className={`${local.bcolHead} ${local.comp}`}>
-                                                <div className={local.bcolTitle}>
-                                                    <div className={`${local.bctDot} ${local.comp}`}></div>
-                                                    Hoàn thành
-                                                </div>
-                                                <div className={`${local.bcolN} ${local.comp}`}>{completedBookingsList.length}</div>
-                                            </div>
-                                        )}
-                                        <div className={local.bcolCards}>
-                                            {isLoadingBookings ? (
-                                                <KanbanSkeleton count={4} />
-                                            ) : (completedBookingsList.length === 0 ? (
-                                                <EmptyState
-                                                    icon={bookingSearchTerm ? Search : Archive}
-                                                    title={bookingSearchTerm ? "Không tìm thấy" : "Trống"}
-                                                    message={bookingSearchTerm ? `Không tìm thấy booking nào khớp with "${bookingSearchTerm}"` : 'Chưa có booking nào hoàn thành'}
-                                                />
-                                            ) : (
-                                                completedBookingsList.map(booking => (
-                                                    <BookingKanbanCard
-                                                        key={booking.id}
-                                                        booking={booking}
-                                                        status="comp"
-                                                        onDetail={() => handleViewBookingDetails(booking.id)}
-                                                    />
-                                                ))
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Cancelled Bookings Column */}
-                                {(!isMobile || activeMobileBookingTab === 'canc') && (
-                                    <div className={local.bcol}>
-                                        {!isMobile && (
-                                            <div className={`${local.bcolHead} ${local.rej}`}>
-                                                <div className={local.bcolTitle}>
-                                                    <div className={`${local.bctDot} ${local.rej}`}></div>
-                                                    Đã hủy
-                                                </div>
-                                                <div className={`${local.bcolN} ${local.rej}`}>{cancelledBookingsList.length}</div>
-                                            </div>
-                                        )}
-                                        <div className={local.bcolCards}>
-                                            {isLoadingBookings ? (
-                                                <KanbanSkeleton count={1} />
-                                            ) : (cancelledBookingsList.length === 0 ? (
-                                                <EmptyState
-                                                    icon={bookingSearchTerm ? Search : Archive}
-                                                    title={bookingSearchTerm ? "Không tìm thấy" : "Trống"}
-                                                    message={bookingSearchTerm ? `Không tìm thấy booking nào khớp with "${bookingSearchTerm}"` : 'Không có booking nào bị hủy'}
-                                                />
-                                            ) : (
-                                                cancelledBookingsList.map(booking => (
-                                                    <BookingKanbanCard
-                                                        key={booking.id}
-                                                        booking={booking}
-                                                        status="canc"
-                                                        onDetail={() => handleViewBookingDetails(booking.id)}
-                                                    />
-                                                ))
-                                            ))}
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-                )}
-
-                {/* Startup Approvals Section */}
-                {activeSection === 'approvals' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>
-                                Phê duyệt Startup
-                                {dashboardData.pendingApprovals > 0 && (
-                                    <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginLeft: '12px' }}>
-                                        {dashboardData.pendingApprovals} Chờ xử lý
-                                    </span>
-                                )}
-                            </h3>
-
-                            <div className={styles.list}>
-                                {isLoadingStartups ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                        <Loader2 size={24} className={styles.spinner} style={{ margin: '0 auto 12px' }} />
-                                        <p>Đang tải dữ liệu...</p>
-                                    </div>
-                                ) : pendingStartups.length === 0 ? (
-                                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                        <p>Chưa có yêu cầu phê duyệt Startup nào.</p>
-                                    </div>
-                                ) : pendingStartups.map(startup => (
-                                    <div key={startup?.id || Math.random()} className={styles.listItem}>
-                                        <div className={styles.listContent} style={{ width: '100%' }}>
-                                            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                                <h4 className={styles.listTitle} style={{ margin: 0 }}>
-                                                    {startup?.companyName || startup?.name || 'Công ty khởi nghiệp'}
-                                                </h4>
-                                                <span className={`${styles.badge} ${styles.badgePending}`}>
-                                                    {startup?.industry || 'Chưa xác định'}
+                                    return (
+                                        <button
+                                            key={tab.id}
+                                            onClick={() => setReportFilter(tab.id)}
+                                            style={{
+                                                padding: '8px 16px',
+                                                borderRadius: '8px',
+                                                border: 'none',
+                                                background: isActive ? 'var(--bg-primary)' : 'transparent',
+                                                color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
+                                                fontWeight: isActive ? '800' : '500',
+                                                cursor: 'pointer',
+                                                boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
+                                                transition: 'all 0.2s',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                gap: '8px'
+                                            }}
+                                        >
+                                            {tab.label}
+                                            {count > 0 && (
+                                                <span style={{
+                                                    fontSize: '10px',
+                                                    fontWeight: '800',
+                                                    padding: '1px 6px',
+                                                    borderRadius: '6px',
+                                                    background: isActive ? 'var(--primary-blue)' : 'rgba(255,255,255,0.08)',
+                                                    color: isActive ? 'white' : 'var(--text-secondary)',
+                                                    transition: 'all 0.2s'
+                                                }}>
+                                                    {count}
                                                 </span>
-                                            </div>
-                                            <div className={styles.listMeta} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                <span>Người đại diện: {startup?.founder || startup?.representName || 'Chưa cập nhật'}</span>
-                                                <span>Email: {startup?.email || 'Chưa cập nhật'}</span>
-                                                <span>Ngày đăng ký: {startup?.createdAt ? new Date(startup.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</span>
-                                            </div>
-                                        </div>
-                                        <div className={styles.listActions}>
-                                            <button
-                                                className={`${styles.primaryBtn} ${processingProjectId !== null ? local.btnDisabled : ''}`}
-                                                style={{ borderRadius: '99px', padding: '6px 16px', fontSize: '13px' }}
-                                                onClick={() => handleApproveStartup(startup?.id)}
-                                                disabled={processingProjectId !== null}
-                                            >
-                                                Phê duyệt
-                                            </button>
-                                            <button
-                                                className={`${styles.secondaryBtn} ${processingProjectId !== null ? local.btnDisabled : ''}`}
-                                                style={{ borderRadius: '99px', padding: '6px 16px', fontSize: '13px', color: 'var(--staff-danger)' }}
-                                                onClick={() => handleRejectStartup(startup?.id, null)}
-                                                disabled={processingProjectId !== null}
-                                            >
-                                                Từ chối
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                                            )}
+                                        </button>
+                                    );
+                                })}
                             </div>
-                        </div>
-                    </div>
-                )}
 
-                {/* User Reports Section */}
-                {activeSection === 'user_reports' && (
-                    <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
-                        <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-color)', width: 'fit-content', marginBottom: '12px' }}>
-                            {[
-                                { id: 'All', label: 'Tất cả' },
-                                { id: 'Pending', label: 'Chờ xử lý' },
-                                { id: 'Resolved', label: 'Đã duyệt' },
-                                { id: 'Dismissed', label: 'Từ chối' }
-                            ].map(tab => {
-                                const count = tab.id === 'All'
-                                    ? (userReports?.length || 0)
-                                    : (userReports?.filter(r => r.status === tab.id).length || 0);
-
-                                const isActive = reportFilter === tab.id;
-
-                                return (
-                                    <button
-                                        key={tab.id}
-                                        onClick={() => setReportFilter(tab.id)}
-                                        style={{
-                                            padding: '8px 16px',
-                                            borderRadius: '8px',
-                                            border: 'none',
-                                            background: isActive ? 'var(--bg-primary)' : 'transparent',
-                                            color: isActive ? 'var(--text-primary)' : 'var(--text-secondary)',
-                                            fontWeight: isActive ? '800' : '500',
-                                            cursor: 'pointer',
-                                            boxShadow: isActive ? '0 2px 8px rgba(0,0,0,0.1)' : 'none',
-                                            transition: 'all 0.2s',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px'
-                                        }}
-                                    >
-                                        {tab.label}
-                                        {count > 0 && (
-                                            <span style={{
-                                                fontSize: '10px',
-                                                fontWeight: '800',
-                                                padding: '1px 6px',
-                                                borderRadius: '6px',
-                                                background: isActive ? 'var(--primary-blue)' : 'rgba(255,255,255,0.08)',
-                                                color: isActive ? 'white' : 'var(--text-secondary)',
-                                                transition: 'all 0.2s'
-                                            }}>
-                                                {count}
-                                            </span>
-                                        )}
-                                    </button>
-                                );
-                            })}
-                        </div>
-
-                        {isLoadingUserReports ? (
-                            <div style={{ padding: '60px', textAlign: 'center' }}>
-                                <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 16px', color: 'var(--primary-blue)' }} />
-                                <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Đang tải danh sách báo cáo...</p>
-                            </div>
-                        ) : (userReportsError || !Array.isArray(userReports)) ? (
-                            <div style={{ padding: '60px' }}>
-                                <EmptyState icon={AlertCircle} title="Lỗi" message={userReportsError || "Không thể tải danh sách báo cáo"} onRetry={fetchUserReports} isError />
-                            </div>
-                        ) : filteredUserReports.length === 0 ? (
-                            <div style={{ padding: '60px' }}>
-                                <EmptyState
-                                    icon={searchTerm ? Search : Shield}
-                                    title={searchTerm ? "Không tìm thấy" : "Trống"}
-                                    message={searchTerm ? `Không tìm thấy báo cáo nào khớp với "${searchTerm}"` : "Hiện không có báo cáo vi phạm nào trong danh mục này."}
-                                />
-                            </div>
-                        ) : (
-                            <div className={local.reportGrid}>
-                                {filteredUserReports.map(report => (
-                                    <UserReportCard
-                                        key={report.userReportId}
-                                        report={report}
-                                        onResolve={handleResolveReport}
-                                        isProcessing={processingProjectId === report.userReportId}
+                            {isLoadingUserReports ? (
+                                <div style={{ padding: '60px', textAlign: 'center' }}>
+                                    <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 16px', color: 'var(--primary-blue)' }} />
+                                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Đang tải danh sách báo cáo...</p>
+                                </div>
+                            ) : (userReportsError || !Array.isArray(userReports)) ? (
+                                <div style={{ padding: '60px' }}>
+                                    <EmptyState icon={AlertCircle} title="Lỗi" message={userReportsError || "Không thể tải danh sách báo cáo"} onRetry={fetchUserReports} isError />
+                                </div>
+                            ) : filteredUserReports.length === 0 ? (
+                                <div style={{ padding: '60px' }}>
+                                    <EmptyState
+                                        icon={searchTerm ? Search : Shield}
+                                        title={searchTerm ? "Không tìm thấy" : "Trống"}
+                                        message={searchTerm ? `Không tìm thấy báo cáo nào khớp với "${searchTerm}"` : "Hiện không có báo cáo vi phạm nào trong danh mục này."}
                                     />
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
+                                </div>
+                            ) : (
+                                <div className={local.reportGrid}>
+                                    {filteredUserReports.map(report => (
+                                        <UserReportCard
+                                            key={report.userReportId}
+                                            report={report}
+                                            onResolve={handleResolveReport}
+                                            isProcessing={processingProjectId === report.userReportId}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
 
-                {/* Advisor Approvals Section */}
-                {activeSection === 'advisor_approval' && (
-                    <div className={styles.section} style={{ padding: 0, gap: 0, background: 'transparent', boxShadow: 'none' }}>
-                        <AdvisorApprovalPage />
-                    </div>
-                )}
+                    {/* Advisor Approvals Section */}
+                    {activeSection === 'advisor_approval' && (
+                        <div className={styles.section} style={{ padding: 0, gap: 0, background: 'transparent', boxShadow: 'none', flex: 1, minHeight: 0 }}>
+                            <AdvisorApprovalPage />
+                        </div>
+                    )}
 
-                {/* Activity Monitor Section */}
-                {activeSection === 'activity' && (
-                    <div className={styles.section}>
-                        <div className={styles.card}>
-                            <h3 className={styles.cardTitle}>Giám sát hoạt động nền tảng</h3>
-                            <div className={styles.metricsGrid}>
-                                <div className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>Tổng đăng nhập hôm nay</span>
-                                    <strong className={styles.metricValue}>0</strong>
-                                </div>
-                                <div className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>Tài liệu đã tải lên</span>
-                                    <strong className={styles.metricValue}>0</strong>
-                                </div>
-                                <div className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>Kết nối mới</span>
-                                    <strong className={styles.metricValue}>0</strong>
-                                </div>
-                                <div className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>Yêu cầu tư vấn</span>
-                                    <strong className={styles.metricValue}>0</strong>
-                                </div>
-                                <div className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>Lỗi hệ thống</span>
-                                    <strong className={styles.metricValue}>0</strong>
-                                </div>
-                                <div className={styles.metricItem}>
-                                    <span className={styles.metricLabel}>Vấn đề bị đánh dấu</span>
-                                    <strong className={styles.metricValue}>0</strong>
+                    {/* Activity Monitor Section */}
+                    {activeSection === 'activity' && (
+                        <div className={styles.section}>
+                            <div className={styles.card}>
+                                <h3 className={styles.cardTitle}>Giám sát hoạt động nền tảng</h3>
+                                <div className={styles.metricsGrid}>
+                                    <div className={styles.metricItem}>
+                                        <span className={styles.metricLabel}>Tổng đăng nhập hôm nay</span>
+                                        <strong className={styles.metricValue}>0</strong>
+                                    </div>
+                                    <div className={styles.metricItem}>
+                                        <span className={styles.metricLabel}>Tài liệu đã tải lên</span>
+                                        <strong className={styles.metricValue}>0</strong>
+                                    </div>
+                                    <div className={styles.metricItem}>
+                                        <span className={styles.metricLabel}>Kết nối mới</span>
+                                        <strong className={styles.metricValue}>0</strong>
+                                    </div>
+                                    <div className={styles.metricItem}>
+                                        <span className={styles.metricLabel}>Yêu cầu tư vấn</span>
+                                        <strong className={styles.metricValue}>0</strong>
+                                    </div>
+                                    <div className={styles.metricItem}>
+                                        <span className={styles.metricLabel}>Lỗi hệ thống</span>
+                                        <strong className={styles.metricValue}>0</strong>
+                                    </div>
+                                    <div className={styles.metricItem}>
+                                        <span className={styles.metricLabel}>Vấn đề bị đánh dấu</span>
+                                        <strong className={styles.metricValue}>0</strong>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {activeSection === 'package_management' && (
-                    <div className={styles.section} style={{ padding: 0, gap: 0, margin: '-24px' }}>
-                        <PackageManagement searchTerm={subscriptionSearchTerm} />
-                    </div>
-                )}
+                    {activeSection === 'package_management' && (
+                        <div className={styles.section} style={{ padding: 0, gap: 0, margin: '-24px' }}>
+                            <PackageManagement searchTerm={subscriptionSearchTerm} />
+                        </div>
+                    )}
 
-                {activeSection === 'subscription_history' && (
-                    <div className={styles.section} style={{ padding: 0, gap: 0, margin: '-24px' }}>
-                        <GlobalSubscriptionHistory searchTerm={subscriptionSearchTerm} />
-                    </div>
-                )}
-            </div>
+                    {activeSection === 'subscription_history' && (
+                        <div className={styles.section} style={{ padding: 0, gap: 0, margin: '-24px' }}>
+                            <GlobalSubscriptionHistory searchTerm={subscriptionSearchTerm} />
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* PR Posting Modal */}
@@ -2828,7 +2796,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                                 <X size={24} />
                             </button>
                         </div>
-                        
+
                         <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', gap: '24px' }}>
                             {/* Deal Information Summary */}
                             <div style={{
@@ -2994,7 +2962,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                                 <Trash2 size={48} color="#ef4444" />
                             </div>
                             <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '15px', lineHeight: '1.5' }}>
-                                Bạn có chắc muốn xóa bài PR <strong style={{color: 'var(--text-primary)'}}>"{selectedPRForDelete.title}"</strong>? Hành động này không thể hoàn tác.
+                                Bạn có chắc muốn xóa bài PR <strong style={{ color: 'var(--text-primary)' }}>"{selectedPRForDelete.title}"</strong>? Hành động này không thể hoàn tác.
                             </p>
                         </div>
 
@@ -3076,48 +3044,48 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                         </div>
                         <div style={{ padding: '24px', overflowY: 'auto', flex: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
 
-                        <div style={{ marginBottom: '20px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>Tiêu đề</label>
-                            <input
-                                type="text"
-                                value={editTitle}
-                                onChange={(e) => setEditTitle(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px 12px',
-                                    border: '1px solid var(--border-color)',
-                                    backgroundColor: 'var(--bg-secondary)',
-                                    borderRadius: '6px',
-                                    fontSize: '14px',
-                                    color: 'var(--text-primary)',
-                                    fontFamily: 'inherit',
-                                    boxSizing: 'border-box'
-                                }}
-                                placeholder="Nhập tiêu đề bài PR"
-                            />
-                        </div>
+                            <div style={{ marginBottom: '20px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>Tiêu đề</label>
+                                <input
+                                    type="text"
+                                    value={editTitle}
+                                    onChange={(e) => setEditTitle(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 12px',
+                                        border: '1px solid var(--border-color)',
+                                        backgroundColor: 'var(--bg-secondary)',
+                                        borderRadius: '6px',
+                                        fontSize: '14px',
+                                        color: 'var(--text-primary)',
+                                        fontFamily: 'inherit',
+                                        boxSizing: 'border-box'
+                                    }}
+                                    placeholder="Nhập tiêu đề bài PR"
+                                />
+                            </div>
 
-                        <div style={{ marginBottom: '0px' }}>
-                            <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>Nội dung</label>
-                            <textarea
-                                value={editContent}
-                                onChange={(e) => setEditContent(e.target.value)}
-                                style={{
-                                    width: '100%',
-                                    padding: '10px 12px',
-                                    border: '1px solid var(--border-color)',
-                                    backgroundColor: 'var(--bg-secondary)',
-                                    borderRadius: '6px',
-                                    fontSize: '14px',
-                                    color: 'var(--text-primary)',
-                                    fontFamily: 'inherit',
-                                    minHeight: '150px',
-                                    boxSizing: 'border-box',
-                                    resize: 'vertical'
-                                }}
-                                placeholder="Nhập nội dung bài PR"
-                            />
-                        </div>
+                            <div style={{ marginBottom: '0px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: 'var(--text-primary)' }}>Nội dung</label>
+                                <textarea
+                                    value={editContent}
+                                    onChange={(e) => setEditContent(e.target.value)}
+                                    style={{
+                                        width: '100%',
+                                        padding: '10px 12px',
+                                        border: '1px solid var(--border-color)',
+                                        backgroundColor: 'var(--bg-secondary)',
+                                        borderRadius: '6px',
+                                        fontSize: '14px',
+                                        color: 'var(--text-primary)',
+                                        fontFamily: 'inherit',
+                                        minHeight: '150px',
+                                        boxSizing: 'border-box',
+                                        resize: 'vertical'
+                                    }}
+                                    placeholder="Nhập nội dung bài PR"
+                                />
+                            </div>
 
                         </div>
                         <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: 'var(--bg-secondary)', borderRadius: '0 0 16px 16px' }}>
@@ -3696,67 +3664,74 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
             {/* Investor Detail Modal */}
             {showInvestorDetailModal && selectedInvestor && (
-                <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && setShowInvestorDetailModal(false)}>
-                    <div className={styles.modalContent} style={{ maxWidth: '600px', width: '92%' }}>
-                        <div className={local.staffModalHeader}>
+                <div className={styles.modalOverlay} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }} onClick={(e) => e.target === e.currentTarget && setShowInvestorDetailModal(false)}>
+                    <div className={`${styles.modalContent} ${local.inv_autoModalContent}`} style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                        <div className={local.staffModalHeader} style={{ background: 'var(--bg-secondary)' }}>
                             <div className={local.staffModalTitleGrp}>
                                 <h2 className={local.staffModalTitleText}>Chi tiết Nhà đầu tư</h2>
-                                <span className={local.bookingBadgeConfirmed} style={{ background: 'rgba(29, 155, 240, 0.1)', color: 'var(--primary-blue)', width: 'fit-content' }}>
-                                    Mã: {selectedInvestor.investorId}
+                                <span className={local.bookingBadgeConfirmed} style={{ background: 'rgba(29, 155, 240, 0.1)', color: 'var(--primary-blue)', width: 'fit-content', border: 'none', borderRadius: '6px' }}>
+                                    ID: {selectedInvestor.investorId}
                                 </span>
                             </div>
                             <button onClick={() => setShowInvestorDetailModal(false)} className={local.staffModalCloseBtn}>
-                                <X size={24} />
+                                <X size={20} />
                             </button>
                         </div>
-                        <div style={{ padding: '24px', overflowY: 'auto' }}>
-                            <div style={{ display: 'grid', gap: '20px' }}>
+                        <div className={local.inv_modalCompactBody} style={{ maxHeight: '70vh', overflowY: 'auto' }}>
+                            <div className={local.inv_detailGrid}>
                                 <div>
-                                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Tên tổ chức/Cá nhân</label>
-                                    <p style={{ fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.organizationName || selectedInvestor.userFullName}</p>
+                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Tên tổ chức / Cá nhân</label>
+                                    <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.organizationName || selectedInvestor.userFullName}</p>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
                                     <div>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Email</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.userEmail || '-'}</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Email</label>
+                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', fontWeight: '500' }}>{selectedInvestor.userEmail || '-'}</p>
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Số điện thoại</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.phoneNumber || '-'}</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Số điện thoại</label>
+                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', fontWeight: '500' }}>{selectedInvestor.phoneNumber || '-'}</p>
                                     </div>
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Khẩu vị đầu tư</label>
-                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', lineHeight: 1.5 }}>{selectedInvestor.investmentTaste || '-'}</p>
                                 </div>
                                 <div>
-                                    <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Lĩnh vực quan tâm</label>
-                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.focusIndustry || '-'}</p>
+                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Khẩu vị đầu tư</label>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', lineHeight: 1.6 }}>{selectedInvestor.investmentTaste || '-'}</p>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                <div>
+                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Lĩnh vực quan tâm</label>
+                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
+                                        {selectedInvestor.focusIndustry?.split(',').map((industry, id) => (
+                                            <span key={id} className={local.btag} style={{ background: 'rgba(29, 155, 240, 0.08)', color: 'var(--primary-blue)', padding: '2px 10px', borderRadius: '4px', fontSize: '11px' }}>
+                                                {industry.trim()}
+                                            </span>
+                                        )) || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                    </div>
+                                </div>
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
                                     <div>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Số tiền đầu tư tối thiểu</label>
-                                        <p style={{ fontSize: '14px', fontWeight: '700', color: '#10b981', margin: '4px 0 0 0' }}>{selectedInvestor.minInvestment ? Number(selectedInvestor.minInvestment).toLocaleString() : '0'} ₫</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Ngân sách tối thiểu</label>
+                                        <p style={{ fontSize: '15px', fontWeight: '800', color: '#10b981', margin: '4px 0 0 0' }}>{selectedInvestor.minInvestment ? Number(selectedInvestor.minInvestment).toLocaleString() : '0'} ₫</p>
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Số tiền đầu tư tối đa</label>
-                                        <p style={{ fontSize: '14px', fontWeight: '700', color: '#10b981', margin: '4px 0 0 0' }}>{selectedInvestor.maxInvestment ? Number(selectedInvestor.maxInvestment).toLocaleString() : 'Không giới hạn'} ₫</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Ngân sách tối đa</label>
+                                        <p style={{ fontSize: '15px', fontWeight: '800', color: '#10b981', margin: '4px 0 0 0' }}>{selectedInvestor.maxInvestment ? Number(selectedInvestor.maxInvestment).toLocaleString() : 'Không giới hạn'} ₫</p>
                                     </div>
                                 </div>
-                                {selectedInvestor.approvalStatus === 'Rejected' && selectedInvestor.rejectionReason && (
-                                    <div style={{ padding: '12px', backgroundColor: 'rgba(244, 33, 46, 0.05)', borderRadius: '8px', border: '1px solid rgba(244, 33, 46, 0.1)' }}>
-                                        <label style={{ fontSize: '11px', color: '#f4212e', textTransform: 'uppercase', fontWeight: '700' }}>Lý do từ chối</label>
-                                        <p style={{ fontSize: '13px', color: '#f4212e', margin: '4px 0 0 0' }}>{selectedInvestor.rejectionReason}</p>
+                                {(selectedInvestor.status || selectedInvestor.approvalStatus) === 'Rejected' && selectedInvestor.rejectionReason && (
+                                    <div style={{ padding: '16px', backgroundColor: 'rgba(244, 33, 46, 0.05)', borderRadius: '12px', border: '1px solid rgba(244, 33, 46, 0.1)', marginTop: '8px' }}>
+                                        <label style={{ fontSize: '11px', color: '#f4212e', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Lý do từ chối</label>
+                                        <p style={{ fontSize: '13px', color: '#f4212e', margin: '4px 0 0 0', lineHeight: 1.5 }}>{selectedInvestor.rejectionReason}</p>
                                     </div>
                                 )}
                             </div>
                         </div>
-                        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', backgroundColor: 'var(--bg-secondary)', borderRadius: '0 0 16px 16px' }}>
-                            <button onClick={() => setShowInvestorDetailModal(false)} className={styles.secondaryBtn}>Đóng</button>
+                        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', backgroundColor: 'var(--bg-secondary)' }}>
+                            <button onClick={() => setShowInvestorDetailModal(false)} className={local.modalSecondaryBtn} style={{ padding: '8px 24px', borderRadius: '99px', height: '40px' }}>Đóng</button>
                         </div>
                     </div>
                 </div>
             )}
+
 
             {/* Global PR News Section */}
             {activeSection === 'pr_news' && (

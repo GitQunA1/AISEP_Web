@@ -202,7 +202,7 @@ function ProfileTab({ user }) {
                     location: profile.location || '',
                     hourlyRate: profile.hourlyRate || '',
                     rating: profile.rating || 0,
-                    approvalStatus: profile.approvalStatus || 'Pending',
+                    approvalStatus: profile.status || profile.approvalStatus || 'Pending',
                     profileImage: profile.profileImage || ''
                 });
                 console.log('[ADVISOR PROFILE] FormData set successfully');
@@ -347,7 +347,7 @@ function ProfileTab({ user }) {
                                 <label>Trạng Thái Phê Duyệt</label>
                                 <input
                                     type="text"
-                                    value={formData.approvalStatus || 'Pending'}
+                                    value={formData.status || formData.approvalStatus || 'Pending'}
                                     disabled
                                     style={{ backgroundColor: '#f3f4f6' }}
                                 />

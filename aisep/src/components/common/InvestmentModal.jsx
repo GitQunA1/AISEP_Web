@@ -130,6 +130,7 @@ const InvestmentModal = ({
       }, 2000);
     } catch (err) {
       console.error('[InvestmentModal] Error creating deal:', err);
+      
       setError(
         err.response?.data?.message || 
         err.message || 

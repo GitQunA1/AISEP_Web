@@ -98,7 +98,7 @@ apiClient.interceptors.response.use(
         : error.message?.includes('Network Error') || error.code === 'ERR_NETWORK'
           ? 'Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng và thử lại.'
           : translateMessage(error.message || 'Đã xảy ra lỗi không xác định.'),
-      errors: responseData?.errors || [],
+      errors: responseData?.errors || (Array.isArray(responseData) ? responseData : []),
       statusCode: error.response?.status,
     };
 

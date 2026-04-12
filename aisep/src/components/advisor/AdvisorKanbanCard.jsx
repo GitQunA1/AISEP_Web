@@ -2,13 +2,15 @@ import React from 'react';
 import { ArrowRight, CheckCircle, XCircle, Loader2, MapPin, Globe, Award, DollarSign } from 'lucide-react';
 import local from './AdvisorApprovalPage.module.css';
 
+import staffLocal from '../../styles/OperationStaffDashboard.module.css';
+
 /**
  * AdvisorKanbanCard - Single card for the Advisor Approval Kanban board
  */
 const AdvisorKanbanCard = ({ advisor, status, onDetail, onApprove, onReject, processingId, processingAction }) => {
-    const isPending = status === 'Pending';
-    const isApproved = status === 'Approved';
-    const isRejected = status === 'Rejected';
+    const isPending = status === 'pend';
+    const isApproved = status === 'appr';
+    const isRejected = status === 'rej';
 
     // Format hourly rate
     const formatPrice = (price) => {
@@ -16,8 +18,8 @@ const AdvisorKanbanCard = ({ advisor, status, onDetail, onApprove, onReject, pro
     };
 
     return (
-        <div className={local.bcard}>
-            <div className={`${local.bcardStrip} ${local[status.toLowerCase()]}`}></div>
+        <div className={staffLocal.inv_card}>
+            <div className={`${staffLocal.inv_cardStrip} ${staffLocal[status]}`}></div>
             <div className={local.bcardBody}>
                 <div className={local.bcardRow1}>
                     <div className={local.bcardMainInfo}>
@@ -32,7 +34,7 @@ const AdvisorKanbanCard = ({ advisor, status, onDetail, onApprove, onReject, pro
                         )}
                     </div>
                     <div className={local.bcardTime}>
-                        {advisor?.createdAt ? new Date(advisor.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
+                        {advisor?.createdAt ? new Date(advisor.createdAt).toLocaleDateString('vi-VN') : null}
                     </div>
                 </div>
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock, Heart, MessageSquare, TrendingUpIcon, MessageCircle, CheckCheck, AlertTriangle, HeartOff, Star, Briefcase } from 'lucide-react';
+import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock, Heart, MessageSquare, TrendingUpIcon, MessageCircle, CheckCheck, AlertTriangle, HeartOff, Star, Briefcase, ChevronRight } from 'lucide-react';
 import Badge from '../common/Badge';
 import InvestmentModal from '../common/InvestmentModal';
 import styles from './StartupCard.module.css';
@@ -11,7 +11,7 @@ import dealsService from '../../services/dealsService';
  * StartupCard Component - "Visual Priority (Concept C)"
  * Clean, full-width data density
  */
-function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), investors = [], onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false, isInvestorApproved = false }) {
+function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), investors = [], onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false, isInvestorApproved = false, myStartupProfileId = null }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
@@ -228,8 +228,17 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
   const roleNum = Number(user?.role);
   const isBypassRole = roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 3 || roleNum === 2;
 
+  const isUnlocked = isBypassRole || startup.isUnlockedByCurrentUser || (myStartupProfileId && startup.startupId === myStartupProfileId);
+  
   const PremiumLock = () => {
     if (isBypassRole) return <div style={{ fontSize: '15px' }}>—</div>;
+    if (isUnlocked) {
+      return (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px', fontWeight: 'bold', color: 'var(--primary-blue)', background: 'rgba(45, 126, 255, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
+          Xem chi tiết <ChevronRight size={12} strokeWidth={2.5} />
+        </div>
+      );
+    }
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px', fontWeight: 'bold', color: '#ffad1f', background: 'rgba(255, 173, 31, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
         <Lock size={12} strokeWidth={2.5} /> {isPaidUser ? 'Mở khóa ngay' : 'Premium'}
@@ -239,6 +248,13 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
 
   const PremiumLockText = () => {
     if (isBypassRole) return <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>—</span>;
+    if (isUnlocked) {
+      return (
+        <span style={{ color: 'var(--primary-blue)', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+          Xem chi tiết <ChevronRight size={12} strokeWidth={2.5} />
+        </span>
+      );
+    }
     return (
       <span style={{ color: '#ffad1f', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
         <Lock size={12} strokeWidth={2.5} /> {isPaidUser ? 'Mở khóa ngay' : 'Yêu cầu Premium'}
@@ -505,7 +521,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
                 }
                 if (!hasRequested) setShowRequestModal(true);
               }}
-              disabled={hasRequested}
+              disabled={hasRequested || !isInvestorApproved}
               className={`${styles.pillButton} ${hasRequested ? styles.btnRequested : styles.btnRequest} ${!isInvestorApproved ? styles.btnDisabled : ''}`}
             >
               <div className={styles.btnInner}>
@@ -556,6 +572,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
                   }
                   setShowInvestmentModal(true);
                 }}
+                disabled={!isInvestorApproved}
                 className={`${styles.pillButton} ${styles.btnInvest} ${!isInvestorApproved ? styles.btnDisabled : ''}`}
               >
                 <DollarSign size={18} />
