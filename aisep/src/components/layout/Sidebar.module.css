@@ -396,12 +396,14 @@
    ========================================= */
 @media (max-width: 1439px) and (min-width: 1024px) {
   .sidebar {
-    padding: 24px 12px;
+    padding: 24px 0;
+    /* Centralize all contents */
+    width: 80px !important;
   }
 
   .sidebarHeader {
     justify-content: center;
-    padding-left: 0;
+    padding: 0 0 20px 0;
   }
 
   .logo span {
@@ -412,9 +414,25 @@
     justify-content: center;
   }
 
+  .menuScrollArea {
+    padding: 0;
+    /* Remove horizontal padding to center icons */
+    overflow-y: auto;
+    /* Use auto instead of scroll to hide track when empty */
+  }
+
+  .menuScrollArea::-webkit-scrollbar {
+    width: 0px;
+    /* Hide scrollbar entirely on narrow view for cleaner look */
+    background: transparent;
+  }
+
   .navItem {
     justify-content: center;
     padding: 12px;
+    margin: 0 auto;
+    width: 48px;
+    /* Standard icon button size */
   }
 
   .navItem span {
@@ -429,6 +447,13 @@
   .themeToggle {
     justify-content: center;
     padding: 12px;
+    margin: 0 auto;
+    width: 48px;
+  }
+
+  .footerSection {
+    padding: 20px 0 24px 0;
+    align-items: center;
   }
 
   .profileSection {
@@ -437,6 +462,8 @@
     border: none;
     flex-direction: column;
     gap: 12px;
+    width: 48px;
+    margin: 0 auto;
   }
 
   .profileInfo {
@@ -445,6 +472,7 @@
 
   .logoutButton {
     display: flex;
+    justify-content: center;
   }
 
   .profileDisplay {
@@ -454,26 +482,34 @@
 
   .authSection {
     align-items: center;
+    width: 100%;
   }
 
   .signInBtn,
   .registerBtn {
     padding: 0;
-    width: 48px;
-    height: 48px;
+    width: 44px;
+    height: 44px;
     border-radius: 50%;
     display: flex;
     justify-content: center;
     align-items: center;
     background-color: transparent !important;
-    border: 1px solid var(--primary-blue) !important;
-    color: var(--primary-blue) !important;
+    border: 1px solid var(--border-color) !important;
+    color: var(--text-primary) !important;
     overflow: hidden;
+    margin: 0 auto;
+  }
+
+  .registerBtn {
+    background-color: var(--primary-blue) !important;
+    border-color: var(--primary-blue) !important;
+    color: white !important;
   }
 
   .authIcon {
     display: block !important;
-    color: var(--primary-blue) !important;
+    color: inherit !important;
   }
 
   .btnText {
@@ -514,7 +550,11 @@
   }
 
   .nav {
-    display: none;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 20px;
+    width: 100%;
   }
 
   /* The "Open" State */

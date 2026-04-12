@@ -748,8 +748,16 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
             }
         } catch (error) {
             console.error('[InvestorDashboard] Failed to save profile:', error);
-            const msg = error?.response?.data?.message || 'Không thể lưu hồ sơ. Vui lòng thử lại sau.';
-            alert(`Lỗi: ${msg}`);
+            
+            // apiClient normalized error contains .message and .errors
+            let errorMsg = error.message || 'Không thể lưu hồ sơ. Vui lòng thử lại sau.';
+            
+            // If backend returned a list of validation errors (array of strings)
+            if (error.errors && Array.isArray(error.errors) && error.errors.length > 0) {
+                errorMsg = error.errors.join('\n');
+            }
+            
+            alert(`Lỗi:\n${errorMsg}`);
         } finally {
             setIsUpdatingPrefs(false);
         }
@@ -812,7 +820,7 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                         }}
                     />
                     <InvestorStatusBanner
-                        status={investorProfile ? (investorProfile.approvalStatus || 'Pending') : (isLoading ? null : 'Missing')}
+                        status={investorProfile ? (investorProfile.status || 'Pending') : (isLoading ? null : 'Missing')}
                         reason={investorProfile?.rejectionReason}
                         onUpdateProfile={() => setActiveSection('preferences')}
                     />
@@ -1750,7 +1758,7 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                     <NewsPRSection user={user} onOpenChat={(sessionId) => {
                         setActiveChatSession({ chatSessionId: sessionId, displayName: 'Thông báo', currentUserId: user?.userId, sentTime: new Date().toISOString() });
                     }} 
-                    investorProfileStatus={investorProfile ? (investorProfile.approvalStatus || 'Pending') : (isLoading ? null : 'Missing')}
+                    investorProfileStatus={investorProfile ? (investorProfile.status || 'Pending') : (isLoading ? null : 'Missing')}
                     investorProfileReason={investorProfile?.rejectionReason}
                     onUpdateProfile={() => setActiveSection('preferences')}
                     />

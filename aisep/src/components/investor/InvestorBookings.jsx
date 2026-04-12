@@ -64,7 +64,7 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
             setBookings(items);
 
             if (profileRes) {
-                setInvestorProfileStatus(profileRes.approvalStatus || 'Pending');
+                setInvestorProfileStatus(profileRes.status || profileRes.approvalStatus || 'Pending');
                 setInvestorProfileReason(profileRes.rejectionReason);
             } else {
                 setInvestorProfileStatus('Missing');

@@ -79,33 +79,18 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                 {/* Main Content */}
                 <div className={styles.modalBody}>
                     {isLoading && (
-                        <div style={{ textAlign: 'center', padding: '40px 20px' }}>
-                            <div style={{
-                                display: 'inline-block',
-                                width: '24px',
-                                height: '24px',
-                                borderRadius: '50%',
-                                border: '3px solid #e5e7eb',
-                                borderTopColor: '#1d9bf0',
-                                animation: 'spin 0.8s linear infinite'
-                            }} />
-                            <p style={{ marginTop: '12px', color: '#666' }}>Đang xác minh...</p>
+                        <div className={styles.loadingContainer}>
+                            <div className={styles.loadingSpinner} />
+                            <p className={styles.loadingText}>Đang xác minh...</p>
                         </div>
                     )}
 
                     {error && (
-                        <div style={{
-                            backgroundColor: '#fee',
-                            border: '1px solid #fcc',
-                            borderRadius: '8px',
-                            padding: '16px',
-                            display: 'flex',
-                            gap: '12px'
-                        }}>
-                            <AlertCircle size={20} style={{ color: '#f4212e', flexShrink: 0, marginTop: '2px' }} />
+                        <div className={styles.errorBox}>
+                            <AlertCircle size={20} style={{ color: 'var(--score-poor)', flexShrink: 0, marginTop: '2px' }} />
                             <div>
-                                <div style={{ fontWeight: '600', color: '#f4212e' }}>Lỗi xác minh</div>
-                                <div style={{ fontSize: '14px', color: '#999' }}>{error}</div>
+                                <div className={styles.errorTitle}>Lỗi xác minh</div>
+                                <div className={styles.errorText}>{error}</div>
                             </div>
                         </div>
                     )}
@@ -129,23 +114,13 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                                 gap: '12px',
                                 marginBottom: '20px'
                             }}>
-                                <div style={{
-                                    backgroundColor: '#f9f9f9',
-                                    border: '1px solid #e5e7eb',
-                                    borderRadius: '8px',
-                                    padding: '12px'
-                                }}>
-                                    <div style={{ fontSize: '11px', color: '#999', fontWeight: '600' }}>Tổng tài liệu</div>
-                                    <div style={{ fontSize: '20px', fontWeight: '700', marginTop: '4px' }}>{totalDocs}</div>
+                                <div className={styles.infoItem}>
+                                    <div className={styles.infoLabel}>Tổng tài liệu</div>
+                                    <div className={styles.infoValue}>{totalDocs}</div>
                                 </div>
-                                <div style={{
-                                    backgroundColor: '#f9f9f9',
-                                    border: '1px solid #e5e7eb',
-                                    borderRadius: '8px',
-                                    padding: '12px'
-                                }}>
-                                    <div style={{ fontSize: '11px', color: '#999', fontWeight: '600' }}>Đã xác minh</div>
-                                    <div style={{ fontSize: '20px', fontWeight: '700', marginTop: '4px', color: '#10b981' }}>{verifiedDocs}</div>
+                                <div className={styles.infoItem}>
+                                    <div className={styles.infoLabel}>Đã xác minh</div>
+                                    <div className={`${styles.infoValue}`} style={{ color: 'var(--score-good)' }}>{verifiedDocs}</div>
                                 </div>
                             </div>
 
@@ -192,13 +167,7 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                             {timestamp && (
                                 <div className={styles.section}>
                                     <h3 className={styles.sectionTitle}>Thời gian xác thực</h3>
-                                    <div style={{
-                                        backgroundColor: '#f9f9f9',
-                                        border: '1px solid #e5e7eb',
-                                        borderRadius: '8px',
-                                        padding: '12px',
-                                        fontSize: '14px'
-                                    }}>
+                                    <div className={styles.infoItem} style={{ fontSize: '14px' }}>
                                         {new Date(timestamp).toLocaleString('vi-VN')}
                                     </div>
                                 </div>
@@ -209,17 +178,7 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
 
                 {/* Info Box - Guide */}
                 {!isLoading && !error && txHash && (
-                    <div style={{
-                        backgroundColor: '#f0f7ff',
-                        border: '1px solid #bae6fd',
-                        borderRadius: '8px',
-                        padding: '12px',
-                        marginBottom: '16px',
-                        display: 'flex',
-                        gap: '12px',
-                        fontSize: '13px',
-                        color: '#0369a1'
-                    }}>
+                    <div className={styles.guideBox}>
                         <span style={{ fontSize: '18px', flexShrink: 0 }}>ℹ️</span>
                         <div>
                             <strong>Hướng dẫn:</strong> Bạn có thể copy mã giao dịch (TX Hash) ở trên và kiểm tra chi tiết trên{' '}
@@ -227,12 +186,7 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                                 href="https://sepolia.etherscan.io/" 
                                 target="_blank" 
                                 rel="noopener noreferrer"
-                                style={{
-                                    color: '#0369a1',
-                                    textDecoration: 'underline',
-                                    cursor: 'pointer',
-                                    fontWeight: '600'
-                                }}
+                                className={styles.guideLink}
                             >
                                 Sepolia Etherscan
                             </a>

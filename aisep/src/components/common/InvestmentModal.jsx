@@ -131,21 +131,11 @@ const InvestmentModal = ({
     } catch (err) {
       console.error('[InvestmentModal] Error creating deal:', err);
       
-      // ⚠️ TẠMTHỜI: Comment ràng buộc kiểm tra profile completeness
-      // Để test chức năng đầu tư mà không cần hoàn thiện hồ sơ
-      // setError(
-      //   err.response?.data?.message || 
-      //   err.message || 
-      //   'Không thể tạo đơn đầu tư. Vui lòng thử lại.'
-      // );
-      
-      // Bỏ qua lỗi và treat as success cho testing
-      console.warn('[InvestmentModal] ⚠️ TẠMTHỜI: Bỏ qua lỗi profile (đang test)', err.message);
-      setSuccessMessage('Đầu tư thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
-      setTimeout(() => {
-        handleClose();
-        onSuccess?.();
-      }, 2000);
+      setError(
+        err.response?.data?.message || 
+        err.message || 
+        'Không thể tạo đơn đầu tư. Vui lòng thử lại.'
+      );
     } finally {
       setIsLoading(false);
     }

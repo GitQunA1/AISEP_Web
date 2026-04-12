@@ -3,6 +3,7 @@ import { X, ChevronLeft, ChevronRight, Check, AlertCircle, Loader, Calendar, Clo
 import bookingService from '../../services/bookingService';
 import advisorAvailabilityService from '../../services/advisorAvailabilityService';
 import advisorService from '../../services/advisorService';
+import commissionService from '../../services/commissionService';
 import SlotPicker from './SlotPicker';
 import PaymentModal from './PaymentModal';
 import styles from './BookingWizard.module.css';
@@ -49,6 +50,8 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdBooking, setCreatedBooking] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [commissionPercent, setCommissionPercent] = useState(null);
+  const [isLoadingComm, setIsLoadingComm] = useState(false);
 
   // Auto-advance if initial data is provided
   useEffect(() => {
@@ -244,6 +247,26 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
     };
     load();
   }, [step, selectedAdvisor]);
+  
+  // ── Load Commission Rate on Confirmation Step ──────────────────────────
+  useEffect(() => {
+    if (step === 3 && commissionPercent === null) {
+      const loadComm = async () => {
+        setIsLoadingComm(true);
+        try {
+          const res = await commissionService.getCurrentCommission();
+          const data = res?.data || res;
+          setCommissionPercent(data?.percent ?? 0);
+        } catch (err) {
+          console.error("Failed to load commission rate", err);
+          setCommissionPercent(0); 
+        } finally {
+          setIsLoadingComm(false);
+        }
+      };
+      loadComm();
+    }
+  }, [step, commissionPercent]);
 
   // ── Validation slots ────────────────────────────────────────────────────
   const validateSlots = useCallback((selectedIds) => {
@@ -711,7 +734,7 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
                   <CreditCard size={16} className={styles.summaryIcon} />
                   <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div>
-                      <div className={styles.summaryLabel}>Chi phí ước tính</div>
+                      <div className={styles.summaryLabel}>Tổng thanh toán</div>
                       {!isFreeBooking && adv.hourlyRate && (
                         <div className={styles.summaryMeta}>
                           {Number(adv.hourlyRate).toLocaleString('vi-VN')} VNĐ/giờ × {selectedSlots.length} giờ
@@ -728,6 +751,28 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
                       </span>
                     )}
                   </div>
+                </div>
+
+                {!isFreeBooking && commissionPercent !== null && (
+                  <div className={styles.pricingBreakdown}>
+                    <div className={styles.breakdownRow}>
+                      <span className={styles.breakdownLabel}>Thanh toán thực tế cho Cố vấn</span>
+                      <span className={styles.breakdownValue}>
+                        {formatPrice(estimatedPrice * (1 - commissionPercent / 100))}
+                      </span>
+                    </div>
+                    <div className={styles.breakdownRow}>
+                      <span className={styles.breakdownLabel}>Phí nền tảng AISEP ({commissionPercent}%)</span>
+                      <span className={styles.breakdownValue}>
+                        {formatPrice(estimatedPrice * (commissionPercent / 100))}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                <div className={styles.commissionNotice}>
+                  <AlertCircle size={14} style={{ flexShrink: 0 }} />
+                  <span>Chỉ số hoa hồng này là cuối cùng và sẽ có hiệu lực với lượt đặt cố vấn này của bạn cho đến khi hoàn thành quá trình tư vấn.</span>
                 </div>
 
                 {note && (

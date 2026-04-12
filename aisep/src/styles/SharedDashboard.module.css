@@ -72,7 +72,8 @@
 @media (max-width: 1023px) {
     .container {
         min-height: auto;
-        padding-bottom: 120px; /* Increased for mobile BottomNav and extra breathing room */
+        padding-bottom: 120px;
+        /* Increased for mobile BottomNav and extra breathing room */
     }
 
     .pageHeader {
@@ -390,6 +391,7 @@
         opacity: 0;
         transform: scale(0.96) translateY(10px);
     }
+
     100% {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -1064,7 +1066,8 @@
     justify-content: center;
     z-index: 10000;
     padding: 20px;
-    overflow: hidden; /* Prevent overlay scroll to favor internal scroll */
+    overflow: hidden;
+    /* Prevent overlay scroll to favor internal scroll */
 }
 
 /* Unified Modal Content */
@@ -1073,21 +1076,24 @@
     border-radius: 24px;
     width: 95%;
     max-width: 1200px;
-    height: 90vh; /* Constrain desktop height */
+    height: 90vh;
+    /* Constrain desktop height */
     max-height: 1000px;
     display: flex;
     flex-direction: column;
     box-shadow: 0 20px 80px rgba(0, 0, 0, 0.6);
     animation: zoomIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
     border: 1px solid var(--border-color);
-    overflow: hidden; /* Lock modal frame */
+    overflow: hidden;
+    /* Lock modal frame */
     position: relative;
 }
 
 .modalSplitWrapper {
     display: flex;
     flex: 1;
-    overflow: hidden; /* Lock wrapper */
+    overflow: hidden;
+    /* Lock wrapper */
     min-height: 0;
 }
 
@@ -1095,12 +1101,16 @@
     flex: 1;
     display: flex;
     flex-direction: column;
-    overflow-y: auto; /* Enable desktop scroll */
+    overflow-y: auto;
+    /* Enable desktop scroll */
     background-color: var(--bg-primary);
     min-height: 0;
-    overscroll-behavior: contain; /* Prevent scroll leakage to background */
-    -webkit-overflow-scrolling: touch; /* Inertial scrolling for iOS */
-    touch-action: pan-y; /* Ensure vertical swipes are captured */
+    overscroll-behavior: contain;
+    /* Prevent scroll leakage to background */
+    -webkit-overflow-scrolling: touch;
+    /* Inertial scrolling for iOS */
+    touch-action: pan-y;
+    /* Ensure vertical swipes are captured */
 }
 
 /* Modal Desktop Header - RESTORATION */
@@ -1219,9 +1229,11 @@
     }
 
     .modalSplitWrapper {
-        flex: 1 1 0% !important; /* Explicitly tell flex to fill available space and allow scrolling */
+        flex: 1 1 0% !important;
+        /* Explicitly tell flex to fill available space and allow scrolling */
         min-height: 0 !important;
-        overflow-y: auto !important; /* Move scroll here */
+        overflow-y: auto !important;
+        /* Move scroll here */
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
         display: block !important;
@@ -1235,7 +1247,8 @@
     .modalSplitContentArea {
         display: block !important;
         height: auto !important;
-        overflow: visible !important; /* No longer the scroll container */
+        overflow: visible !important;
+        /* No longer the scroll container */
         padding: 0 !important;
     }
 
@@ -3210,7 +3223,7 @@
     border-radius: 50%;
     background: linear-gradient(135deg, var(--primary-blue), #7c3aed);
     display: flex;
-    align-items: center; 
+    align-items: center;
     justify-content: center;
     color: #fff;
     font-weight: 800;
@@ -3277,13 +3290,17 @@
     flex-wrap: nowrap;
     align-items: center;
     overflow-x: auto;
-    scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE/Edge */
-    padding-bottom: 4px; /* Tiny breathing room for scroll */
+    scrollbar-width: none;
+    /* Firefox */
+    -ms-overflow-style: none;
+    /* IE/Edge */
+    padding-bottom: 4px;
+    /* Tiny breathing room for scroll */
 }
 
 .xActions::-webkit-scrollbar {
-    display: none; /* Hide scrollbar for Chrome/Safari/Brave */
+    display: none;
+    /* Hide scrollbar for Chrome/Safari/Brave */
 }
 
 .xActionButton {
@@ -3335,21 +3352,26 @@
         padding: 12px !important;
         gap: 12px !important;
     }
+
     .xAvatar {
         width: 40px !important;
         height: 40px !important;
         font-size: 16px !important;
     }
+
     .xProjectName {
         font-size: 14px !important;
     }
+
     .xMetaRow {
         font-size: 12.5px !important;
     }
+
     .xActions {
         gap: 8px !important;
         margin-top: 8px !important;
     }
+
     .xActionButton {
         padding: 10px 12px !important;
         font-size: 12px !important;
@@ -3384,9 +3406,11 @@
         gap: 12px;
         margin-bottom: 24px;
     }
+
     .xStatCard {
         padding: 16px;
     }
+
     .xStatValue {
         font-size: 24px;
     }
@@ -3397,14 +3421,17 @@
         grid-template-columns: repeat(2, 1fr);
         gap: 8px;
     }
+
     .xStatCard {
         padding: 12px;
         gap: 4px;
         border-radius: 10px;
     }
+
     .xStatLabel {
         font-size: 11px;
     }
+
     .xStatValue {
         font-size: 20px;
     }
@@ -3445,7 +3472,8 @@
     justify-content: space-between;
     gap: 16px;
     margin-bottom: 24px;
-    flex-wrap: nowrap; /* Prevent forcing wrap if possible */
+    flex-wrap: nowrap;
+    /* Prevent forcing wrap if possible */
     padding: 10px;
     background: rgba(255, 255, 255, 0.02);
     border-radius: 12px;
@@ -3552,10 +3580,12 @@
         grid-template-columns: repeat(2, 1fr);
         gap: 12px;
     }
+
     .xToolbar {
         flex-direction: column;
         align-items: stretch;
     }
+
     .xSearchBox {
         max-width: none;
     }
@@ -3632,9 +3662,11 @@
         margin-bottom: 20px;
         gap: 12px;
     }
+
     .xHeaderTitle {
         font-size: 18px;
     }
+
     .xHeaderSubtitle {
         font-size: 12px;
     }
@@ -3642,8 +3674,13 @@
 
 
 @keyframes xSpinAnim {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 /* ============================================================= */
@@ -3912,91 +3949,90 @@
 /* GLOBAL ONBOARDING / STATUS BANNER      */
 /* â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */
 .onboardingBanner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 20px;
-  padding: 18px 32px;
-  background: var(--bg-secondary);
-  border-bottom: 1px solid var(--border-color);
-  border-left: 5px solid var(--primary-blue);
-  margin: 0;
-  position: relative;
-  overflow: hidden;
-  animation: slideDownBanner 0.6s cubic-bezier(0.16, 1, 0.3, 1);
-  width: 100%;
-  box-sizing: border-box;
-  z-index: 40;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    padding: 18px 32px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-color);
+    border-left: 5px solid var(--primary-blue);
+    margin: 0;
+    position: relative;
+    overflow: hidden;
+    animation: slideDownBanner 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    width: 100%;
+    box-sizing: border-box;
+    z-index: 40;
 }
 
 .onboardingBanner::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgba(29, 155, 240, 0.08) 0%, transparent 60%);
-  pointer-events: none;
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, rgba(29, 155, 240, 0.08) 0%, transparent 60%);
+    pointer-events: none;
 }
 
 .bannerPending {
-  border-left-color: #f59e0b;
+    border-left-color: #f59e0b;
 }
 
 .bannerPending::before {
-  background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, transparent 60%);
+    background: linear-gradient(90deg, rgba(245, 158, 11, 0.08) 0%, transparent 60%);
 }
 
 .bannerRejected {
-  border-left-color: #ef4444;
+    border-left-color: #ef4444;
 }
 
 .bannerRejected::before {
-  background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, transparent 60%);
+    background: linear-gradient(90deg, rgba(239, 68, 68, 0.08) 0%, transparent 60%);
 }
 
 .bannerActionBtn {
-  background-color: var(--primary-blue);
-  color: white;
-  border: none;
-  font-weight: 700;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 12px rgba(29, 155, 240, 0.2);
+    background-color: var(--primary-blue);
+    color: white;
+    border: none;
+    font-weight: 700;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 12px rgba(29, 155, 240, 0.2);
 }
 
 .bannerActionBtn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(29, 155, 240, 0.3);
-  background-color: #1a8cd8;
+    transform: translateY(-1px);
+    box-shadow: 0 6px 16px rgba(29, 155, 240, 0.3);
+    background-color: #1a8cd8;
 }
 
 @keyframes slideDownBanner {
-  from {
-    opacity: 0;
-    transform: translateY(-16px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+    from {
+        opacity: 0;
+        transform: translateY(-16px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 @media (max-width: 1024px) {
-  .onboardingBanner {
-    padding: 16px 24px;
-  }
+    .onboardingBanner {
+        padding: 16px 24px;
+    }
 }
 
 @media (max-width: 768px) {
-  .onboardingBanner {
-    flex-direction: column;
-    align-items: flex-start;
-    padding: 20px 20px;
-    gap: 16px;
-  }
-  
-  .bannerActionBtn {
-    width: 100%;
-    justify-content: center;
-  }
-}
+    .onboardingBanner {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 20px 20px;
+        gap: 16px;
+    }
 
-
+    .bannerActionBtn {
+        width: 100%;
+        justify-content: center;
+    }
+}
