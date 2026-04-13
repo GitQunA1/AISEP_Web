@@ -20,6 +20,7 @@ import AdvisorApprovalPage from '../components/advisor/AdvisorApprovalPage';
 import PackageManagement from '../components/staff/PackageManagement';
 import GlobalSubscriptionHistory from '../components/staff/GlobalSubscriptionHistory';
 import WithdrawManagement from '../components/staff/WithdrawManagement';
+import PayoutManagement from '../components/staff/PayoutManagement';
 import CommissionManagement from '../components/staff/CommissionManagement';
 import NewsPRSection from '../components/common/NewsPRSection';
 
@@ -481,6 +482,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
     const [selectedHistoryResult, setSelectedHistoryResult] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [withdrawSearchTerm, setWithdrawSearchTerm] = useState('');
+    const [payoutSearchTerm, setPayoutSearchTerm] = useState('');
     const [commissionSearchTerm, setCommissionSearchTerm] = useState('');
     const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
     const [reportFilter, setReportFilter] = useState('Pending'); // 'All', 'Pending', 'Resolved', 'Dismissed'
@@ -578,8 +580,8 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
     // Mobile States
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-    const [activeMobileTab, setActiveMobileTab] = useState('pend'); // 'pend', 'appr', 'rej'
-    const [activeMobileInvTab, setActiveMobileInvTab] = useState('pend'); // 'pend', 'apr', 'rej'
+    const [activeMobileTab, setActiveMobileTab] = useState('all'); // 'all', 'pend', 'appr', 'rej'
+    const [activeMobileInvTab, setActiveMobileInvTab] = useState('all'); // 'all', 'pend', 'apr', 'rej'
 
     useEffect(() => {
         const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -597,33 +599,9 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [isLoadingBookingDetail, setIsLoadingBookingDetail] = useState(false);
 
-    // Handle Scroll for Kanban Lanes (Faded effect)
-    const handleLaneScroll = (e) => {
-        const { scrollTop, scrollHeight, clientHeight } = e.target;
-        const topFade = Math.min(scrollTop, 40);
-        const bottomFade = Math.min(scrollHeight - scrollTop - clientHeight, 40);
 
-        e.target.style.setProperty('--top-fade', `${topFade}px`);
-        e.target.style.setProperty('--bottom-fade', `${bottomFade}px`);
-    };
 
-    // Initialize fades on mount or when section changes to investor_approval
-    useEffect(() => {
-        if (activeSection === 'investor_approval' || activeSection === 'bookings') {
-            // Wait for DOM to render
-            setTimeout(() => {
-                const selector = activeSection === 'investor_approval' ? `.${local.inv_scrollCardsContainer}` : '#bookingScrollContainer';
-                const containers = document.querySelectorAll(selector);
-                containers.forEach(el => {
-                    const { scrollTop, scrollHeight, clientHeight } = el;
-                    const topFade = Math.min(scrollTop, 40);
-                    const bottomFade = Math.min(scrollHeight - scrollTop - clientHeight, 40);
-                    el.style.setProperty('--top-fade', `${topFade}px`);
-                    el.style.setProperty('--bottom-fade', `${bottomFade}px`);
-                });
-            }, 100);
-        }
-    }, [activeSection, pendingInvestors, approvedInvestors, rejectedInvestors, allBookings, activeMobileInvTab, activeMobileBookingTab, isMobile]);
+
 
     const getSectionTitle = (section) => {
         switch (section) {
@@ -1377,8 +1355,8 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
     const filteredRejected = filterProjects(rejectedProjects);
 
     return (
-        <div className={styles.container} style={{ 
-            paddingBottom: isMobile ? '120px' : '24px',
+        <div className={styles.container} style={{
+            paddingBottom: '16px',
             minHeight: isMobile ? '100dvh' : '100vh',
             height: isMobile ? '100dvh' : '100vh',
             display: 'flex',
@@ -1470,6 +1448,11 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                     {activeSection === 'withdrawals' && (
                         <div className={styles.section}>
                             <WithdrawManagement searchTerm={withdrawSearchTerm} />
+                        </div>
+                    )}
+                    {activeSection === 'payouts' && (
+                        <div className={styles.section}>
+                            <PayoutManagement searchTerm={payoutSearchTerm} />
                         </div>
                     )}
                     {activeSection === 'commission' && (
@@ -1759,62 +1742,131 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                         </div>
                     )}
 
-                    {activeSection === 'investor_approval' && (
-                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, gap: 0, flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                            {/* Mobile Tab Switcher */}
-                            {isMobile && (
-                                <div className={local.mobileTabSwitcher} style={{ marginBottom: '16px', flexShrink: 0 }}>
-                                    {[
-                                        { id: 'pend', label: 'Chờ Duyệt', count: pendingInvestors.length, status: 'pend' },
-                                        { id: 'apr', label: 'Đã Duyệt', count: approvedInvestors.length, status: 'appr' },
-                                        { id: 'rej', label: 'Từ Chối', count: rejectedInvestors.length, status: 'rej' }
-                                    ].map(tab => (
-                                        <button
-                                            key={tab.id}
-                                            className={`${local.mobileTab} ${activeMobileInvTab === tab.id ? local.activeMobileTab : ''}`}
-                                            onClick={() => setActiveMobileInvTab(tab.id)}
-                                            data-status={tab.status}
-                                        >
-                                            <div className={`${local.bctDot} ${tab.id === 'apr' ? local.inv_dot_apr : local[tab.status]}`}></div>
-                                            <span>{tab.label}</span>
-                                            <span className={local.mobileTabCount}>{tab.count}</span>
-                                        </button>
-                                    ))}
-                                </div>
-                            )}
+                    {/* Project Management Section (All statuses) */}
+                    {activeSection === 'project_management' && (
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 16 }}>
+                            {/* Tab Switcher - Same as Booking */}
+                            <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                                <button className={`${styles.tab} ${activeMobileTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileTab('all')}>
+                                    Tất cả
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{filteredPending.length + filteredApproved.length + filteredRejected.length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileTab === 'pend' ? styles.active : ''}`} onClick={() => setActiveMobileTab('pend')}>
+                                    <div className={`${local.bctDot} ${local.pend}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Chờ Xử Lý
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{filteredPending.length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileTab === 'appr' ? styles.active : ''}`} onClick={() => setActiveMobileTab('appr')}>
+                                    <div className={`${local.bctDot} ${local.appr}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Đã Duyệt
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{filteredApproved.length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileTab === 'rej' ? styles.active : ''}`} onClick={() => setActiveMobileTab('rej')}>
+                                    <div className={`${local.bctDot} ${local.rej}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Từ Chối
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{filteredRejected.length}</span>
+                                </button>
+                            </div>
 
-                            <div className={local.inv_boardGridScrollable} onScroll={handleLaneScroll} style={{ 
-                                flex: 1,
-                                minHeight: 0,
-                                flexFlow: isMobile ? 'column' : 'row nowrap',
-                                margin: isMobile ? '0' : '0 -24px -24px -24px'
-                            }}>
-                                {/* Column: Pending */}
-                                {(!isMobile || activeMobileInvTab === 'pend') && (
-                                    <div className={`${local.inv_col} ${local.inv_scrollCol}`}>
-                                        {!isMobile && (
-                                            <div className={`${local.inv_colHead} ${local.pend}`}>
-                                                <div className={local.bcolTitle}>
-                                                    <div className={`${local.bctDot} ${local.pend}`}></div>
-                                                    Chờ Duyệt
-                                                </div>
-                                                <div className={`${local.bcolN} ${local.pend}`}>{pendingInvestors.length}</div>
-                                            </div>
-                                        )}
-                                        <div className={local.inv_scrollCardsContainer} onScroll={handleLaneScroll}>
-                                            {isLoadingInvestors ? (
-                                                <KanbanSkeleton count={3} />
-                                            ) : pendingInvestors.length === 0 ? (
+                            <div className={local.inv_scrollCardsContainer} style={{ flex: 1, overflowY: 'auto' }}>
+                                {isLoadingProjects ? (
+                                    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                                        <Loader2 size={24} className="animate-spin" style={{ color: 'var(--text-secondary)' }} />
+                                    </div>
+                                ) : (
+                                    (() => {
+                                        let listToShow = [];
+                                        if (activeMobileTab === 'pend') listToShow = filteredPending;
+                                        else if (activeMobileTab === 'appr') listToShow = filteredApproved;
+                                        else if (activeMobileTab === 'rej') listToShow = filteredRejected;
+                                        else listToShow = [...filteredPending, ...filteredApproved, ...filteredRejected].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+                                        if (listToShow.length === 0) {
+                                            return (
                                                 <div className={local.inv_emptyState}>
                                                     <Archive size={40} className={local.inv_emptyIcon} />
-                                                    <p>Không có hồ sơ chờ duyệt</p>
+                                                    <p>{searchTerm ? 'Không tìm thấy kết quả' : 'Trống'}</p>
                                                 </div>
-                                            ) : (
-                                                pendingInvestors.map(i => (
+                                            );
+                                        }
+
+                                        return (
+                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                                {listToShow.map(project => (
+                                                    <ProjectKanbanCard
+                                                        key={project.projectId}
+                                                        project={project}
+                                                        status={project.status === 'Approved' ? 'appr' : (project.status === 'Rejected' ? 'rej' : 'pend')}
+                                                        onDetail={() => openDetailModal(project)}
+                                                        onApprove={() => handleApproveProject(project.projectId)}
+                                                        onReject={() => handleRejectProject(project.projectId)}
+                                                        processingProjectId={processingProjectId}
+                                                        processingAction={processingAction}
+                                                    />
+                                                ))}
+                                            </div>
+                                        );
+                                    })()
+                                )}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Investor Approval Section */}
+                    {activeSection === 'investor_approval' && (
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 16 }}>
+                            {/* Tab Switcher - Same as Booking */}
+                            <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                                <button className={`${styles.tab} ${activeMobileInvTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileInvTab('all')}>
+                                    Tất cả
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{pendingInvestors.length + approvedInvestors.length + rejectedInvestors.length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileInvTab === 'pend' ? styles.active : ''}`} onClick={() => setActiveMobileInvTab('pend')}>
+                                    <div className={`${local.bctDot} ${local.pend}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Chờ Duyệt
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{pendingInvestors.length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileInvTab === 'apr' ? styles.active : ''}`} onClick={() => setActiveMobileInvTab('apr')}>
+                                    <div className={`${local.bctDot} ${local.inv_dot_apr}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Đã Duyệt
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{approvedInvestors.length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileInvTab === 'rej' ? styles.active : ''}`} onClick={() => setActiveMobileInvTab('rej')}>
+                                    <div className={`${local.bctDot} ${local.rej}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Từ Chối
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{rejectedInvestors.length}</span>
+                                </button>
+                            </div>
+
+                            <div className={local.inv_scrollCardsContainer} style={{ flex: 1, overflowY: 'auto' }}>
+                                {isLoadingInvestors ? (
+                                    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                                        <Loader2 size={24} className="animate-spin" style={{ color: 'var(--text-secondary)' }} />
+                                    </div>
+                                ) : (
+                                    (() => {
+                                        let listToShow = [];
+                                        if (activeMobileInvTab === 'pend') listToShow = pendingInvestors;
+                                        else if (activeMobileInvTab === 'apr') listToShow = approvedInvestors;
+                                        else if (activeMobileInvTab === 'rej') listToShow = rejectedInvestors;
+                                        else listToShow = [...pendingInvestors, ...approvedInvestors, ...rejectedInvestors].sort((a,b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+
+                                        if (listToShow.length === 0) {
+                                            return (
+                                                <div className={local.inv_emptyState}>
+                                                    <Archive size={40} className={local.inv_emptyIcon} />
+                                                    <p>Trống</p>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                                {listToShow.map(i => (
                                                     <InvestorKanbanCard
                                                         key={i.investorId}
                                                         investor={i}
-                                                        status="pend"
+                                                        status={i.approvalStatus === 'Approved' ? 'apr' : (i.approvalStatus === 'Rejected' ? 'rej' : 'pend')}
                                                         onDetail={(inv) => {
                                                             setSelectedInvestor(inv);
                                                             setShowInvestorDetailModal(true);
@@ -1827,260 +1879,20 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                                                         processingId={processingInvestorId}
                                                         processingAction={investorAction}
                                                     />
-                                                ))
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Column: Approved */}
-                                {(!isMobile || activeMobileInvTab === 'apr') && (
-                                    <div className={`${local.inv_col} ${local.inv_scrollCol}`}>
-                                        {!isMobile && (
-                                            <div className={`${local.inv_colHead} ${local.apr}`}>
-                                                <div className={local.bcolTitle}>
-                                                    <div className={`${local.bctDot} ${local.inv_dot_apr}`}></div>
-                                                    Đã Duyệt
-                                                </div>
-                                                <div className={`${local.bcolN} ${local.inv_n_apr}`}>{approvedInvestors.length}</div>
+                                                ))}
                                             </div>
-                                        )}
-                                        <div className={local.inv_scrollCardsContainer} onScroll={handleLaneScroll}>
-                                            {approvedInvestors.map(i => (
-                                                <InvestorKanbanCard
-                                                    key={i.investorId}
-                                                    investor={i}
-                                                    status="apr"
-                                                    onDetail={(inv) => {
-                                                        setSelectedInvestor(inv);
-                                                        setShowInvestorDetailModal(true);
-                                                    }}
-                                                    processingId={processingInvestorId}
-                                                    processingAction={investorAction}
-                                                />
-                                            ))}
-                                            {approvedInvestors.length === 0 && !isLoadingInvestors && (
-                                                <div className={local.inv_emptyState}>
-                                                    <Archive size={40} className={local.inv_emptyIcon} />
-                                                    <p>Chưa có nhà đầu tư nào</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                )}
-
-                                {/* Column: Rejected */}
-                                {(!isMobile || activeMobileInvTab === 'rej') && (
-                                    <div className={`${local.inv_col} ${local.inv_scrollCol}`}>
-                                        {!isMobile && (
-                                            <div className={`${local.inv_colHead} ${local.rej}`}>
-                                                <div className={local.bcolTitle}>
-                                                    <div className={`${local.bctDot} ${local.rej}`}></div>
-                                                    Đã Từ Chối
-                                                </div>
-                                                <div className={`${local.bcolN} ${local.rej}`}>{rejectedInvestors.length}</div>
-                                            </div>
-                                        )}
-                                        <div className={local.inv_scrollCardsContainer} onScroll={handleLaneScroll}>
-                                            {rejectedInvestors.map(i => (
-                                                <InvestorKanbanCard
-                                                    key={i.investorId}
-                                                    investor={i}
-                                                    status="rej"
-                                                    onDetail={(inv) => {
-                                                        setSelectedInvestor(inv);
-                                                        setShowInvestorDetailModal(true);
-                                                    }}
-                                                    processingId={processingInvestorId}
-                                                    processingAction={investorAction}
-                                                />
-                                            ))}
-                                            {rejectedInvestors.length === 0 && !isLoadingInvestors && (
-                                                <div className={local.inv_emptyState}>
-                                                    <Archive size={40} className={local.inv_emptyIcon} />
-                                                    <p>Danh sách trống</p>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
+                                        );
+                                    })()
                                 )}
                             </div>
                         </div>
                     )}
 
-                    {/* Project Management Section (All statuses) */}
-                    {/* Project Management Kanban Board */}
-                    {activeSection === 'project_management' && (
-                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, gap: 0, flex: 1, minHeight: 0 }}>
-
-                            {/* Mobile Tab Switcher */}
-                            {isMobile && (
-                                <div className={local.mobileTabSwitcher}>
-                                    <button
-                                        className={`${local.mobileTab} ${activeMobileTab === 'pend' ? local.activeMobileTab : ''}`}
-                                        onClick={() => setActiveMobileTab('pend')}
-                                        data-status="pend"
-                                    >
-                                        <div className={`${local.bctDot} ${local.pend}`}></div>
-                                        <span>Chờ Xử Lý</span>
-                                        <span className={local.mobileTabCount}>{filteredPending.length}</span>
-                                    </button>
-                                    <button
-                                        className={`${local.mobileTab} ${activeMobileTab === 'appr' ? local.activeMobileTab : ''}`}
-                                        onClick={() => setActiveMobileTab('appr')}
-                                        data-status="appr"
-                                    >
-                                        <div className={`${local.bctDot} ${local.appr}`}></div>
-                                        <span>Đã Duyệt</span>
-                                        <span className={local.mobileTabCount}>{filteredApproved.length}</span>
-                                    </button>
-                                    <button
-                                        className={`${local.mobileTab} ${activeMobileTab === 'rej' ? local.activeMobileTab : ''}`}
-                                        onClick={() => setActiveMobileTab('rej')}
-                                        data-status="rej"
-                                    >
-                                        <div className={`${local.bctDot} ${local.rej}`}></div>
-                                        <span>Từ Chối</span>
-                                        <span className={local.mobileTabCount}>{filteredRejected.length}</span>
-                                    </button>
-                                </div>
-                            )}
-
-                            {projectsError ? (
-                                <div className={local.errorWrapper}>
-                                    <EmptyState
-                                        icon={AlertCircle}
-                                        title="Lỗi tải dữ liệu"
-                                        message={projectsError}
-                                        isError={true}
-                                        onRetry={() => {
-                                            setProjectsError(null);
-                                            fetchPendingProjects();
-                                            fetchApprovedProjects();
-                                            fetchRejectedProjects();
-                                        }}
-                                    />
-                                </div>
-                            ) : (
-                                <div className={local.inv_boardGridScrollable} style={{
-                                    flexFlow: isMobile ? 'column' : 'row nowrap',
-                                    margin: isMobile ? '0' : '0 -24px -24px -24px'
-                                }}>
-                                    {/* Pending Column */}
-                                    {(!isMobile || activeMobileTab === 'pend') && (
-                                        <div className={`${local.inv_col} ${local.inv_scrollCol}`}>
-                                            {!isMobile && (
-                                                <div className={`${local.inv_colHead} ${local.pend}`}>
-                                                    <div className={local.bcolTitle}>
-                                                        <div className={`${local.bctDot} ${local.pend}`}></div>
-                                                        Chờ Xử Lý
-                                                    </div>
-                                                    <div className={`${local.bcolN} ${local.pend}`}>{filteredPending.length}</div>
-                                                </div>
-                                            )}
-                                            <div className={local.inv_scrollCardsContainer} onScroll={handleLaneScroll}>
-                                                {isLoadingProjects ? (
-                                                    <KanbanSkeleton count={3} />
-                                                ) : (filteredPending.length === 0 ? (
-                                                    <div className={local.inv_emptyState}>
-                                                        <Archive size={40} className={local.inv_emptyIcon} />
-                                                        <p>{searchTerm ? 'Không tìm thấy kết quả' : 'Trống'}</p>
-                                                    </div>
-                                                ) : (
-                                                    filteredPending.map(project => (
-                                                        <ProjectKanbanCard
-                                                            key={project.projectId}
-                                                            project={project}
-                                                            status="pend"
-                                                            onDetail={() => openDetailModal(project)}
-                                                            onApprove={() => handleApproveProject(project.projectId)}
-                                                            onReject={() => handleRejectProject(project.projectId)}
-                                                            processingProjectId={processingProjectId}
-                                                            processingAction={processingAction}
-                                                        />
-                                                    ))
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Approved Column */}
-                                    {(!isMobile || activeMobileTab === 'appr') && (
-                                        <div className={`${local.inv_col} ${local.inv_scrollCol}`}>
-                                            {!isMobile && (
-                                                <div className={`${local.inv_colHead} ${local.appr}`}>
-                                                    <div className={local.bcolTitle}>
-                                                        <div className={`${local.bctDot} ${local.appr}`}></div>
-                                                        Đã Duyệt
-                                                    </div>
-                                                    <div className={`${local.bcolN} ${local.appr}`}>{filteredApproved.length}</div>
-                                                </div>
-                                            )}
-                                            <div className={local.inv_scrollCardsContainer} onScroll={handleLaneScroll}>
-                                                {isLoadingProjects ? (
-                                                    <KanbanSkeleton count={2} />
-                                                ) : (filteredApproved.length === 0 ? (
-                                                    <div className={local.inv_emptyState}>
-                                                        <Archive size={40} className={local.inv_emptyIcon} />
-                                                        <p>{searchTerm ? 'Không tìm thấy kết quả' : 'Trống'}</p>
-                                                    </div>
-                                                ) : (
-                                                    filteredApproved.map(project => (
-                                                        <ProjectKanbanCard
-                                                            key={project.projectId}
-                                                            project={project}
-                                                            status="appr"
-                                                            onDetail={() => openDetailModal(project)}
-                                                        />
-                                                    ))
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-
-                                    {/* Rejected Column */}
-                                    {(!isMobile || activeMobileTab === 'rej') && (
-                                        <div className={`${local.inv_col} ${local.inv_scrollCol}`}>
-                                            {!isMobile && (
-                                                <div className={`${local.inv_colHead} ${local.rej}`}>
-                                                    <div className={local.bcolTitle}>
-                                                        <div className={`${local.bctDot} ${local.rej}`}></div>
-                                                        Từ Chối
-                                                    </div>
-                                                    <div className={`${local.bcolN} ${local.rej}`}>{filteredRejected.length}</div>
-                                                </div>
-                                            )}
-                                            <div className={local.inv_scrollCardsContainer} onScroll={handleLaneScroll}>
-                                                {isLoadingProjects ? (
-                                                    <KanbanSkeleton count={1} />
-                                                ) : (filteredRejected.length === 0 ? (
-                                                    <div className={local.inv_emptyState}>
-                                                        <Archive size={40} className={local.inv_emptyIcon} />
-                                                        <p>{searchTerm ? 'Không tìm thấy kết quả' : 'Trống'}</p>
-                                                    </div>
-                                                ) : (
-                                                    filteredRejected.map(project => (
-                                                        <ProjectKanbanCard
-                                                            key={project.projectId}
-                                                            project={project}
-                                                            status="rej"
-                                                            onDetail={() => openDetailModal(project)}
-                                                        />
-                                                    ))
-                                                ))}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    )}
-
-                    {/* PR Management Section (Overhauled with Subtabs and Sleek UI) */}
+                    {/* PR Management Section */}
                     {activeSection === 'pr_management' && (
-                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, margin: '-24px' }}>
+                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, margin: '-24px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                             {/* Sleek Subtab Switcher */}
-                            <div className={styles.tabs} style={{ marginBottom: '8px' }}>
+                            <div className={styles.tabs} style={{ marginBottom: '0px' }}>
                                 <button
                                     className={`${styles.tab} ${activePRTab === 'posting' ? styles.active : ''}`}
                                     onClick={() => setActivePRTab('posting')}
@@ -2099,10 +1911,9 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                             </div>
 
                             {activePRTab === 'posting' && (
-                                <div key="posting" className={styles.section} style={{ padding: '0 24px 24px 24px' }}>
-
+                                <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px 24px', minHeight: 0 }}>
                                     {/* Header Stats */}
-                                    <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
+                                    <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                             <Newspaper size={24} color="var(--primary-blue)" />
                                             <div>
@@ -2280,170 +2091,117 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
                             {/* News Section */}
                             {activePRTab === 'news' && (
-                                <div key="news" className={styles.section} style={{ padding: '0 24px 24px 24px' }}>
-
-                                    {/* News Header Stats */}
-                                    <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <Newspaper size={24} color="var(--primary-blue)" />
-                                            <div>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng PR được đăng</div>
-                                                <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-primary)' }}>{prNewsList.length}</div>
+                                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+                                    <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px 24px', minHeight: 0 }}>
+                                        {/* News Header Stats */}
+                                        <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <Newspaper size={24} color="var(--primary-blue)" />
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng PR được đăng</div>
+                                                    <div style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-primary)' }}>{prNewsList.length}</div>
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <CheckCircle size={24} color="#10b981" />
-                                            <div>
-                                                <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Đã xuất bản</div>
-                                                <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>
-                                                    {prNewsList.filter(pr => pr.publishedAt).length}
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                                <CheckCircle size={24} color="#10b981" />
+                                                <div>
+                                                    <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Đã xuất bản</div>
+                                                    <div style={{ fontSize: '28px', fontWeight: '800', color: '#10b981' }}>
+                                                        {prNewsList.filter(pr => pr.publishedAt).length}
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
-                                    </div>
 
-                                    {/* Error State */}
-                                    {prNewsError && (
-                                        <div className={local.errorWrapper} style={{ marginBottom: '20px' }}>
-                                            <EmptyState
-                                                icon={AlertCircle}
-                                                title="Lỗi tải dữ liệu"
-                                                message={prNewsError}
-                                                isError={true}
-                                                onRetry={fetchPRNews}
-                                            />
-                                        </div>
-                                    )}
-
-                                    {/* Loading State */}
-                                    {isLoadingPRNews && (
-                                        <div className={styles.card}>
-                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '12px' }}>
-                                                <Loader2 size={20} className="animate-spin" />
-                                                <span style={{ color: 'var(--text-secondary)' }}>Đang tải dữ liệu...</span>
+                                        {/* Error State */}
+                                        {prNewsError && (
+                                            <div className={local.errorWrapper} style={{ marginBottom: '20px' }}>
+                                                <EmptyState
+                                                    icon={AlertCircle}
+                                                    title="Lỗi tải dữ liệu"
+                                                    message={prNewsError}
+                                                    isError={true}
+                                                    onRetry={fetchPRNews}
+                                                />
                                             </div>
-                                        </div>
-                                    )}
+                                        )}
 
-                                    {/* Empty State */}
-                                    {!isLoadingPRNews && prNewsList.length === 0 && (
-                                        <div className={styles.card}>
-                                            <EmptyState
-                                                icon={Archive}
-                                                title="Chưa có PR được đăng"
-                                                message="Hiện chưa có bài PR nào được đăng. Hãy đăng bài PR từ tab 'Đăng bài PR'."
-                                            />
-                                        </div>
-                                    )}
+                                        {/* Loading State */}
+                                        {isLoadingPRNews && (
+                                            <div className={styles.card}>
+                                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px', gap: '12px' }}>
+                                                    <Loader2 size={20} className="animate-spin" />
+                                                    <span style={{ color: 'var(--text-secondary)' }}>Đang tải dữ liệu...</span>
+                                                </div>
+                                            </div>
+                                        )}
 
-                                    {/* PR News List */}
-                                    {!isLoadingPRNews && prNewsList.length > 0 && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
-                                            {prNewsList
-                                                .filter(pr => {
-                                                    if (!prNewsSearchTerm.trim()) return true;
-                                                    const search = prNewsSearchTerm.toLowerCase();
-                                                    return (
-                                                        pr.title?.toLowerCase().includes(search) ||
-                                                        pr.content?.toLowerCase().includes(search) ||
-                                                        pr.projectName?.toLowerCase().includes(search) ||
-                                                        pr.investorName?.toLowerCase().includes(search)
-                                                    );
-                                                })
-                                                .map(pr => (
-                                                    <div key={pr.postPrId} className={local.sleekCard}>
-                                                        {/* PR Image or Placeholder */}
-                                                        {pr.projectImage ? (
-                                                            <img
-                                                                src={pr.projectImage}
-                                                                alt={pr.projectName}
-                                                                style={{
-                                                                    width: '100%',
-                                                                    height: '180px',
-                                                                    objectFit: 'cover',
-                                                                    borderRadius: '8px'
-                                                                }}
-                                                            />
-                                                        ) : (
-                                                            <div style={{
-                                                                width: '100%',
-                                                                height: '180px',
-                                                                backgroundColor: 'var(--bg-secondary)',
-                                                                borderRadius: '8px',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                color: 'var(--text-secondary)',
-                                                                fontSize: '13px',
-                                                                border: '1px dashed var(--border-color)'
-                                                            }}>
-                                                                Tin đăng này chưa có hình ảnh đính kèm.
-                                                            </div>
-                                                        )}
+                                        {/* Empty State */}
+                                        {!isLoadingPRNews && prNewsList.length === 0 && (
+                                            <div className={styles.card}>
+                                                <EmptyState
+                                                    icon={Archive}
+                                                    title="Chưa có PR được đăng"
+                                                    message="Hiện chưa có bài PR nào được đăng. Hãy đăng bài PR từ tab 'Đăng bài PR'."
+                                                />
+                                            </div>
+                                        )}
 
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                            {/* PR Header */}
+                                        {/* PR News List */}
+                                        {!isLoadingPRNews && prNewsList.length > 0 && (
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                                {prNewsList
+                                                    .filter(pr => {
+                                                        if (!prNewsSearchTerm.trim()) return true;
+                                                        const search = prNewsSearchTerm.toLowerCase();
+                                                        return (
+                                                            pr.title?.toLowerCase().includes(search) ||
+                                                            pr.content?.toLowerCase().includes(search) ||
+                                                            pr.projectName?.toLowerCase().includes(search) ||
+                                                            pr.investorName?.toLowerCase().includes(search)
+                                                        );
+                                                    })
+                                                    .map(pr => (
+                                                        <div key={pr.postPrId} className={local.sleekCard}>
+                                                            {/* PR Image */}
+                                                            {pr.projectImage ? (
+                                                                <img
+                                                                    src={pr.projectImage}
+                                                                    alt={pr.projectName}
+                                                                    style={{ width: '100%', height: '180px', objectFit: 'cover', borderRadius: '8px', marginBottom: '12px' }}
+                                                                />
+                                                            ) : (
+                                                                <div style={{ width: '100%', height: '180px', backgroundColor: 'var(--bg-secondary)', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', fontSize: '13px', border: '1px dashed var(--border-color)', marginBottom: '12px' }}>
+                                                                    Chưa có hình ảnh
+                                                                </div>
+                                                            )}
+
                                                             <div className={local.sleekCardHeader}>
                                                                 <div style={{ flex: 1 }}>
-                                                                    <h4 className={local.sleekCardTitle} style={{ minHeight: '40px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                                                                        {pr.title}
-                                                                    </h4>
-                                                                    <p className={local.sleekCardSubtitle} style={{ minHeight: '18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                                        {pr.projectName}
-                                                                    </p>
+                                                                    <h4 className={local.sleekCardTitle} style={{ minHeight: '40px' }}>{pr.title}</h4>
+                                                                    <p className={local.sleekCardSubtitle}>{pr.projectName}</p>
                                                                 </div>
                                                                 <div className={`${local.sleekBadge} ${pr.status === 'Pending' ? local.sleekBadgeWarning : local.sleekBadgeSuccess}`}>
-                                                                    {pr.status === 'Pending' ? <Clock size={12} /> : <CheckCircle size={12} />}
-                                                                    {pr.status === 'Pending' ? 'Chờ duyệt' : 'Đã xuất bản'}
+                                                                    {pr.status === 'Pending' ? 'Chờ duyệt' : 'Đã đăng'}
                                                                 </div>
                                                             </div>
 
-                                                            {/* PR Content Preview */}
-                                                            <p style={{
-                                                                margin: 0,
-                                                                fontSize: '13px',
-                                                                color: 'var(--text-secondary)',
-                                                                lineHeight: '1.5',
-                                                                display: '-webkit-box',
-                                                                WebkitLineClamp: 3,
-                                                                WebkitBoxOrient: 'vertical',
-                                                                overflow: 'hidden',
-                                                                height: '60px'
-                                                            }}>
+                                                            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', margin: '12px 0', lineHeight: '1.5', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden', height: '60px' }}>
                                                                 {pr.content}
                                                             </p>
 
-                                                            {/* PR Meta Info */}
                                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', paddingTop: '12px', borderTop: '1px solid var(--border-color)' }}>
                                                                 <div>
                                                                     <div className={local.sleekMetaLabel}>Startup</div>
-                                                                    <div className={local.sleekMetaValue}>
-                                                                        {pr.startupName}
-                                                                    </div>
+                                                                    <div className={local.sleekMetaValue}>{pr.startupName}</div>
                                                                 </div>
-
                                                                 <div>
                                                                     <div className={local.sleekMetaLabel}>Nhà đầu tư</div>
-                                                                    <div className={local.sleekMetaValue}>
-                                                                        {pr.investorName}
-                                                                    </div>
+                                                                    <div className={local.sleekMetaValue}>{pr.investorName}</div>
                                                                 </div>
-
-                                                                <div style={{ gridColumn: '1 / -1' }}>
-                                                                    <div className={local.sleekMetaLabel}>Ngày đăng</div>
-                                                                    <div className={local.sleekMetaValue} style={{ fontSize: '12px' }}>
-                                                                        {pr.publishedAt ? new Date(pr.publishedAt).toLocaleDateString('vi-VN') : 'Chưa xuất bản'}
-                                                                    </div>
-                                                                </div>
-
-                                                                {/* Action Buttons */}
-                                                                <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '8px', marginTop: '12px' }}>
-                                                                    <button
-                                                                        onClick={() => handleOpenEditPR(pr)}
-                                                                        className={`${local.sleekButton} ${local.sleekButtonOutline}`}
-                                                                        style={{ flex: 1 }}
-                                                                    >
-                                                                        <Edit2 size={14} /> Chỉnh sửa
+                                                                <div style={{ gridColumn: '1 / -1', marginTop: '12px', display: 'flex', gap: '8px' }}>
+                                                                    <button onClick={() => handleOpenEditPR(pr)} className={`${local.sleekButton} ${local.sleekButtonOutline}`} style={{ flex: 1 }}>
+                                                                        <Edit2 size={14} /> Sửa
                                                                     </button>
                                                                     <button
                                                                         onClick={() => {
@@ -2459,10 +2217,10 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                                                                 </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                ))}
-                                        </div>
-                                    )}
+                                                    ))}
+                                            </div>
+                                        )}
+                                    </div>
                                 </div>
                             )}
                         </div>
@@ -2472,7 +2230,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                     {/* Booking Management Section */}
                     {activeSection === 'bookings' && (
                         <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
-                            <div className={styles.tabs} style={{ margin: '0 -24px 16px -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                            <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
                                 <button className={`${styles.tab} ${activeMobileBookingTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileBookingTab('all')}>
                                     Tất cả
                                     <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{filterBookings(allBookings).length}</span>
@@ -2513,17 +2271,13 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                                     />
                                 </div>
                             ) : (
-                                <div 
+                                <div
                                     id="bookingScrollContainer"
-                                    onScroll={handleLaneScroll}
-                                    style={{ 
-                                        flex: 1, 
-                                        overflowY: 'auto', 
-                                        paddingRight: '4px', 
+                                    style={{
+                                        flex: 1,
+                                        overflowY: 'auto',
+                                        paddingRight: '4px',
                                         paddingBottom: '24px',
-                                        maskImage: 'linear-gradient(to bottom, transparent 0%, black var(--top-fade, 0px), black calc(100% - var(--bottom-fade, 0px)), transparent 100%)',
-                                        WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black var(--top-fade, 0px), black calc(100% - var(--bottom-fade, 0px)), transparent 100%)',
-                                        transition: 'mask-image 0.2s ease, -webkit-mask-image 0.2s ease'
                                     }}
                                 >
                                     {isLoadingBookings ? (
@@ -2534,11 +2288,10 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                                         (() => {
                                             const baseList = activeMobileBookingTab === 'pend' ? pendingBookingsList :
                                                 activeMobileBookingTab === 'conf' ? confirmedBookingsList :
-                                                activeMobileBookingTab === 'comp' ? completedBookingsList :
-                                                activeMobileBookingTab === 'canc' ? cancelledBookingsList :
-                                                filterBookings(allBookings);
-                                            
-                                            // Explicit safety sort: Newest to Oldest based on updatedAt or createdAt
+                                                    activeMobileBookingTab === 'comp' ? completedBookingsList :
+                                                        activeMobileBookingTab === 'canc' ? cancelledBookingsList :
+                                                            filterBookings(allBookings);
+
                                             const activeList = [...baseList].sort((a, b) => {
                                                 const dateB = new Date(b.updatedAt || b.createdAt || b.startTime || 0);
                                                 const dateA = new Date(a.updatedAt || a.createdAt || a.startTime || 0);
@@ -2575,9 +2328,9 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
                     {/* Startup Approvals Section */}
                     {activeSection === 'approvals' && (
-                        <div className={styles.section}>
-                            <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, padding: 0, display: 'flex', flexDirection: 'column' }}>
+                            <div className={styles.card} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: 'none', boxShadow: 'none', background: 'transparent' }}>
+                                <h3 className={styles.cardTitle} style={{ padding: '0 24px 16px 24px' }}>
                                     Phê duyệt Startup
                                     {dashboardData.pendingApprovals > 0 && (
                                         <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginLeft: '12px' }}>
@@ -2586,53 +2339,48 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                                     )}
                                 </h3>
 
-                                <div className={styles.list}>
+                                <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px 24px' }}>
                                     {isLoadingStartups ? (
-                                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                                             <Loader2 size={24} className={styles.spinner} style={{ margin: '0 auto 12px' }} />
                                             <p>Đang tải dữ liệu...</p>
                                         </div>
                                     ) : pendingStartups.length === 0 ? (
-                                        <div style={{ padding: '20px', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                                        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                                             <p>Chưa có yêu cầu phê duyệt Startup nào.</p>
                                         </div>
-                                    ) : pendingStartups.map(startup => (
-                                        <div key={startup?.id || Math.random()} className={styles.listItem}>
-                                            <div className={styles.listContent} style={{ width: '100%' }}>
-                                                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                                    <h4 className={styles.listTitle} style={{ margin: 0 }}>
-                                                        {startup?.companyName || startup?.name || 'Công ty khởi nghiệp'}
-                                                    </h4>
-                                                    <span className={`${styles.badge} ${styles.badgePending}`}>
-                                                        {startup?.industry || 'Chưa xác định'}
-                                                    </span>
+                                    ) : (
+                                        <div className={styles.list}>
+                                            {pendingStartups.map(startup => (
+                                                <div key={startup?.id || Math.random()} className={styles.listItem}>
+                                                    <div className={styles.listContent} style={{ width: '100%' }}>
+                                                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                                            <h4 className={styles.listTitle} style={{ margin: 0 }}>
+                                                                {startup?.companyName || startup?.name || 'Công ty khởi nghiệp'}
+                                                            </h4>
+                                                            <span className={`${styles.badge} ${styles.badgePending}`}>
+                                                                {startup?.industry || 'Chưa xác định'}
+                                                            </span>
+                                                        </div>
+                                                        <div className={styles.listMeta} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                                            <span>Người đại diện: {startup?.founder || startup?.representName || 'Chưa cập nhật'}</span>
+                                                            <span>Email: {startup?.email || 'Chưa cập nhật'}</span>
+                                                            <span>Ngày đăng ký: {startup?.createdAt ? new Date(startup.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</span>
+                                                        </div>
+                                                        <div className={styles.listAction} style={{ marginTop: '12px' }}>
+                                                            <button
+                                                                className={`${styles.button} ${styles.buttonPrimary}`}
+                                                                onClick={() => handleApproveStartup(startup)}
+                                                                disabled={processingProjectId === startup?.id}
+                                                            >
+                                                                {processingProjectId === startup?.id ? <Loader2 size={16} className={styles.spinner} /> : 'Xem chi tiết & Phê duyệt'}
+                                                            </button>
+                                                        </div>
+                                                    </div>
                                                 </div>
-                                                <div className={styles.listMeta} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                    <span>Người đại diện: {startup?.founder || startup?.representName || 'Chưa cập nhật'}</span>
-                                                    <span>Email: {startup?.email || 'Chưa cập nhật'}</span>
-                                                    <span>Ngày đăng ký: {startup?.createdAt ? new Date(startup.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</span>
-                                                </div>
-                                            </div>
-                                            <div className={styles.listActions}>
-                                                <button
-                                                    className={`${styles.primaryBtn} ${processingProjectId !== null ? local.btnDisabled : ''}`}
-                                                    style={{ borderRadius: '99px', padding: '6px 16px', fontSize: '13px' }}
-                                                    onClick={() => handleApproveStartup(startup?.id)}
-                                                    disabled={processingProjectId !== null}
-                                                >
-                                                    Phê duyệt
-                                                </button>
-                                                <button
-                                                    className={`${styles.secondaryBtn} ${processingProjectId !== null ? local.btnDisabled : ''}`}
-                                                    style={{ borderRadius: '99px', padding: '6px 16px', fontSize: '13px', color: 'var(--staff-danger)' }}
-                                                    onClick={() => handleRejectStartup(startup?.id, null)}
-                                                    disabled={processingProjectId !== null}
-                                                >
-                                                    Từ chối
-                                                </button>
-                                            </div>
+                                            ))}
                                         </div>
-                                    ))}
+                                    )}
                                 </div>
                             </div>
                         </div>
@@ -2640,7 +2388,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
                     {/* User Reports Section */}
                     {activeSection === 'user_reports' && (
-                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
+                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
                             <div style={{ display: 'flex', background: 'var(--bg-secondary)', padding: '4px', borderRadius: '12px', border: '1px solid var(--border-color)', width: 'fit-content', marginBottom: '12px' }}>
                                 {[
                                     { id: 'All', label: 'Tất cả' },
@@ -2692,35 +2440,37 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                                 })}
                             </div>
 
-                            {isLoadingUserReports ? (
-                                <div style={{ padding: '60px', textAlign: 'center' }}>
-                                    <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 16px', color: 'var(--primary-blue)' }} />
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Đang tải danh sách báo cáo...</p>
-                                </div>
-                            ) : (userReportsError || !Array.isArray(userReports)) ? (
-                                <div style={{ padding: '60px' }}>
-                                    <EmptyState icon={AlertCircle} title="Lỗi" message={userReportsError || "Không thể tải danh sách báo cáo"} onRetry={fetchUserReports} isError />
-                                </div>
-                            ) : filteredUserReports.length === 0 ? (
-                                <div style={{ padding: '60px' }}>
-                                    <EmptyState
-                                        icon={searchTerm ? Search : Shield}
-                                        title={searchTerm ? "Không tìm thấy" : "Trống"}
-                                        message={searchTerm ? `Không tìm thấy báo cáo nào khớp với "${searchTerm}"` : "Hiện không có báo cáo vi phạm nào trong danh mục này."}
-                                    />
-                                </div>
-                            ) : (
-                                <div className={local.reportGrid}>
-                                    {filteredUserReports.map(report => (
-                                        <UserReportCard
-                                            key={report.userReportId}
-                                            report={report}
-                                            onResolve={handleResolveReport}
-                                            isProcessing={processingProjectId === report.userReportId}
+                            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', minHeight: 0 }}>
+                                {isLoadingUserReports ? (
+                                    <div style={{ padding: '60px', textAlign: 'center' }}>
+                                        <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 16px', color: 'var(--primary-blue)' }} />
+                                        <p style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Đang tải danh sách báo cáo...</p>
+                                    </div>
+                                ) : (userReportsError || !Array.isArray(userReports)) ? (
+                                    <div style={{ padding: '60px' }}>
+                                        <EmptyState icon={AlertCircle} title="Lỗi" message={userReportsError || "Không thể tải danh sách báo cáo"} onRetry={fetchUserReports} isError />
+                                    </div>
+                                ) : filteredUserReports.length === 0 ? (
+                                    <div style={{ padding: '60px' }}>
+                                        <EmptyState
+                                            icon={searchTerm ? Search : Shield}
+                                            title={searchTerm ? "Không tìm thấy" : "Trống"}
+                                            message={searchTerm ? `Không tìm thấy báo cáo nào khớp với "${searchTerm}"` : "Hiện không có báo cáo vi phạm nào trong danh mục này."}
                                         />
-                                    ))}
-                                </div>
-                            )}
+                                    </div>
+                                ) : (
+                                    <div className={local.reportGrid}>
+                                        {filteredUserReports.map(report => (
+                                            <UserReportCard
+                                                key={report.userReportId}
+                                                report={report}
+                                                onResolve={handleResolveReport}
+                                                isProcessing={processingProjectId === report.userReportId}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     )}
 
@@ -2767,13 +2517,13 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                     )}
 
                     {activeSection === 'package_management' && (
-                        <div className={styles.section} style={{ padding: 0, gap: 0, margin: '-24px' }}>
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                             <PackageManagement searchTerm={subscriptionSearchTerm} />
                         </div>
                     )}
 
                     {activeSection === 'subscription_history' && (
-                        <div className={styles.section} style={{ padding: 0, gap: 0, margin: '-24px' }}>
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
                             <GlobalSubscriptionHistory searchTerm={subscriptionSearchTerm} />
                         </div>
                     )}

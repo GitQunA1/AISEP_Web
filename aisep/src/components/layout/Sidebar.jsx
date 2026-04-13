@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle, Loader, Shield, History, ChevronUp, ChevronDown, DollarSign, CreditCard, Newspaper } from 'lucide-react';
+import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle, Loader, Shield, History, ChevronUp, ChevronDown, DollarSign, CreditCard, Newspaper, Landmark } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
@@ -47,6 +47,7 @@ function Sidebar({
       const staffItems = [
         { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
         { icon: DollarSign, label: 'WithdrawRequest', displayLabel: 'Yêu cầu rút tiền', href: '#', showWhenLoggedIn: true },
+        { icon: CreditCard, label: 'Payouts', displayLabel: 'Chi trả cố vấn', href: '#', showWhenLoggedIn: true },
         { icon: Activity, label: 'CommissionConfig', displayLabel: 'Cấu hình hoa hồng', href: '#', showWhenLoggedIn: true },
         { icon: FileText, label: 'Projects', displayLabel: 'Quản lý dự án', href: '#', showWhenLoggedIn: true },
         { icon: Calendar, label: 'Bookings', displayLabel: 'Quản lý Booking', href: '#', showWhenLoggedIn: true },
@@ -66,7 +67,8 @@ function Sidebar({
     if (roleStr === 'advisor' || roleNum === 2) {
       const advisorItems = [
         { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
-        { icon: CreditCard, label: 'Wallet', displayLabel: 'Ví & Thu nhập', href: '#', showWhenLoggedIn: true },
+        { icon: CreditCard, label: 'Wallet', displayLabel: 'Thu nhập', href: '#', showWhenLoggedIn: true },
+        { icon: Landmark, label: 'Payouts', displayLabel: 'Thanh toán & Đối soát', href: '#', showWhenLoggedIn: true },
         { icon: ShieldCheck, label: 'ApproveBookings', displayLabel: 'Duyệt Booking', href: '#', showWhenLoggedIn: true },
         { icon: MessageSquare, label: 'Bookings', displayLabel: 'Danh sách Booking', href: '#', showWhenLoggedIn: true },
         { icon: Calendar, label: 'Availability', displayLabel: 'Lịch Rảnh', href: '#', showWhenLoggedIn: true },
@@ -163,6 +165,9 @@ function Sidebar({
     }
     if (label === 'Wallet' && onShowDashboard) {
       onShowDashboard('wallet');
+    }
+    if (label === 'Payouts' && onShowDashboard) {
+      onShowDashboard('payouts');
     }
     if (label === 'PackageManagement' && onShowDashboard) {
       onShowDashboard('package_management');
@@ -302,6 +307,7 @@ function Sidebar({
                       if (activeView === 'dashboard_withdrawals') return 'WithdrawRequest';
                       if (activeView === 'dashboard_commission') return 'CommissionConfig';
                       if (activeView === 'dashboard_wallet') return 'Wallet';
+                      if (activeView === 'dashboard_payouts') return 'Payouts';
                       if (activeView === 'dashboard_package_management') return 'PackageManagement';
                       if (activeView === 'dashboard_subscription_history') return 'SubscriptionHistory';
                       if (activeView === 'dashboard_investor_approval') return 'InvestorApproval';

@@ -66,7 +66,7 @@ const GlobalSubscriptionHistory = ({ searchTerm = '' }) => {
   return (
     <div className={styles.container}>
 
-      <div className={styles.tableContainer}>
+      <div>
         {loading ? (
           <div style={{ display: 'flex', justifyContent: 'center', padding: '100px' }}>
             <Loader2 className={styles.spin} size={40} color="var(--primary-blue)" />

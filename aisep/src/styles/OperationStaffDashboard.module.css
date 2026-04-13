@@ -549,8 +549,9 @@
     max-width: 1200px;
     margin: 0 auto;
     width: 100%;
-    padding: 12px 0;
+    padding: 12px 16px;
     gap: 16px;
+    position: relative;
 }
 
 .statsGrid {
@@ -798,9 +799,332 @@
 
 .summaryText {
     font-size: 13px;
-    color: var(--text-secondary);
-    line-height: 1.4;
+    color: var(--text-muted);
 }
+
+/* Payout Management Specific Styles */
+
+.batchDetailContainer {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    animation: fadeIn 0.3s ease-out;
+}
+
+.detailHeader {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.backBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    padding: 8px 16px;
+    border-radius: 8px;
+    color: var(--text-primary);
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.backBtn:hover {
+    background: var(--bg-hover);
+}
+
+.headerInfo h2 {
+    margin: 0 0 4px 0;
+    font-size: 20px;
+    font-weight: 800;
+}
+
+.headerInfo p {
+    margin: 0;
+    color: var(--text-secondary);
+    font-size: 13px;
+}
+
+.batchStatsStrip {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+}
+
+.stripItem {
+    padding: 16px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.stripLabel {
+    font-size: 11px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.stripValue {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.itemsTableWrapper {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.itemsTable {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.itemsTable th {
+    text-align: left;
+    padding: 14px 16px;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    background: rgba(255, 255, 255, 0.02);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.itemsTable td {
+    padding: 16px;
+    border-bottom: 1px solid var(--border-color);
+    font-size: 13px;
+}
+
+.itemsTable tr:last-child td {
+    border-bottom: none;
+}
+
+.baBtnSimple {
+    padding: 6px;
+    background: var(--bg-tertiary);
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.baBtnSimple:hover {
+    background: var(--bg-hover);
+    transform: scale(1.1);
+}
+
+/* Modal Styles (Shared) */
+.modalOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.82);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 99999;
+    padding: 20px;
+    backdrop-filter: blur(8px) saturate(180%);
+    animation: fadeInModal 0.3s ease-out;
+}
+
+@keyframes fadeInModal {
+    from { opacity: 0; backdrop-filter: blur(0px); }
+    to { opacity: 1; backdrop-filter: blur(8px); }
+}
+
+.modalContent {
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    width: 450px;
+    max-width: 95%;
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: zoomInModal 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    z-index: 100000;
+}
+
+@keyframes zoomInModal {
+    from { transform: scale(0.95) translateY(10px); opacity: 0; }
+    to { transform: scale(1) translateY(0); opacity: 1; }
+}
+
+.modalHeader {
+    padding: 20px 24px;
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--bg-primary);
+}
+
+.modalHeader h3 {
+    margin: 0;
+    font-size: 19px;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.modalCloseBtn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modalCloseBtn:hover {
+    background-color: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.modalBody {
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.formGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.modalLabel {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.modalSelect {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    color: var(--text-primary);
+    font-size: 15px;
+    outline: none;
+    transition: all 0.2s;
+}
+
+.modalSelect:focus {
+    border-color: var(--primary-blue);
+}
+
+.modalError {
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(239, 68, 68, 0.1);
+    border: 1px solid rgba(239, 68, 68, 0.2);
+    border-radius: 10px;
+    color: #ef4444;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modalFooter {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    background: var(--bg-primary);
+}
+
+.modalCancel {
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modalCancel:hover {
+    background: var(--bg-hover);
+}
+
+.modalSubmit {
+    padding: 10px 20px;
+    background: var(--primary-blue);
+    color: white;
+    border: none;
+    border-radius: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.modalSubmit:hover:not(:disabled) {
+    background: #1a8cd8;
+}
+
+.modalFooter {
+    padding: 20px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+.modalCancel {
+    padding: 10px 20px;
+    background: transparent;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-secondary);
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.modalSubmit {
+    padding: 10px 24px;
+    background: var(--primary-blue);
+    border: none;
+    border-radius: 10px;
+    color: white;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.badgeWarning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+
 
 /* Booking Management Refinements */
 .bookingCard {
@@ -1285,6 +1609,8 @@ btnReject {
 }
 
 .bcardBody {
+    display: flex;
+    flex-direction: column;
     flex: 1;
     min-width: 0;
 }
@@ -1413,7 +1739,7 @@ btnReject {
     justify-content: stretch;
     gap: 6px;
     padding: 12px 0 0 0;
-    margin: 16px 0 0 0;
+    margin-top: auto;
     background-color: transparent;
     border-top: 1px solid var(--border-color);
 }
@@ -2697,40 +3023,11 @@ btnReject {
 }
 
 
-/* --- High Fidelity System Modal Refinement --- */
-
-.modalOverlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgba(0, 0, 0, 0.82);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 99999;
-    padding: 20px;
-    backdrop-filter: blur(16px) saturate(180%);
-    animation: fadeInModal 0.3s ease-out;
-}
-
-@keyframes fadeInModal {
-    from {
-        opacity: 0;
-        backdrop-filter: blur(0px);
-    }
-
-    to {
-        opacity: 1;
-        backdrop-filter: blur(16px);
-    }
-}
-
+/* --- Standard High Fidelity Modal Logic --- */
 .modalFrame {
     background: var(--bg-primary);
     border: 1px solid var(--border-color);
-    border-radius: 20px;
+    border-radius: 24px;
     max-width: 500px;
     width: 100%;
     box-shadow: 0 40px 100px rgba(0, 0, 0, 0.7);
@@ -2739,20 +3036,7 @@ btnReject {
     overflow: hidden;
     animation: zoomInModal 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     position: relative;
-    /* Ensure children can stay inside */
     z-index: 100000;
-}
-
-@keyframes zoomInModal {
-    0% {
-        transform: scale(0.92) translateY(20px);
-        opacity: 0;
-    }
-
-    100% {
-        transform: scale(1) translateY(0);
-        opacity: 1;
-    }
 }
 
 .inputGroup {
@@ -3068,6 +3352,8 @@ btnReject {
     border-radius: 16px;
     padding: 20px;
     margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
     /* Let flex gap handle spacing */
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     position: relative;

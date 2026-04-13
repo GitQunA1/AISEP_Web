@@ -12,7 +12,7 @@
     margin: 0 auto;
     background-color: var(--bg-primary);
     min-height: 100vh;
-    padding-bottom: 80px;
+    padding-bottom: 24px;
     display: flex;
     flex-direction: column;
 }
@@ -371,7 +371,7 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
-    padding-bottom: 40px;
+    padding-bottom: 24px;
     animation: fadeInUpContent 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -1278,7 +1278,7 @@
         display: flex !important;
         flex-direction: column !important;
         gap: 64px !important;
-        padding: 32px 24px 120px 24px !important;
+        padding: 32px 24px 24px 24px !important;
         background-color: var(--bg-primary);
     }
 
@@ -2210,7 +2210,7 @@
         display: flex;
         flex-direction: column;
         gap: 40px;
-        padding: 100px 20px 120px 20px;
+        padding: 100px 20px 24px 20px;
         background-color: var(--bg-primary);
         margin-top: 0;
     }
@@ -4035,4 +4035,45 @@
         width: 100%;
         justify-content: center;
     }
+}
+
+/* --- Resilient Scroll Fade Overlays --- */
+.scrollFadeWrapper {
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+}
+
+.scrollOverlayTop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 16px;
+    background: linear-gradient(to bottom, var(--bg-primary), transparent);
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.scrollOverlayBottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 16px;
+    background: linear-gradient(to top, var(--bg-primary), transparent);
+    z-index: 10;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+/* Force show bottom fade if content is scrollable (initialized) */
+.scrollOverlayBottom.active {
+    opacity: 1;
 }
