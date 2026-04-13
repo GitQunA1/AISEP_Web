@@ -20,7 +20,8 @@ import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import CustomSelect from '../components/common/CustomSelect';
 import NewsPRSection from '../components/common/NewsPRSection';
 import ProjectDetailView from '../components/feed/ProjectDetailView';
-import WalletSection from '../components/advisor/WalletSection';
+import AdvisorPayoutSection from '../components/advisor/AdvisorPayoutSection';
+import AdvisorWalletSection from '../components/advisor/AdvisorWalletSection';
 
 /**
  * AdvisorDashboard – Dashboard cho Advisor
@@ -155,9 +156,9 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
         <div className={styles.container}>
             {!activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
                 <FeedHeader
-                    title={activeSection === 'wallet' ? "Ví & Thu nhập" : "Bảng điều khiển Cố vấn"}
+                    title={activeSection === 'wallet' ? "Thu nhập" : "Bảng điều khiển Cố vấn"}
                     subtitle={activeSection === 'wallet' 
-                        ? "Quản lý số dư và các yêu cầu rút tiền của bạn."
+                        ? "Quản lý số dư và lịch sử thu nhập của bạn."
                         : (isNewAdvisor
                             ? `Chào mừng ${user?.fullName || user?.name || ''}, hãy bắt đầu bằng việc thiết lập hồ sơ của bạn.`
                             : `Xin chào, ${user?.fullName || user?.name || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`)
@@ -296,15 +297,19 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                     <NewsPRSection user={user} />
                 )}
                 
-                {activeSection === 'wallet' && (
+
+                {activeSection === 'payouts' && (
                     isNewAdvisor ? (
                         <div className={styles.emptyState} style={{ padding: '40px' }}>
                             <AlertCircle size={40} />
-                            <p>Bạn cần hoàn tất hồ sơ trước khi quản lý ví.</p>
+                            <p>Bạn cần hoàn tất hồ sơ trước khi quản lý thanh toán.</p>
                         </div>
                     ) : (
-                        <WalletSection advisorProfile={advisorProfile} user={user} />
+                        <AdvisorPayoutSection user={user} />
                     )
+                )}
+                {activeSection === 'wallet' && (
+                    <AdvisorWalletSection user={user} />
                 )}
                 {activeSection.startsWith('project_') && (
                     <ProjectDetailView

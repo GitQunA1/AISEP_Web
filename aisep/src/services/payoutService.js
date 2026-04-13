@@ -1,0 +1,86 @@
+import apiClient from './apiClient';
+
+/**
+ * Service for managing Monthly Payouts and Batches
+ */
+const payoutService = {
+  // Batch Endpoints (Staff/Admin)
+  
+  /**
+   * Generate a monthly payout batch
+   * @param {Object} data { year, month, advisorId? }
+   */
+  async generateBatch(data) {
+    const response = await apiClient.post('/api/monthly-payout-batches/generate', data);
+    return response.data;
+  },
+
+  /**
+   * Get all payout batches
+   */
+  async getBatches(params) {
+    const response = await apiClient.get('/api/monthly-payout-batches', { params });
+    return response.data;
+  },
+
+  /**
+   * Get specific batch by ID
+   */
+  async getBatchById(id) {
+    const response = await apiClient.get(`/api/monthly-payout-batches/${id}`);
+    return response.data;
+  },
+
+  /**
+   * Get all items (individual payouts) within a batch
+   */
+  async getBatchItems(id, params) {
+    const response = await apiClient.get(`/api/monthly-payout-batches/${id}/items`, { params });
+    return response.data;
+  },
+
+  // Individual Payout Endpoints (Staff/Admin & Advisor)
+
+  /**
+   * Staff/Admin: Mark a payout as paid
+   * @param {number} id 
+   * @param {Object} data { note? }
+   */
+  async markPaid(id, data = {}) {
+    const response = await apiClient.patch(`/api/monthly-payouts/${id}/mark-paid`, data);
+    return response.data;
+  },
+
+  /**
+   * Staff/Admin: Reject a payout
+   * @param {number} id 
+   * @param {Object} data { reason, note? }
+   */
+  async rejectPayout(id, data) {
+    const response = await apiClient.patch(`/api/monthly-payouts/${id}/reject`, data);
+    return response.data;
+  },
+
+  /**
+   * Staff/Admin: Get all individual payouts
+   */
+  async getAllPayouts(params) {
+    const response = await apiClient.get('/api/monthly-payouts', { params });
+    return response.data;
+  },
+
+  /**
+   * Advisor: Get their own payout history
+   */
+  async getMyPayouts(params) {
+    try {
+      const response = await apiClient.get('/api/monthly-payouts/me', { params });
+      return response.data;
+    } catch (error) {
+      if (error.response?.status === 404 || error.statusCode === 404) return [];
+      throw error;
+    }
+  }
+};
+
+export default payoutService;

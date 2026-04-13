@@ -167,36 +167,10 @@ export default function AdvisorApprovalPage({ user }) {
 
     // Mobile UI state
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
-    const [activeMobileTab, setActiveMobileTab] = useState('Pending');
-
-    // Mobile Tab Scroll Tracking
-    const tabSwitcherRef = useRef(null);
-    const [showLeftTabIndicator, setShowLeftTabIndicator] = useState(false);
-    const [showRightTabIndicator, setShowRightTabIndicator] = useState(false);
-
-    const checkTabScroll = () => {
-        if (tabSwitcherRef.current) {
-            const { scrollLeft, scrollWidth, clientWidth } = tabSwitcherRef.current;
-            setShowLeftTabIndicator(scrollLeft > 10);
-            setShowRightTabIndicator(scrollLeft < scrollWidth - clientWidth - 10);
-        }
-    };
+    const [activeMobileTab, setActiveMobileTab] = useState('All');
 
     useEffect(() => {
-        const handleResize = () => {
-            setIsMobile(window.innerWidth < 1024);
-            checkTabScroll();
-        };
-        window.addEventListener('resize', handleResize);
         fetchAdvisors();
-
-        // Initial scroll check
-        const timer = setTimeout(checkTabScroll, 100);
-
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            clearTimeout(timer);
-        };
     }, []);
 
     const fetchAdvisors = async () => {
@@ -297,83 +271,73 @@ export default function AdvisorApprovalPage({ user }) {
                 showNotification={true}
             />
 
-            <div className={local.section}>
-                {/* Mobile Tab Switcher */}
-                {isMobile && (
-                    <div className={local.tabSwitcherWrapper}>
-                        {showLeftTabIndicator && <div className={`${local.scrollIndicator} ${local.scrollIndicatorLeft}`} />}
-                        <div
-                            className={local.mobileTabSwitcher}
-                            ref={tabSwitcherRef}
-                            onScroll={checkTabScroll}
-                        >
-                            {[
-                                { id: 'Pending', label: 'Chờ xử lý', count: advisors.pending.length, status: 'pend' },
-                                { id: 'Approved', label: 'Đã duyệt', count: advisors.approved.length, status: 'appr' },
-                                { id: 'Rejected', label: 'Từ chối', count: advisors.rejected.length, status: 'rej' }
-                            ].map(tab => (
-                                <button
-                                    key={tab.id}
-                                    className={`${local.mobileTab} ${activeMobileTab === tab.id ? local.activeMobileTab : ''}`}
-                                    onClick={() => setActiveMobileTab(tab.id)}
-                                    data-status={tab.status}
-                                >
-                                    <span>{tab.label}</span>
-                                    <span className={local.mobileTabCount}>{tab.count}</span>
-                                </button>
-                            ))}
-                        </div>
-                        {showRightTabIndicator && <div className={`${local.scrollIndicator} ${local.scrollIndicatorRight}`} />}
-                    </div>
-                )}
+            <div className={local.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
+                {/* Tab Switcher - Consistent with Dashboard */}
+                <div className={local.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                    <button className={`${local.tab} ${activeMobileTab === 'All' ? local.active : ''}`} onClick={() => setActiveMobileTab('All')}>
+                        Tất cả
+                        <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{advisors.pending.length + advisors.approved.length + advisors.rejected.length}</span>
+                    </button>
+                    <button className={`${local.tab} ${activeMobileTab === 'Pending' ? local.active : ''}`} onClick={() => setActiveMobileTab('Pending')}>
+                        <div className={`${local.bctDot} ${local.pend}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                        Chờ xử lý
+                        <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{advisors.pending.length}</span>
+                    </button>
+                    <button className={`${local.tab} ${activeMobileTab === 'Approved' ? local.active : ''}`} onClick={() => setActiveMobileTab('Approved')}>
+                        <div className={`${local.bctDot} ${local.appr}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                        Đã duyệt
+                        <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{advisors.approved.length}</span>
+                    </button>
+                    <button className={`${local.tab} ${activeMobileTab === 'Rejected' ? local.active : ''}`} onClick={() => setActiveMobileTab('Rejected')}>
+                        <div className={`${local.bctDot} ${local.rej}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                        Từ chối
+                        <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{advisors.rejected.length}</span>
+                    </button>
+                </div>
 
-                <div className={staffLocal.inv_boardGridScrollable} style={{ flexFlow: isMobile ? 'column' : 'row nowrap' }}>
-                    {/* Columns */}
-                    {[
-                        { id: 'Pending', name: 'Chờ duyệt', list: advisors.pending, color: 'pending', status: 'pend' },
-                        { id: 'Approved', name: 'Đã duyệt', list: advisors.approved, color: 'approved', status: 'appr' },
-                        { id: 'Rejected', name: 'Từ chối', list: advisors.rejected, color: 'rejected', status: 'rej' }
-                    ].map(col => (
-                        (!isMobile || activeMobileTab === col.id) && (
-                            <div key={col.id} className={`${staffLocal.inv_col} ${staffLocal.inv_scrollCol}`}>
-                                {!isMobile && (
-                                    <div className={`${staffLocal.inv_colHead} ${staffLocal[col.status]}`}>
-                                        <div className={local.bcolTitle}>
-                                            <div className={`${local.bctDot} ${local[col.status]}`}></div>
-                                            {col.name}
-                                        </div>
-                                        <div className={`${local.bcolN} ${local[col.status]}`}>{col.list.length}</div>
+                <div className={staffLocal.inv_scrollCardsContainer} style={{ flex: 1, overflowY: 'auto' }}>
+                    {isLoading ? (
+                        <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                            <Loader2 size={24} className="animate-spin" style={{ color: 'var(--text-secondary)' }} />
+                        </div>
+                    ) : (
+                        (() => {
+                            let list = [];
+                            if (activeMobileTab === 'Pending') list = advisors.pending;
+                            else if (activeMobileTab === 'Approved') list = advisors.approved;
+                            else if (activeMobileTab === 'Rejected') list = advisors.rejected;
+                            else list = [...advisors.pending, ...advisors.approved, ...advisors.rejected];
+
+                            const filteredList = filterAdvisors(list);
+
+                            if (filteredList.length === 0) {
+                                return (
+                                    <div className={staffLocal.inv_emptyState}>
+                                        <Archive size={40} className={staffLocal.inv_emptyIcon} />
+                                        <p>Trống</p>
                                     </div>
-                                )}
-                                <div className={staffLocal.inv_scrollCardsContainer}>
-                                    {isLoading ? (
-                                        [1, 2, 3].map(i => <div key={i} className={local.skeletonCard}><div className={local.shimmer} /></div>)
-                                    ) : (
-                                        filterAdvisors(col.list).length === 0 ? (
-                                            <div className={staffLocal.inv_emptyState}>
-                                                <Archive size={40} className={staffLocal.inv_emptyIcon} />
-                                                <p>Trống</p>
-                                            </div>
-                                        ) : (
-                                            filterAdvisors(col.list).map(advisor => (
-                                                <AdvisorKanbanCard
-                                                    key={advisor.advisorId}
-                                                    advisor={advisor}
-                                                    status={col.status}
-                                                    onDetail={() => openDetails(advisor)}
-                                                    onApprove={() => handleApprove(advisor.advisorId)}
-                                                    onReject={() => handleReject(advisor)}
-                                                    processingId={processingId}
-                                                    processingAction={processingAction}
-                                                    isAnyProcessing={processingId !== null}
-                                                />
-                                            ))
-                                        )
-                                    )}
+                                );
+                            }
+
+                            return (
+                                <div className={staffLocal.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px', display: 'grid' }}>
+                                    {filteredList.map(advisor => (
+                                        <AdvisorKanbanCard
+                                            key={advisor.advisorId}
+                                            advisor={advisor}
+                                            status={advisor.approvalStatus === 'Approved' ? 'appr' : (advisor.approvalStatus === 'Rejected' ? 'rej' : 'pend')}
+                                            onDetail={() => openDetails(advisor)}
+                                            onApprove={() => handleApprove(advisor.advisorId)}
+                                            onReject={() => handleReject(advisor)}
+                                            processingId={processingId}
+                                            processingAction={processingAction}
+                                            isAnyProcessing={processingId !== null}
+                                        />
+                                    ))}
                                 </div>
-                            </div>
-                        )
-                    ))}
+                            );
+                        })()
+                    )}
                 </div>
             </div>
 
