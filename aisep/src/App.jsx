@@ -23,7 +23,7 @@ function App() {
   const [selectedRole, setSelectedRole] = useState(null);
   const [user, setUser] = useState(null);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
-  const [lastInvestorBookingFilter, setLastInvestorBookingFilter] = useState('ApprovedAwaitingPayment');
+  const [lastInvestorBookingFilter, setLastInvestorBookingFilter] = useState('all');
 
   // Listen for global session_expired events from apiClient
   useEffect(() => {
@@ -70,13 +70,13 @@ function App() {
 
       setUser(parsedUser);
       
-      // For staff and advisors, default to dashboard view; others default to main
       const roleStr = parsedUser.role?.toString().toLowerCase() || '';
       const roleNum = Number(parsedUser.role);
       const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
       const isAdvisor = roleStr === 'advisor' || roleNum === 2;
+      const isInvestor = roleStr === 'investor' || roleNum === 1;
       
-      if (isStaff || isAdvisor) {
+      if (isStaff || isAdvisor || isInvestor) {
         setCurrentView('dashboard');
       } else {
         setCurrentView('main');
@@ -97,9 +97,10 @@ function App() {
     const roleNum = Number(userData.role);
     const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
     const isAdvisor = roleStr === 'advisor' || roleNum === 2;
+    const isInvestor = roleStr === 'investor' || roleNum === 1;
 
-    // Operation Staff and Advisor redirect to dashboard directly
-    if (isStaff || isAdvisor) {
+    // Operation Staff, Advisor, and Investor redirect to dashboard directly
+    if (isStaff || isAdvisor || isInvestor) {
       setCurrentView('dashboard');
       return;
     }

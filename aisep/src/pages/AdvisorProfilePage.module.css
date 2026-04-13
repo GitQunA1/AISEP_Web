@@ -359,7 +359,7 @@
     border-radius: 24px;
     margin-top: 48px;
     box-shadow: 0 12px 48px rgba(0, 0, 0, 0.4);
-    z-index: 1100; /* Higher than BottomNav (1000) */
+    z-index: 1100; /* High priority visibility */
     transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 

@@ -97,14 +97,16 @@ export default function InvestorDiscovery({ user, onShowLogin }) {
                         <p className={styles.headerSubtitle}>Khám phá quỹ đầu tư và nhà đầu tư phù hợp với tiêu chí của bạn</p>
                     </div>
                     <div style={{ padding: '4px' }}>
-                        <NotificationCenter onOpenChat={(chatSessionId, notification) => {
-                            setActiveChatSession({
-                                chatSessionId,
-                                displayName: notification?.title || 'Chat mới',
-                                currentUserId: user?.userId,
-                                sentTime: new Date().toISOString()
-                            });
-                        }} />
+                        {user && (
+                            <NotificationCenter onOpenChat={(chatSessionId, notification) => {
+                                setActiveChatSession({
+                                    chatSessionId,
+                                    displayName: notification?.title || 'Chat mới',
+                                    currentUserId: user?.userId,
+                                    sentTime: new Date().toISOString()
+                                });
+                            }} />
+                        )}
                     </div>
                 </div>
                 

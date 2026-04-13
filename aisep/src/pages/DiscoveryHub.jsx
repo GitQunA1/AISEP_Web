@@ -145,14 +145,16 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
                         <p className={styles.headerSubtitle}>Tìm kiếm và kết nối với các startup tiềm năng nhất</p>
                     </div>
                     <div style={{ padding: '4px' }}>
-                        <NotificationCenter onOpenChat={(chatSessionId, notification) => {
-                            setActiveChatSession({
-                                chatSessionId,
-                                displayName: notification?.title || 'Chat mới',
-                                currentUserId: user?.userId,
-                                sentTime: new Date().toISOString()
-                            });
-                        }} />
+                        {user && (
+                            <NotificationCenter onOpenChat={(chatSessionId, notification) => {
+                                setActiveChatSession({
+                                    chatSessionId,
+                                    displayName: notification?.title || 'Chat mới',
+                                    currentUserId: user?.userId,
+                                    sentTime: new Date().toISOString()
+                                });
+                            }} />
+                        )}
                     </div>
                 </div>
 

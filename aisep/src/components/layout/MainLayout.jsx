@@ -5,7 +5,6 @@ import sharedStyles from '../../styles/SharedDashboard.module.css';
 import Sidebar from './Sidebar';
 import RightPanel from './RightPanel';
 import TopBar from './TopBar';
-import BottomNav from './BottomNav';
 import FeedHeader from '../feed/FeedHeader';
 import StartupCard from '../feed/StartupCard';
 import ProjectDetailView from '../feed/ProjectDetailView';
@@ -974,33 +973,6 @@ function MainLayout({
       )}
 
 
-      {/* Mobile Bottom Navigation */}
-      <BottomNav
-        user={user}
-        onShowHome={onShowHome}
-        onShowAdvisors={onShowAdvisors}
-        onShowInvestors={onShowInvestors}
-        onShowDashboard={onShowDashboard}
-        onShowAI={onShowAI}
-        onShowProfile={onShowProfile}
-        activeTab={
-          activeView === 'main' ? 'Home' :
-            activeView === 'advisors' ? 'Advisors' :
-              activeView === 'investors' ? 'Investors' :
-                activeView === 'ai' ? 'AI' :
-                  activeView.startsWith('dashboard') ? (
-                    activeView === 'dashboard' ? 'Dashboard' :
-                      activeView === 'dashboard_project_management' ? 'Projects' :
-                        activeView === 'dashboard_bookings' ? 'Bookings' :
-                          activeView === 'dashboard_advisor_approval' ? 'AdvisorApproval' :
-                            activeView === 'dashboard_availability' ? 'Availability' :
-                              activeView === 'dashboard_reports' ? 'Reports' :
-                                activeView === 'dashboard_approvals' ? 'Approvals' :
-                                  activeView === 'dashboard_approve_bookings' ? 'ApproveBookings' :
-                                    activeView === 'dashboard_activity' ? 'Activity' : 'Dashboard'
-                  ) : activeView === 'profile' ? 'Profile' : ''
-        }
-      />
 
     </div>
   );

@@ -72,8 +72,8 @@
 @media (max-width: 1023px) {
     .container {
         min-height: auto;
-        padding-bottom: 120px;
-        /* Increased for mobile BottomNav and extra breathing room */
+        padding-bottom: 24px;
+        /* Reclaimed space */
     }
 
     .pageHeader {
@@ -371,6 +371,7 @@
     display: flex;
     flex-direction: column;
     gap: 24px;
+    padding-bottom: 40px;
     animation: fadeInUpContent 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
@@ -3287,10 +3288,9 @@
     display: flex;
     gap: 8px;
     margin-top: 14px;
-    flex-wrap: nowrap;
+    flex-wrap: wrap;
     align-items: center;
-    overflow-x: auto;
-    scrollbar-width: none;
+    /* scrollbar-width removed as we wrap now */
     /* Firefox */
     -ms-overflow-style: none;
     /* IE/Edge */
@@ -3298,10 +3298,7 @@
     /* Tiny breathing room for scroll */
 }
 
-.xActions::-webkit-scrollbar {
-    display: none;
-    /* Hide scrollbar for Chrome/Safari/Brave */
-}
+/* scrollbar hide removed */
 
 .xActionButton {
     display: flex;
@@ -3368,16 +3365,19 @@
     }
 
     .xActions {
-        gap: 8px !important;
-        margin-top: 8px !important;
+        gap: 6px !important;
+        margin-top: 12px !important;
+        flex-wrap: wrap !important;
     }
 
     .xActionButton {
-        padding: 10px 12px !important;
-        font-size: 12px !important;
-        flex: 1;
+        padding: 8px 12px !important;
+        font-size: 11px !important;
+        font-weight: 600 !important;
+        flex: 0 1 auto !important;
+        min-width: calc(33.333% - 4px);
         justify-content: center;
-        min-height: 40px;
+        min-height: 34px;
     }
 }
 

@@ -34,7 +34,7 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
     const [loading, setLoading] = useState(true);
 
     // Filter & Search State
-    const [filterStatus, setFilterStatus] = useState(initialFilterStatus || 'ApprovedAwaitingPayment');
+    const [filterStatus, setFilterStatus] = useState(initialFilterStatus || 'all');
     const [searchTerm, setSearchTerm] = useState('');
 
     // Profile Status State
@@ -172,6 +172,7 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
     const filteredBookings = bookings.filter(b => {
         // Status filter
         const matchesStatus =
+            filterStatus === 'all' ||
             (filterStatus === 'ApprovedAwaitingPayment' && (b.status === 1 || b.status === 'ApprovedAwaitingPayment')) ||
             (filterStatus === 'Pending' && (b.status === 0 || b.status === 'Pending')) ||
             (filterStatus === 'Confirmed' && (b.status === 2 || b.status === 'Confirmed')) ||
@@ -244,8 +245,9 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
                 <div className={styles.xToolbar}>
                     <div className={styles.xFilters}>
                         {[
-                            { id: 'ApprovedAwaitingPayment', label: 'Chờ thanh toán' },
+                            { id: 'all', label: 'Tất cả' },
                             { id: 'Pending', label: 'Chờ duyệt' },
+                            { id: 'ApprovedAwaitingPayment', label: 'Chờ thanh toán' },
                             { id: 'Confirmed', label: 'Đã xác nhận' },
                             { id: 'Completed', label: 'Hoàn thành' },
                             { id: 'NoResponse', label: 'Không phản hồi' },
