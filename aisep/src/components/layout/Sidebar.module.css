@@ -542,7 +542,7 @@
 
     /* Reset Desktop Borders */
     border-right: none;
-    padding: 24px 16px;
+    padding: 20px 10px;
 
     /* Flex layout for mobile */
     display: flex;
@@ -603,6 +603,37 @@
   .backdropOpen {
     opacity: 1;
     visibility: visible;
+  }
+
+  /* Mobile Overrides for Padding */
+  .menuScrollArea {
+    padding: 0 10px;
+  }
+
+  .navItem {
+    padding: 10px 12px;
+    gap: 12px;
+  }
+
+  .footerSection {
+    padding: 16px 12px 20px;
+    gap: 12px;
+  }
+
+  .themeToggle,
+  .signInBtn,
+  .registerBtn {
+    padding: 10px 14px;
+    font-size: 0.9rem;
+  }
+
+  .profileSection {
+    padding: 6px 10px;
+  }
+
+  .sidebarHeader {
+    margin-bottom: 24px;
+    padding: 0 10px;
   }
 }
 

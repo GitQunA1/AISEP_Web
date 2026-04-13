@@ -94,7 +94,7 @@ export default function NewsPRSection({ user, onOpenChat, investorProfileStatus,
 
                         {/* Right: Notification bell */}
                         <div className={feedHeaderStyles.headerRightActions}>
-                            <NotificationCenter onOpenChat={onOpenChat} />
+                            {user && <NotificationCenter onOpenChat={onOpenChat} />}
                         </div>
                     </div>
                 </div>

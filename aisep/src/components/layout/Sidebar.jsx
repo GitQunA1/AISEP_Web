@@ -35,7 +35,7 @@ function Sidebar({
       { icon: Compass, label: 'Home', displayLabel: 'Khám phá dự án', href: '#' },
       { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
       { icon: Newspaper, label: 'PRNews', displayLabel: 'Tin tức', href: '#', showWhenLoggedIn: true },
-      { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#', hideFor: ['investor'] },
+      { icon: TrendingUp, label: 'Investors', displayLabel: 'Nhà đầu tư', href: '#' },
       { icon: Users, label: 'Advisors', displayLabel: 'Cố vấn', href: '#', hideFor: ['advisor'] },
     ];
 
@@ -78,13 +78,14 @@ function Sidebar({
     }
 
     if (roleStr === 'investor' || roleNum === 1) {
-      const investorItems = [
-        { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
+      return [
+        baseItems.find(i => i.label === 'Home'),
+        baseItems.find(i => i.label === 'Dashboard'),
         { icon: Calendar, label: 'Bookings', displayLabel: 'Lịch Tư Vấn', href: '#', showWhenLoggedIn: true },
+        baseItems.find(i => i.label === 'PRNews'),
+        baseItems.find(i => i.label === 'Advisors'),
+        baseItems.find(i => i.label === 'Investors'),
       ];
-      const otherItems = baseItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
-      const homeItem = baseItems.find(item => item.label === 'Home');
-      return [...investorItems, homeItem, ...otherItems];
     }
 
     return baseItems;

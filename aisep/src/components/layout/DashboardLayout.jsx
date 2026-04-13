@@ -3,11 +3,10 @@ import styles from './DashboardLayout.module.css';
 import Sidebar from './Sidebar';
 import RightPanel from './RightPanel';
 import TopBar from './TopBar';
-import BottomNav from './BottomNav';
 
 /**
  * DashboardLayout - Wrapper layout for dashboard pages
- * Provides navigation (Sidebar, TopBar, BottomNav) while displaying dashboard content
+ * Provides navigation (Sidebar, TopBar) while displaying dashboard content
  * Uses strict 3-column grid layout
  */
 function DashboardLayout({
@@ -69,16 +68,7 @@ function DashboardLayout({
         <RightPanel showSearch={false} />
       </div>
 
-      {/* Mobile Bottom Navigation - Kept outside strict grid flow if fixed, or handled by media queries */}
-      <BottomNav
-        user={user}
-        onShowHome={onShowHome}
-        onShowAdvisors={onShowAdvisors}
-        onShowInvestors={onShowInvestors}
-        onShowDashboard={onShowDashboard}
-        onShowAI={onShowAI}
-        activeTab="Dashboard"
-      />
+
     </div>
   );
 }

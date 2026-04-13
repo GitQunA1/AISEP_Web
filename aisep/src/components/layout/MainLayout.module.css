@@ -190,7 +190,7 @@
     border: none;
     overflow: visible;
     margin-top: 60px;
-    padding-bottom: 70px;
+    padding-bottom: 24px;
   }
 
   /* Add horizontal padding for mobile — SIGNIFICANTLY REDUCED to fix gaps */
@@ -203,8 +203,8 @@
   /* Specific fix for AI Chat Assistant on Mobile */
   .noScroll {
     overflow: hidden !important;
-    height: calc(100vh - 120px) !important;
-    /* Viewport minus TopBar (60px) and BottomNav (60px) */
+    height: calc(100vh - 60px) !important;
+    /* Viewport minus TopBar (60px) */
     display: flex;
     flex-direction: column;
     padding-bottom: 0 !important;

@@ -14,9 +14,9 @@
 @media (max-width: 1023px) {
     .wrapper {
         position: fixed;
-        /* Lock between TopBar (60px) and BottomNav (80px) */
+        /* Lock below TopBar (60px) - Reclaimed bottom space */
         top: 60px;
-        bottom: 80px;
+        bottom: 0;
         left: 0;
         right: 0;
         z-index: 500; /* Above regular content, below modals if any */

@@ -58,7 +58,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
         window.addEventListener('resize', handleResize);
         return () => window.removeEventListener('resize', handleResize);
     }, []);
-    const [lastBookingFilter, setLastBookingFilter] = React.useState('ApprovedAwaitingPayment');
+    const [lastBookingFilter, setLastBookingFilter] = React.useState('all');
     const [activeProjectMobileTab, setActiveProjectMobileTab] = React.useState('draft');
     const [projectSearchTerm, setProjectSearchTerm] = React.useState('');
     const [showCompleteInfoForm, setShowCompleteInfoForm] = React.useState(false);

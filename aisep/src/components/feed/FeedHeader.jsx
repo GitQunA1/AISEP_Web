@@ -69,7 +69,7 @@ function FeedHeader({
                 </button>
               )}
               {customAction}
-              {(onOpenChat || showNotification) && <NotificationCenter onOpenChat={onOpenChat} />}
+              {user && (onOpenChat || showNotification) && <NotificationCenter onOpenChat={onOpenChat} />}
             </div>
           </div>
         </div>
