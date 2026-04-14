@@ -477,7 +477,10 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
     // AI History state
     const [analysisHistory, setAnalysisHistory] = useState([]);
+    const [staffAnalysisHistory, setStaffAnalysisHistory] = useState([]);
     const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+    const [isLoadingStaffHistory, setIsLoadingStaffHistory] = useState(false);
+    const [isEvaluatingStaffAI, setIsEvaluatingStaffAI] = useState(false);
     const [showHistoryView, setShowHistoryView] = useState(false);
     const [selectedHistoryResult, setSelectedHistoryResult] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -885,6 +888,9 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
     };
 
     const fetchAnalysisHistory = async (projectId) => {
+        if (!projectId) return;
+        
+        // 1. Fetch Startup-initiated history
         setIsLoadingHistory(true);
         try {
             const response = await AIEvaluationService.getProjectAnalysisHistory(projectId);
@@ -894,13 +900,56 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                 setAnalysisHistory([]);
             }
         } catch (error) {
-            // Only log if it's not a permission error or if debugging
             if (error?.response?.status !== 403) {
-                console.error('Error fetching analysis history:', error);
+                console.error('Error fetching startup analysis history:', error);
             }
             setAnalysisHistory([]);
         } finally {
             setIsLoadingHistory(false);
+        }
+
+        // 2. Fetch Staff-initiated history
+        setIsLoadingStaffHistory(true);
+        try {
+            const response = await AIEvaluationService.getStaffAnalysisHistory(projectId);
+            if (response.success) {
+                setStaffAnalysisHistory(response.data || []);
+            } else {
+                setStaffAnalysisHistory([]);
+            }
+        } catch (error) {
+            console.error('Error fetching staff analysis history:', error);
+            setStaffAnalysisHistory([]);
+        } finally {
+            setIsLoadingStaffHistory(false);
+        }
+    };
+
+    /**
+     * Handle Staff-initiated AI Evaluation
+     */
+    const handleRunStaffAIEvaluation = async (projectId) => {
+        if (!projectId || isEvaluatingStaffAI) return;
+        
+        setIsEvaluatingStaffAI(true);
+        try {
+            const result = await AIEvaluationService.evaluateProjectByStaffAPI(projectId);
+            if (result.success) {
+                setModalType('success');
+                setModalMessage('✓ Đã khởi tạo phân tích AI mới thành công!');
+                setShowModal(true);
+                // Refresh both histories
+                fetchAnalysisHistory(projectId);
+            } else {
+                throw new Error(result.message || 'Lỗi khi gọi API phân tích');
+            }
+        } catch (error) {
+            console.error('Staff AI evaluation error:', error);
+            setModalType('error');
+            setModalMessage('❌ Phân tích thất bại: ' + (error.message || 'Lỗi không xác định'));
+            setShowModal(true);
+        } finally {
+            setIsEvaluatingStaffAI(false);
         }
     };
 
@@ -2937,86 +2986,173 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
                         {/* Modal Body */}
                         <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-                            {/* AI History Section */}
-                            <div style={{
-                                marginBottom: '24px',
-                                padding: '16px',
-                                backgroundColor: 'rgba(29, 155, 240, 0.05)',
-                                borderRadius: '12px',
-                                border: '1px solid var(--border-color)'
-                            }}>
-                                <h4 style={{
-                                    fontSize: '14px',
-                                    fontWeight: '800',
-                                    marginBottom: '12px',
-                                    color: 'var(--text-primary)',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '8px'
+                            {/* AI Analysis Sections (Dual Compartments) */}
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
+                                {/* Compartment 1: Startup initiated */}
+                                <div style={{
+                                    padding: '16px',
+                                    backgroundColor: 'rgba(29, 155, 240, 0.03)',
+                                    borderRadius: '16px',
+                                    border: '1px solid rgba(29, 155, 240, 0.1)'
                                 }}>
-                                    <History size={18} color="var(--primary-blue)" />
-                                    Lịch sử đánh giá AI
-                                </h4>
-                                {isLoadingHistory ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                                        <Loader2 size={14} className={styles.spinner} />
-                                        Đang tải lịch sử...
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <History size={18} color="var(--primary-blue)" />
+                                            <h4 style={{ fontSize: '14px', fontWeight: '800', margin: 0, color: 'var(--text-primary)' }}>Startup đánh giá dự án qua AI</h4>
+                                        </div>
                                     </div>
-                                ) : analysisHistory.length > 0 ? (
-                                    <div style={{
-                                        display: 'flex',
-                                        gap: '12px',
-                                        overflowX: 'auto',
-                                        paddingBottom: '8px',
-                                        msOverflowStyle: 'none',
-                                        scrollbarWidth: 'none'
+                                    
+                                    {isLoadingHistory ? (
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                            <Loader2 size={14} className={styles.spinner} /> Đang tải...
+                                        </div>
+                                    ) : analysisHistory.length > 0 ? (
+                                        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                                            {analysisHistory.map((item, index) => {
+                                                const isEligibility = 'is_eligible_startup' in item || 'isEligibleStartup' in item || ('data' in item && ('is_eligible_startup' in item.data || 'isEligibleStartup' in item.data));
+                                                const isEligible = item.is_eligible_startup || item.isEligibleStartup || item.data?.is_eligible_startup || item.data?.isEligibleStartup;
+                                                
+                                                return (
+                                                    <button
+                                                        key={item.evaluationId || index}
+                                                        onClick={() => { setSelectedHistoryResult({ data: item }); setShowHistoryView(true); }}
+                                                        className={styles.scoreCard}
+                                                        style={{ 
+                                                            minWidth: '95px', 
+                                                            padding: '8px 12px',
+                                                            borderLeft: isEligibility ? `3px solid ${isEligible ? '#10b981' : '#ef4444'}` : 'none'
+                                                        }}
+                                                    >
+                                                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '4px' }}>
+                                                            {new Date(item.createdAt || item.evaluatedAt || Date.now()).toLocaleDateString('vi-VN')}
+                                                        </span>
+                                                        {isEligibility ? (
+                                                            <div style={{ 
+                                                                fontSize: '11px', 
+                                                                fontWeight: '800', 
+                                                                color: isEligible ? '#10b981' : '#ef4444',
+                                                                textTransform: 'uppercase',
+                                                                letterSpacing: '0.02em'
+                                                            }}>
+                                                                {isEligible ? 'Đủ Đ/K' : 'K.đủ Đ/K'}
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
+                                                                <span style={{ fontSize: '16px', fontWeight: '900', color: 'var(--primary-blue)' }}>{item.potentialScore || 0}</span>
+                                                                <span style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>/100</span>
+                                                            </div>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    ) : (
+                                        <div style={{ color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Chưa có bản đánh giá từ Startup</div>
+                                    )}
+                                </div>
+
+                                {/* Compartment 2: Staff initiated */}
+                                <div style={{
+                                    padding: '16px',
+                                    backgroundColor: 'rgba(13, 148, 136, 0.03)',
+                                    borderRadius: '16px',
+                                    border: '1px solid rgba(13, 148, 136, 0.1)'
+                                }}>
+                                    <div style={{ 
+                                        display: 'flex', 
+                                        alignItems: 'center', 
+                                        justifyContent: 'space-between', 
+                                        marginBottom: '16px', 
+                                        flexWrap: 'wrap', 
+                                        gap: '12px' 
                                     }}>
-                                        {analysisHistory.map((item, index) => (
-                                            <button
-                                                key={item.evaluationId || index}
-                                                onClick={() => {
-                                                    setSelectedHistoryResult({ data: item });
-                                                    setShowHistoryView(true);
-                                                }}
-                                                style={{
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    alignItems: 'center',
-                                                    padding: '10px 16px',
-                                                    backgroundColor: 'var(--bg-primary)',
-                                                    border: '1px solid var(--border-color)',
-                                                    borderRadius: '12px',
-                                                    minWidth: '100px',
-                                                    cursor: 'pointer',
-                                                    transition: 'all 0.2s',
-                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.02)'
-                                                }}
-                                                onMouseOver={(e) => {
-                                                    e.currentTarget.style.borderColor = 'var(--primary-blue)';
-                                                    e.currentTarget.style.backgroundColor = 'rgba(29, 155, 240, 0.02)';
-                                                }}
-                                                onMouseOut={(e) => {
-                                                    e.currentTarget.style.borderColor = 'var(--border-color)';
-                                                    e.currentTarget.style.backgroundColor = 'var(--bg-primary)';
-                                                }}
-                                            >
-                                                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '4px' }}>
-                                                    {new Date(item.createdAt || item.evaluatedAt || Date.now()).toLocaleDateString('vi-VN')}
-                                                </span>
-                                                <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-                                                    <span style={{ fontSize: '18px', fontWeight: '900', color: 'var(--primary-blue)' }}>
-                                                        {item.potentialScore || 0}
-                                                    </span>
-                                                    <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600' }}>/100</span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                            <PenTool size={18} color="#0d9488" />
+                                            <h4 style={{ fontSize: '14px', fontWeight: '800', margin: 0, color: 'var(--text-primary)', lineHeight: '1.4' }}>Nhân viên đánh giá dự án qua AI</h4>
+                                        </div>
+                                    </div>
+                                    
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
+                                        {/* Left Side: Scrollable History Chips */}
+                                        <div style={{ 
+                                            flex: 1, 
+                                            display: 'flex', 
+                                            gap: '10px', 
+                                            overflowX: 'auto', 
+                                            paddingBottom: '4px', 
+                                            msOverflowStyle: 'none', 
+                                            scrollbarWidth: 'none',
+                                            minWidth: 0 // allow shrinking
+                                        }}>
+                                            {isLoadingStaffHistory ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                    <Loader2 size={14} className={styles.spinner} /> Đang tải...
                                                 </div>
-                                            </button>
-                                        ))}
+                                            ) : staffAnalysisHistory.length > 0 ? (
+                                                staffAnalysisHistory.map((item, index) => {
+                                                    const isEligible = item.is_eligible_startup || item.isEligibleStartup || item.data?.is_eligible_startup || item.data?.isEligibleStartup;
+                                                    
+                                                    return (
+                                                        <button
+                                                            key={item.evaluationId || index}
+                                                            onClick={() => { setSelectedHistoryResult({ data: item }); setShowHistoryView(true); }}
+                                                            className={styles.scoreCard}
+                                                            style={{ 
+                                                                minWidth: '100px', 
+                                                                padding: '8px 12px', 
+                                                                borderLeft: `3px solid ${isEligible ? '#10b981' : '#ef4444'}`,
+                                                                flexShrink: 0
+                                                            }}
+                                                        >
+                                                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '4px' }}>
+                                                                {new Date(item.createdAt || item.evaluatedAt || Date.now()).toLocaleDateString('vi-VN')}
+                                                            </span>
+                                                            <div style={{ 
+                                                                fontSize: '11px', 
+                                                                fontWeight: '800', 
+                                                                color: isEligible ? '#10b981' : '#ef4444',
+                                                                textTransform: 'uppercase',
+                                                                letterSpacing: '0.02em'
+                                                            }}>
+                                                                {isEligible ? 'Đủ Đ/K' : 'K.đủ Đ/K'}
+                                                            </div>
+                                                        </button>
+                                                    );
+                                                })
+                                            ) : (
+                                                <div style={{ color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic', paddingLeft: '8px' }}>
+                                                    Chưa có dữ liệu lịch sử
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Right Side: Original Action Button */}
+                                        <button
+                                            className={styles.primaryBtn}
+                                            style={{ 
+                                                padding: '6px 14px', 
+                                                borderRadius: '10px', 
+                                                fontSize: '12px', 
+                                                fontWeight: 700,
+                                                backgroundColor: detailProject.status === 'Pending' ? '#0d9488' : '#6b7280',
+                                                borderColor: detailProject.status === 'Pending' ? '#0d9488' : '#6b7280',
+                                                cursor: detailProject.status === 'Pending' ? 'pointer' : 'not-allowed',
+                                                opacity: detailProject.status === 'Pending' ? 1 : 0.6,
+                                                flexShrink: 0,
+                                                whiteSpace: 'nowrap'
+                                            }}
+                                            onClick={() => handleRunStaffAIEvaluation(detailProject.projectId)}
+                                            disabled={isEvaluatingStaffAI || detailProject.status !== 'Pending'}
+                                            title={detailProject.status !== 'Pending' ? 'Chỉ có thể đánh giá Eligibility cho dự án đang ở trạng thái Pending' : ''}
+                                        >
+                                            {isEvaluatingStaffAI ? (
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                    <Loader2 className={styles.spinner} size={14} /> Xử lý...
+                                                </div>
+                                            ) : staffAnalysisHistory.length > 0 ? 'Phân tích lại' : 'Phân tích ngay'}
+                                        </button>
                                     </div>
-                                ) : (
-                                    <div style={{ color: 'var(--text-secondary)', fontSize: '13px', padding: '4px 0' }}>
-                                        Chưa có dữ liệu đánh giá
-                                    </div>
-                                )}
+                                </div>
                             </div>
                             {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
                                 <div className={styles.rejectionBox} style={{ marginBottom: '24px', marginTop: 0 }}>

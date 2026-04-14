@@ -29,9 +29,11 @@ export default function ErrorModal({ onClose, title, message }) {
                     {message || 'Đã xảy ra lỗi. Vui lòng thử lại.'}
                 </p>
 
-                <button className={styles.primaryButton} onClick={onClose} style={{ backgroundColor: 'var(--score-poor)' }}>
-                    Đóng
-                </button>
+                <div className={styles.buttonGroup}>
+                    <button className={styles.primaryButton} onClick={onClose} style={{ backgroundColor: 'var(--score-poor)' }}>
+                        Đóng
+                    </button>
+                </div>
             </div>
         </div>
     );
