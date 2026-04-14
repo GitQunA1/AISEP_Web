@@ -387,21 +387,21 @@ class AIEvaluationService {
   }
 
   /**
-   * Call API to evaluate project eligibility
-   * POST /api/StartupAIAnalysis/{projectId}/eligibility-evaluate
+   * Call API to evaluate project and get eligibility/score
+   * POST /api/StartupAIAnalysis/{projectId}/evaluate
    * @param {number} projectId - Project ID
-   * @returns {Promise<object>} - { success, data: { isEligible, failureReasons, ... }, message }
+   * @returns {Promise<object>} - { success, data: { isEligibleStartup, score, ... }, message }
    */
-  static async evaluateEligibilityAPI(projectId) {
+  static async evaluateProjectAPI(projectId) {
     try {
       if (!projectId && projectId !== 0) {
         return { success: false, message: 'Invalid projectId' };
       }
 
-      console.log('[ELIGIBILITY] API Call via apiClient:', projectId);
-      const result = await apiClient.post(`/api/StartupAIAnalysis/${projectId}/eligibility-evaluate`);
+      console.log('[AI EVALUATE] API Call via apiClient:', projectId);
+      const result = await apiClient.post(`/api/StartupAIAnalysis/${projectId}/analyze`, {});
       
-      console.log('[ELIGIBILITY] Success - eligibility result received:', result.data?.isEligibleStartup);
+      console.log('[AI EVALUATE] Success - result received:', result.data);
       
       return {
         success: true,
@@ -409,11 +409,11 @@ class AIEvaluationService {
         message: result.message || 'Evaluation complete'
       };
     } catch (error) {
-      console.error('[ELIGIBILITY] Error:', error);
+      console.error('[AI EVALUATE] Error:', error);
       return {
         success: false,
         data: null,
-        message: error.message || 'Network error while evaluating eligibility'
+        message: error.message || 'Network error while evaluating project'
       };
     }
   }
