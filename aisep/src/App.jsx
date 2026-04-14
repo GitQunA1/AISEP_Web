@@ -282,9 +282,6 @@ function App() {
                 return <AdvisorDashboard user={user} initialSection={section} onSectionChange={handleShowDashboard} onShowProfile={handleShowProfile} />;
               } else if (isStaff) {
                 const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'statistics';
-                if (section === 'advisor_approval') {
-                  return <AdvisorApprovalPage user={user} />;
-                }
                 return <OperationStaffDashboard user={user} initialSection={section} />;
               } else {
                 return <div style={{ padding: '20px', textAlign: 'center' }}><p>Dashboard not available for your role</p></div>;

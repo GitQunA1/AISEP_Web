@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { Search, Archive, AlertCircle, Loader2, X, User, Mail, MapPin, Globe, Award, Briefcase, DollarSign, FileText, ChevronRight, CheckCircle, XCircle } from 'lucide-react';
 import local from './AdvisorApprovalPage.module.css';
 import advisorService from '../../services/advisorService';
@@ -8,6 +9,7 @@ import ErrorModal from '../common/ErrorModal';
 import RejectionReasonModal from '../common/RejectionReasonModal';
 import FeedHeader from '../feed/FeedHeader';
 import staffLocal from '../../styles/OperationStaffDashboard.module.css';
+import sharedStyles from '../../styles/SharedDashboard.module.css';
 
 /**
  * AdvisorDetailModal - Detailed view of an advisor profile for staff review
@@ -22,7 +24,7 @@ const AdvisorDetailModal = ({ advisor, onClose, onApprove, onReject, processingI
     const status = advisor.approvalStatus || 'Pending';
     const isPending = status === 'Pending';
 
-    return (
+    return createPortal(
         <div className={local.modalOverlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
             <div className={local.detailModalContent}>
                 {/* Header */}
@@ -49,12 +51,12 @@ const AdvisorDetailModal = ({ advisor, onClose, onApprove, onReject, processingI
                                 </div>
                                 <div className={local.infoRow}>
                                     <span className={local.infoLabel}>Email</span>
-                                    <span className={local.infoValue}>{advisor.email || 'N/A'}</span>
+                                    <span className={`${local.infoValue} ${local.vEmail}`}>{advisor.email || 'N/A'}</span>
                                 </div>
                                 <div className={local.infoRow}>
                                     <span className={local.infoLabel}>Khu vực</span>
                                     <span className={local.infoValue}>
-                                        <MapPin size={14} style={{ marginRight: '4px' }} />
+                                        <MapPin size={14} style={{ marginRight: '4px', verticalAlign: 'middle' }} />
                                         {advisor.location || 'Chưa cập nhật'}
                                     </span>
                                 </div>
@@ -81,11 +83,11 @@ const AdvisorDetailModal = ({ advisor, onClose, onApprove, onReject, processingI
                             </div>
                             <div className={local.descriptionBox}>
                                 <h4 className={local.boxLabel}>Tiểu sử</h4>
-                                <p>{advisor.bio || 'Không có mô tả.'}</p>
+                                <p className={local.boxText}>{advisor.bio || 'Không có mô tả.'}</p>
                             </div>
                             <div className={local.descriptionBox}>
                                 <h4 className={local.boxLabel}>Kinh nghiệm làm việc</h4>
-                                <p>{advisor.previousExperience || 'Không có thông tin kinh nghiệm.'}</p>
+                                <p className={local.boxText}>{advisor.previousExperience || 'Không có thông tin kinh nghiệm.'}</p>
                             </div>
                         </div>
 
@@ -100,7 +102,10 @@ const AdvisorDetailModal = ({ advisor, onClose, onApprove, onReject, processingI
                                     className={local.certLink}
                                 >
                                     <FileText size={18} />
-                                    <span>Xem hồ sơ chứng chỉ</span>
+                                    <div className={local.certDetails}>
+                                        <span className={local.certName}>Xem hồ sơ chứng chỉ</span>
+                                        <span className={local.certSub}>Tài liệu đính kèm</span>
+                                    </div>
                                     <Globe size={14} style={{ marginLeft: 'auto' }} />
                                 </a>
                             ) : (
@@ -146,14 +151,14 @@ const AdvisorDetailModal = ({ advisor, onClose, onApprove, onReject, processingI
                     )}
                 </div>
             </div>
-        </div>
+        </div>,
+        document.body
     );
 };
 
-export default function AdvisorApprovalPage({ user }) {
+export default function AdvisorApprovalPage({ user, searchTerm }) {
     const [isLoading, setIsLoading] = useState(true);
     const [advisors, setAdvisors] = useState({ pending: [], approved: [], rejected: [] });
-    const [searchTerm, setSearchTerm] = useState('');
     const [processingId, setProcessingId] = useState(null);
     const [processingAction, setProcessingAction] = useState(null);
 
@@ -250,7 +255,7 @@ export default function AdvisorApprovalPage({ user }) {
     };
 
     const filterAdvisors = (list) => {
-        if (!searchTerm.trim()) return list;
+        if (!searchTerm?.trim()) return list;
         const low = searchTerm.toLowerCase();
         return list.filter(a =>
             (a.userName || '').toLowerCase().includes(low) ||
@@ -260,38 +265,37 @@ export default function AdvisorApprovalPage({ user }) {
 
     return (
         <div className={local.container}>
-            <FeedHeader
-                title="Duyệt hồ sơ Cố vấn"
-                subtitle="Quản lý và phê duyệt đội ngũ chuyên gia cố vấn cho nền tảng."
-                showFilter={false}
-                user={user}
-                searchTerm={searchTerm}
-                onSearchChange={setSearchTerm}
-                searchPlaceholder="Tìm kiếm tên hoặc chuyên môn..."
-                showNotification={true}
-            />
+            {/* Removed internal FeedHeader to use dashboard's main header */}
 
             <div className={local.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
-                {/* Tab Switcher - Consistent with Dashboard */}
-                <div className={local.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
-                    <button className={`${local.tab} ${activeMobileTab === 'All' ? local.active : ''}`} onClick={() => setActiveMobileTab('All')}>
-                        Tất cả
-                        <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{advisors.pending.length + advisors.approved.length + advisors.rejected.length}</span>
+                {/* Tab Switcher - Fully synced with Dashboard shared styles */}
+                <div className={sharedStyles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                    <button
+                        className={`${sharedStyles.tab} ${activeMobileTab === 'All' ? sharedStyles.active : ''}`}
+                        onClick={() => setActiveMobileTab('All')}
+                    >
+                        Tất cả <span className={local.mobileTabCount}>{advisors.pending.length + advisors.approved.length + advisors.rejected.length}</span>
                     </button>
-                    <button className={`${local.tab} ${activeMobileTab === 'Pending' ? local.active : ''}`} onClick={() => setActiveMobileTab('Pending')}>
+                    <button
+                        className={`${sharedStyles.tab} ${activeMobileTab === 'Pending' ? sharedStyles.active : ''}`}
+                        onClick={() => setActiveMobileTab('Pending')}
+                    >
                         <div className={`${local.bctDot} ${local.pend}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
-                        Chờ xử lý
-                        <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{advisors.pending.length}</span>
+                        Chờ xử lý <span className={local.mobileTabCount}>{advisors.pending.length}</span>
                     </button>
-                    <button className={`${local.tab} ${activeMobileTab === 'Approved' ? local.active : ''}`} onClick={() => setActiveMobileTab('Approved')}>
+                    <button
+                        className={`${sharedStyles.tab} ${activeMobileTab === 'Approved' ? sharedStyles.active : ''}`}
+                        onClick={() => setActiveMobileTab('Approved')}
+                    >
                         <div className={`${local.bctDot} ${local.appr}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
-                        Đã duyệt
-                        <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{advisors.approved.length}</span>
+                        Đã duyệt <span className={local.mobileTabCount}>{advisors.approved.length}</span>
                     </button>
-                    <button className={`${local.tab} ${activeMobileTab === 'Rejected' ? local.active : ''}`} onClick={() => setActiveMobileTab('Rejected')}>
+                    <button
+                        className={`${sharedStyles.tab} ${activeMobileTab === 'Rejected' ? sharedStyles.active : ''}`}
+                        onClick={() => setActiveMobileTab('Rejected')}
+                    >
                         <div className={`${local.bctDot} ${local.rej}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
-                        Từ chối
-                        <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{advisors.rejected.length}</span>
+                        Từ chối <span className={local.mobileTabCount}>{advisors.rejected.length}</span>
                     </button>
                 </div>
 
@@ -320,7 +324,7 @@ export default function AdvisorApprovalPage({ user }) {
                             }
 
                             return (
-                                <div className={staffLocal.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px', display: 'grid' }}>
+                                <div className={sharedStyles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px', padding: '16px 0 24px 0' }}>
                                     {filteredList.map(advisor => (
                                         <AdvisorKanbanCard
                                             key={advisor.advisorId}
@@ -353,12 +357,13 @@ export default function AdvisorApprovalPage({ user }) {
                 />
             )}
 
-            {showRejectionModal && selectedAdvisor && (
+            {showRejectionModal && selectedAdvisor && createPortal(
                 <RejectionReasonModal
                     projectName={selectedAdvisor.userName || selectedAdvisor.fullName}
                     onCancel={() => setShowRejectionModal(false)}
                     onSubmit={(reason) => handleReject(selectedAdvisor, reason)}
-                />
+                />,
+                document.body
             )}
 
             {showModal && (

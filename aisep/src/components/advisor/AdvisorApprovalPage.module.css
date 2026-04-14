@@ -3,12 +3,10 @@
 .container {
     padding: 0;
     width: 100%;
-    height: 100%;
-    /* Fill the MainLayout content area */
+    /* Fill the container provided by the parent */
     display: flex;
     flex-direction: column;
-    background-color: var(--bg-primary);
-    overflow: hidden;
+    background-color: transparent;
 }
 
 /* FeedHeader is now standard */
@@ -17,104 +15,21 @@
     padding: 0;
     display: flex;
     flex-direction: column;
+    gap: 24px;
     flex: 1;
     min-height: 0;
     /* Important for inner flex scrolling */
 }
 
-/* Elite Tuning: Override FeedHeader (Standard component spacing is too loose) */
-.container :global(.FeedHeader_headerInner) {
+/* Removed aggressive Tuning to allow standard header spacing */
+/*.container :global(.FeedHeader_headerInner) {
     padding-bottom: 4px !important;
-}
+}*/
 
-/* Tabs */
-.tabs {
-    display: flex;
-    border-bottom: 1px solid var(--border-color);
-    overflow-x: auto;
-    scrollbar-width: none;
-    background-color: var(--bg-primary);
-    position: relative;
-}
-
-.tabs::-webkit-scrollbar {
-    display: none;
-}
-
-.tab {
-    padding: 12px 16px;
-    background: none;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 600;
-    cursor: pointer;
-    position: relative;
-    transition: all 0.2s;
-    text-align: center;
-    white-space: nowrap;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.tab:hover {
-    background-color: var(--bg-hover);
-    color: var(--text-primary);
-}
-
-.tab.active {
-    color: var(--text-primary);
-    background-color: rgba(var(--primary-blue-rgb), 0.05);
-}
-
-.tab.active::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 3px;
-    background-color: var(--primary-blue);
-    border-radius: 3px 3px 0 0;
-}
-
-.mobileTabCount {
-    font-size: 11px;
-    font-weight: 800;
-    padding: 1px 6px;
-    border-radius: 6px;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-secondary);
-}
-
-.tab.active .mobileTabCount {
-    background: var(--primary-blue);
-    color: white;
-}
-
-.pend {
-    color: #ff7a00;
-}
-
-.appr {
-    color: #00ba7c;
-}
-
-.rej {
-    color: #f4212e;
-}
+/* Tabs styles removed - now using shared dashboard styles */
 
 /* Kanban Board Layout */
-.boardGrid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 0;
-    flex: 1;
-    min-height: 0;
-    /* Enable flex-child scrolling */
-    overflow-x: auto;
-}
+/* boardGrid removed - using sharedStyles.sectionGrid */
 
 .bcol {
     display: flex;
@@ -819,9 +734,28 @@
 
 .infoValue {
     font-size: 14px;
-    font-weight: 800;
+    font-weight: 700;
     color: var(--text-primary);
     text-align: right;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.vEmail {
+    font-size: 13px;
+    color: var(--primary-blue);
+    font-family: 'IBM Plex Mono', monospace;
+    letter-spacing: -0.2px;
+}
+
+@media (max-width: 480px) {
+    .infoRow {
+        flex-direction: column;
+        gap: 4px;
+    }
+    .infoValue {
+        text-align: left;
+    }
 }
 
 .expertiseBox {
@@ -869,31 +803,53 @@
     opacity: 0.6;
 }
 
-.descriptionBox p {
+.boxText {
     font-size: 14px;
     line-height: 1.6;
     color: var(--text-primary);
     margin: 0;
     font-weight: 500;
+    white-space: pre-wrap;
 }
 
 .certLink {
     display: flex;
     align-items: center;
-    gap: 12px;
-    background: var(--bg-secondary);
+    gap: 16px;
+    background: rgba(255, 255, 255, 0.03);
     border: 1px solid var(--border-color);
-    padding: 16px;
-    border-radius: 12px;
+    padding: 16px 20px;
+    border-radius: 16px;
     color: var(--primary-blue);
     text-decoration: none;
-    font-weight: 800;
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .certLink:hover {
-    background: var(--bg-hover);
+    background: rgba(29, 155, 240, 0.08);
     border-color: var(--primary-blue);
+}
+
+.certDetails {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+}
+
+.certName {
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text-primary);
+    display: block;
+}
+
+.certSub {
+    font-size: 11px;
+    color: var(--text-secondary);
+    font-weight: 600;
+    opacity: 0.6;
+    display: block;
 }
 
 .noCert {
