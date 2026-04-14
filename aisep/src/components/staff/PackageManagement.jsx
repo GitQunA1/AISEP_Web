@@ -48,7 +48,7 @@ const PackageManagement = ({ searchTerm = '' }) => {
     setIsSaving(true);
     try {
       const payload = {
-        name: editingPackage.packageName,
+        packageName: editingPackage.packageName,
         description: editingPackage.description,
         price: editingPackage.price,
         durationMonths: editingPackage.durationMonths,

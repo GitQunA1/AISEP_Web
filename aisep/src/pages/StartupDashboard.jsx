@@ -31,6 +31,9 @@ import StartupProfileBanner from '../components/startup/StartupProfileBanner';
 import StartupBookings from '../components/startup/StartupBookings';
 import ProjectDetailView from '../components/feed/ProjectDetailView';
 import SubscriptionManagement from '../components/subscription/SubscriptionManagement';
+import subscriptionService from '../services/subscriptionService';
+import paymentService from '../services/paymentService';
+import AIAnalyzeConfirmationModal from '../components/common/AIAnalyzeConfirmationModal';
 
 
 /**
@@ -146,6 +149,13 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
     const signatureCanvasRef = React.useRef(null);
     const signatureDataRef = React.useRef(''); // Keep latest signature value
     const [isSignatureEmpty, setIsSignatureEmpty] = React.useState(true);
+
+    // AI Analysis Quote states
+    const [subscription, setSubscription] = React.useState(null);
+    const [activePackage, setActivePackage] = React.useState(null);
+    const [showAIAnalyzeConfirm, setShowAIAnalyzeConfirm] = React.useState(false);
+    const [targetProjectIdForAI, setTargetProjectIdForAI] = React.useState(null);
+    const [isLoadingSubscription, setIsLoadingSubscription] = React.useState(false);
 
     // Chat Widget States
     const [activeChatConnectionId, setActiveChatConnectionId] = React.useState(null);
@@ -362,8 +372,27 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
         };
 
         fetchDashboardData();
+        fetchSubscriptionData();
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [user]);
+
+    const fetchSubscriptionData = async () => {
+        setIsLoadingSubscription(true);
+        try {
+            const [subData, pkgData] = await Promise.all([
+                subscriptionService.getMySubscription(),
+                paymentService.getStartupPackages()
+            ]);
+            setSubscription(subData);
+            const pkgs = pkgData?.items || pkgData || [];
+            const activePkg = pkgs.find(p => p.packageId === subData?.packageId);
+            setActivePackage(activePkg);
+        } catch (error) {
+            console.error('Failed to fetch subscription data:', error);
+        } finally {
+            setIsLoadingSubscription(false);
+        }
+    };
     const [advisorRequests, setAdvisorRequests] = React.useState([]);
 
     // Empty documents out, we fetch them via project endpoint or soon later
@@ -1304,13 +1333,8 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
         setShowDetailModal(true);
         fetchAnalysisHistory(pId);
         
-        // Only fetch booking info if project is Approved
-        if (p.status === 'Approved' || p.status === PROJECT_STATUS.APPROVED) {
-            fetchBookingEligibility(pId);
-        } else {
-            setCanBookDetailProject(false);
-            setDetailProjectAdvisors([]);
-        }
+        // Fetch advisor and booking info for all statuses (as requested)
+        fetchBookingEligibility(pId);
     };
 
     // BR-15: Submit Project for Staff Review (WITHOUT AI - Direct submission)
@@ -1409,7 +1433,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
     };
 
     // PREMIUM FEATURE: Run AI Evaluation separately
-    const handleRunAIEvaluation = async (projectId) => {
+    const handleRunAIEvaluation = (projectId) => {
         if (!projectId) {
             console.error('[AI] Invalid projectId:', projectId);
             setSuccessMessage('Lỗi: Không tìm thấy ID dự án');
@@ -1418,41 +1442,62 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
             return;
         }
 
-        const validId = parseInt(projectId) || projectId;
+        // Check if user has an active membership
+        const hasActivePackage = subscription && (subscription.status === 1 || subscription.status === 'Active');
+        if (!hasActivePackage) return; // Button should be faded anyway
+
+        // Phase 1: Show confirmation modal first
+        setTargetProjectIdForAI(projectId);
+        setShowAIAnalyzeConfirm(true);
+    };
+
+    const handleConfirmAIAnalyze = async () => {
+        const validId = parseInt(targetProjectIdForAI) || targetProjectIdForAI;
         console.log('[AI] Running AI Evaluation for projectId:', validId);
 
+        setShowAIAnalyzeConfirm(false);
         setIsEvaluatingAI(true);
         setEvaluatingProjectId(validId);
         setAiEvaluationError(null);
         setShowAIEvaluationModal(true);
 
         try {
-            // Call both AI APIs in parallel
-            const [analysisRes, eligibilityRes] = await Promise.all([
-                AIEvaluationService.analyzeProjectAPI(validId),
-                AIEvaluationService.evaluateEligibilityAPI(validId)
-            ]);
-
-            console.log('[AI] API responses received:', {
-                analysisSuccess: analysisRes?.success,
-                eligibilitySuccess: eligibilityRes?.success
+            // Call AI evaluate API (New endpoint)
+            const evaluationRes = await AIEvaluationService.evaluateProjectAPI(validId);
+            
+            console.log('[AI] API response received:', {
+                success: evaluationRes?.success
             });
 
             // Translate results to Vietnamese
-            const { analysisResult: translatedAnalysis, eligibilityResult: translatedEligibility } = translateAIResults(analysisRes, eligibilityRes);
+            const { analysisResult: translatedAnalysis, eligibilityResult: translatedEligibility } = translateAIResults(evaluationRes, evaluationRes);
 
             // Store results
             setAIEvaluationResult({
                 projectId: validId,
-                analysis: translatedAnalysis,
-                eligibility: translatedEligibility
+                analysis: translatedAnalysis?.data || evaluationRes.data,
+                eligibility: translatedEligibility?.data || evaluationRes.data
             });
 
-            setIsEvaluatingAI(false);
+            // Refresh subscription data after using a quota point
+            fetchSubscriptionData();
+
+            // Refresh AI history to show the new result in the detail view
+            fetchAnalysisHistory(validId);
+            
+            // Also refresh projects to show updated status/score if any
+            const response = await projectSubmissionService.getMyProjects();
+            if (response.success && response.data) {
+                const projects = Array.isArray(response.data) ? response.data : (response.data.items || []);
+                setMyProjects([...projects].sort((a, b) => (b.id || b.projectId) - (a.id || a.projectId)));
+            }
         } catch (error) {
             console.error('[AI] Error evaluating project:', error);
             setAiEvaluationError(error.message || 'Không thể đánh giá dự án. Vui lòng thử lại.');
+        } finally {
             setIsEvaluatingAI(false);
+            setEvaluatingProjectId(null);
+            setTargetProjectIdForAI(null);
         }
     };
 
@@ -1959,10 +2004,16 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                                                                 <>
                                                                                     <button
                                                                                         className={kanban.baBtn}
-                                                                                        style={{ color: '#f59e0b', borderColor: 'rgba(245, 158, 11, 0.2)', background: 'rgba(245, 158, 11, 0.05)' }}
+                                                                                        style={{ 
+                                                                                            color: '#f59e0b', 
+                                                                                            borderColor: 'rgba(245, 158, 11, 0.2)', 
+                                                                                            background: 'rgba(245, 158, 11, 0.05)',
+                                                                                            opacity: (subscription && (subscription.status === 1 || subscription.status === 'Active')) ? 1 : 0.4,
+                                                                                            cursor: (subscription && (subscription.status === 1 || subscription.status === 'Active')) ? 'pointer' : 'not-allowed'
+                                                                                        }}
                                                                                         onClick={() => handleRunAIEvaluation(p.id || p.projectId)}
-                                                                                        disabled={isEvaluatingAI && evaluatingProjectId === (p.id || p.projectId)}
-                                                                                        title="Phân tích AI"
+                                                                                        disabled={(isEvaluatingAI && evaluatingProjectId === (p.id || p.projectId)) || !(subscription && (subscription.status === 1 || subscription.status === 'Active'))}
+                                                                                        title={(subscription && (subscription.status === 1 || subscription.status === 'Active')) ? "Phân tích AI" : "Yêu cầu gói Premium"}
                                                                                     >
                                                                                         <Sparkles size={16} />
                                                                                     </button>
@@ -2896,6 +2947,25 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                 <div className={`${styles.modalContentBody} ${isMobile && detailProject.projectImageUrl ? styles.withHero : ''}`}>
                                     {/* AI History & Analysis Summary */}
                                     <div style={{ marginBottom: '0' }}>
+                                        {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
+                                            <div style={{
+                                                marginBottom: '16px',
+                                                padding: '20px',
+                                                backgroundColor: 'rgba(244, 33, 46, 0.05)',
+                                                borderRadius: '24px',
+                                                border: '1px solid rgba(244, 33, 46, 0.1)',
+                                                display: 'flex',
+                                                gap: '16px'
+                                            }}>
+                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(244, 33, 46, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                                                    <AlertCircle size={22} color="#f4212e" />
+                                                </div>
+                                                <div>
+                                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 900, color: '#f4212e' }}>LÝ DO TỪ CHỐI</h4>
+                                                    <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)' }}>{detailProject.rejectionReason}</p>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div style={{
                                             padding: '24px',
                                             backgroundColor: 'rgba(29, 155, 240, 0.03)',
@@ -2960,28 +3030,9 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
                                             </div>
                                         </div>
 
-                                        {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
-                                            <div style={{
-                                                marginTop: '16px',
-                                                padding: '20px',
-                                                backgroundColor: 'rgba(244, 33, 46, 0.05)',
-                                                borderRadius: '24px',
-                                                border: '1px solid rgba(244, 33, 46, 0.1)',
-                                                display: 'flex',
-                                                gap: '16px'
-                                            }}>
-                                                <div style={{ width: '40px', height: '40px', borderRadius: '12px', backgroundColor: 'rgba(244, 33, 46, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                                                    <AlertCircle size={22} color="#f4212e" />
-                                                </div>
-                                                <div>
-                                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: 900, color: '#f4212e' }}>LÝ DO TỪ CHỐI</h4>
-                                                    <p style={{ margin: 0, fontSize: '14px', lineHeight: 1.6, color: 'var(--text-primary)' }}>{detailProject.rejectionReason}</p>
-                                                </div>
-                                            </div>
-                                        )}
 
-                                        {/* Assigned Advisor Section (Newly added for Approved projects) */}
-                                        {(detailProject.status === 'Approved' || detailProject.status === PROJECT_STATUS.APPROVED) && (
+                                        {/* Assigned Advisor Section (Shown for all statuses as requested) */}
+                                        {true && (
                                             <div className={styles.advisorSection}>
                                                 <div className={styles.advisorSectionHeader}>
                                                     <div className={styles.advisorInfoBlock}>
@@ -3748,6 +3799,18 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
             }}
         />
     )}
+
+    {/* AI Analyze Confirmation Modal */}
+    <AIAnalyzeConfirmationModal
+        isOpen={showAIAnalyzeConfirm}
+        onClose={() => setShowAIAnalyzeConfirm(false)}
+        onConfirm={handleConfirmAIAnalyze}
+        isAnalyzing={isEvaluatingAI}
+        isLoadingQuota={isLoadingSubscription}
+        projectName={myProjects.find(p => (p.id || p.projectId) === targetProjectIdForAI)?.projectName || detailProject?.projectName}
+        remainingQuota={(activePackage?.maxAiRequests || 0) - (subscription?.usedAiRequests || 0)}
+        packageName={activePackage?.packageName}
+    />
 
     {showDeleteConfirm && (
         <ConfirmationModal
