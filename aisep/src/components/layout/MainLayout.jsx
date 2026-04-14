@@ -97,11 +97,24 @@ function MainLayout({
     // Helper to get/set scroll
     const getScroll = () => isMobile ? window.scrollY : (main ? main.scrollTop : 0);
     const setScroll = (val) => {
+      // Force immediate jump (no smooth animation), then restore.
+      const prevDocBehavior = document?.documentElement?.style?.scrollBehavior;
+      const prevMainBehavior = main?.style?.scrollBehavior;
+      if (document?.documentElement) document.documentElement.style.scrollBehavior = 'auto';
+      if (main) main.style.scrollBehavior = 'auto';
+
       if (isMobile) {
-        window.scrollTo({ top: val, behavior: 'instant' });
+        // 'instant' is not a valid value; use 'auto' to avoid smooth scrolling.
+        window.scrollTo({ top: val, behavior: 'auto' });
       } else if (main) {
         main.scrollTop = val;
       }
+
+      // Restore original behavior on next frame.
+      requestAnimationFrame(() => {
+        if (document?.documentElement) document.documentElement.style.scrollBehavior = prevDocBehavior || '';
+        if (main) main.style.scrollBehavior = prevMainBehavior || '';
+      });
     };
 
     // Transition Logic

@@ -40,6 +40,17 @@ const NotificationCenter = ({ onOpenChat }) => {
     };
   }, []);
 
+  // Safety net: if unread-count endpoint returns a wrong shape,
+  // derive count from loaded notifications so badge still shows.
+  useEffect(() => {
+    const derivedUnread = Array.isArray(notifications)
+      ? notifications.filter(n => !n?.isRead).length
+      : 0;
+    if (derivedUnread > 0 && unreadCount === 0) {
+      setUnreadCount(derivedUnread);
+    }
+  }, [notifications, unreadCount]);
+
   const loadNotifications = async () => {
     try {
       // Fetch more notifications (100) to ensure historical data is visible
@@ -48,6 +59,11 @@ const NotificationCenter = ({ onOpenChat }) => {
       // Unwrap the ApiResponse structure: response.data is the PagedResult, response.data.items is the list
       const items = response?.data?.items || (Array.isArray(response) ? response : []);
       setNotifications(items);
+      // Also derive unread count from the returned items (fallback).
+      if (Array.isArray(items)) {
+        const derivedUnread = items.filter(n => !n?.isRead).length;
+        setUnreadCount(prev => Math.max(prev || 0, derivedUnread));
+      }
     } catch (error) {
       console.error('Error loading notifications:', error);
     }
@@ -56,9 +72,15 @@ const NotificationCenter = ({ onOpenChat }) => {
   const loadUnreadCount = async () => {
     try {
       const response = await notificationService.getUnreadCount();
-      // Extract unread count from ApiResponse.Data
-      const count = typeof response?.data === 'number' ? response.data : 0;
-      setUnreadCount(count);
+      // Extract unread count from multiple possible ApiResponse shapes
+      const raw =
+        (typeof response?.data === 'number' ? response.data : undefined) ??
+        (typeof response?.data?.unreadCount === 'number' ? response.data.unreadCount : undefined) ??
+        (typeof response?.data?.count === 'number' ? response.data.count : undefined) ??
+        (typeof response?.unreadCount === 'number' ? response.unreadCount : undefined);
+
+      const count = Number.isFinite(Number(raw)) ? Number(raw) : 0;
+      setUnreadCount(prev => Math.max(prev || 0, count));
     } catch (error) {
       console.error('Error loading unread count:', error);
     }
@@ -73,6 +95,9 @@ const NotificationCenter = ({ onOpenChat }) => {
       }, 250);
     } else {
       setIsOpen(true);
+      // Refresh counts when opening (keeps badge accurate).
+      loadNotifications();
+      loadUnreadCount();
     }
   };
 
@@ -103,7 +128,7 @@ const NotificationCenter = ({ onOpenChat }) => {
               : n
           )
         );
-        setUnreadCount(Math.max(0, unreadCount - 1));
+        setUnreadCount(prev => Math.max(0, (prev || 0) - 1));
       }
     } catch (error) {
       console.error('Error marking as read:', error);
@@ -181,7 +206,7 @@ const NotificationCenter = ({ onOpenChat }) => {
         });
         
         if (deletedNotif && !deletedNotif.isRead) {
-          setUnreadCount(Math.max(0, unreadCount - 1));
+          setUnreadCount(prev => Math.max(0, (prev || 0) - 1));
         }
       }, 300);
     } catch (error) {

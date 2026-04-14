@@ -3768,6 +3768,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
             isLoading={isEvaluatingAI}
             error={aiEvaluationError}
             projectName={myProjects.find(p => (p.id || p.projectId) === aiEvaluationResult?.projectId)?.projectName || 'Dự án'}
+            viewerRole={user?.role}
             isEvaluationOnly={true}
             onSubmit={handleSaveAIResults}
             onCancel={handleCancelAIEvaluation}
@@ -3836,6 +3837,7 @@ export default function StartupDashboard({ user, initialSection = 'overview' }) 
             isLoading={false}
             isHistoryMode={true}
             projectName={detailProject?.projectName || 'Dự án'}
+            viewerRole={user?.role}
             onCancel={() => {
                 setShowHistoryView(false);
                 setSelectedHistoryResult(null);
