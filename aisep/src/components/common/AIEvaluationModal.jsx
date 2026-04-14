@@ -16,6 +16,7 @@ export default function AIEvaluationModal({
     isLoading,
     error,
     projectName,
+    viewerRole,
     isHistoryMode = false,
     isEvaluationOnly = false,
     onSubmit,
@@ -48,6 +49,15 @@ export default function AIEvaluationModal({
     // Determine if can submit based on score > 0
     const canSubmit = potentialScore > 0;
     const showLowScoreWarning = potentialScore > 0 && potentialScore < 50;
+
+    const roleStr = viewerRole?.toString().toLowerCase?.() || '';
+    const roleNum = Number(viewerRole);
+    const isStartupViewer = roleStr === 'startup' || roleNum === 0;
+    const isInvestorViewer = roleStr === 'investor' || roleNum === 1;
+    const isStaffOrAdvisorViewer =
+        ['staff', 'operationstaff', 'operation_staff', 'advisor', 'admin'].includes(roleStr) ||
+        [2, 3, 4, 5].includes(roleNum);
+    const isNonStartupViewer = (isInvestorViewer || isStaffOrAdvisorViewer) && !isStartupViewer;
 
     // Determine if this is a staff-initiated eligibility report
     const isEligibilityReport = analysisData && (
@@ -351,7 +361,11 @@ export default function AIEvaluationModal({
                                 <div>
                                     <div className={styles.warningTitle}>⚠️ Cảnh báo: Điểm Đánh Giá Thấp</div>
                                     <div className={styles.warningText}>
-                                        Dự án của bạn có điểm {potentialScore}/100. Bạn vẫn có thể nộp dự án, nhưng hãy cân nhắc cải thiện các điểm yếu được nhấn mạnh ở trên để tăng khả năng được cấp vốn.
+                                        {isStartupViewer ? (
+                                            <>Dự án của bạn có điểm {potentialScore}/100. Bạn vẫn có thể nộp dự án, nhưng hãy cân nhắc cải thiện các điểm yếu được nhấn mạnh ở trên để tăng khả năng được cấp vốn.</>
+                                        ) : (
+                                            <>Dự án có điểm {potentialScore}/100. Hãy cân nhắc các điểm cần cải thiện được nhấn mạnh ở trên để giảm rủi ro và tăng khả năng thu hút đầu tư.</>
+                                        )}
                                     </div>
                                 </div>
                             </div>
@@ -410,7 +424,7 @@ export default function AIEvaluationModal({
                         </div>
                         <h3 className={styles.loadingText}>Đang khởi chạy AI Analyst</h3>
                         <p className={styles.loadingSubtext}>
-                            Hệ thống đang phân tích chi tiết các đầu mục trong dự án của bạn để đưa ra đánh giá chính xác nhất...
+                            Hệ thống đang phân tích chi tiết các đầu mục trong {isStartupViewer ? 'dự án của bạn' : 'dự án này'} để đưa ra đánh giá chính xác nhất...
                         </p>
                         <div className={styles.progressBeamContainer}>
                             <div className={styles.progressBeam}></div>
@@ -425,6 +439,14 @@ export default function AIEvaluationModal({
                 {!isLoading && (
                     <div className={styles.footer}>
                         {isHistoryMode ? (
+                            <button
+                                className={styles.secondaryBtn}
+                                onClick={onCancel}
+                                style={{ width: '100%', maxWidth: '200px' }}
+                            >
+                                Đóng
+                            </button>
+                        ) : (!isEvaluationOnly && isNonStartupViewer) ? (
                             <button
                                 className={styles.secondaryBtn}
                                 onClick={onCancel}

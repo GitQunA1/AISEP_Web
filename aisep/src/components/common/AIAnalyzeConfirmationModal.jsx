@@ -1,5 +1,5 @@
 import React from 'react';
-import { Sparkles, Zap, X, ShieldAlert, CheckCircle, ChevronRight, Loader2 } from 'lucide-react';
+import { Sparkles, Zap, X, ShieldAlert, CheckCircle, ChevronRight, Loader2, Brain } from 'lucide-react';
 import styles from './AIAnalyzeConfirmationModal.module.css';
 
 /**
@@ -13,15 +13,16 @@ const AIAnalyzeConfirmationModal = ({
   isAnalyzing,
   isLoadingQuota,
   projectName,
-  remainingQuota,
+  remainingAiRequests,
   packageName
 }) => {
   if (!isOpen) return null;
 
-  const afterAnalyze = Math.max(0, remainingQuota - 1);
+  const safeRemaining = Number.isFinite(Number(remainingAiRequests)) ? Number(remainingAiRequests) : 0;
+  const afterAnalyze = Math.max(0, safeRemaining - 1);
 
   return (
-    <div className={styles.modalOverlay}>
+    <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.modalContent}>
         {/* Close Button */}
         <button className={styles.closeBtn} onClick={onClose} aria-label="Đóng">
@@ -32,14 +33,14 @@ const AIAnalyzeConfirmationModal = ({
         <div className={styles.iconContainer}>
           <div className={styles.pulseRing}></div>
           <div className={styles.mainIcon}>
-            <Sparkles size={32} strokeWidth={2.5} />
+            <Brain size={32} strokeWidth={2.5} />
           </div>
         </div>
 
         {/* Title & Info */}
-        <h2 className={styles.title}>Phân tích AI chuyên sâu</h2>
+        <h2 className={styles.title}>Phân tích Dự án bằng AI</h2>
         <p className={styles.description}>
-          Bạn đang yêu cầu hệ thống AI thực hiện phân tích tiềm năng và rủi ro cho dự án:
+          Hệ thống AI sẽ thực hiện quét sâu và đánh giá chi tiết dự án:
           <br />
           <strong className={styles.projectName}>{projectName || 'Dự án này'}</strong>
         </p>
@@ -47,24 +48,24 @@ const AIAnalyzeConfirmationModal = ({
         {/* Quota Insight Card */}
         <div className={styles.quotaCard}>
           <div className={styles.quotaHeader}>
-            <Zap size={16} fill="currentColor" />
-            <span>Hạn mức AI ({packageName || 'Gói của bạn'})</span>
+            <Zap size={14} fill="currentColor" />
+            <span>Quota AI ({packageName || 'Gói của bạn'})</span>
           </div>
           
           <div className={styles.quotaStats}>
             <div className={styles.statItem}>
-              <span className={styles.statLabel}>Lượt hiện tại</span>
+              <span className={styles.statLabel}>Hiện tại</span>
               {isLoadingQuota ? (
                 <Loader2 className={styles.spinIcon} size={18} />
               ) : (
-                <span className={styles.statValue}>{remainingQuota}</span>
+                <span className={styles.statValue}>{safeRemaining}</span>
               )}
             </div>
             <div className={styles.statDivider}>
               <ChevronRight size={16} />
             </div>
             <div className={styles.statItem}>
-              <span className={styles.statLabel}>Sau khi dùng</span>
+              <span className={styles.statLabel}>Dự kiến còn</span>
               {isLoadingQuota ? (
                 <Loader2 className={styles.spinIcon} size={18} />
               ) : (
@@ -74,19 +75,19 @@ const AIAnalyzeConfirmationModal = ({
           </div>
         </div>
 
-        {/* AI Benefits */}
+        {/* AI Benefits List */}
         <div className={styles.benefitList}>
            <div className={styles.benefitItem}>
-             <CheckCircle size={16} className={styles.checkIcon} />
-             <span>Chấm điểm tiềm năng khởi nghiệp (0-100)</span>
+             <CheckCircle size={14} className={styles.checkIcon} />
+             <span>Phân tích tiềm năng & chỉ số rủi ro chi tiết</span>
            </div>
            <div className={styles.benefitItem}>
-             <CheckCircle size={16} className={styles.checkIcon} />
-             <span>Phân tích Điểm mạnh, Điểm yếu & Rủi ro</span>
+             <CheckCircle size={14} className={styles.checkIcon} />
+             <span>Khuyến nghị đầu tư & các bước tiếp theo từ AI</span>
            </div>
            <div className={styles.benefitItem}>
-             <CheckCircle size={16} className={styles.checkIcon} />
-             <span>Báo cáo tóm tắt cho Nhà đầu tư & Cố vấn</span>
+             <CheckCircle size={14} className={styles.checkIcon} />
+             <span>Lưu kết quả vào lịch sử để xem lại bất cứ lúc nào</span>
            </div>
         </div>
 
@@ -95,17 +96,17 @@ const AIAnalyzeConfirmationModal = ({
           <button 
             className={styles.confirmBtn} 
             onClick={onConfirm}
-            disabled={isAnalyzing || remainingQuota <= 0}
+            disabled={isAnalyzing || safeRemaining <= 0}
           >
             {isAnalyzing ? (
               <>
                 <Loader2 size={18} className={styles.spin} />
-                Đang khởi tạo AI...
+                Đang khởi chạy AI...
               </>
             ) : (
               <>
                 <Sparkles size={18} />
-                Bắt đầu phân tích
+                Xác nhận Phân tích
               </>
             )}
           </button>
@@ -119,10 +120,10 @@ const AIAnalyzeConfirmationModal = ({
           </button>
         </div>
 
-        {remainingQuota <= 0 && !isLoadingQuota && (
+        {safeRemaining <= 0 && !isLoadingQuota && (
           <div className={styles.errorBox}>
             <ShieldAlert size={16} />
-            <span>Hạn mức AI đã hết. Vui lòng nâng cấp gói dịch vụ.</span>
+            <span>Số lượt phân tích AI đã hết. Vui lòng nâng cấp gói.</span>
           </div>
         )}
       </div>

@@ -556,6 +556,70 @@ class AIEvaluationService {
       };
     }
   }
+
+  /**
+   * Investor-specific API to analyze project
+   * POST /api/InvestorAIAnalysis/{projectId}/analyze
+   * @param {number} projectId - Project ID
+   * @returns {Promise<object>} - { success, data, message }
+   */
+  static async analyzeProjectByInvestorAPI(projectId) {
+    try {
+      if (!projectId && projectId !== 0) {
+        return { success: false, message: 'Invalid projectId' };
+      }
+
+      console.log('[INVESTOR AI ANALYSIS] API Call:', projectId);
+      const result = await apiClient.post(`/api/InvestorAIAnalysis/${projectId}/analyze`);
+      
+      return {
+        success: true,
+        data: result.data || result,
+        message: result.message || 'Investor analysis complete'
+      };
+    } catch (error) {
+      console.error('[INVESTOR AI ANALYSIS] Error:', error);
+      return {
+        success: false,
+        data: null,
+        message: error.message || 'Lỗi trong quá trình phân tích (Nhà đầu tư)'
+      };
+    }
+  }
+
+  /**
+   * Get investor-specific AI analysis history for a project
+   * GET /api/InvestorAIAnalysis/{projectId}
+   * @param {number} projectId - Project ID
+   * @returns {Promise<object>} - { success, data: Array of results, message }
+   */
+  static async getInvestorAnalysisHistory(projectId) {
+    try {
+      if (!projectId && projectId !== 0) {
+        return { success: false, message: 'Invalid projectId' };
+      }
+
+      console.log('[INVESTOR AI HISTORY] Fetching for project:', projectId);
+      
+      const result = await apiClient.get(`/api/InvestorAIAnalysis/${projectId}`);
+      const rawData = result.data || result;
+      // Backend returns a single object for investor analysis GET {projectId}, or null
+      const normalizedData = rawData ? [rawData] : [];
+      
+      return {
+        success: true,
+        data: normalizedData,
+        message: result.message || 'Investor history fetched successfully'
+      };
+    } catch (error) {
+      console.error('[INVESTOR AI HISTORY] Error:', error);
+      return {
+        success: false,
+        data: [],
+        message: error.message || 'Error fetching investor history'
+      };
+    }
+  }
 }
 
 export default AIEvaluationService;
