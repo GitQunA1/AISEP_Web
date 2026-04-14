@@ -43,7 +43,7 @@
 .title {
   font-size: 20px;
   font-weight: 800;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
   letter-spacing: -0.5px;
 }
 
@@ -82,12 +82,12 @@
 }
 
 .tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--bg-hover);
 }
 
 .td {
   padding: 16px;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
   vertical-align: middle;
 }
 
@@ -275,10 +275,10 @@
 
 .input {
   padding: 12px 14px;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border: 1px solid var(--border-color);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  color: var(--text-primary, #fff);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
   font-size: 14px;
   transition: all 0.2s;
 }
@@ -299,8 +299,8 @@
 
 .saveBtn {
   padding: 10px 24px;
-  background: var(--text-primary, #fff);
-  color: #000;
+  background: var(--text-primary);
+  color: var(--bg-primary);
   border: none;
   border-radius: 9999px;
   font-weight: 800;
@@ -322,8 +322,8 @@
 .cancelBtn {
   padding: 10px 24px;
   background: transparent;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
   border-radius: 9999px;
   font-weight: 700;
   font-size: 14px;

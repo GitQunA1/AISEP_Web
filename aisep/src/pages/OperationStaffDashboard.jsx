@@ -485,6 +485,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
     const [payoutSearchTerm, setPayoutSearchTerm] = useState('');
     const [commissionSearchTerm, setCommissionSearchTerm] = useState('');
     const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
+    const [advisorSearchTerm, setAdvisorSearchTerm] = useState('');
     const [reportFilter, setReportFilter] = useState('Pending'); // 'All', 'Pending', 'Resolved', 'Dismissed'
 
     const handleSearchChange = (val) => {
@@ -492,6 +493,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
         else if (activeSection === 'bookings') setBookingSearchTerm(val);
         else if (activeSection === 'withdrawals') setWithdrawSearchTerm(val);
         else if (activeSection === 'commission') setCommissionSearchTerm(val);
+        else if (activeSection === 'advisor_approval') setAdvisorSearchTerm(val);
         else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
     };
 
@@ -1356,40 +1358,14 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
     return (
         <div className={styles.container} style={{
-            paddingBottom: '16px',
-            minHeight: isMobile ? '100dvh' : '100vh',
-            height: isMobile ? '100dvh' : '100vh',
+            minHeight: '100%',
             display: 'flex',
-            flexDirection: 'column',
-            overflow: 'hidden'
+            flexDirection: 'column'
         }}>
-            {!['pr_news', 'advisor_approval'].includes(activeSection) && (
+            {!['pr_news'].includes(activeSection) && (
                 <FeedHeader
-                    title={
-                        activeSection === 'subscription_history' ? "Lịch sử đăng ký gói" :
-                            (activeSection === 'package_management' ? "Quản lý Gói dịch vụ" :
-                                (activeSection === 'project_management' ? "Quản lý Dự án" :
-                                    (activeSection === 'pr_management' ? "Đăng bài PR - Dự án Đầu tư" :
-                                        (activeSection === 'pr_news' ? "Tin tức PR" :
-                                            (activeSection === 'bookings' ? "Quản lý Booking" :
-                                                (activeSection === 'user_reports' ? "Quản lý báo cáo" :
-                                                    (activeSection === 'advisor_approval' ? "Phê duyệt cố vấn" :
-                                                        (activeSection === 'investor_approval' ? "Duyệt nhà đầu tư" :
-                                                            (activeSection === 'statistics' ? "Thống kê hoạt động" : "Bảng điều khiển Nhân viên")))))))))
-                    }
-                    subtitle={
-                        activeSection === 'subscription_history' ? "Theo dõi và quản lý lịch sử thanh toán, gia hạn các gói dịch vụ của người dùng trên hệ thống." :
-                            activeSection === 'package_management' ? "Cấu hình hạn mức, thời hạn và giá cả cho các gói đăng ký trên toàn hệ thống AISEP." :
-                                activeSection === 'project_management' ? "Phê duyệt và quản lý các startup tham gia nền tảng." :
-                                    activeSection === 'pr_management' ? "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký)." :
-                                        activeSection === 'pr_news' ? "Xem tất cả các bài PR đã được đăng lên hệ thống." :
-                                            activeSection === 'bookings' ? "Theo dõi và giám sát các lịch hẹn đào tạo trong hệ thống." :
-                                                activeSection === 'user_reports' ? "Giải quyết các báo cáo vi phạm và khiếu nại từ người dùng." :
-                                                    activeSection === 'advisor_approval' ? "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn trên nền tảng AISEP." :
-                                                        activeSection === 'investor_approval' ? "Phê duyệt hồ sơ đăng ký và năng lực tài chính của các nhà đầu tư." :
-                                                            activeSection === 'statistics' ? "Tổng quan về các số liệu tăng trưởng và hiệu suất nền tảng." :
-                                                                "Quản lý nền tảng và các yêu cầu phê duyệt."
-                    }
+                    title={getSectionTitle(activeSection)}
+                    subtitle={getSectionSubtitle(activeSection)}
                     showFilter={false}
                     user={user}
                     searchTerm={
@@ -1397,13 +1373,15 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                             (activeSection === 'bookings' ? bookingSearchTerm :
                                 (activeSection === 'pr_management' ? prSearchTerm :
                                     (activeSection === 'pr_news' ? prNewsSearchTerm :
-                                        (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : ''))))
+                                        (activeSection === 'advisor_approval' ? advisorSearchTerm :
+                                            (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : '')))))
                     }
                     onSearchChange={(val) => {
                         if (activeSection === 'project_management') setSearchTerm(val);
                         else if (activeSection === 'bookings') setBookingSearchTerm(val);
                         else if (activeSection === 'pr_management') setPrSearchTerm(val);
                         else if (activeSection === 'pr_news') setPrNewsSearchTerm(val);
+                        else if (activeSection === 'advisor_approval') setAdvisorSearchTerm(val);
                         else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
                     }}
                     searchPlaceholder={
@@ -1411,7 +1389,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                             (activeSection === 'bookings' ? "Tìm kiếm booking..." :
                                 (activeSection === 'pr_management' ? "Tìm kiếm dự án đã ký..." :
                                     (activeSection === 'pr_news' ? "Tìm kiếm bài PR..." :
-                                        "Tìm kiếm...")))
+                                        (activeSection === 'advisor_approval' ? "Tìm kiếm cố vấn..." : "Tìm kiếm..."))))
                     }
                     showNotification={true}
                 />
@@ -1744,7 +1722,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
                     {/* Project Management Section (All statuses) */}
                     {activeSection === 'project_management' && (
-                        <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 16 }}>
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
                             {/* Tab Switcher - Same as Booking */}
                             <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
                                 <button className={`${styles.tab} ${activeMobileTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileTab('all')}>
@@ -1814,7 +1792,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
                     {/* Investor Approval Section */}
                     {activeSection === 'investor_approval' && (
-                        <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 16 }}>
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
                             {/* Tab Switcher - Same as Booking */}
                             <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
                                 <button className={`${styles.tab} ${activeMobileInvTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileInvTab('all')}>
@@ -1866,7 +1844,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                                                     <InvestorKanbanCard
                                                         key={i.investorId}
                                                         investor={i}
-                                                        status={i.approvalStatus === 'Approved' ? 'apr' : (i.approvalStatus === 'Rejected' ? 'rej' : 'pend')}
+                                                        status={(i.status || i.approvalStatus) === 'Approved' ? 'apr' : ((i.status || i.approvalStatus) === 'Rejected' ? 'rej' : 'pend')}
                                                         onDetail={(inv) => {
                                                             setSelectedInvestor(inv);
                                                             setShowInvestorDetailModal(true);
@@ -2277,7 +2255,9 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                                         flex: 1,
                                         overflowY: 'auto',
                                         paddingRight: '4px',
-                                        paddingBottom: '24px',
+                                        paddingBottom: 32,
+                                        WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black calc(100% - 32px), transparent 100%)',
+                                        maskImage: 'linear-gradient(to bottom, black 0%, black calc(100% - 32px), transparent 100%)',
                                     }}
                                 >
                                     {isLoadingBookings ? (
@@ -2476,8 +2456,8 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
                     {/* Advisor Approvals Section */}
                     {activeSection === 'advisor_approval' && (
-                        <div className={styles.section} style={{ padding: 0, gap: 0, background: 'transparent', boxShadow: 'none', flex: 1, minHeight: 0 }}>
-                            <AdvisorApprovalPage />
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
+                            <AdvisorApprovalPage user={user} searchTerm={advisorSearchTerm} />
                         </div>
                     )}
 
