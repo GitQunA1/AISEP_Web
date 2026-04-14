@@ -419,6 +419,36 @@ class AIEvaluationService {
   }
 
   /**
+   * Staff-specific API to analyze project
+   * POST /api/AIEvaluation/eligibility-evaluate-staff
+   * @param {number} projectId - Project ID
+   * @returns {Promise<object>} - { success, data, message }
+   */
+  static async evaluateProjectByStaffAPI(projectId) {
+    try {
+      if (!projectId && projectId !== 0) {
+        return { success: false, message: 'Invalid projectId' };
+      }
+
+      console.log('[STAFF AI EVALUATE] API Call:', projectId);
+      const result = await apiClient.post(`/api/StartupAIAnalysis/${projectId}/eligibility-evaluate-staff`);
+      
+      return {
+        success: true,
+        data: result.data || result,
+        message: result.message || 'Staff evaluation complete'
+      };
+    } catch (error) {
+      console.error('[STAFF AI EVALUATE] Error:', error);
+      return {
+        success: false,
+        data: null,
+        message: error.message || 'Lỗi trong quá trình phân tích (Nhân viên)'
+      };
+    }
+  }
+
+  /**
    * Helper: Convert score to category
    * @param {number} score
    * @returns {string}
@@ -490,6 +520,39 @@ class AIEvaluationService {
         success: false,
         data: [],
         message: error.message || 'Error fetching history'
+      };
+    }
+  }
+
+  /**
+   * Get staff-specific AI analysis history for a project
+   * GET /api/AIEvaluation/eligibility-evaluate-staff/{projectId}
+   * @param {number} projectId - Project ID
+   * @returns {Promise<object>} - { success, data: Array of results, message }
+   */
+  static async getStaffAnalysisHistory(projectId) {
+    try {
+      if (!projectId && projectId !== 0) {
+        return { success: false, message: 'Invalid projectId' };
+      }
+
+      console.log('[STAFF AI HISTORY] Fetching for project:', projectId);
+      
+      const result = await apiClient.get(`/api/StartupAIAnalysis/${projectId}/eligibility-evaluate-staff`);
+      const rawData = result.data || result;
+      const normalizedData = Array.isArray(rawData) ? rawData : (rawData ? [rawData] : []);
+      
+      return {
+        success: true,
+        data: normalizedData,
+        message: result.message || 'Staff history fetched successfully'
+      };
+    } catch (error) {
+      console.error('[STAFF AI HISTORY] Error:', error);
+      return {
+        success: false,
+        data: [],
+        message: error.message || 'Error fetching staff history'
       };
     }
   }
