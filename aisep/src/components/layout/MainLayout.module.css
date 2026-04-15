@@ -1,9 +1,8 @@
-:global(html),
+/* GLOBAL RESET for this layout */
 :global(body) {
   margin: 0;
   padding: 0;
-  overflow: hidden !important;
-  height: 100% !important;
+  overflow: hidden;
   /* CRITICAL: Kills the browser's default scrollbar on desktop grid */
 }
 
@@ -101,6 +100,13 @@
 .fullWidthContent {
   padding: 0 !important;
   background: var(--bg-primary) !important;
+}
+
+/* GLOBAL NO-SCROLL class for dashboards/AI mode */
+:global(html).noScroll,
+:global(body).noScroll {
+  overflow: hidden !important;
+  height: 100% !important;
 }
 
 /* COLUMN 3: RIGHT PANEL */

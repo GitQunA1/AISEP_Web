@@ -1630,7 +1630,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
             const updatedProject = {
                 ...project,
                 status: PROJECT_STATUS.SUBMITTED,
-                submittedDate: new Date().toISOString().split('T')[0],
+                submittedDate: (() => {
+                    const d = new Date();
+                    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+                })(),
                 feedback: null
             };
             setProject(updatedProject);
@@ -1739,7 +1742,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
             )}
 
             {activeSection !== 'pr_news' && (
-            <div className={styles.content}>
+                <div className={`${styles.content} ${styles.scrollableSection}`}>
 
                 {/* Startup Profile Form (Section View) */}
                 {activeSection === 'complete-info' && (

@@ -141,7 +141,8 @@ function MainLayout({
 
     // Update body class for fixed views
     if (typeof document !== 'undefined') {
-      const shouldLock = showAI;
+      const shouldLock = showAI || activeView.startsWith('dashboard');
+      document.documentElement.classList.toggle('noScroll', shouldLock);
       document.body.classList.toggle('noScroll', shouldLock);
     }
 

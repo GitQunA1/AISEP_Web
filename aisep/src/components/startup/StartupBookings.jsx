@@ -261,7 +261,7 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
                                                     <CreditCard size={14} /> Thanh toán
                                                 </button>
                                             )}
-                                            {(booking.status === 2 || booking.status === 'Confirmed') && (
+                                            {(booking.status === 2 || booking.status === 'Confirmed' || booking.status === 3 || booking.status === 'Completed') && (
                                                 <button
                                                     className={`${styles.xActionButton} ${styles.xActionPrimary} ${chatLoading[booking.id] ? styles.xBtnDisabled : ''}`}
                                                     onClick={() => handleOpenChat(booking)}

@@ -1453,19 +1453,19 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                 <div className={styles.content}>
                     {/* FINANCIAL SECTIONS */}
                     {activeSection === 'payouts' && (
-                        <div className={styles.section}>
+                        <div className={`${styles.section} ${styles.scrollableSection}`}>
                             <PayoutManagement searchTerm={payoutSearchTerm} />
                         </div>
                     )}
                     {activeSection === 'commission' && (
-                        <div className={styles.section}>
+                        <div className={`${styles.section} ${styles.scrollableSection}`}>
                             <CommissionManagement searchTerm={commissionSearchTerm} />
                         </div>
                     )}
 
                     {/* STATISTICS SECTION */}
                     {activeSection === 'statistics' && (
-                        <div className={styles.section}>
+                        <div className={`${styles.section} ${styles.scrollableSection}`}>
                             <div className={s.statisticsSection}>
                                 {/* Main KPI Cards Grid */}
                                 <div className={s.statsGrid}>
@@ -1580,7 +1580,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
                     {/* ANALYTICS SECTION */}
                     {activeSection === 'analytics' && (
-                        <div className={styles.section}>
+                        <div className={`${styles.section} ${styles.scrollableSection}`}>
                             <div className={s.analyticsSection}>
                                 {/* Main Analytics Grid */}
                                 <div className={s.analyticsGrid}>
@@ -1770,7 +1770,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 </button>
                             </div>
 
-                            <div className={local.inv_scrollCardsContainer} style={{ flex: 1, overflowY: 'auto' }}>
+                            <div className={`${local.inv_scrollCardsContainer} ${styles.scrollableSection}`}>
                                 {isLoadingProjects ? (
                                     <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
                                         <Loader2 size={24} className="animate-spin" style={{ color: 'var(--text-secondary)' }} />
@@ -1841,7 +1841,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 </button>
                             </div>
 
-                            <div className={local.inv_scrollCardsContainer} style={{ flex: 1, overflowY: 'auto' }}>
+                            <div className={`${local.inv_scrollCardsContainer} ${styles.scrollableSection}`}>
                                 {isLoadingInvestors ? (
                                     <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
                                         <Loader2 size={24} className="animate-spin" style={{ color: 'var(--text-secondary)' }} />
@@ -2284,11 +2284,9 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                             ) : (
                                 <div
                                     id="bookingScrollContainer"
+                                    className={styles.scrollableSection}
                                     style={{
-                                        flex: 1,
-                                        overflowY: 'auto',
                                         paddingRight: '4px',
-                                        paddingBottom: 32,
                                         WebkitMaskImage: 'linear-gradient(to bottom, black 0%, black calc(100% - 32px), transparent 100%)',
                                         maskImage: 'linear-gradient(to bottom, black 0%, black calc(100% - 32px), transparent 100%)',
                                     }}
@@ -2355,7 +2353,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                     )}
                                 </h3>
 
-                                <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px 24px' }}>
+                                <div className={styles.scrollableSection} style={{ paddingLeft: '24px', paddingRight: '24px' }}>
                                     {isLoadingStartups ? (
                                         <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
                                             <Loader2 size={24} className={styles.spinner} style={{ margin: '0 auto 12px' }} />
@@ -2458,7 +2456,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 })}
                             </div>
 
-                            <div style={{ flex: 1, overflowY: 'auto', paddingRight: '4px', minHeight: 0 }}>
+                            <div className={styles.scrollableSection} style={{ paddingRight: '4px' }}>
                                 {isLoadingUserReports ? (
                                     <div style={{ padding: '60px', textAlign: 'center' }}>
                                         <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 16px', color: 'var(--primary-blue)' }} />
@@ -2494,7 +2492,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
                     {/* Advisor Approvals Section */}
                     {activeSection === 'advisor_approval' && (
-                        <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
+                        <div className={`${styles.section} ${styles.scrollableSection}`}>
                             <AdvisorApprovalPage user={user} searchTerm={advisorSearchTerm} />
                         </div>
                     )}

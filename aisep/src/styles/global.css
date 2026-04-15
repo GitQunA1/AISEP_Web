@@ -10,17 +10,7 @@
 
 html {
   scroll-behavior: smooth;
-  height: 100%;
-}
-
-body {
-  height: 100%;
-}
-
-/* Ensure no window scrollbar when body is locked (dashboards) */
-html:has(body[style*="overflow: hidden"]),
-html:has(body.no-scroll) {
-  overflow: hidden;
+  overflow-y: auto;
 }
 
 body {

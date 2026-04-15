@@ -236,7 +236,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                 </div>
             )}
 
-            <div className={styles.content} style={activeSection.startsWith('project_') ? { padding: 0 } : activeSection === 'pr_news' ? { padding: 0 } : {}}>
+            <div className={`${styles.content} ${styles.scrollableSection}`} style={activeSection.startsWith('project_') ? { padding: 0 } : activeSection === 'pr_news' ? { padding: 0 } : {}}>
                 {activeSection === 'account_profile' && (
                     <AccountProfileTab user={user} onLogout={onLogout} />
                 )}
@@ -966,7 +966,8 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSec
 }
 
 function AvailabilitySection({ availabilities, loading, onRefresh }) {
-    const todayStr = new Date().toISOString().split('T')[0];
+    const todayVal = new Date();
+    const todayStr = `${todayVal.getFullYear()}-${String(todayVal.getMonth() + 1).padStart(2, '0')}-${String(todayVal.getDate()).padStart(2, '0')}`;
     const [selectedDate, setSelectedDate] = useState(todayStr);
     const [currentMonth, setCurrentMonth] = useState(new Date());
     const [showAddSlotModal, setShowAddSlotModal] = useState(false);
