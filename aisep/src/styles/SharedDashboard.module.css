@@ -9,6 +9,7 @@
 /* Container - Matches ProfilePage but allows full width for dashboards */
 .container {
     width: 100%;
+    max-width: 1280px;
     margin: 0 auto;
     background-color: var(--bg-primary);
     min-height: 100%;

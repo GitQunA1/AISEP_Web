@@ -278,7 +278,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     const role = user?.role?.toString().toLowerCase();
     const isEligible = role === 'investor' || role === 'startup' || role === '0' || role === '1';
     
-    if (!user || !isEligible || !isPaidUser) {
+    if (!user || !isEligible) {
       setIsLoadingQuota(false);
       return;
     }
@@ -777,7 +777,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
         </div>
 
         {/* Investor AI Action Button (Compact) */}
-        {isPaidUser && (user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1) && (
+        {(user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1) && (
           <div style={{ width: '100%', marginTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             {investorAIResults.length > 0 ? (
               <button 
@@ -864,7 +864,9 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
               {project.assignedAdvisorName ? (
                 <div>
                   <div style={{ fontWeight: 700 }}>{project.assignedAdvisorName}</div>
-                  <button onClick={() => setShowBookingWizard(true)} style={{ marginTop: 10, padding: '8px 16px', borderRadius: 8, background: T.blue, color: '#fff', border: 'none', cursor: 'pointer' }}>Đặt lịch tư vấn</button>
+                  {user?.role?.toString().toLowerCase() !== 'startup' && user?.role !== 0 && (
+                    <button onClick={() => setShowBookingWizard(true)} style={{ marginTop: 10, padding: '8px 16px', borderRadius: 8, background: T.blue, color: '#fff', border: 'none', cursor: 'pointer' }}>Đặt lịch tư vấn</button>
+                  )}
                 </div>
               ) : 'Đang phân công cố vấn'}
             </SectionBody>

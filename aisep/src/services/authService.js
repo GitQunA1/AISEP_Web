@@ -65,7 +65,51 @@ export const authService = {
   logout: async () => {
     const response = await apiClient.post('/api/Auth/logout');
     return response;
-  }
+  },
+
+  /**
+   * Change password for the currently authenticated user
+   * @param {string} currentPassword
+   * @param {string} newPassword
+   * @param {string} confirmPassword
+   * @returns {Promise<any>}
+   */
+  changePassword: async (currentPassword, newPassword, confirmPassword) => {
+    const response = await apiClient.post('/api/Auth/change-password', {
+      currentPassword,
+      newPassword,
+      confirmPassword,
+    });
+    return response;
+  },
+
+  /**
+   * Trigger a password reset email
+   * @param {string} email
+   * @returns {Promise<any>}
+   */
+  forgotPassword: async (email) => {
+    const response = await apiClient.post('/api/Auth/forgot-password', { email });
+    return response;
+  },
+
+  /**
+   * Reset password using the token sent via email
+   * @param {string} userId
+   * @param {string} token
+   * @param {string} newPassword
+   * @param {string} confirmPassword
+   * @returns {Promise<any>}
+   */
+  resetPassword: async (userId, token, newPassword, confirmPassword) => {
+    const response = await apiClient.post('/api/Auth/reset-password', {
+      userId,
+      token,
+      newPassword,
+      confirmPassword,
+    });
+    return response;
+  },
 };
 
 export default authService;

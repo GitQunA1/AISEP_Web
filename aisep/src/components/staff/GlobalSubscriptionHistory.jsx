@@ -3,8 +3,10 @@ import {
   Search, Filter, Calendar, 
   Crown, User, UserCheck, 
   ArrowUpRight, Loader2, 
-  ChevronLeft, ChevronRight 
+  ChevronLeft, ChevronRight,
+  Archive
 } from 'lucide-react';
+import EmptyState from '../common/EmptyState';
 import styles from './StaffSubscription.module.css';
 import subscriptionService from '../../services/subscriptionService';
 
@@ -89,11 +91,12 @@ const GlobalSubscriptionHistory = ({ searchTerm = '' }) => {
                 <tbody>
                   {filteredSubscriptions.length === 0 ? (
                     <tr>
-                      <td colSpan="6" style={{ textAlign: 'center', padding: '60px', color: 'var(--text-secondary)' }}>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                           <Filter size={32} style={{ opacity: 0.2 }} />
-                           <span>Không tìm thấy dữ liệu đăng ký nào.</span>
-                        </div>
+                      <td colSpan="6">
+                        <EmptyState 
+                          icon={searchTerm ? Search : Archive}
+                          title={searchTerm ? "Không tìm thấy" : "Trống"}
+                          message={searchTerm ? `Không có lịch sử đăng ký nào khớp với "${searchTerm}"` : "Hiện chưa có dữ liệu đăng ký nào được ghi nhận."}
+                        />
                       </td>
                     </tr>
                   ) : (
@@ -148,9 +151,11 @@ const GlobalSubscriptionHistory = ({ searchTerm = '' }) => {
             <div className={styles.mobileOnly}>
               <div className={styles.mobileCards}>
                  {filteredSubscriptions.length === 0 && (
-                   <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-                      Không tìm thấy dữ liệu đăng ký nào.
-                   </div>
+                   <EmptyState 
+                     icon={searchTerm ? Search : Archive}
+                     title={searchTerm ? "Không tìm thấy" : "Trống"}
+                     message={searchTerm ? `Không có lịch sử đăng ký nào khớp với "${searchTerm}"` : "Hiện chưa có dữ liệu đăng ký nào được ghi nhận."}
+                   />
                  )}
                  {filteredSubscriptions.map((sub) => {
                     const status = getStatusLabel(sub.status);

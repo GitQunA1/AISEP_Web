@@ -11,6 +11,7 @@ import AdvisorDashboard from './pages/AdvisorDashboard';
 import OperationStaffDashboard from './pages/OperationStaffDashboard';
 import InvestorBookings from './components/investor/InvestorBookings';
 import VerifyEmailPage from './pages/VerifyEmailPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 import authService from './services/authService';
 import startupProfileService from './services/startupProfileService';
 import SubscriptionManagement from './components/subscription/SubscriptionManagement';
@@ -18,8 +19,9 @@ import AdvisorProfilePage from './pages/AdvisorProfilePage';
 import AdvisorApprovalPage from './components/advisor/AdvisorApprovalPage';
 import ProjectDetailView from './components/feed/ProjectDetailView';
 import SessionExpiredModal from './components/auth/SessionExpiredModal';
+
 function App() {
-  const [currentView, setCurrentView] = useState('main'); // 'login', 'main', 'roleSelection', 'register'
+  const [currentView, setCurrentView] = useState('main'); // 'login', 'main', 'roleSelection', 'register', 'resetPassword'
   const [selectedRole, setSelectedRole] = useState(null);
   const [user, setUser] = useState(null);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
@@ -36,13 +38,20 @@ function App() {
     return () => window.removeEventListener('session_expired', handleSessionExpired);
   }, []);
 
-  // Load user from localStorage on mount
   useEffect(() => {
-    // Check if URL has userId and token (email verification payload)
+    // Check if URL has reset-password or verify-email markers
     const params = new URLSearchParams(window.location.search);
+    const isResetPswd = window.location.pathname.includes('/reset-password');
+    const isVerifyEmail = window.location.pathname.includes('/confirm-email');
+    
     if (params.get('userId') && params.get('token')) {
-      setCurrentView('verifyEmail');
-      return;
+      if (isResetPswd) {
+        setCurrentView('resetPassword');
+        return;
+      } else if (isVerifyEmail) {
+        setCurrentView('verifyEmail');
+        return;
+      }
     }
 
     const storedUser = localStorage.getItem('aisep_user');
@@ -85,32 +94,27 @@ function App() {
   }, []);
 
   const handleLoginSuccess = async (userData, accessToken, refreshToken) => {
-    // Store user and tokens in localStorage
     localStorage.setItem('aisep_user', JSON.stringify(userData));
     localStorage.setItem('aisep_token', accessToken);
     localStorage.setItem('aisep_refresh_token', refreshToken);
     setUser(userData);
-    setIsSessionExpired(false); // Reset session expired flag
+    setIsSessionExpired(false); 
 
-    // Determine role-based redirect — must derive from userData, not outer scope
     const roleStr = userData.role?.toString().toLowerCase() || '';
     const roleNum = Number(userData.role);
     const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
     const isAdvisor = roleStr === 'advisor' || roleNum === 2;
     const isInvestor = roleStr === 'investor' || roleNum === 1;
 
-    // Operation Staff, Advisor, and Investor redirect to dashboard directly
     if (isStaff || isAdvisor || isInvestor) {
       setCurrentView('dashboard');
       return;
     }
     
-    // Startup users check profile
     if (roleStr === 'startup' || roleStr === '0' || roleNum === 0) {
       try {
         const response = await startupProfileService.getStartupProfileByUserId(userData.userId);
         if (!response) {
-          // No profile, redirect to HOME with setup flag so MainLayout shows the modal
           setCurrentView('main');
           window.history.replaceState({}, document.title, window.location.pathname + '?setup=true');
         } else {
@@ -121,7 +125,6 @@ function App() {
         setCurrentView('main');
       }
     } else {
-      // Other roles go to main
       setCurrentView('main');
     }
   };
@@ -158,8 +161,6 @@ function App() {
   };
 
   const handleRegistrationComplete = (role, formData) => {
-    console.log('Registration complete for', role, formData);
-    // TODO: Send data to backend
     setCurrentView('login');
     setSelectedRole(null);
   };
@@ -167,7 +168,6 @@ function App() {
   const handleShowLogin = () => {
     setCurrentView('login');
   };
-
 
   const handleShowHome = () => {
     setCurrentView('main');
@@ -222,6 +222,13 @@ function App() {
           onShowRegister={handleShowRegister}
           onBack={handleBackToMain}
         />
+      ) : currentView === 'resetPassword' ? (
+        <ResetPasswordPage onGoToLogin={() => setCurrentView('login')} />
+      ) : currentView === 'verifyEmail' ? (
+        <VerifyEmailPage onVerified={() => {
+          window.history.replaceState({}, document.title, window.location.pathname);
+          setCurrentView('login');
+        }} />
       ) : (['main', 'advisors', 'investors', 'ai', 'dashboard', 'profile', 'subscription'].includes(currentView) || currentView.startsWith('dashboard_')) ? (
         <MainLayout
           onShowRegister={handleShowRegister}
@@ -250,8 +257,8 @@ function App() {
               const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
               
               if (roleStr === 'startup' || roleNum === 0) {
-                const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
-                return <StartupDashboard user={user} initialSection={section} />;
+                const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'my-projects';
+                return <StartupDashboard user={user} initialSection={section} onLogout={handleLogout} />;
               } else if (roleStr === 'investor' || roleNum === 1) {
                 if (currentView === 'dashboard_bookings') {
                   return (
@@ -275,25 +282,20 @@ function App() {
                     />
                   );
                 }
-                const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
-                return <InvestorDashboard user={user} initialSection={section} />;
+                const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'investments';
+                return <InvestorDashboard user={user} initialSection={section} onLogout={handleLogout} />;
               } else if (roleStr === 'advisor' || roleNum === 2) {
                 const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
-                return <AdvisorDashboard user={user} initialSection={section} onSectionChange={handleShowDashboard} onShowProfile={handleShowProfile} />;
+                return <AdvisorDashboard user={user} initialSection={section} onSectionChange={handleShowDashboard} onShowProfile={handleShowProfile} onLogout={handleLogout} />;
               } else if (isStaff) {
                 const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'statistics';
-                return <OperationStaffDashboard user={user} initialSection={section} />;
+                return <OperationStaffDashboard user={user} initialSection={section} onLogout={handleLogout} />;
               } else {
                 return <div style={{ padding: '20px', textAlign: 'center' }}><p>Dashboard not available for your role</p></div>;
               }
             })()
           )}
         </MainLayout>
-      ) : currentView === 'verifyEmail' ? (
-        <VerifyEmailPage onVerified={() => {
-          window.history.replaceState({}, document.title, window.location.pathname);
-          setCurrentView('login');
-        }} />
       ) : currentView === 'roleSelection' ? (
         <RegisterSelection
           onRoleSelect={handleRoleSelect}

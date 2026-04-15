@@ -1,8 +1,9 @@
-/* GLOBAL RESET for this layout */
+:global(html),
 :global(body) {
   margin: 0;
   padding: 0;
-  overflow: hidden;
+  overflow: hidden !important;
+  height: 100% !important;
   /* CRITICAL: Kills the browser's default scrollbar on desktop grid */
 }
 

@@ -32,8 +32,8 @@ function StartupRegisterForm({ onBack, onComplete }) {
       newErrors.username = 'Vui lòng nhập tên đăng nhập.';
     } else if (formData.username.length < 3) {
       newErrors.username = 'Tên đăng nhập phải có ít nhất 3 ký tự.';
-    } else if (!/^[a-zA-Z0-9_]+$/.test(formData.username)) {
-      newErrors.username = 'Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới.';
+    } else if (!/^[a-zA-Z0-9]+$/.test(formData.username)) {
+      newErrors.username = 'Tên đăng nhập chỉ được chứa chữ cái và số.';
     }
 
     if (!formData.email.trim()) {
