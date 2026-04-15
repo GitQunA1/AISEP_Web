@@ -49,16 +49,17 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
         <div className={local.inv_card}>
             <div className={`${local.inv_cardStrip} ${local[status]}`}></div>
             <div className={local.bcardBody}>
-                <div className={local.bcardRow1}>
-                    <div className={local.bcardMainInfo}>
-                        <div className={local.bcardName} title={project?.projectName}>
-                            {project?.projectName || 'Dự án không tên'}
-                        </div>
-                        <span className={`${local.btag} ${stageInfo.class}`}>{stageInfo.label}</span>
+                <div className={local.bcardTopRow}>
+                    <div className={local.bcardName} title={project?.projectName}>
+                        {project?.projectName || 'Dự án không tên'}
                     </div>
                     <div className={local.bcardTime}>
                         {project?.createdAt ? new Date(project.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
                     </div>
+                </div>
+
+                <div className={local.bcardTagRow}>
+                    <span className={`${local.btag} ${stageInfo.class}`}>{stageInfo.label}</span>
                 </div>
 
                 <p className={local.bcardDesc}>{project?.shortDescription || '-'}</p>
@@ -85,8 +86,8 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
                             {name.trim().charAt(0).toUpperCase()}
                         </div>
                     ))}
-                    {teamSize > 3 && <span>+{teamSize - 3} thành viên</span>}
-                    {teamSize <= 3 && teamSize > 0 && <span>{teamSize} thành viên</span>}
+                    {teamSize > 3 && <span style={{ fontSize: '11px', opacity: 0.8 }}>+{teamSize - 3} thành viên</span>}
+                    {teamSize <= 3 && teamSize > 0 && <span style={{ fontSize: '11px', opacity: 0.8 }}>{teamSize} thành viên</span>}
                 </div>
 
                 <div className={local.bcardActions}>
@@ -108,7 +109,7 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
                                 ) : (
                                     <XCircle size={16} />
                                 )}
-                                Từ chối
+                                <span style={{ marginLeft: '4px' }}>Từ chối</span>
                             </button>
                             <button
                                 className={`${local.baBtn} ${local.apr} ${processingProjectId !== null ? local.btnDisabled : ''}`}
@@ -121,7 +122,7 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
                                 ) : (
                                     <CheckCircle size={16} />
                                 )}
-                                Duyệt
+                                <span style={{ marginLeft: '4px' }}>Duyệt</span>
                             </button>
                         </>
                     )}
@@ -251,40 +252,49 @@ const InvestorKanbanCard = ({ investor, status, onDetail, onApprove, onReject, p
                             </span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: '600', width: '60px', flexShrink: 0, textTransform: 'uppercase' }}>Ngân sách</span>
-                            <span style={{ color: '#10b981', fontWeight: '700' }}>
-                                {investor.maxInvestment ? `${Number(investor.maxInvestment).toLocaleString()} ₫` : 'N/A'}
+                            <span style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: '600', width: '60px', flexShrink: 0, textTransform: 'uppercase' }}>Email</span>
+                            <span style={{ color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {investor.email || 'N/A'}
                             </span>
                         </div>
                     </div>
                 </div>
 
-                <div className={local.bcardActions}>
-                    <button
-                        className={`${local.baBtn} ${isAnyProcessing ? local.inv_btnDisabled : ''}`}
-                        onClick={() => onDetail(investor)}
-                        title="Chi tiết"
-                        disabled={isAnyProcessing}
-                    >
+                <div className={local.bcardActions} style={{ marginTop: 'auto' }}>
+                    <button className={local.baBtn} onClick={() => onDetail(investor)} title="Chi tiết">
+                        <ArrowRight size={16} />
                         Chi tiết
                     </button>
+
                     {status === 'pend' && (
-                        <div style={{ display: 'flex', gap: '8px', marginLeft: 'auto' }}>
+                        <>
                             <button
-                                className={`${local.baBtn} ${local.rej} ${isAnyProcessing ? (isProcessing && processingAction === 'reject' ? local.inv_btnLoading : local.inv_btnDisabled) : ''}`}
+                                className={`${local.baBtn} ${local.rej} ${isAnyProcessing ? local.btnDisabled : ''}`}
                                 onClick={() => onReject(investor)}
                                 disabled={isAnyProcessing}
+                                title="Từ chối"
                             >
-                                {isProcessing && processingAction === 'reject' ? <Loader2 className="animate-spin" size={14} /> : <X size={14} />}
+                                {isProcessing && processingAction === 'reject' ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                    <XCircle size={16} />
+                                )}
+                                <span style={{ marginLeft: '4px' }}>Từ chối</span>
                             </button>
                             <button
-                                className={`${local.baBtn} ${local.appr} ${isAnyProcessing ? (isProcessing && processingAction === 'approve' ? local.inv_btnLoading : local.inv_btnDisabled) : ''}`}
+                                className={`${local.baBtn} ${local.apr} ${isAnyProcessing ? local.btnDisabled : ''}`}
                                 onClick={() => onApprove(investor.investorId)}
                                 disabled={isAnyProcessing}
+                                title="Phê duyệt"
                             >
-                                {isProcessing && processingAction === 'approve' ? <Loader2 className="animate-spin" size={14} /> : <CheckCircle size={14} />}
+                                {isProcessing && processingAction === 'approve' ? (
+                                    <Loader2 size={16} className="animate-spin" />
+                                ) : (
+                                    <CheckCircle size={16} />
+                                )}
+                                <span style={{ marginLeft: '4px' }}>Duyệt</span>
                             </button>
-                        </div>
+                        </>
                     )}
                 </div>
             </div>
@@ -2962,15 +2972,18 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                         </div>
                                     </div>
                                     
-                                    {isLoadingHistory ? (
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                                            <Loader2 size={14} className={styles.spinner} /> Đang tải...
-                                        </div>
-                                    ) : analysisHistory.length > 0 ? (
-                                        <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-                                            {analysisHistory.map((item, index) => {
-                                                const isEligibility = 'is_eligible_startup' in item || 'isEligibleStartup' in item || ('data' in item && ('is_eligible_startup' in item.data || 'isEligibleStartup' in item.data));
-                                                const isEligible = item.is_eligible_startup || item.isEligibleStartup || item.data?.is_eligible_startup || item.data?.isEligibleStartup;
+                                    {(() => {
+                                        const startupHistory = analysisHistory.filter(item => !('is_eligible_startup' in item || 'isEligibleStartup' in item || (item.data && ('is_eligible_startup' in item.data || 'isEligibleStartup' in item.data))));
+                                        
+                                        return isLoadingHistory ? (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                                                <Loader2 size={14} className={styles.spinner} /> Đang tải...
+                                            </div>
+                                        ) : startupHistory.length > 0 ? (
+                                            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                                                {startupHistory.map((item, index) => {
+                                                    const isEligibility = false; 
+                                                    const isEligible = item.is_eligible_startup || item.isEligibleStartup || item.data?.is_eligible_startup || item.data?.isEligibleStartup;
                                                 
                                                 return (
                                                     <button
@@ -3005,10 +3018,11 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                                     </button>
                                                 );
                                             })}
-                                        </div>
-                                    ) : (
-                                        <div style={{ color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Chưa có bản đánh giá từ Startup</div>
-                                    )}
+                                            </div>
+                                        ) : (
+                                            <div style={{ color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Chưa có bản đánh giá từ Startup</div>
+                                        );
+                                    })()}
                                 </div>
 
                                 {/* Compartment 2: Staff initiated */}
