@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { ArrowLeft, Rocket, Eye, EyeOff } from 'lucide-react';
 import authService from '../services/authService';
+import ForgotPasswordModal from '../components/auth/ForgotPasswordModal';
 import styles from './LoginPage.module.css';
 
 export default function LoginPage({ onLoginSuccess, onShowRegister, onBack }) {
@@ -9,6 +10,7 @@ export default function LoginPage({ onLoginSuccess, onShowRegister, onBack }) {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -146,6 +148,7 @@ export default function LoginPage({ onLoginSuccess, onShowRegister, onBack }) {
             <button
               type="button"
               className={styles.forgotButton}
+              onClick={() => setShowForgotModal(true)}
             >
               Quên mật khẩu?
             </button>
@@ -169,6 +172,10 @@ export default function LoginPage({ onLoginSuccess, onShowRegister, onBack }) {
           </button>
         </div>
       </div>
+
+      {showForgotModal && (
+        <ForgotPasswordModal onClose={() => setShowForgotModal(false)} />
+      )}
     </div>
   );
 }

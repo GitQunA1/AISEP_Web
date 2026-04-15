@@ -46,7 +46,6 @@ function Sidebar({
     if (isStaff) {
       const staffItems = [
         { icon: LayoutDashboard, label: 'Dashboard', displayLabel: 'Bảng điều khiển', href: '#', showWhenLoggedIn: true },
-        { icon: DollarSign, label: 'WithdrawRequest', displayLabel: 'Yêu cầu rút tiền', href: '#', showWhenLoggedIn: true },
         { icon: CreditCard, label: 'Payouts', displayLabel: 'Chi trả cố vấn', href: '#', showWhenLoggedIn: true },
         { icon: Activity, label: 'CommissionConfig', displayLabel: 'Cấu hình hoa hồng', href: '#', showWhenLoggedIn: true },
         { icon: FileText, label: 'Projects', displayLabel: 'Quản lý dự án', href: '#', showWhenLoggedIn: true },
@@ -58,6 +57,7 @@ function Sidebar({
         { icon: ShieldCheck, label: 'InvestorApproval', displayLabel: 'Phê duyệt nhà đầu tư', href: '#', showWhenLoggedIn: true },
         { icon: Shield, label: 'PackageManagement', displayLabel: 'Quản lý gói', href: '#', showWhenLoggedIn: true },
         { icon: History, label: 'SubscriptionHistory', displayLabel: 'Lịch sử đăng ký gói', href: '#', showWhenLoggedIn: true },
+        { icon: User, label: 'AccountProfile', displayLabel: 'Hồ sơ người dùng', href: '#', showWhenLoggedIn: true },
       ];
       const otherItems = baseItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
       const homeItem = baseItems.find(item => item.label === 'Home');
@@ -72,7 +72,8 @@ function Sidebar({
         { icon: ShieldCheck, label: 'ApproveBookings', displayLabel: 'Duyệt Booking', href: '#', showWhenLoggedIn: true },
         { icon: MessageSquare, label: 'Bookings', displayLabel: 'Danh sách Booking', href: '#', showWhenLoggedIn: true },
         { icon: Calendar, label: 'Availability', displayLabel: 'Lịch Rảnh', href: '#', showWhenLoggedIn: true },
-        { icon: User, label: 'Profile', displayLabel: 'Hồ sơ', href: '#', showWhenLoggedIn: true },
+        { icon: User, label: 'Profile', displayLabel: 'Hồ sơ cố vấn', href: '#', showWhenLoggedIn: true },
+        { icon: User, label: 'AccountProfile', displayLabel: 'Hồ sơ người dùng', href: '#', showWhenLoggedIn: true },
       ];
       const otherItems = baseItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
       const homeItem = baseItems.find(item => item.label === 'Home');
@@ -87,10 +88,15 @@ function Sidebar({
         baseItems.find(i => i.label === 'PRNews'),
         baseItems.find(i => i.label === 'Advisors'),
         baseItems.find(i => i.label === 'Investors'),
+        { icon: User, label: 'AccountProfile', displayLabel: 'Hồ sơ người dùng', href: '#', showWhenLoggedIn: true },
       ];
     }
 
-    return baseItems;
+    // Startup and other roles — add AccountProfile to base items
+    return [
+      ...baseItems,
+      { icon: User, label: 'AccountProfile', displayLabel: 'Hồ sơ người dùng', href: '#', showWhenLoggedIn: true },
+    ];
   }, [user]);
 
 
@@ -130,7 +136,18 @@ function Sidebar({
   const handleNavClick = (label) => {
     // Navigate to dashboard when clicking Dashboard
     if (label === 'Dashboard' && onShowDashboard) {
-      onShowDashboard('statistics');
+      const roleStr = user?.role?.toString().toLowerCase() || '';
+      const roleNum = Number(user?.role);
+      
+      if (roleStr === 'startup' || roleNum === 0) {
+        onShowDashboard('my-projects');
+      } else if (roleStr === 'investor' || roleNum === 1) {
+        onShowDashboard('investments');
+      } else if (roleStr === 'operationstaff' || roleStr === 'staff' || roleNum === 3) {
+        onShowDashboard('statistics');
+      } else {
+        onShowDashboard('overview');
+      }
     }
     if (label === 'Projects' && onShowDashboard) {
       onShowDashboard('project_management');
@@ -157,9 +174,6 @@ function Sidebar({
     if (label === 'UserReports' && onShowDashboard) {
       onShowDashboard('user_reports');
     }
-    if (label === 'WithdrawRequest' && onShowDashboard) {
-      onShowDashboard('withdrawals');
-    }
     if (label === 'CommissionConfig' && onShowDashboard) {
       onShowDashboard('commission');
     }
@@ -180,6 +194,10 @@ function Sidebar({
     }
     if (label === 'PRNews' && onShowDashboard) {
       onShowDashboard('pr_news');
+    }
+
+    if (label === 'AccountProfile' && onShowDashboard) {
+      onShowDashboard('account_profile');
     }
 
     // Navigate to home when clicking Home
@@ -294,7 +312,11 @@ function Sidebar({
                     // Map activeView to nav item labels
                     const getActiveLabel = () => {
                       if (activeView === 'main') return 'Home';
-                      if (activeView === 'dashboard') return 'Dashboard';
+                      if (activeView === 'dashboard' || 
+                          activeView === 'dashboard_statistics' || 
+                          activeView === 'dashboard_my-projects' || 
+                          activeView === 'dashboard_investments' || 
+                          activeView === 'dashboard_overview') return 'Dashboard';
                       if (activeView === 'dashboard_project_management') return 'Projects';
                       if (activeView === 'dashboard_bookings') return 'Bookings';
                       if (activeView === 'dashboard_approvals') return 'Approvals';
@@ -311,6 +333,7 @@ function Sidebar({
                       if (activeView === 'dashboard_package_management') return 'PackageManagement';
                       if (activeView === 'dashboard_subscription_history') return 'SubscriptionHistory';
                       if (activeView === 'dashboard_investor_approval') return 'InvestorApproval';
+                      if (activeView === 'dashboard_account_profile') return 'AccountProfile';
                       if (activeView === 'profile') return 'Profile';
                       if (activeView === 'advisors') return 'Advisors';
                       if (activeView === 'investors') return 'Investors';

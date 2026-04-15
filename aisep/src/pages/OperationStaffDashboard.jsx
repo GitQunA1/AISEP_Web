@@ -19,10 +19,13 @@ import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/Projec
 import AdvisorApprovalPage from '../components/advisor/AdvisorApprovalPage';
 import PackageManagement from '../components/staff/PackageManagement';
 import GlobalSubscriptionHistory from '../components/staff/GlobalSubscriptionHistory';
-import WithdrawManagement from '../components/staff/WithdrawManagement';
 import PayoutManagement from '../components/staff/PayoutManagement';
 import CommissionManagement from '../components/staff/CommissionManagement';
 import NewsPRSection from '../components/common/NewsPRSection';
+import AccountProfileTab from '../components/common/AccountProfileTab';
+import EmptyState from '../components/common/EmptyState';
+
+
 
 /**
  * ProjectKanbanCard - Single card for the Kanban board
@@ -418,27 +421,12 @@ const KanbanSkeleton = ({ count = 3 }) => {
 /**
  * EmptyState - Reusable empty or error view
  */
-const EmptyState = ({ icon: Icon, title, message, onRetry, isError = false }) => {
-    return (
-        <div className={local.emptyStateContainer}>
-            <div className={local.emptyStateIcon}>
-                <Icon size={48} strokeWidth={1.5} color={isError ? '#f4212e' : 'var(--text-muted)'} />
-            </div>
-            <h4 style={{ margin: '0 0 8px 0', fontSize: '16px', fontWeight: '800', color: 'var(--text-primary)' }}>{title}</h4>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '280px', lineHeight: '1.5' }}>{message}</p>
-            {onRetry && (
-                <button className={local.retryBtn} onClick={onRetry}>
-                    Thử lại
-                </button>
-            )}
-        </div>
-    );
-};
 
 
 
 
-const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
+const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics' }) => {
+
     // Safety check for styles
     const s = local || {};
     if (!local) {
@@ -484,7 +472,6 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
     const [showHistoryView, setShowHistoryView] = useState(false);
     const [selectedHistoryResult, setSelectedHistoryResult] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
-    const [withdrawSearchTerm, setWithdrawSearchTerm] = useState('');
     const [payoutSearchTerm, setPayoutSearchTerm] = useState('');
     const [commissionSearchTerm, setCommissionSearchTerm] = useState('');
     const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
@@ -494,7 +481,6 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
     const handleSearchChange = (val) => {
         if (activeSection === 'project_management') setSearchTerm(val);
         else if (activeSection === 'bookings') setBookingSearchTerm(val);
-        else if (activeSection === 'withdrawals') setWithdrawSearchTerm(val);
         else if (activeSection === 'commission') setCommissionSearchTerm(val);
         else if (activeSection === 'advisor_approval') setAdvisorSearchTerm(val);
         else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
@@ -617,13 +603,14 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
             case 'advisor_approval': return "Phê duyệt cố vấn";
             case 'package_management': return "Quản lý Gói dịch vụ";
             case 'subscription_history': return "Lịch sử đăng ký gói";
-            case 'withdrawals': return "Quản lý Rút tiền";
             case 'commission': return "Cấu hình Hoa hồng";
             case 'pr_management': return "Đăng bài PR - Dự án Đầu tư";
             case 'investor_approval': return "Phê duyệt Nhà đầu tư";
             case 'analytics': return "Phân tích dữ liệu";
             case 'activity': return "Giám sát hoạt động";
+            case 'account_profile': return "Hồ sơ người dùng";
             default: return "Bảng điều khiển Nhân viên";
+
         }
     };
 
@@ -636,13 +623,14 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
             case 'advisor_approval': return "Đánh giá hồ sơ và phê duyệt năng lực chuyên môn của các cố vấn.";
             case 'package_management': return "Cấu hình hạn mức, thời hạn và giá cả cho các gói đăng ký.";
             case 'subscription_history': return "Theo dõi lịch sử thanh toán, gia hạn các gói dịch vụ của người dùng.";
-            case 'withdrawals': return "Phê duyệt và theo dõi các yêu cầu rút tiền của Advisor.";
             case 'commission': return "Điều chỉnh tỷ lệ phần trăm hoa hồng hệ thống áp dụng cho các phiên tư vấn.";
             case 'pr_management': return "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký).";
             case 'investor_approval': return "Xem xét hồ sơ và phê duyệt tư cách nhà đầu tư trên hệ thống.";
             case 'analytics': return "Biểu đồ phân tích chuyên sâu về dữ liệu hệ thống.";
             case 'activity': return "Nhật ký hoạt động và giám sát thời gian thực.";
+            case 'account_profile': return "Quản lý thông tin cá nhân và mật khẩu.";
             default: return "Quản lý nền tảng và các yêu cầu phê duyệt.";
+
         }
     };
 
@@ -666,8 +654,6 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
         pendingApprovals: pendingStartups.length,
         pendingProjects: pendingProjects.length,
         approvedUsers: 0,
-        totalActivity: 0,
-        averageApprovalTime: '-',
         totalProjects: totalProjects,
         approvalRate: approvalRate,
         avgApprovalTime: avgApprovalTime,
@@ -1407,7 +1393,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
     return (
         <div className={styles.container} style={{
-            minHeight: '100%',
+            height: '100%',
             display: 'flex',
             flexDirection: 'column'
         }}>
@@ -1445,7 +1431,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
             )}
 
             {/* Navigation Tabs (Only for main statistics/analytics/activity) */}
-            {['statistics', 'analytics', 'activity'].includes(activeSection) && (
+            {['statistics', 'analytics'].includes(activeSection) && (
                 <div className={styles.tabs}>
                     <button
                         className={`${styles.tab} ${activeSection === 'statistics' ? styles.active : ''}`}
@@ -1459,12 +1445,6 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                     >
                         Phân tích
                     </button>
-                    <button
-                        className={`${styles.tab} ${activeSection === 'activity' ? styles.active : ''}`}
-                        onClick={() => setActiveSection('activity')}
-                    >
-                        Giám sát hoạt động
-                    </button>
                 </div>
             )}
 
@@ -1472,11 +1452,6 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
             {activeSection !== 'pr_news' && (
                 <div className={styles.content}>
                     {/* FINANCIAL SECTIONS */}
-                    {activeSection === 'withdrawals' && (
-                        <div className={styles.section}>
-                            <WithdrawManagement searchTerm={withdrawSearchTerm} />
-                        </div>
-                    )}
                     {activeSection === 'payouts' && (
                         <div className={styles.section}>
                             <PayoutManagement searchTerm={payoutSearchTerm} />
@@ -1810,10 +1785,11 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
                                         if (listToShow.length === 0) {
                                             return (
-                                                <div className={local.inv_emptyState}>
-                                                    <Archive size={40} className={local.inv_emptyIcon} />
-                                                    <p>{searchTerm ? 'Không tìm thấy kết quả' : 'Trống'}</p>
-                                                </div>
+                                                <EmptyState
+                                                    icon={Archive}
+                                                    title="Trống"
+                                                    message={searchTerm ? 'Không tìm thấy kết quả phù hợp với tìm kiếm của bạn' : 'Hiện chưa có dự án nào trong danh mục này'}
+                                                />
                                             );
                                         }
 
@@ -1880,10 +1856,11 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
                                         if (listToShow.length === 0) {
                                             return (
-                                                <div className={local.inv_emptyState}>
-                                                    <Archive size={40} className={local.inv_emptyIcon} />
-                                                    <p>Trống</p>
-                                                </div>
+                                                <EmptyState
+                                                    icon={Archive}
+                                                    title="Trống"
+                                                    message="Hiện chưa có nhà đầu tư nào trong danh mục này"
+                                                />
                                             );
                                         }
 
@@ -1938,7 +1915,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                             </div>
 
                             {activePRTab === 'posting' && (
-                                <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px 24px', minHeight: 0 }}>
+                                <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 100px 24px', minHeight: 0 }}>
                                     {/* Header Stats */}
                                     <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -1970,6 +1947,15 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                                                 onRetry={fetchSignedDeals}
                                             />
                                         </div>
+                                    )}
+
+                                    {/* Empty State */}
+                                    {!isLoadingSignedDeals && signedDeals.length === 0 && (
+                                        <EmptyState
+                                            icon={Archive}
+                                            title="Trống"
+                                            message="Hiện chưa có dự án nào ký hợp đồng đầu tư thành công để đăng PR."
+                                        />
                                     )}
 
                                     {/* Loading State */}
@@ -2119,7 +2105,7 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                             {/* News Section */}
                             {activePRTab === 'news' && (
                                 <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-                                    <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 24px 24px', minHeight: 0 }}>
+                                    <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px 100px 24px', minHeight: 0 }}>
                                         {/* News Header Stats */}
                                         <div className={styles.card} style={{ marginBottom: '24px', display: 'flex', gap: '24px', flexWrap: 'wrap', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.08)' }}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
@@ -2165,13 +2151,11 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
                                         {/* Empty State */}
                                         {!isLoadingPRNews && prNewsList.length === 0 && (
-                                            <div className={styles.card}>
-                                                <EmptyState
-                                                    icon={Archive}
-                                                    title="Chưa có PR được đăng"
-                                                    message="Hiện chưa có bài PR nào được đăng. Hãy đăng bài PR từ tab 'Đăng bài PR'."
-                                                />
-                                            </div>
+                                            <EmptyState
+                                                icon={Archive}
+                                                title="Chưa có PR được đăng"
+                                                message="Hiện chưa có bài PR nào được đăng. Hãy đăng bài PR từ tab 'Đăng bài PR'."
+                                            />
                                         )}
 
                                         {/* PR News List */}
@@ -2329,9 +2313,12 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
 
                                             if (activeList.length === 0) {
                                                 return (
-                                                    <div className={local.inv_emptyState} style={{ gridColumn: '1 / -1', minHeight: '300px' }}>
-                                                        <Archive size={40} className={local.inv_emptyIcon} />
-                                                        <p>{bookingSearchTerm ? 'Không tìm thấy kết quả phù hợp' : 'Không có booking nào'}</p>
+                                                    <div style={{ gridColumn: '1 / -1' }}>
+                                                        <EmptyState
+                                                            icon={Calendar}
+                                                            title="Trống"
+                                                            message={bookingSearchTerm ? 'Không tìm thấy kết quả phù hợp với tìm kiếm của bạn' : 'Hiện chưa có yêu cầu booking nào được ghi nhận'}
+                                                        />
                                                     </div>
                                                 );
                                             }
@@ -2375,9 +2362,11 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                                             <p>Đang tải dữ liệu...</p>
                                         </div>
                                     ) : pendingStartups.length === 0 ? (
-                                        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                            <p>Chưa có yêu cầu phê duyệt Startup nào.</p>
-                                        </div>
+                                        <EmptyState
+                                            icon={Shield}
+                                            title="Trống"
+                                            message="Chưa có yêu cầu phê duyệt Startup nào."
+                                        />
                                     ) : (
                                         <div className={styles.list}>
                                             {pendingStartups.map(startup => (
@@ -2510,40 +2499,6 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                         </div>
                     )}
 
-                    {/* Activity Monitor Section */}
-                    {activeSection === 'activity' && (
-                        <div className={styles.section}>
-                            <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Giám sát hoạt động nền tảng</h3>
-                                <div className={styles.metricsGrid}>
-                                    <div className={styles.metricItem}>
-                                        <span className={styles.metricLabel}>Tổng đăng nhập hôm nay</span>
-                                        <strong className={styles.metricValue}>0</strong>
-                                    </div>
-                                    <div className={styles.metricItem}>
-                                        <span className={styles.metricLabel}>Tài liệu đã tải lên</span>
-                                        <strong className={styles.metricValue}>0</strong>
-                                    </div>
-                                    <div className={styles.metricItem}>
-                                        <span className={styles.metricLabel}>Kết nối mới</span>
-                                        <strong className={styles.metricValue}>0</strong>
-                                    </div>
-                                    <div className={styles.metricItem}>
-                                        <span className={styles.metricLabel}>Yêu cầu tư vấn</span>
-                                        <strong className={styles.metricValue}>0</strong>
-                                    </div>
-                                    <div className={styles.metricItem}>
-                                        <span className={styles.metricLabel}>Lỗi hệ thống</span>
-                                        <strong className={styles.metricValue}>0</strong>
-                                    </div>
-                                    <div className={styles.metricItem}>
-                                        <span className={styles.metricLabel}>Vấn đề bị đánh dấu</span>
-                                        <strong className={styles.metricValue}>0</strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
                     {activeSection === 'package_management' && (
                         <div className={styles.section} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
@@ -2556,6 +2511,13 @@ const OperationStaffDashboard = ({ user, initialSection = 'statistics' }) => {
                             <GlobalSubscriptionHistory searchTerm={subscriptionSearchTerm} />
                         </div>
                     )}
+
+                    {activeSection === 'account_profile' && (
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                            <AccountProfileTab user={user} onLogout={onLogout} />
+                        </div>
+                    )}
+
                 </div>
             )}
 

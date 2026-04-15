@@ -10,6 +10,7 @@ import RejectionReasonModal from '../common/RejectionReasonModal';
 import FeedHeader from '../feed/FeedHeader';
 import staffLocal from '../../styles/OperationStaffDashboard.module.css';
 import sharedStyles from '../../styles/SharedDashboard.module.css';
+import EmptyState from '../common/EmptyState';
 
 /**
  * AdvisorDetailModal - Detailed view of an advisor profile for staff review
@@ -314,14 +315,15 @@ export default function AdvisorApprovalPage({ user, searchTerm }) {
 
                             const filteredList = filterAdvisors(list);
 
-                            if (filteredList.length === 0) {
-                                return (
-                                    <div className={staffLocal.inv_emptyState}>
-                                        <Archive size={40} className={staffLocal.inv_emptyIcon} />
-                                        <p>Trống</p>
-                                    </div>
-                                );
-                            }
+                                if (filteredList.length === 0) {
+                                    return (
+                                        <EmptyState
+                                            icon={Archive}
+                                            title="Trống"
+                                            message={searchTerm ? 'Không tìm thấy kết quả phù hợp với tìm kiếm của bạn' : 'Hiện chưa có hồ sơ cố vấn nào trong danh mục này'}
+                                        />
+                                    );
+                                }
 
                             return (
                                 <div className={sharedStyles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px', padding: '16px 0 24px 0' }}>

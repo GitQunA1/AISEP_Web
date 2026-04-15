@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom';
 import { 
   Percent, History, Edit3, X, AlertTriangle, 
   CheckCircle, Loader2, MessageSquare, Search, Clock,
-  Hash, Calendar, User
+  Hash, Calendar, User, Archive
 } from 'lucide-react';
+import EmptyState from '../common/EmptyState';
 import styles from '../../styles/OperationStaffDashboard.module.css';
 import commissionService from '../../services/commissionService';
 
@@ -115,18 +116,14 @@ export default function CommissionManagement({ searchTerm }) {
                 <Loader2 size={32} className="animate-spin" style={{ color: 'var(--primary-blue)', margin: '0 auto' }} />
               </div>
             ) : filteredHistory.length === 0 ? (
-              <div className={styles.emptyStateContainer} style={{ height: '300px' }}>
-                <MessageSquare size={48} className={styles.emptyStateIcon} />
-                <h4 style={{ margin: 0, fontWeight: 800 }}>
-                  {searchTerm ? 'Không tìm thấy kết quả' : 'Chưa có thay đổi nào'}
-                </h4>
-                <p style={{ fontSize: '13px', color: 'var(--text-secondary)', maxWidth: '280px' }}>
-                  {searchTerm 
-                    ? `Không tìm thấy lịch sử nào khớp với "${searchTerm}"` 
-                    : 'Lịch sử sẽ xuất hiện sau khi bạn cập nhật tỷ lệ hoa hồng lần đầu.'
-                  }
-                </p>
-              </div>
+              <EmptyState 
+                icon={searchTerm ? Search : Archive}
+                title={searchTerm ? 'Không tìm thấy kết quả' : 'Chưa có thay đổi nào'}
+                message={searchTerm 
+                  ? `Không tìm thấy lịch sử nào khớp với "${searchTerm}"` 
+                  : 'Lịch sử sẽ xuất hiện sau khi bạn cập nhật tỷ lệ hoa hồng lần đầu.'
+                }
+              />
             ) : (
               <div className={styles.timeline}>
                 {filteredHistory.map((item, idx) => {

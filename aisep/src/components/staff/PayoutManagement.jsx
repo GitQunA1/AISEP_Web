@@ -3,8 +3,10 @@ import { createPortal } from 'react-dom';
 import { 
   DollarSign, Clock, CheckCircle, XCircle, Eye, 
   Loader2, AlertCircle, FileText, Download, Calculator, 
-  ChevronRight, Calendar, ArrowLeft, Search, Save, X
+  ChevronRight, Calendar, ArrowLeft, Search, Save, X,
+  Archive
 } from 'lucide-react';
+import EmptyState from '../common/EmptyState';
 import styles from '../../styles/OperationStaffDashboard.module.css';
 import payoutService from '../../services/payoutService';
 import ExcelExportUtil from '../../utils/ExcelExportUtil';
@@ -137,13 +139,11 @@ export default function PayoutManagement({ searchTerm = '' }) {
             <Loader2 size={32} className="animate-spin" style={{ color: 'var(--primary-blue)', margin: '0 auto' }} />
           </div>
         ) : batches.length === 0 ? (
-          <div className={styles.errorWrapper}>
-            <div style={{ textAlign: 'center' }}>
-              <Calendar size={48} opacity={0.2} style={{ marginBottom: '16px' }} />
-              <h3>Chưa có đợt chi trả nào</h3>
-              <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Hãy nhấn "Kết toán tháng mới" để bắt đầu tạo đợt chi trả đầu tiên.</p>
-            </div>
-          </div>
+          <EmptyState 
+            icon={Calendar}
+            title="Chưa có đợt chi trả nào"
+            message='Hãy nhấn "Kết toán tháng mới" để bắt đầu tạo đợt chi trả đầu tiên cho các cố vấn.'
+          />
         ) : (
           batches.map(batch => (
             <div key={batch.monthlyPayoutBatchId} className={styles.pendingItem} onClick={() => handleViewBatch(batch)} style={{ cursor: 'pointer' }}>
@@ -233,12 +233,11 @@ function BatchDetailView({ batch, items, loading, onBack, onExport, onMarkPaid, 
             <Loader2 size={32} className="animate-spin" style={{ color: 'var(--primary-blue)', margin: '0 auto' }} />
           </div>
         ) : items.length === 0 ? (
-          <div className={styles.errorWrapper}>
-            <div style={{ textAlign: 'center' }}>
-              <FileText size={48} opacity={0.2} style={{ marginBottom: '16px' }} />
-              <p style={{ color: 'var(--text-secondary)' }}>Không tìm thấy dữ liệu chi tiết cho đợt này.</p>
-            </div>
-          </div>
+          <EmptyState 
+            icon={FileText}
+            title="Trống"
+            message="Không tìm thấy dữ liệu chi tiết cho đợt kết toán này."
+          />
         ) : (
           items.map(item => (
             <div key={item.monthlyPayoutId} className={styles.pendingItem}>

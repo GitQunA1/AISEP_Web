@@ -719,7 +719,7 @@ function MainLayout({
 
   const handleProjectUnlock = useCallback((projectId) => {
     console.log('[MainLayout] Syncing unlock state for project:', projectId);
-    setAllStartups(prev => prev.map(s => 
+    setAllStartups(prev => prev.map(s =>
       String(s.id) === String(projectId) ? { ...s, isUnlockedByCurrentUser: true } : s
     ));
   }, []);
@@ -761,7 +761,7 @@ function MainLayout({
       <main
         ref={mainContentRef}
         key={activeView}
-        className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} ${isFullWidthContent ? styles.fullWidthContent : ''} view-enter`}
+        className={`${styles.mainContent} ${(showAI || activeView.startsWith('dashboard')) ? styles.noScroll : ''} ${isFullWidthContent ? styles.fullWidthContent : ''} view-enter`}
       >
 
         {/* Feed Content or Profile Page */}

@@ -19,12 +19,14 @@ import enumService from '../services/enumService';
 import investorService from '../services/investorService';
 import blockchainOwnershipService from '../services/blockchainOwnershipService';
 import BlockchainOwnershipModal from '../components/common/BlockchainOwnershipModal';
+import AccountProfileTab from '../components/common/AccountProfileTab';
+
 
 /**
  * InvestorDashboard - Comprehensive dashboard for investors
  * Features: Portfolio overview, Watchlist, Sent interests, Active investments, Preferences
  */
-export default function InvestorDashboard({ user, initialSection = 'overview' }) {
+export default function InvestorDashboard({ user, initialSection = 'investments', onLogout }) {
     const [activeSection, setActiveSection] = useState(initialSection);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
     const [showLeftTabIndicator, setShowLeftTabIndicator] = useState(false);
@@ -34,9 +36,13 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
     const isFirstLoad = useRef(true);
     const [investorProfile, setInvestorProfile] = useState(null);
     
-    // Sync activeSection with initialSection prop
+    // Sync activeSection with initialSection prop + handle removed/invalid sections
     React.useEffect(() => {
-        if (initialSection) setActiveSection(initialSection);
+        if (initialSection === 'overview' || initialSection === 'statistics' || !initialSection) {
+            setActiveSection('investments');
+        } else {
+            setActiveSection(initialSection);
+        }
     }, [initialSection]);
 
     React.useLayoutEffect(() => {
@@ -806,8 +812,8 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
             {activeSection !== 'pr_news' && (
                 <>
                     <FeedHeader
-                        title="Bảng điều khiển Nhà đầu tư"
-                        subtitle={`Xin chào, ${user?.name || 'Nhà đầu tư'}! Quản lý đầu tư và khám phá startup.`}
+                        title={activeSection === 'account_profile' ? "Hồ sơ người dùng" : "Bảng điều khiển Nhà đầu tư"}
+                        subtitle={activeSection === 'account_profile' ? "Quản lý thông tin tài khoản và mật khẩu của bạn." : `Xin chào, ${user?.name || 'Nhà đầu tư'}! Quản lý đầu tư và khám phá startup.`}
                         showFilter={false}
                         user={user}
                         onOpenChat={(chatSessionId) => {
@@ -829,45 +835,14 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
 
             {activeSection !== 'pr_news' && (
                 <>
-                    {/* Stats Section */}
-                    <div className={`${styles.statsWrapper} ${activeSection !== 'overview' ? styles.statsCollapsed : ''}`}>
-                        <div className={styles.statsGrid}>
-                            <div className={styles.statCard}>
-                                <div className={`${styles.statIcon} ${styles.iconCyan}`}>
-                                    <PieChart size={20} />
-                                </div>
-                                <div className={styles.statInfo}>
-                                    <div className={styles.statValue}>{dashboardData.activeInvestments}</div>
-                                    <div className={styles.statLabel}>Đang đầu tư</div>
-                                </div>
-                            </div>
-                            <div className={styles.statCard}>
-                                <div className={`${styles.statIcon} ${styles.iconYellow}`}>
-                                    <TrendingUp size={20} />
-                                </div>
-                                <div className={styles.statInfo}>
-                                    <div className={styles.statValue}>{dashboardData.acceptedInterests}</div>
-                                    <div className={styles.statLabel}>Pitch được chấp nhận</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    {/* Dashboard Tabs */}
-                    <div className={styles.tabSwitcherWrapper}>
-                        {isMobile && showLeftTabIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorLeft}`} />}
-                        
+                    {/* Stats Section - Removed Overview specific Stats Wrapper */}
+                                        {/* Tabs Section */}
+                    {activeSection !== 'account_profile' && (
                         <div 
                             className={`${styles.tabs} ${styles.animatedTabs}`}
                             ref={tabsRef}
                             onScroll={checkTabScroll}
                         >
-                            <button 
-                                className={`${styles.tab} ${activeSection === 'overview' ? styles.active : ''}`}
-                                onClick={() => setActiveSection('overview')}
-                            >
-                                Tổng quan
-                            </button>
                             <button 
                                 className={`${styles.tab} ${activeSection === 'investments' ? styles.active : ''}`}
                                 onClick={() => setActiveSection('investments')}
@@ -896,75 +871,14 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                             {/* Animated Indicator Line */}
                             <div className={styles.tabIndicator} style={indicatorStyle} />
                         </div>
-
-                        {isMobile && showRightTabIndicator && <div className={`${styles.scrollIndicator} ${styles.scrollIndicatorRight}`} />}
-                    </div>
+                    )}
                 </>
             )}
 
             {/* Content Sections */}
             <div className={styles.content} style={activeSection === 'pr_news' ? { padding: 0 } : {}}>
-                {/* Overview Section */}
-                {activeSection === 'overview' && (
-                    <div className={styles.section}>
-                        <div className={styles.sectionGrid}>
-                            {/* Portfolio Summary */}
-                            <div className={styles.card} style={{ gridColumn: '1 / -1' }}>
-                                <h3 className={styles.cardTitle}>Tổng quan danh mục</h3>
-                                <div className={styles.metricsGrid}>
-                                    <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Giá trị danh mục</div>
-                                        <div className={styles.metricValue}>{dashboardData.portfolioValue}</div>
-                                    </div>
-                                    <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Đang đầu tư</div>
-                                        <div className={styles.metricValue}>{dashboardData.activeInvestments}</div>
-                                    </div>
-                                    <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Tổng đã giải ngân</div>
-                                        <div className={styles.metricValue}>{dashboardData.totalInvested}</div>
-                                    </div>
-                                    <div className={styles.metricItem}>
-                                        <div className={styles.metricLabel}>Quan tâm được chấp nhận</div>
-                                        <div className={styles.metricValue}>{dashboardData.acceptedInterests}</div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Recent Activity */}
-                            <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Hoạt động gần đây</h3>
-                                <div className={styles.list}>
-                                    <div style={{ padding: '20px', textAlign: 'center', color: '#64748b' }}>
-                                        <p>Chưa có hoạt động nào.</p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Quick Stats */}
-                            <div className={styles.card}>
-                                <h3 className={styles.cardTitle}>Thống kê nhanh</h3>
-                                <div className={styles.list}>
-                                    <div className={styles.listItem} style={{ justifyContent: 'space-between' }}>
-                                        <span className={styles.listSubtitle}>Điểm AI trung bình</span>
-                                        <strong>-</strong>
-                                    </div>
-                                    <div className={styles.listItem} style={{ justifyContent: 'space-between' }}>
-                                        <span className={styles.listSubtitle}>Giai đoạn ưu tiên</span>
-                                        <strong>-</strong>
-                                    </div>
-                                    <div className={styles.listItem} style={{ justifyContent: 'space-between' }}>
-                                        <span className={styles.listSubtitle}>Ngành hàng đầu</span>
-                                        <strong>-</strong>
-                                    </div>
-                                    <div className={styles.listItem} style={{ justifyContent: 'space-between' }}>
-                                        <span className={styles.listSubtitle}>Tỷ lệ thành công</span>
-                                        <strong>0%</strong>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                {activeSection === 'account_profile' && (
+                    <AccountProfileTab user={user} onLogout={onLogout} />
                 )}
 
                 {/* Sent Connection Requests Section */}
@@ -1959,13 +1873,7 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                         </div>
                     </div>
                 )}
-            <FloatingChatWidget
-                chatSessionId={activeChatSession?.chatSessionId}
-                displayName={activeChatSession?.displayName}
-                currentUserId={user?.userId}
-                sentTime={activeChatSession?.sentTime}
-                onClose={handleCloseChatWindow}
-            />
+
 
             {/* Success Modal */}
             {showSuccessModal && (
@@ -2107,7 +2015,7 @@ export default function InvestorDashboard({ user, initialSection = 'overview' })
                     </div>
                 </div>
             )}
+            </div>
         </div>
-    </div>
     );
 }

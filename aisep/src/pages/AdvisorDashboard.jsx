@@ -22,11 +22,13 @@ import NewsPRSection from '../components/common/NewsPRSection';
 import ProjectDetailView from '../components/feed/ProjectDetailView';
 import AdvisorPayoutSection from '../components/advisor/AdvisorPayoutSection';
 import AdvisorWalletSection from '../components/advisor/AdvisorWalletSection';
+import AccountProfileTab from '../components/common/AccountProfileTab';
+
 
 /**
  * AdvisorDashboard – Dashboard cho Advisor
  */
-export default function AdvisorDashboard({ user, initialSection = 'overview', onSectionChange, onShowProfile }) {
+export default function AdvisorDashboard({ user, initialSection = 'overview', onSectionChange, onShowProfile, onLogout }) {
     const [activeSection, setActiveSection] = useState(initialSection);
     const [advisorProfile, setAdvisorProfile] = useState(null);
     const [activeChatSession, setActiveChatSession] = useState(null);
@@ -156,12 +158,14 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
         <div className={styles.container}>
             {!activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
                 <FeedHeader
-                    title={activeSection === 'wallet' ? "Thu nhập" : "Bảng điều khiển Cố vấn"}
-                    subtitle={activeSection === 'wallet' 
-                        ? "Quản lý số dư và lịch sử thu nhập của bạn."
-                        : (isNewAdvisor
-                            ? `Chào mừng ${user?.fullName || user?.name || ''}, hãy bắt đầu bằng việc thiết lập hồ sơ của bạn.`
-                            : `Xin chào, ${user?.fullName || user?.name || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`)
+                    title={activeSection === 'account_profile' ? "Hồ sơ người dùng" : (activeSection === 'wallet' ? "Thu nhập" : "Bảng điều khiển Cố vấn")}
+                    subtitle={activeSection === 'account_profile' 
+                        ? "Quản lý thông tin tài khoản và mật khẩu của bạn."
+                        : (activeSection === 'wallet' 
+                            ? "Quản lý số dư và lịch sử thu nhập của bạn."
+                            : (isNewAdvisor
+                                ? `Chào mừng ${user?.fullName || user?.name || ''}, hãy bắt đầu bằng việc thiết lập hồ sơ của bạn.`
+                                : `Xin chào, ${user?.fullName || user?.name || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`))
                     }
                     stats={!isNewAdvisor && activeSection === 'overview' ? dashboardData : null}
                     onNavigate={handleNavigate}
@@ -233,6 +237,9 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
             )}
 
             <div className={styles.content} style={activeSection.startsWith('project_') ? { padding: 0 } : activeSection === 'pr_news' ? { padding: 0 } : {}}>
+                {activeSection === 'account_profile' && (
+                    <AccountProfileTab user={user} onLogout={onLogout} />
+                )}
                 {activeSection === 'overview' && (
                     isNewAdvisor ? (
                         <div className={styles.emptyState} style={{ padding: '40px', background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px dashed var(--border-color)' }}>

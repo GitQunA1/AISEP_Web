@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Edit3, Check, X, Shield, Zap, Eye, Ticket, Loader2, AlertCircle } from 'lucide-react';
+import { Edit3, Check, X, Shield, Zap, Eye, Ticket, Loader2, AlertCircle, Archive, Search } from 'lucide-react';
+import EmptyState from '../common/EmptyState';
 import styles from './StaffSubscription.module.css';
 import paymentService from '../../services/paymentService';
 
@@ -95,46 +96,58 @@ const PackageManagement = ({ searchTerm = '' }) => {
             </tr>
           </thead>
           <tbody>
-            {filteredPackages.map((pkg) => (
-              <tr key={`${pkg.role}-${pkg.packageId}`} className={styles.tr}>
-                <td className={styles.td}>
-                   <div style={{ fontWeight: 800, fontSize: '15px' }}>{pkg.packageName}</div>
-                   <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>{pkg.description.substring(0, 60)}...</div>
-                </td>
-                <td className={`${styles.td} ${styles.colRole}`}>
-                  <span className={`${styles.roleBadge} ${pkg.role === 'Investor' ? styles.investor : styles.startup}`}>
-                    {pkg.role}
-                  </span>
-                </td>
-                <td className={`${styles.td} ${styles.colPrice}`} style={{ fontWeight: 700 }}>
-                  {pkg.price.toLocaleString('vi-VN')} <span style={{ fontSize: '11px', opacity: 0.6 }}>đ</span>
-                </td>
-                <td className={`${styles.td} ${styles.colDuration}`}>
-                   <span style={{ fontWeight: 600 }}>{pkg.durationMonths}</span> <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>tháng</span>
-                </td>
-                <td className={`${styles.td} ${styles.colAi}`}>
-                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '13px', fontWeight: 700 }}>
-                      <Zap size={14} color="#1d9bf0" /> {pkg.maxAiRequests}
-                   </div>
-                </td>
-                <td className={`${styles.td} ${styles.colView}`}>
-                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '13px', fontWeight: 700 }}>
-                      <Eye size={14} color="#1d9bf0" /> {pkg.maxProjectViews}
-                   </div>
-                </td>
-                <td className={`${styles.td} ${styles.colBook}`}>
-                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '13px', fontWeight: 700 }}>
-                      <Ticket size={14} color="#1d9bf0" /> {pkg.freeBookingCount}
-                   </div>
-                </td>
-                <td className={styles.td} style={{ textAlign: 'right' }}>
-                  <button className={styles.editBtn} onClick={() => handleEdit(pkg)}>
-                    <Edit3 size={14} />
-                    Sửa
-                  </button>
+            {filteredPackages.length > 0 ? (
+              filteredPackages.map((pkg) => (
+                <tr key={`${pkg.role}-${pkg.packageId}`} className={styles.tr}>
+                  <td className={styles.td}>
+                     <div style={{ fontWeight: 800, fontSize: '15px' }}>{pkg.packageName}</div>
+                     <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px' }}>{pkg.description.substring(0, 60)}...</div>
+                  </td>
+                  <td className={`${styles.td} ${styles.colRole}`}>
+                    <span className={`${styles.roleBadge} ${pkg.role === 'Investor' ? styles.investor : styles.startup}`}>
+                      {pkg.role}
+                    </span>
+                  </td>
+                  <td className={`${styles.td} ${styles.colPrice}`} style={{ fontWeight: 700 }}>
+                    {pkg.price.toLocaleString('vi-VN')} <span style={{ fontSize: '11px', opacity: 0.6 }}>đ</span>
+                  </td>
+                  <td className={`${styles.td} ${styles.colDuration}`}>
+                     <span style={{ fontWeight: 600 }}>{pkg.durationMonths}</span> <span style={{ fontSize: '13px', color: 'var(--text-secondary)' }}>tháng</span>
+                  </td>
+                  <td className={`${styles.td} ${styles.colAi}`}>
+                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '13px', fontWeight: 700 }}>
+                        <Zap size={14} color="#1d9bf0" /> {pkg.maxAiRequests}
+                     </div>
+                  </td>
+                  <td className={`${styles.td} ${styles.colView}`}>
+                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '13px', fontWeight: 700 }}>
+                        <Eye size={14} color="#1d9bf0" /> {pkg.maxProjectViews}
+                     </div>
+                  </td>
+                  <td className={`${styles.td} ${styles.colBook}`}>
+                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '13px', fontWeight: 700 }}>
+                        <Ticket size={14} color="#1d9bf0" /> {pkg.freeBookingCount}
+                     </div>
+                  </td>
+                  <td className={styles.td} style={{ textAlign: 'right' }}>
+                    <button className={styles.editBtn} onClick={() => handleEdit(pkg)}>
+                      <Edit3 size={14} />
+                      Sửa
+                    </button>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="8">
+                  <EmptyState 
+                    icon={searchTerm ? Search : Archive}
+                    title={searchTerm ? "Không tìm thấy" : "Trống"}
+                    message={searchTerm ? `Không có gói dịch vụ nào khớp với "${searchTerm}"` : "Hiện chưa có gói dịch vụ nào được tạo."}
+                  />
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
@@ -181,9 +194,11 @@ const PackageManagement = ({ searchTerm = '' }) => {
             </div>
           ))}
           {filteredPackages.length === 0 && (
-            <div style={{ textAlign: 'center', padding: '40px', color: 'var(--text-secondary)' }}>
-                Không tìm thấy gói dịch vụ nào.
-            </div>
+            <EmptyState 
+              icon={searchTerm ? Search : Archive}
+              title={searchTerm ? "Không tìm thấy" : "Trống"}
+              message={searchTerm ? `Không có gói dịch vụ nào khớp với "${searchTerm}"` : "Hiện chưa có gói dịch vụ nào được tạo."}
+            />
           )}
         </div>
       </div>
