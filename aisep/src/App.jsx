@@ -26,6 +26,7 @@ function App() {
   const [user, setUser] = useState(null);
   const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [lastInvestorBookingFilter, setLastInvestorBookingFilter] = useState('all');
+  const [lastDashboardSection, setLastDashboardSection] = useState('investments');
 
   // Listen for global session_expired events from apiClient
   useEffect(() => {
@@ -264,7 +265,10 @@ function App() {
                   return (
                     <InvestorBookings 
                       user={user} 
-                      onViewProject={(pid) => setCurrentView('dashboard_project_' + pid)} 
+                      onViewProject={(pid) => {
+                        setLastDashboardSection('bookings');
+                        setCurrentView('dashboard_project_' + pid);
+                      }} 
                       initialFilterStatus={lastInvestorBookingFilter}
                       onFilterStatusChange={setLastInvestorBookingFilter}
                       onUpdateProfile={() => setCurrentView('dashboard_preferences')}
@@ -276,14 +280,24 @@ function App() {
                   return (
                     <ProjectDetailView 
                         projectId={pid} 
-                        onBack={() => setCurrentView('dashboard_bookings')} 
+                        onBack={() => setCurrentView(`dashboard_${lastDashboardSection}`)} 
                         user={user} 
                         isFullView={false} 
                     />
                   );
                 }
                 const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'investments';
-                return <InvestorDashboard user={user} initialSection={section} onLogout={handleLogout} />;
+                return (
+                  <InvestorDashboard 
+                    user={user} 
+                    initialSection={section} 
+                    onLogout={handleLogout} 
+                    onViewProject={(pid, currentSection) => {
+                      if (currentSection) setLastDashboardSection(currentSection);
+                      setCurrentView('dashboard_project_' + pid);
+                    }}
+                  />
+                );
               } else if (roleStr === 'advisor' || roleNum === 2) {
                 const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
                 return <AdvisorDashboard user={user} initialSection={section} onSectionChange={handleShowDashboard} onShowProfile={handleShowProfile} onLogout={handleLogout} />;

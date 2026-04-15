@@ -11,6 +11,8 @@ import connectionService from '../services/connectionService';
 import chatService from '../services/chatService';
 import signalRService from '../services/signalRService';
 import dealsService from '../services/dealsService';
+import AIEvaluationService from '../services/AIEvaluationService';
+import projectSubmissionService from '../services/projectSubmissionService';
 import SuccessModal from '../components/common/SuccessModal';
 import InvestorStatusBanner from '../components/common/InvestorStatusBanner';
 import apiDebug from '../utils/apiDebug';
@@ -26,7 +28,7 @@ import AccountProfileTab from '../components/common/AccountProfileTab';
  * InvestorDashboard - Comprehensive dashboard for investors
  * Features: Portfolio overview, Watchlist, Sent interests, Active investments, Preferences
  */
-export default function InvestorDashboard({ user, initialSection = 'investments', onLogout }) {
+export default function InvestorDashboard({ user, initialSection = 'investments', onLogout, onViewProject }) {
     const [activeSection, setActiveSection] = useState(initialSection);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
     const [showLeftTabIndicator, setShowLeftTabIndicator] = useState(false);
@@ -110,6 +112,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const [selectedDealForOwnership, setSelectedDealForOwnership] = useState(null);
     const blockchainPollingIntervalRef = useRef(null);
 
+    // AI Analysis States
+    const [aiReports, setAiReports] = useState([]);
+    const [projectMap, setProjectMap] = useState({}); // Mapping ProjectId -> ProjectData
+
     // Detail Modal States
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [detailType, setDetailType] = useState('connection'); // 'connection' or 'deal'
@@ -121,6 +127,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     // Success Modal States
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+
+    // AI Analysis View States
+    const [showAIReportModal, setShowAIReportModal] = useState(false);
+    const [selectedAIReport, setSelectedAIReport] = useState(null);
 
     // Dashboard Data States
     const [prefFormData, setPrefFormData] = useState({
@@ -278,11 +288,13 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             try {
                 console.log('[InvestorDashboard] Starting fetch of all data (First load:', isFirstLoad.current, ')');
                 
-                const [followingRes, connectRes, dealsRes, profileRes] = await Promise.all([
+                const [followingRes, connectRes, dealsRes, profileRes, aiReportsRes, allProjectsRes] = await Promise.all([
                     followerService.getMyFollowing().catch(err => null),
                     connectionService.getMyConnectionRequests().catch(err => null),
                     dealsService.getInvestorDeals({ pageSize: 100 }).catch(err => null),
-                    investorService.getMyProfile().catch(err => null)
+                    investorService.getMyProfile().catch(err => null),
+                    AIEvaluationService.getAllInvestorAnalyses({ pageSize: 100 }).catch(err => null),
+                    projectSubmissionService.getAllProjects().catch(err => null)
                 ]);
 
                 // Update States... (Omitted logic remains same)
@@ -370,6 +382,20 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 let dealsData = dealsRes?.data?.items || dealsRes?.data || dealsRes || [];
                 if (!Array.isArray(dealsData)) dealsData = [];
                 setDeals(dealsData);
+
+                // Handle AI Reports
+                if (aiReportsRes?.data?.items) {
+                    setAiReports(aiReportsRes.data.items);
+                }
+
+                // Handle Project Map for matching
+                if (allProjectsRes?.data?.items) {
+                    const mapping = {};
+                    allProjectsRes.data.items.forEach(p => {
+                        mapping[p.projectId || p.id] = p;
+                    });
+                    setProjectMap(mapping);
+                }
 
                 // Mark first load as complete
                 isFirstLoad.current = false;
@@ -860,6 +886,12 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                 onClick={() => setActiveSection('interests')}
                             >
                                 Dự án quan tâm
+                            </button>
+                            <button 
+                                className={`${styles.tab} ${activeSection === 'ai_reports' ? styles.active : ''}`}
+                                onClick={() => setActiveSection('ai_reports')}
+                            >
+                                Lịch sử phân tích AI
                             </button>
                             <button 
                                 className={`${styles.tab} ${activeSection === 'preferences' ? styles.active : ''}`}
@@ -1515,6 +1547,206 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                     </div>
                 )}
 
+                {/* AI Analysis History Section */}
+                {activeSection === 'ai_reports' && (
+                    <div className={styles.section} style={{ paddingBottom: '40px' }}>
+                        {/* Header Stats */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                            <div className={styles.card} style={{ padding: '16px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                    <PieChart size={24} color="#0ea5e9" />
+                                    <div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Tổng báo cáo</div>
+                                        <div style={{ fontSize: '24px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                            {aiReports.length}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Loading State */}
+                        {isLoading && (
+                            <div className={styles.card} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '40px' }}>
+                                <Loader2 size={24} className={styles.spinner} style={{ marginRight: '12px' }} />
+                                <span style={{ color: 'var(--text-secondary)' }}>Đang tải lịch sử phân tích...</span>
+                            </div>
+                        )}
+
+                        {/* Empty State */}
+                        {!isLoading && aiReports.length === 0 && (
+                            <div className={styles.card} style={{ padding: '40px', textAlign: 'center' }}>
+                                <PieChart size={48} style={{ margin: '0 auto 16px', color: 'var(--text-secondary)', opacity: 0.5 }} />
+                                <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Chưa có bản phân tích nào</h3>
+                                <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Các dự án bạn đã yêu cầu AI đánh giá sẽ xuất hiện ở đây.</p>
+                            </div>
+                        )}
+
+                        {/* Reports Grid */}
+                        {!isLoading && aiReports.length > 0 && (
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                {aiReports.map((report, index) => {
+                                    const project = projectMap[report.projectId] || {};
+                                    return (
+                                        <div 
+                                            key={report.analysisId} 
+                                            className={`${styles.card} ${styles.itemAppear}`} 
+                                            style={{ 
+                                                borderLeft: `4px solid ${(() => {
+                                                    const verdict = (report.investmentVerdict || '').toLowerCase();
+                                                    if (verdict.includes('strong')) return '#00ba7c';
+                                                    if (verdict.includes('watchlist')) return '#ffd400';
+                                                    if (verdict.includes('pass')) return '#1d9bf0';
+                                                    if (verdict.includes('reject') || verdict.includes('fail')) return '#f4212e';
+                                                    return '#0ea5e9';
+                                                })()}`, 
+                                                display: 'flex', 
+                                                flexDirection: 'column', 
+                                                gap: '12px',
+                                                animationDelay: `${index * 0.05}s`
+                                            }}
+                                        >
+                                            {/* Report Header */}
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                 <div style={{ flex: 1 }}>
+                                                     <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: '#e7e9ea', letterSpacing: '-0.01em' }}>
+                                                         {project.projectName || `Dự án #${report.projectId}`}
+                                                     </h4>
+                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <Clock size={12} color="#71767b" />
+                                                        <p style={{ margin: 0, fontSize: '12px', color: '#71767b' }}>
+                                                            {new Date(report.createdAt).toLocaleDateString('vi-VN')}
+                                                        </p>
+                                                     </div>
+                                                 </div>
+                                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                                                     <div style={{ 
+                                                         backgroundColor: '#1d9bf020', 
+                                                         color: '#1d9bf0', 
+                                                         padding: '2px 10px', 
+                                                         borderRadius: '6px', 
+                                                         fontSize: '11px', 
+                                                         fontWeight: '800',
+                                                         border: '1px solid #1d9bf030'
+                                                     }}>
+                                                         DIỂM: {report.potentialScore || 0}
+                                                     </div>
+                                                     {(() => {
+                                                         const verdict = (report.investmentVerdict || '').toLowerCase();
+                                                         let colors = { bg: '#2f3336', text: '#e7e9ea', border: '#3e4144' };
+                                                         let label = report.investmentVerdict || 'Unknown';
+                                                         
+                                                         if (verdict.includes('strong')) {
+                                                             colors = { bg: '#00ba7c20', text: '#00ba7c', border: '#00ba7c40' };
+                                                             label = 'STRONG';
+                                                         } else if (verdict.includes('watchlist')) {
+                                                             colors = { bg: '#ffd40020', text: '#ffd400', border: '#ffd40040' };
+                                                             label = 'WATCHLIST';
+                                                         } else if (verdict.includes('pass')) {
+                                                             colors = { bg: '#1d9bf020', text: '#1d9bf0', border: '#1d9bf030' };
+                                                             label = 'PASS';
+                                                         } else if (verdict.includes('reject') || verdict.includes('fail')) {
+                                                             colors = { bg: '#f4212e20', text: '#f4212e', border: '#f4212e40' };
+                                                             label = 'REJECT';
+                                                         }
+
+                                                         return (
+                                                             <div style={{ 
+                                                                 backgroundColor: colors.bg, 
+                                                                 color: colors.text, 
+                                                                 padding: '2px 10px', 
+                                                                 borderRadius: '6px', 
+                                                                 fontSize: '10px', 
+                                                                 fontWeight: '900',
+                                                                 textTransform: 'uppercase',
+                                                                 border: `1px solid ${colors.border}`,
+                                                                 letterSpacing: '0.05em'
+                                                             }}>
+                                                                 {label}
+                                                             </div>
+                                                         );
+                                                     })()}
+                                                 </div>
+                                            </div>
+
+                                            {/* Project Image */}
+                                            <div style={{ width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden' }}>
+                                                {project.projectImageUrl ? (
+                                                    <img 
+                                                        src={project.projectImageUrl} 
+                                                        alt={project.projectName} 
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                    />
+                                                ) : (
+                                                    <div style={{ 
+                                                        width: '100%', 
+                                                        height: '100%', 
+                                                        backgroundColor: 'var(--bg-secondary)', 
+                                                        display: 'flex', 
+                                                        alignItems: 'center', 
+                                                        justifyContent: 'center', 
+                                                        border: '1px dashed var(--border-color)', 
+                                                        borderRadius: '8px',
+                                                        color: 'var(--text-secondary)',
+                                                        fontSize: '12px'
+                                                    }}>
+                                                        Không có ảnh
+                                                    </div>
+                                                )}
+                                            </div>
+
+
+                                            {/* Actions */}
+                                            <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', paddingTop: '8px' }}>
+                                                <button 
+                                                    onClick={() => { setSelectedAIReport(report); setShowAIReportModal(true); }} 
+                                                    style={{ 
+                                                        flex: 1, 
+                                                        padding: '8px 12px', 
+                                                        backgroundColor: 'rgba(14, 165, 233, 0.1)', 
+                                                        color: '#0ea5e9', 
+                                                        border: '1px solid rgba(14, 165, 233, 0.2)', 
+                                                        borderRadius: '4px', 
+                                                        fontSize: '12px', 
+                                                        fontWeight: '600', 
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '4px'
+                                                    }}
+                                                >
+                                                    <FileText size={12} /> Xem báo cáo
+                                                </button>
+                                                <button 
+                                                    onClick={() => onViewProject ? onViewProject(report.projectId, activeSection) : window.location.href = `/project/${report.projectId}`} 
+                                                    style={{ 
+                                                        flex: 1, 
+                                                        padding: '8px 12px', 
+                                                        backgroundColor: 'var(--bg-secondary)', 
+                                                        color: 'var(--text-primary)', 
+                                                        border: '1px solid var(--border-color)', 
+                                                        borderRadius: '4px', 
+                                                        fontSize: '12px', 
+                                                        fontWeight: '600', 
+                                                        cursor: 'pointer',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        gap: '4px'
+                                                    }}
+                                                >
+                                                    <ChevronRight size={12} /> Dự án
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        )}
+                    </div>
+                )}
+
                 {/* Preferences / Profile Section */}
                 {activeSection === 'preferences' && (
                     <div className={styles.section}>
@@ -1894,6 +2126,178 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             />
 
             {/* Detail Modal */}
+            {/* AI Report Detail Modal - Redesigned Sleek/Twitter Aesthetic */}
+            {showAIReportModal && selectedAIReport && (
+                <div className={styles.modalOverlay} onClick={() => setShowAIReportModal(false)} style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)' }}>
+                    <div className={styles.modalContent} style={{ maxWidth: '800px', width: '95%', maxHeight: '92vh', backgroundColor: '#000000', border: '1px solid #2f3336', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
+                        
+                        {/* Header */}
+                        <div style={{ padding: '16px 24px', borderBottom: '1px solid #2f3336', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#e7e9ea', letterSpacing: '-0.02em' }}>Báo cáo phân tích AI</h3>
+                                <div style={{ fontSize: '13px', color: '#71767b', marginTop: '2px' }}>
+                                    {projectMap[selectedAIReport.projectId]?.projectName || `#${selectedAIReport.projectId}`} • {new Date(selectedAIReport.createdAt).toLocaleDateString('vi-VN')}
+                                </div>
+                            </div>
+                            <button onClick={() => setShowAIReportModal(false)} style={{ background: 'none', border: 'none', color: '#e7e9ea', cursor: 'pointer', padding: '8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(231, 233, 234, 0.1)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+                             {/* Key Metric: Potential Score */}
+                             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '40px', alignItems: 'start', marginBottom: '32px' }}>
+                                 <div style={{ textAlign: 'center', padding: '16px', border: '1px solid #2f3336', borderRadius: '12px', minWidth: '140px' }}>
+                                     <div style={{ fontSize: '11px', color: '#71767b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Điểm tiềm năng</div>
+                                     <div style={{ fontSize: '48px', fontWeight: '900', color: '#0ea5e9' }}>{selectedAIReport.potentialScore || 0}</div>
+                                     <div style={{ fontSize: '12px', color: '#71767b' }}>trên 100 điểm</div>
+                                 </div>
+
+                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                     {(() => {
+                                         const breakdownData = selectedAIReport.scoreBreakdown;
+                                         let items = Array.isArray(breakdownData) ? breakdownData : (typeof breakdownData === 'string' ? JSON.parse(breakdownData || '[]') : []);
+                                         
+                                         const labelsMap = { 'Team': 'Đội ngũ', 'Opportunity': 'Thị trường', 'Product': 'Sản phẩm', 'Competition': 'Cạnh tranh', 'Marketing': 'Tiếp thị', 'Investment': 'Tài chính', 'Other': 'Khác' };
+
+                                         return items.map((item, idx) => (
+                                             <div key={idx} style={{ width: '100%' }}>
+                                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px', color: '#e7e9ea' }}>
+                                                     <span style={{ fontWeight: '600' }}>{labelsMap[item.component] || item.component}</span>
+                                                     <span style={{ color: '#71767b' }}>{item.score}/{item.maxPoints}</span>
+                                                 </div>
+                                                 <div style={{ height: '4px', width: '100%', backgroundColor: '#2f3336', borderRadius: '2px', overflow: 'hidden' }}>
+                                                     <div style={{ height: '100%', width: `${(item.score / item.maxPoints) * 100}%`, backgroundColor: '#0ea5e9', transition: 'width 1s ease-out' }}></div>
+                                                 </div>
+                                             </div>
+                                         ));
+                                     })()}
+                                 </div>
+                             </div>
+
+                             {/* Investment Verdict Card */}
+                             <div style={{ marginBottom: '32px' }}>
+                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#71767b', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>
+                                     <MessageSquare size={14} /> Nhận định đầu tư
+                                 </div>
+                                 <div style={{ 
+                                     padding: '24px', 
+                                     borderRadius: '16px', 
+                                     border: `1px solid ${(() => {
+                                         const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
+                                         if (v.includes('strong')) return '#00ba7c';
+                                         if (v.includes('watchlist')) return '#ffd400';
+                                         if (v.includes('pass')) return '#1d9bf0';
+                                         if (v.includes('reject') || v.includes('fail')) return '#f4212e';
+                                         return '#2f3336';
+                                     })()}40`, 
+                                     backgroundColor: `${(() => {
+                                         const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
+                                         if (v.includes('strong')) return '#00ba7c20';
+                                         if (v.includes('watchlist')) return '#ffd40020';
+                                         if (v.includes('pass')) return '#1d9bf020';
+                                         if (v.includes('reject') || v.includes('fail')) return '#f4212e20';
+                                         return '#1d9bf020';
+                                     })()}`, 
+                                     borderLeft: `6px solid ${(() => {
+                                         const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
+                                         if (v.includes('strong')) return '#00ba7c';
+                                         if (v.includes('watchlist')) return '#ffd400';
+                                         if (v.includes('pass')) return '#1d9bf0';
+                                         if (v.includes('reject') || v.includes('fail')) return '#f4212e';
+                                         return '#1d9bf0';
+                                     })()}`,
+                                     position: 'relative' 
+                                 }}>
+                                     <div style={{ 
+                                         fontSize: '18px', 
+                                         fontWeight: '900', 
+                                         color: (() => {
+                                             const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
+                                             if (v.includes('strong')) return '#00ba7c';
+                                             if (v.includes('watchlist')) return '#ffd400';
+                                             if (v.includes('pass')) return '#1d9bf0';
+                                             if (v.includes('reject') || v.includes('fail')) return '#f4212e';
+                                             return '#e7e9ea';
+                                         })(),
+                                         marginBottom: '12px',
+                                         display: 'flex',
+                                         alignItems: 'center',
+                                         gap: '8px',
+                                         letterSpacing: '-0.02em',
+                                         textTransform: 'uppercase'
+                                     }}>
+                                         <Shield size={20} />
+                                         {selectedAIReport.investmentVerdict || 'Evaluation Complete'}
+                                     </div>
+                                     <div style={{ fontSize: '15px', color: '#e7e9ea', lineHeight: '1.6', fontWeight: '400', fontStyle: 'italic' }}>
+                                         "{(() => {
+                                             const fullData = typeof selectedAIReport.analysisJson === 'string' ? JSON.parse(selectedAIReport.analysisJson || '{}') : (selectedAIReport.analysis || {});
+                                             return fullData.Summary || 'AI has evaluated this project. Please review the detailed breakdown below for next steps.';
+                                         })()}"
+                                     </div>
+                                 </div>
+                             </div>
+
+                             {/* Risks and Strategy */}
+                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+                                 <div>
+                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#f4212e', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>
+                                         <AlertCircle size={14} /> Cảnh báo rủi ro
+                                     </div>
+                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                         {(() => {
+                                             const risks = Array.isArray(selectedAIReport.riskFlags) ? selectedAIReport.riskFlags : (typeof selectedAIReport.riskFlags === 'string' ? JSON.parse(selectedAIReport.riskFlags || '[]') : []);
+                                             return risks.length > 0 ? risks.map((risk, i) => (
+                                                 <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '14px', lineHeight: '1.4', color: '#e7e9ea' }}>
+                                                     <span style={{ color: '#f4212e', flexShrink: 0 }}>•</span>
+                                                     <span>{risk}</span>
+                                                 </div>
+                                             )) : <span style={{ color: '#71767b', fontSize: '13px' }}>Không có rủi ro đáng kể.</span>;
+                                         })()}
+                                     </div>
+                                 </div>
+
+                                 <div>
+                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#00ba7c', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>
+                                         <ArrowRight size={14} /> Bước tiếp theo
+                                     </div>
+                                     <div style={{ padding: '16px', borderRadius: '12px', border: '1px dashed #2f3336', backgroundColor: 'rgba(0, 186, 124, 0.03)', color: '#e7e9ea', fontSize: '14px', lineHeight: '1.5' }}>
+                                         {(() => {
+                                             const nextStep = selectedAIReport.investorNextStep;
+                                             if (nextStep) return nextStep;
+                                             const fullData = typeof selectedAIReport.analysisJson === 'string' ? JSON.parse(selectedAIReport.analysisJson || '{}') : (selectedAIReport.analysis || {});
+                                             return fullData.InvestorNextStep || 'Tiếp tục theo dõi và thẩm định dự án.';
+                                         })()}
+                                     </div>
+                                 </div>
+                             </div>
+                        </div>
+
+                        {/* Footer Actions */}
+                        <div style={{ padding: '16px 24px', borderTop: '1px solid #2f3336', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', backgroundColor: '#000000', gap: '12px' }}>
+                             <button 
+                                onClick={() => setShowAIReportModal(false)} 
+                                style={{ backgroundColor: 'transparent', border: '1px solid #536471', color: '#e7e9ea', padding: '10px 24px', borderRadius: '9999px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'background 0.2s' }}
+                                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(231, 233, 234, 0.1)'}
+                                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                             >
+                                 Đóng
+                             </button>
+                             <button 
+                                onClick={() => onViewProject ? onViewProject(selectedAIReport.projectId, activeSection) : window.location.href = `/project/${selectedAIReport.projectId}`} 
+                                style={{ backgroundColor: '#eff3f4', border: 'none', color: '#0f1419', padding: '10px 24px', borderRadius: '9999px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'opacity 0.2s' }}
+                                onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                                onMouseLeave={(e) => e.target.style.opacity = '1'}
+                             >
+                                 Xem chi tiết dự án
+                             </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Standardized Detail Modal */}
             {showDetailModal && selectedItem && (
                 <div className={styles.modalOverlay} onClick={handleCloseDetailModal}>
