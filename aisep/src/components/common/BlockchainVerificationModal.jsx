@@ -176,24 +176,6 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
                     )}
                 </div>
 
-                {/* Info Box - Guide */}
-                {!isLoading && !error && txHash && (
-                    <div className={styles.guideBox}>
-                        <span style={{ fontSize: '18px', flexShrink: 0 }}>ℹ️</span>
-                        <div>
-                            <strong>Hướng dẫn:</strong> Bạn có thể copy mã giao dịch (TX Hash) ở trên và kiểm tra chi tiết trên{' '}
-                            <a 
-                                href="https://sepolia.etherscan.io/" 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                className={styles.guideLink}
-                            >
-                                Sepolia Etherscan
-                            </a>
-                            {' '}để xác nhận độc lập
-                        </div>
-                    </div>
-                )}
 
                 {/* Footer */}
                 <div className={styles.modalFooter}>

@@ -183,6 +183,20 @@
     align-items: center;
     flex-wrap: wrap;
     gap: 16px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.historyHeaderInfo h3 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 900;
+}
+
+.historySub {
+    margin: 4px 0 0 0;
+    font-size: 13px;
+    color: var(--text-muted);
 }
 
 .statusLegend {
@@ -202,9 +216,14 @@
 .dotPaid::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #10b981; }
 .dotRejected::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: #ef4444; }
 
+.historyBody {
+    margin-top: 24px;
+}
+
 .tableWrapper {
-    margin-top: 16px;
     overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
 }
 
 .table {
@@ -272,6 +291,7 @@
 .statusPending { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
 .statusPaid { background: rgba(16, 185, 129, 0.1); color: #10b981; }
 .statusRejected { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+.statusPendingRecheck { background: rgba(245, 158, 11, 0.12); color: #f59e0b; border: 1px dashed rgba(245, 158, 11, 0.5); }
 
 .actionsCell {
     text-align: right;
@@ -299,10 +319,186 @@
     white-space: nowrap;
 }
 
+.retryTip {
+    display: flex;
+    align-items: center;
+    color: #f59e0b;
+    font-size: 12px;
+    font-style: italic;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .mutedMeta {
     font-size: 11px;
     color: var(--text-muted);
     font-style: italic;
+}
+
+/* Retry request button */
+.retryBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 8px;
+    border: 1.5px solid rgba(245, 158, 11, 0.5);
+    background: rgba(245, 158, 11, 0.08);
+    color: #f59e0b;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.18s;
+    margin-top: 4px;
+}
+
+.retryBtn:hover {
+    background: rgba(245, 158, 11, 0.15);
+    border-color: #f59e0b;
+}
+
+/* Inline retry form row */
+.retryFormRow td {
+    padding: 0 !important;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.retryForm {
+    background: rgba(245, 158, 11, 0.04);
+    border: 1px solid rgba(245, 158, 11, 0.2);
+    border-radius: 12px;
+    padding: 16px 20px;
+    margin: 6px 12px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.retryFormHeader {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: #f59e0b;
+    font-size: 14px;
+}
+
+.retryFormClose {
+    margin-left: auto;
+    background: transparent;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    transition: color 0.15s;
+}
+
+.retryFormClose:hover {
+    color: var(--text-primary);
+}
+
+.retryFormHint {
+    margin: 0;
+    font-size: 13px;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.retryNoteInput {
+    width: 100%;
+    padding: 10px 14px;
+    background: var(--bg-secondary);
+    border: 1.5px solid var(--border-color);
+    border-radius: 10px;
+    color: var(--text-primary);
+    font-size: 14px;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 72px;
+    outline: none;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.retryNoteInput:focus {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.12);
+}
+
+.retryNoteError {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    color: #ef4444;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.retryFormActions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+}
+
+.retryCancelBtn {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.retryCancelBtn:hover {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+}
+
+.retrySubmitBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    background: #f59e0b;
+    color: #000;
+    font-size: 13px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.18s;
+}
+
+.retrySubmitBtn:hover:not(:disabled) {
+    background: #e78e04;
+    transform: translateY(-1px);
+}
+
+.retrySubmitBtn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Legend dots */
+.dotPendingRecheck {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.dotPendingRecheck::before {
+    content: '';
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f59e0b;
+    border: 1.5px dashed #b45309;
 }
 
 .emptyState {
@@ -321,17 +517,178 @@
     max-width: 300px;
 }
 
+/* Mobile History Styles */
+.mobileHistoryList {
+    display: none;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.payoutCard {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: 16px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    transition: transform 0.2s, background-color 0.2s;
+}
+
+.payoutCard:active {
+    background: var(--bg-tertiary);
+    transform: scale(0.98);
+}
+
+.payoutCardHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.payoutCardPeriod {
+    font-size: 16px;
+    color: var(--text-primary);
+}
+
+.payoutCardBody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 12px 0;
+    border-top: 1px solid var(--border-color);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.payoutCardRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.payoutCardLabel {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.payoutCardFooter {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.rejectInfo, .retryInfo {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 10px;
+    border-radius: 8px;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.rejectInfo svg, .retryInfo svg {
+    display: block;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.rejectInfo {
+    background: rgba(239, 68, 68, 0.05);
+    color: #ef4444;
+    border-left: 3px solid #ef4444;
+}
+
+.retryInfo {
+    background: rgba(245, 158, 11, 0.05);
+    color: #f59e0b;
+    border-left: 3px solid #f59e0b;
+}
+
+.retryBtnFull {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 10px;
+    border: none;
+    background: var(--primary-blue);
+    color: white;
+    font-weight: 800;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.retryBtnFull:hover {
+    filter: brightness(1.1);
+}
+
+.mobileRetryFormWrapper {
+    margin: 8px -4px -4px;
+}
+
+@media (max-width: 1024px) {
+    .container {
+        gap: 16px;
+    }
+}
+
 @media (max-width: 768px) {
+    .card, .historyCard {
+        padding: 24px 16px;
+        border-radius: 16px;
+    }
+
     .formRow {
         grid-template-columns: 1fr;
     }
-    
-    .card, .historyCard {
-        padding: 20px;
-    }
-    
+
     .historyHeader {
         flex-direction: column;
-        align-items: flex-start;
+        align-items: stretch;
+        gap: 20px;
+    }
+
+    .historyHeaderInfo {
+        text-align: center;
+    }
+
+    .statusLegend {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        background: var(--bg-secondary);
+        padding: 12px;
+        border-radius: 12px;
+    }
+
+    .tableWrapper {
+        display: none;
+    }
+
+    .mobileHistoryList {
+        display: flex;
+    }
+
+    .saveBtn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .tabs {
+        width: 100%;
+    }
+
+    .tab {
+        flex: 1;
+        justify-content: center;
+        padding: 12px 10px;
+        font-size: 13px;
     }
 }

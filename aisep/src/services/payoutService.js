@@ -8,7 +8,7 @@ const payoutService = {
   
   /**
    * Generate a monthly payout batch
-   * @param {Object} data { year, month, advisorId? }
+   * @param {Object} data { fromDate: "YYYY-MM-DD", toDate: "YYYY-MM-DD", advisorId?: number }
    */
   async generateBatch(data) {
     const response = await apiClient.post('/api/monthly-payout-batches/generate', data);
@@ -42,7 +42,7 @@ const payoutService = {
   // Individual Payout Endpoints (Staff/Admin & Advisor)
 
   /**
-   * Staff/Admin: Mark a payout as paid
+   * Staff/Admin: Mark a payout as paid (works for Pending → Paid and PendingRecheck → Paid)
    * @param {number} id 
    * @param {Object} data { note? }
    */
@@ -52,7 +52,7 @@ const payoutService = {
   },
 
   /**
-   * Staff/Admin: Reject a payout
+   * Staff/Admin: Reject a payout (works for Pending → Rejected and PendingRecheck → Rejected)
    * @param {number} id 
    * @param {Object} data { reason, note? }
    */
@@ -62,7 +62,8 @@ const payoutService = {
   },
 
   /**
-   * Staff/Admin: Get all individual payouts
+   * Staff/Admin: Get all individual payouts (filterable by Status via Sieve)
+   * e.g. params: { filters: 'Status==Rejected' }
    */
   async getAllPayouts(params) {
     const response = await apiClient.get('/api/monthly-payouts', { params });
@@ -80,7 +81,17 @@ const payoutService = {
       if (error.response?.status === 404 || error.statusCode === 404) return [];
       throw error;
     }
-  }
+  },
+
+  /**
+   * Advisor: Request a retry for a rejected payout (Rejected → PendingRecheck)
+   * @param {number} id - The monthlyPayoutId
+   * @param {Object} data { resolutionNote: string } — required, non-empty
+   */
+  async requestRetry(id, data) {
+    const response = await apiClient.patch(`/api/monthly-payouts/${id}/request-retry`, data);
+    return response.data;
+  },
 };
 
 export default payoutService;

@@ -620,6 +620,33 @@ class AIEvaluationService {
       };
     }
   }
+
+  /**
+   * Get all investor-specific AI analysis history
+   * GET /api/InvestorAIAnalysis
+   * @param {object} params - Sieve filters/pagination
+   * @returns {Promise<object>} - { success, data: PagedResult, message }
+   */
+  static async getAllInvestorAnalyses(params = {}) {
+    try {
+      console.log('[INVESTOR AI HISTORY ALL] Fetching with params:', params);
+      
+      const result = await apiClient.get('/api/InvestorAIAnalysis', { params });
+      
+      return {
+        success: true,
+        data: result.data || result,
+        message: result.message || 'Investor analysis list fetched successfully'
+      };
+    } catch (error) {
+      console.error('[INVESTOR AI HISTORY ALL] Error:', error);
+      return {
+        success: false,
+        data: { items: [], totalCount: 0 },
+        message: error.message || 'Error fetching investor analysis list'
+      };
+    }
+  }
 }
 
 export default AIEvaluationService;

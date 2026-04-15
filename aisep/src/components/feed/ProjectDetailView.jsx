@@ -251,6 +251,10 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 850);
   const [showBookingWizard, setShowBookingWizard] = useState(false);
   const [showFullscreenImage, setShowFullscreenImage] = useState(false);
+  
+  // Effective permissions state (derived internally if props are missing)
+  const [effectiveIsPaidUser, setEffectiveIsPaidUser] = useState(isPaidUser);
+  const [effectiveIsInvestorApproved, setEffectiveIsInvestorApproved] = useState(isInvestorApproved);
 
   // Quota & Unlock State
   const [subscription, setSubscription] = useState(null);
@@ -299,7 +303,20 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
         ? pkgRes.data
         : (Array.isArray(pkgRes) ? pkgRes : []);
 
-      if (finalSub && typeof finalSub === 'object') setSubscription(finalSub);
+      if (finalSub && typeof finalSub === 'object') {
+        setSubscription(finalSub);
+        
+        // Derive isPaidUser status internally
+        const subStatus = finalSub.status;
+        const subPackage = finalSub.packageName || '';
+        const isActuallyPaid = !!(
+          (subStatus === 'Active' || subStatus === 1 || subStatus === 'active') &&
+          subPackage &&
+          !subPackage.toLowerCase().includes('miễn phí') &&
+          !subPackage.toLowerCase().includes('free')
+        );
+        setEffectiveIsPaidUser(isActuallyPaid);
+      }
       if (finalPkgs.length > 0) setInvestorPackages(finalPkgs);
     } catch (err) {
       console.error("Error fetching quota data:", err);
@@ -320,6 +337,20 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
       console.error('[ProjectDetailView] Error fetching AI history:', err);
     } finally {
       setIsLoadingAIHistory(false);
+    }
+  };
+
+  const fetchInvestorProfile = async () => {
+    const isInvestor = user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1;
+    if (!isInvestor) return;
+    try {
+      const res = await investorService.getMyProfile();
+      if (res) {
+        const profileStatus = res.status || res.approvalStatus;
+        setEffectiveIsInvestorApproved(profileStatus === 'Approved' || profileStatus === 'approved');
+      }
+    } catch (err) {
+      console.error('[ProjectDetailView] Error fetching investor profile:', err);
     }
   };
 
@@ -347,6 +378,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
 
   useEffect(() => {
     fetchQuotaData();
+    fetchInvestorProfile();
     const isStartup = user?.role?.toString().toLowerCase() === 'startup' || Number(user?.role) === 2;
     if (isStartup) {
       startupProfileService.getStartupMe().then(setMyStartupProfile).catch(() => {});
@@ -438,7 +470,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
 
   const handleUnlockClick = (e) => {
     if (e) e.stopPropagation();
-    if (!isPaidUser) return;
+    if (!effectiveIsPaidUser) return;
     fetchQuotaData();
     setShowUnlockConfirm(true);
   };
@@ -529,7 +561,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     const roleStr = user?.role?.toString().toLowerCase() || '';
     const isBypassRole = ['staff', 'operationstaff', 'advisor'].includes(roleStr) || [3,4,5].includes(Number(user?.role));
     if (isBypassRole) return null;
-    const canUnlock = isPaidUser && (user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1);
+    const canUnlock = effectiveIsPaidUser && (user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1);
     return (
       <div 
         onClick={canUnlock ? handleUnlockClick : undefined}
@@ -541,7 +573,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           cursor: canUnlock ? 'pointer' : 'default', userSelect: 'none'
         }}
       >
-        <Lock size={13} strokeWidth={2.5} /> {isPaidUser ? 'Mở khóa ngay' : 'Premium'}
+        <Lock size={13} strokeWidth={2.5} /> {effectiveIsPaidUser ? 'Mở khóa ngay' : 'Premium'}
       </div>
     );
   };
@@ -651,21 +683,29 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
             ✓ Đã duyệt
           </span>
         )}
-        <button 
-          onClick={handleBlockchainVerification} 
-          disabled={isLoadingBlockchain} 
-          style={{ 
-            display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, 
-            fontSize: 11.5, fontWeight: 700, background: T.blueDim, color: T.blue, border: `1px solid ${T.blueDim}`, 
-            cursor: isLoadingBlockchain ? 'not-allowed' : 'pointer' 
-          }}
-        >
-          {isLoadingBlockchain ? (
-            <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />
-          ) : (
-            <><Shield size={13} /> 🔗 Xác minh</>
-          )}
-        </button>
+        {(user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1) && (
+          <button 
+            onClick={handleBlockchainVerification} 
+            disabled={isLoadingBlockchain || documents.length === 0} 
+            style={{ 
+              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, 
+              fontSize: 11.5, fontWeight: 700, 
+              background: documents.length === 0 ? 'rgba(29, 155, 240, 0.05)' : T.blueDim, 
+              color: T.blue, 
+              border: `1px solid ${T.blueDim}`, 
+              cursor: (isLoadingBlockchain || documents.length === 0) ? 'not-allowed' : 'pointer',
+              opacity: documents.length === 0 ? 0.4 : 1,
+              transition: 'all 0.2s'
+            }}
+            title={documents.length === 0 ? "Không có tài liệu để xác minh" : ""}
+          >
+            {isLoadingBlockchain ? (
+              <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />
+            ) : (
+              <><Shield size={13} /> 🔗 Xác minh</>
+            )}
+          </button>
+        )}
       </div>
 
       {/* PROFILE CARD (Compact) */}
