@@ -876,7 +876,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             )}
 
             {/* Content Sections */}
-            <div className={styles.content} style={activeSection === 'pr_news' ? { padding: 0 } : {}}>
+            <div className={`${styles.content} ${styles.scrollableSection}`} style={activeSection === 'pr_news' ? { padding: 0 } : {}}>
                 {activeSection === 'account_profile' && (
                     <AccountProfileTab user={user} onLogout={onLogout} />
                 )}
