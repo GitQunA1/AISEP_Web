@@ -139,9 +139,8 @@ function MainLayout({
       homeScrollPos.current = 0;
     }
 
-    // Update body class for fixed views
     if (typeof document !== 'undefined') {
-      const shouldLock = showAI || activeView.startsWith('dashboard');
+      const shouldLock = showAI;
       document.documentElement.classList.toggle('noScroll', shouldLock);
       document.body.classList.toggle('noScroll', shouldLock);
     }
@@ -762,7 +761,7 @@ function MainLayout({
       <main
         ref={mainContentRef}
         key={activeView}
-        className={`${styles.mainContent} ${(showAI || activeView.startsWith('dashboard')) ? styles.noScroll : ''} ${isFullWidthContent ? styles.fullWidthContent : ''} view-enter`}
+        className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} ${isFullWidthContent ? styles.fullWidthContent : ''} view-enter`}
       >
 
         {/* Feed Content or Profile Page */}

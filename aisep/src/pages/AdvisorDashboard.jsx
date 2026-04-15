@@ -158,14 +158,22 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
         <div className={styles.container}>
             {!activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
                 <FeedHeader
-                    title={activeSection === 'account_profile' ? "Hồ sơ người dùng" : (activeSection === 'wallet' ? "Thu nhập" : "Bảng điều khiển Cố vấn")}
-                    subtitle={activeSection === 'account_profile' 
-                        ? "Quản lý thông tin tài khoản và mật khẩu của bạn."
-                        : (activeSection === 'wallet' 
-                            ? "Quản lý số dư và lịch sử thu nhập của bạn."
-                            : (isNewAdvisor
-                                ? `Chào mừng ${user?.fullName || user?.name || ''}, hãy bắt đầu bằng việc thiết lập hồ sơ của bạn.`
-                                : `Xin chào, ${user?.fullName || user?.name || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`))
+                    title={
+                        activeSection === 'account_profile' ? "Hồ sơ người dùng" : 
+                        activeSection === 'wallet' ? "Thu nhập" : 
+                        activeSection === 'approve_bookings' ? "Duyệt Booking" :
+                        "Bảng điều khiển Cố vấn"
+                    }
+                    subtitle={
+                        activeSection === 'account_profile' 
+                            ? "Quản lý thông tin tài khoản và mật khẩu của bạn."
+                            : activeSection === 'wallet' 
+                                ? "Quản lý số dư và lịch sử thu nhập của bạn."
+                                : activeSection === 'approve_bookings'
+                                    ? "Các yêu cầu tư vấn mới cần bạn xác nhận."
+                                    : (isNewAdvisor
+                                        ? `Chào mừng ${user?.fullName || user?.name || ''}, hãy bắt đầu bằng việc thiết lập hồ sơ của bạn.`
+                                        : `Xin chào, ${user?.fullName || user?.name || 'Cố vấn'}! Quản lý hoạt động tư vấn của bạn.`)
                     }
                     stats={!isNewAdvisor && activeSection === 'overview' ? dashboardData : null}
                     onNavigate={handleNavigate}
@@ -639,10 +647,7 @@ function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate
 
     return (
         <div className={styles.section} style={{ padding: '0 4px' }}>
-            <div className={styles.sectionHeader} style={{ marginBottom: '24px' }}>
-                <h2 className={styles.headerTitle} style={{ fontSize: '24px' }}>Duyệt Booking</h2>
-                <p className={styles.headerSubtitle}>Các yêu cầu tư vấn mới cần bạn xác nhận.</p>
-            </div>
+
 
             {loading ? (
                 <div className={styles.card}>

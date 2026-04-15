@@ -2954,33 +2954,37 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                             </div>
 
                                             <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', padding: '4px 0' }}>
-                                                {isLoadingHistory ? (
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
-                                                        <Loader2 className={styles.spinner} size={16} /> Đang cập nhật lịch sử...
-                                                    </div>
-                                                ) : analysisHistory.length > 0 ? (
-                                                    analysisHistory.map((item, idx) => (
-                                                        <div key={idx} onClick={() => { setSelectedHistoryResult({ data: item }); setShowHistoryView(true); }} className={styles.scoreCard}>
-                                                            <div className={styles.scoreHeader}>
-                                                                <span className={styles.scoreMainValue}>{item.potentialScore}</span>
-                                                                <span className={styles.scoreMaxLabel}>/100</span>
-                                                            </div>
-                                                            <span className={styles.scoreDate}>
-                                                                {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', {
-                                                                    year: 'numeric',
-                                                                    month: '2-digit',
-                                                                    day: '2-digit',
-                                                                    hour: '2-digit',
-                                                                    minute: '2-digit',
-                                                                    second: '2-digit',
-                                                                    hour12: false
-                                                                }) : 'Mới'}
-                                                            </span>
+                                                {(() => {
+                                                    const filteredHistory = analysisHistory.filter(item => (item.potentialScore !== undefined && item.potentialScore !== null) || (item.data && item.data.potentialScore !== undefined));
+                                                    
+                                                    return isLoadingHistory ? (
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '14px' }}>
+                                                            <Loader2 className={styles.spinner} size={16} /> Đang cập nhật lịch sử...
                                                         </div>
-                                                    ))
-                                                ) : (
-                                                    <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Dự án này chưa có bản phân tích tiềm năng nào.</p>
-                                                )}
+                                                    ) : filteredHistory.length > 0 ? (
+                                                        filteredHistory.map((item, idx) => (
+                                                            <div key={idx} onClick={() => { setSelectedHistoryResult({ data: item }); setShowHistoryView(true); }} className={styles.scoreCard}>
+                                                                <div className={styles.scoreHeader}>
+                                                                    <span className={styles.scoreMainValue}>{item.potentialScore}</span>
+                                                                    <span className={styles.scoreMaxLabel}>/100</span>
+                                                                </div>
+                                                                <span className={styles.scoreDate}>
+                                                                    {item.createdAt ? new Date(item.createdAt).toLocaleString('vi-VN', {
+                                                                        year: 'numeric',
+                                                                        month: '2-digit',
+                                                                        day: '2-digit',
+                                                                        hour: '2-digit',
+                                                                        minute: '2-digit',
+                                                                        second: '2-digit',
+                                                                        hour12: false
+                                                                    }) : 'Mới'}
+                                                                </span>
+                                                            </div>
+                                                        ))
+                                                    ) : (
+                                                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Dự án này chưa có bản phân tích tiềm năng nào.</p>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
 
