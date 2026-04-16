@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FileCheck, CheckCircle, AlertCircle, Search, Archive, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, XCircle, FileText, Loader2, TrendingUp, ExternalLink, Shield, History, Calendar, PieChart, Briefcase, Clock, DollarSign, Send, Newspaper, User, Edit2, PenTool } from 'lucide-react';
+import { FileCheck, CheckCircle, AlertCircle, Search, Archive, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, XCircle, FileText, Loader2, TrendingUp, ExternalLink, Shield, History, Calendar, PieChart, Briefcase, Clock, DollarSign, Send, Newspaper, User, Edit2, PenTool, Image as ImageIcon, ImageOff, Maximize2 } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import local from '../styles/OperationStaffDashboard.module.css';
 import FeedHeader from '../components/feed/FeedHeader';
@@ -21,9 +21,29 @@ import PackageManagement from '../components/staff/PackageManagement';
 import GlobalSubscriptionHistory from '../components/staff/GlobalSubscriptionHistory';
 import PayoutManagement from '../components/staff/PayoutManagement';
 import CommissionManagement from '../components/staff/CommissionManagement';
-import NewsPRSection from '../components/common/NewsPRSection';
-import AccountProfileTab from '../components/common/AccountProfileTab';
 import EmptyState from '../components/common/EmptyState';
+import BlockchainVerificationModal from '../components/common/BlockchainVerificationModal';
+import blockchainVerificationService from '../services/blockchainVerificationService';
+
+const T = {
+  bg: 'var(--pd-bg)',
+  surface: 'var(--pd-surface)',
+  card: 'var(--pd-card)',
+  surface2: 'var(--pd-card)',
+  surface3: 'var(--pd-surface-accent)',
+  border: 'var(--pd-border)',
+  blue: 'var(--pd-blue)',
+  blueDim: 'var(--pd-blue-dim)',
+  text: 'var(--pd-text)',
+  textMuted: 'var(--pd-text-muted)',
+  textDim: 'var(--pd-text-dim)',
+  green: 'var(--pd-green)',
+  greenDim: 'var(--pd-green-dim)',
+  shadow: 'var(--pd-shadow)',
+  amber: '#ffad1f',
+  amberDim: 'rgba(255, 173, 31, 0.12)',
+  red: '#f4212e',
+};
 
 
 
@@ -488,6 +508,12 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [advisorSearchTerm, setAdvisorSearchTerm] = useState('');
     const [reportFilter, setReportFilter] = useState('Pending'); // 'All', 'Pending', 'Resolved', 'Dismissed'
 
+    // Blockchain verification state
+    const [isLoadingBlockchain, setIsLoadingBlockchain] = useState(false);
+    const [blockchainData, setBlockchainData] = useState(null);
+    const [showBlockchainModal, setShowBlockchainModal] = useState(false);
+    const [blockchainError, setBlockchainError] = useState(null);
+
     const handleSearchChange = (val) => {
         if (activeSection === 'project_management') setSearchTerm(val);
         else if (activeSection === 'bookings') setBookingSearchTerm(val);
@@ -592,8 +618,8 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [bookingPageSize, setBookingPageSize] = useState(10);
     const [allBookings, setAllBookings] = useState([]);
 
-    // Project Management Filtering
-    const [projectFilter, setProjectFilter] = useState('all'); // 'all', 'pending', 'approved', 'rejected'
+
+    const [showFullImage, setShowFullImage] = useState(false);
 
     // Booking Detail Modal state
     const [showBookingModal, setShowBookingModal] = useState(false);
@@ -891,7 +917,11 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         try {
             const response = await AIEvaluationService.getProjectAnalysisHistory(projectId);
             if (response.success) {
-                setAnalysisHistory(response.data || []);
+                // Filter: Only include Startup-initiated analyses (those with potentialScore)
+                const startupReports = (response.data || []).filter(h => 
+                    h.potentialScore !== undefined && h.potentialScore !== null
+                );
+                setAnalysisHistory(startupReports);
             } else {
                 setAnalysisHistory([]);
             }
@@ -909,7 +939,11 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         try {
             const response = await AIEvaluationService.getStaffAnalysisHistory(projectId);
             if (response.success) {
-                setStaffAnalysisHistory(response.data || []);
+                // Filter: Only include Staff-initiated eligibility analyses
+                const staffReports = (response.data || []).filter(h => 
+                    h.isEligibleStartup !== undefined || h.is_eligible_startup !== undefined || h.data?.is_eligible_startup !== undefined
+                );
+                setStaffAnalysisHistory(staffReports);
             } else {
                 setStaffAnalysisHistory([]);
             }
@@ -1085,6 +1119,35 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         } finally {
             setProcessingProjectId(null);
             setProcessingAction(null);
+        }
+    };
+
+    const handleBlockchainVerification = async (docId, docName) => {
+        setIsLoadingBlockchain(true);
+        setBlockchainError(null);
+        try {
+            const response = await projectSubmissionService.verifyDocument(docId);
+            if (response && response.data) {
+                // Ensure the verification modal gets the correct data structure
+                const extendedData = {
+                    ...response.data,
+                    // Map any specific txHash fields if necessary to match the Startup version
+                    txHash: response.data.txHash || response.data.blockchainTxHash
+                };
+                setBlockchainData(extendedData);
+                setShowBlockchainModal(true);
+            } else {
+                setModalType('error');
+                setModalMessage('Không tìm thấy thông tin xác thực cho tài liệu này.');
+                setShowModal(true);
+            }
+        } catch (error) {
+            console.error('Error verifying document:', error);
+            setModalType('error');
+            setModalMessage('Lỗi xác thực: ' + (error?.message || 'Không thể kết nối với Blockchain.'));
+            setShowModal(true);
+        } finally {
+            setIsLoadingBlockchain(false);
         }
     };
 
@@ -2929,393 +2992,259 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     className={styles.modalOverlay}
                     onClick={(e) => e.target === e.currentTarget && setShowDetailModal(false)}
                 >
-                    <div className={styles.modalContent} style={{ maxWidth: '820px', width: '92%', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
-                        {/* Modal Header (Unique & Standardized) */}
-                        <div className={local.staffModalHeader}>
-                            <div className={local.staffModalTitleGrp}>
-                                <h2 className={local.staffModalTitleText}>{detailProject.projectName}</h2>
-                                <span
-                                    className={styles.badge}
-                                    style={{
-                                        backgroundColor: `${STATUS_COLORS[detailProject.status || 'Pending']}25`,
-                                        color: STATUS_COLORS[detailProject.status || 'Pending'],
-                                        border: `1px solid ${STATUS_COLORS[detailProject.status || 'Pending']}40`,
-                                        width: 'fit-content'
-                                    }}
+                    <div className={styles.modalContent} style={{ maxWidth: '1100px', width: '95%', height: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                        {/* Global Close button */}
+                        <button
+                            onClick={() => setShowDetailModal(false)}
+                            style={{ 
+                                zIndex: 1000, 
+                                position: 'absolute', 
+                                top: '16px', 
+                                right: '16px',
+                                width: '36px',
+                                height: '36px',
+                                borderRadius: '50%',
+                                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                color: '#fff',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                border: '1px solid rgba(255, 255, 255, 0.2)',
+                                cursor: 'pointer',
+                                backdropFilter: 'blur(10px)'
+                            }}
+                        >
+                            <X size={20} />
+                        </button>
+                        <div className={styles.modalSplitWrapper} style={{ flex: 1, display: 'flex', overflow: 'hidden', flexDirection: isMobile ? 'column' : 'row' }}>
+                            {/* --- LEFT SIDE: HERO POSTER (Desktop) --- */}
+                            {detailProject.projectImageUrl && !isMobile && (
+                                <div
+                                    className={styles.modalSplitHero}
+                                    onClick={() => setShowFullImage(true)}
+                                    style={{ cursor: 'zoom-in', width: '38%', position: 'relative', overflow: 'hidden' }}
                                 >
-                                    {STATUS_LABELS[detailProject.status || 'Pending'] || 'Đang chờ duyệt'}
-                                </span>
-                            </div>
-                            <button
-                                onClick={() => setShowDetailModal(false)}
-                                className={local.staffModalCloseBtn}
-                            >
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        {/* Modal Body */}
-                        <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-                            {/* AI Analysis Sections (Dual Compartments) */}
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '24px' }}>
-                                {/* Compartment 1: Startup initiated */}
-                                <div style={{
-                                    padding: '16px',
-                                    backgroundColor: 'rgba(29, 155, 240, 0.03)',
-                                    borderRadius: '16px',
-                                    border: '1px solid rgba(29, 155, 240, 0.1)'
-                                }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                                    <img
+                                        src={detailProject.projectImageUrl}
+                                        alt={detailProject.projectName}
+                                        className={styles.heroPosterImage}
+                                        style={{ height: '100%', width: '100%', objectFit: 'cover' }}
+                                    />
+                                    <div className={styles.heroPosterOverlay}>
+                                        <h2 className={styles.heroPosterTitle}>{detailProject.projectName}</h2>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <History size={18} color="var(--primary-blue)" />
-                                            <h4 style={{ fontSize: '14px', fontWeight: '800', margin: 0, color: 'var(--text-primary)' }}>Startup đánh giá dự án qua AI</h4>
+                                            <span
+                                                className={styles.badge}
+                                                style={{
+                                                    backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}25`,
+                                                    color: STATUS_COLORS[detailProject.status || 'Draft'],
+                                                    border: `1px solid ${STATUS_COLORS[detailProject.status || 'Draft']}40`,
+                                                }}
+                                            >
+                                                {STATUS_LABELS[detailProject.status || 'Draft'] || 'Bản nháp'}
+                                            </span>
                                         </div>
                                     </div>
-                                    
-                                    {(() => {
-                                        const startupHistory = analysisHistory.filter(item => !('is_eligible_startup' in item || 'isEligibleStartup' in item || (item.data && ('is_eligible_startup' in item.data || 'isEligibleStartup' in item.data))));
-                                        
-                                        return isLoadingHistory ? (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                                                <Loader2 size={14} className={styles.spinner} /> Đang tải...
-                                            </div>
-                                        ) : startupHistory.length > 0 ? (
-                                            <div style={{ display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
-                                                {startupHistory.map((item, index) => {
-                                                    const isEligibility = false; 
-                                                    const isEligible = item.is_eligible_startup || item.isEligibleStartup || item.data?.is_eligible_startup || item.data?.isEligibleStartup;
-                                                
-                                                return (
-                                                    <button
-                                                        key={item.evaluationId || index}
-                                                        onClick={() => { setSelectedHistoryResult({ data: item }); setShowHistoryView(true); }}
-                                                        className={styles.scoreCard}
-                                                        style={{ 
-                                                            minWidth: '95px', 
-                                                            padding: '8px 12px',
-                                                            borderLeft: isEligibility ? `3px solid ${isEligible ? '#10b981' : '#ef4444'}` : 'none'
-                                                        }}
-                                                    >
-                                                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '4px' }}>
-                                                            {new Date(item.createdAt || item.evaluatedAt || Date.now()).toLocaleDateString('vi-VN')}
-                                                        </span>
-                                                        {isEligibility ? (
-                                                            <div style={{ 
-                                                                fontSize: '11px', 
-                                                                fontWeight: '800', 
-                                                                color: isEligible ? '#10b981' : '#ef4444',
-                                                                textTransform: 'uppercase',
-                                                                letterSpacing: '0.02em'
-                                                            }}>
-                                                                {isEligible ? 'Đủ Đ/K' : 'K.đủ Đ/K'}
-                                                            </div>
-                                                        ) : (
-                                                            <div style={{ display: 'flex', alignItems: 'baseline', gap: '2px' }}>
-                                                                <span style={{ fontSize: '16px', fontWeight: '900', color: 'var(--primary-blue)' }}>{item.potentialScore || 0}</span>
-                                                                <span style={{ fontSize: '9px', color: 'var(--text-secondary)' }}>/100</span>
-                                                            </div>
-                                                        )}
-                                                    </button>
-                                                );
-                                            })}
-                                            </div>
-                                        ) : (
-                                            <div style={{ color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic' }}>Chưa có bản đánh giá từ Startup</div>
-                                        );
-                                    })()}
+                                    <button
+                                        className={styles.heroMaximizeHint}
+                                        onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowFullImage(true);
+                                        }}
+                                        title="Xem ảnh đầy đủ"
+                                    >
+                                        <Maximize2 size={24} />
+                                    </button>
                                 </div>
+                            )}
 
-                                {/* Compartment 2: Staff initiated */}
-                                <div style={{
-                                    padding: '16px',
-                                    backgroundColor: 'rgba(13, 148, 136, 0.03)',
-                                    borderRadius: '16px',
-                                    border: '1px solid rgba(13, 148, 136, 0.1)'
-                                }}>
-                                    <div style={{ 
-                                        display: 'flex', 
-                                        alignItems: 'center', 
-                                        justifyContent: 'space-between', 
-                                        marginBottom: '16px', 
-                                        flexWrap: 'wrap', 
-                                        gap: '12px' 
-                                    }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                            <PenTool size={18} color="#0d9488" />
-                                            <h4 style={{ fontSize: '14px', fontWeight: '800', margin: 0, color: 'var(--text-primary)', lineHeight: '1.4' }}>Nhân viên đánh giá dự án qua AI</h4>
+                            {/* --- RIGHT SIDE: CONTENT (Scrollable) --- */}
+                            <div className={styles.modalSplitContent} style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden', position: 'relative' }}>
+                                {/* Mobile Hero Poster */}
+                                {isMobile && detailProject.projectImageUrl && (
+                                    <div className={styles.mobileHeroPoster} style={{ position: 'relative', flexShrink: 0 }}>
+                                        <img src={detailProject.projectImageUrl} alt={detailProject.projectName} style={{ width: '100%', aspectRatio: '16/9', objectFit: 'cover' }} />
+                                    </div>
+                                )}
+
+
+                                <div style={{ padding: '24px 32px', overflowY: 'auto', flex: 1 }}>
+                                    {/* Content Header (Always Visible Title/Status) */}
+                                    <div style={{ marginBottom: '28px', borderBottom: '1px solid var(--border-color)', paddingBottom: '24px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                                            Dự án quản lý
+                                        </div>
+                                        <h2 style={{ margin: '0 0 16px 0', fontSize: '28px', fontWeight: 900, color: 'var(--text-primary)', lineHeight: '1.2' }}>
+                                            {detailProject.projectName}
+                                        </h2>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                                            <span 
+                                                className={styles.badge} 
+                                                style={{ 
+                                                    backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}25`, 
+                                                    color: STATUS_COLORS[detailProject.status || 'Draft'],
+                                                    padding: '4px 12px',
+                                                    fontSize: '12px'
+                                                }}
+                                            >
+                                                {STATUS_LABELS[detailProject.status || 'Draft']}
+                                            </span>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '12px', fontWeight: 800, color: 'var(--primary-blue)', background: 'rgba(29, 155, 240, 0.08)', padding: '4px 12px', borderRadius: '8px' }}>
+                                                <TrendingUp size={14} /> {getStageLabel(detailProject.developmentStage)}
+                                            </div>
                                         </div>
                                     </div>
-                                    
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '16px' }}>
-                                        {/* Left Side: Scrollable History Chips */}
-                                        <div style={{ 
-                                            flex: 1, 
-                                            display: 'flex', 
-                                            gap: '10px', 
-                                            overflowX: 'auto', 
-                                            paddingBottom: '4px', 
-                                            msOverflowStyle: 'none', 
-                                            scrollbarWidth: 'none',
-                                            minWidth: 0 // allow shrinking
-                                        }}>
-                                            {isLoadingStaffHistory ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)', fontSize: '13px' }}>
-                                                    <Loader2 size={14} className={styles.spinner} /> Đang tải...
-                                                </div>
-                                            ) : staffAnalysisHistory.length > 0 ? (
-                                                staffAnalysisHistory.map((item, index) => {
-                                                    const isEligible = item.is_eligible_startup || item.isEligibleStartup || item.data?.is_eligible_startup || item.data?.isEligibleStartup;
-                                                    
-                                                    return (
-                                                        <button
-                                                            key={item.evaluationId || index}
-                                                            onClick={() => { setSelectedHistoryResult({ data: item }); setShowHistoryView(true); }}
-                                                            className={styles.scoreCard}
-                                                            style={{ 
-                                                                minWidth: '100px', 
-                                                                padding: '8px 12px', 
-                                                                borderLeft: `3px solid ${isEligible ? '#10b981' : '#ef4444'}`,
-                                                                flexShrink: 0
-                                                            }}
-                                                        >
-                                                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)', fontWeight: '600', marginBottom: '4px' }}>
-                                                                {new Date(item.createdAt || item.evaluatedAt || Date.now()).toLocaleDateString('vi-VN')}
-                                                            </span>
-                                                            <div style={{ 
-                                                                fontSize: '11px', 
-                                                                fontWeight: '800', 
-                                                                color: isEligible ? '#10b981' : '#ef4444',
-                                                                textTransform: 'uppercase',
-                                                                letterSpacing: '0.02em'
-                                                            }}>
-                                                                {isEligible ? 'Đủ Đ/K' : 'K.đủ Đ/K'}
-                                                            </div>
+
+                                    {/* AI Assessment Sections (Dual Compartments) */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginBottom: '32px' }}>
+                                        {/* Startup Role Side */}
+                                        <div style={{ padding: '20px', backgroundColor: 'rgba(29, 155, 240, 0.03)', borderRadius: '20px', border: '1px solid rgba(29, 155, 240, 0.1)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
+                                                <History size={20} color="var(--primary-blue)" />
+                                                <h4 style={{ fontSize: '15px', fontWeight: '800', margin: 0 }}>Startup đánh giá qua AI</h4>
+                                            </div>
+                                            {isLoadingHistory ? <Loader2 className={styles.spinner} size={20} /> : (
+                                                <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                                    {analysisHistory.length > 0 ? analysisHistory.map((h, i) => (
+                                                        <button key={i} onClick={() => { setSelectedHistoryResult({ data: h }); setShowHistoryView(true); }} className={styles.scoreCard} style={{ minWidth: '100px' }}>
+                                                            <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{new Date(h.createdAt || h.evaluatedAt).toLocaleDateString('vi-VN')}</div>
+                                                            <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--primary-blue)' }}>{h.potentialScore || 0}<small style={{ fontSize: '10px' }}>/100</small></div>
                                                         </button>
-                                                    );
-                                                })
-                                            ) : (
-                                                <div style={{ color: 'var(--text-secondary)', fontSize: '13px', fontStyle: 'italic', paddingLeft: '8px' }}>
-                                                    Chưa có dữ liệu lịch sử
+                                                    )) : <p style={{ fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Chưa có bản phân tích nào</p>}
                                                 </div>
                                             )}
                                         </div>
 
-                                        {/* Right Side: Original Action Button */}
-                                        <button
-                                            className={styles.primaryBtn}
-                                            style={{ 
-                                                padding: '6px 14px', 
-                                                borderRadius: '10px', 
-                                                fontSize: '12px', 
-                                                fontWeight: 700,
-                                                backgroundColor: detailProject.status === 'Pending' ? '#0d9488' : '#6b7280',
-                                                borderColor: detailProject.status === 'Pending' ? '#0d9488' : '#6b7280',
-                                                cursor: detailProject.status === 'Pending' ? 'pointer' : 'not-allowed',
-                                                opacity: detailProject.status === 'Pending' ? 1 : 0.6,
-                                                flexShrink: 0,
-                                                whiteSpace: 'nowrap'
-                                            }}
-                                            onClick={() => handleRunStaffAIEvaluation(detailProject.projectId)}
-                                            disabled={isEvaluatingStaffAI || detailProject.status !== 'Pending'}
-                                            title={detailProject.status !== 'Pending' ? 'Chỉ có thể đánh giá Eligibility cho dự án đang ở trạng thái Pending' : ''}
-                                        >
-                                            {isEvaluatingStaffAI ? (
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <Loader2 className={styles.spinner} size={14} /> Xử lý...
+                                        {/* Staff Side Eligibility */}
+                                        <div style={{ padding: '20px', backgroundColor: 'rgba(13, 148, 136, 0.03)', borderRadius: '20px', border: '1px solid rgba(13, 148, 136, 0.1)' }}>
+                                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '16px' }}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    <PenTool size={20} color="#0d9488" />
+                                                    <h4 style={{ fontSize: '15px', fontWeight: '800', margin: 0 }}>AI Phân tích Eligibility</h4>
                                                 </div>
-                                            ) : staffAnalysisHistory.length > 0 ? 'Phân tích lại' : 'Phân tích ngay'}
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                            {detailProject.status === 'Rejected' && detailProject.rejectionReason && (
-                                <div className={styles.rejectionBox} style={{ marginBottom: '24px', marginTop: 0 }}>
-                                    <div className={styles.rejectionTitle}>
-                                        <AlertCircle size={16} />
-                                        <span style={{ fontSize: '15px' }}>Lý do từ chối dự án:</span>
-                                    </div>
-                                    <p className={styles.rejectionText} style={{ fontSize: '15px' }}>{detailProject.rejectionReason}</p>
-                                </div>
-                            )}
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '32px' }}>
-
-                                {/* Section 1: Basic info */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '4px' }}>1. Thông tin cơ bản</h4>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Mô tả ngắn</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.shortDescription || '—'}</p>
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Giai đoạn phát triển</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)' }}>
-                                            {getStageLabel(detailProject.developmentStage)}
-                                        </p>
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Vấn đề cần giải quyết</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.problemStatement || '—'}</p>
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Giải pháp đề xuất</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.solutionDescription || '—'}</p>
-                                    </div>
-                                </div>
-
-                                {/* Section 2: Market & Model */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '4px' }}>2. Thị trường &amp; Mô hình</h4>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Khách hàng mục tiêu</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.targetCustomers || '—'}</p>
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Giá trị độc đáo (UVP)</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.uniqueValueProposition || '—'}</p>
-                                    </div>
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                        <div className={styles.formGroup}>
-                                            <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Quy mô thị trường</label>
-                                            <p style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: '700' }}>
-                                                {detailProject.marketSize ? `${detailProject.marketSize.toLocaleString()} VND` : '—'}
-                                            </p>
-                                        </div>
-                                        <div className={styles.formGroup}>
-                                            <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Doanh thu</label>
-                                            <p style={{ fontSize: '14px', color: 'var(--text-primary)', fontWeight: '700' }}>
-                                                {detailProject.revenue ? `${detailProject.revenue.toLocaleString()} VND` : '—'}
-                                            </p>
+                                                {detailProject.status === 'Pending' && (
+                                                    <button onClick={() => handleRunStaffAIEvaluation(detailProject.projectId)} disabled={isEvaluatingStaffAI} className={styles.primaryBtn} style={{ padding: '6px 16px', fontSize: '12px', background: '#0d9488', borderColor: '#0d9488' }}>
+                                                        {isEvaluatingStaffAI ? <Loader2 className={styles.spinner} size={14} /> : 'Phân tích ngay'}
+                                                    </button>
+                                                )}
+                                            </div>
+                                            {isLoadingHistory ? <Loader2 className={styles.spinner} size={20} /> : (
+                                                <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
+                                                    {staffAnalysisHistory.length > 0 ? staffAnalysisHistory.map((h, i) => {
+                                                        const isEligible = h.is_eligible_startup || h.isEligibleStartup || h.data?.is_eligible_startup;
+                                                        return (
+                                                            <button key={i} onClick={() => { setSelectedHistoryResult({ data: h }); setShowHistoryView(true); }} className={styles.scoreCard} style={{ minWidth: '110px', borderLeft: `4px solid ${isEligible ? '#10b981' : '#ef4444'}` }}>
+                                                                <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{new Date(h.createdAt).toLocaleDateString('vi-VN')}</div>
+                                                                <div style={{ color: isEligible ? '#10b981' : '#ef4444', fontWeight: '900', fontSize: '12px' }}>{isEligible ? 'ĐỦ ĐIỀU KIỆN' : 'KHÔNG ĐỦ Đ/K'}</div>
+                                                            </button>
+                                                        );
+                                                    }) : <p style={{ fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Chưa có lịch sử đánh giá</p>}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Mô hình kinh doanh</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.businessModel || '—'}</p>
+
+                                    {/* Data Sections */}
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
+                                        {/* Section: Basic info */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                            <h4 style={{ color: 'var(--primary-blue)', fontSize: '14px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ width: '4px', height: '16px', background: 'var(--primary-blue)', borderRadius: '2px' }} /> 1. Thông tin cốt lõi
+                                            </h4>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Mô tả dự án</label><p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.7' }}>{detailProject.shortDescription || 'Chưa cung cấp'}</p></div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                                    <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Giai đoạn dự án</label><p style={{ fontSize: '15px', fontWeight: 700, color: 'var(--primary-blue)' }}>📈 {getStageLabel(detailProject.developmentStage)}</p></div>
+                                                    <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Lĩnh vực chính</label><p style={{ fontSize: '15px', fontWeight: 700 }}>{detailProject.industry || 'Công nghệ'}</p></div>
+                                                </div>
+                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Vấn đề & Giải pháp</label><p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.7' }}>{detailProject.problemStatement || '—'}</p><p style={{ fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.7' }}>{detailProject.solutionDescription || '—'}</p></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Section: Market & Model */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '32px' }}>
+                                            <h4 style={{ color: 'var(--primary-blue)', fontSize: '14px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ width: '4px', height: '16px', background: 'var(--primary-blue)', borderRadius: '2px' }} /> 2. Thị trường & Mô hình
+                                            </h4>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Khách hàng mục tiêu</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.targetCustomers || '—'}</p></div>
+                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Giá trị độc đáo (UVP)</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.uniqueValueProposition || '—'}</p></div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                                    <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Quy mô thị trường</label><p style={{ fontSize: '15px', fontWeight: 700 }}>{detailProject.marketSize ? `${detailProject.marketSize.toLocaleString()} VND` : '—'}</p></div>
+                                                    <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Doanh thu</label><p style={{ fontSize: '15px', fontWeight: 700 }}>{detailProject.revenue ? `${detailProject.revenue.toLocaleString()} VND` : '—'}</p></div>
+                                                </div>
+                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Mô hình kinh doanh</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.businessModel || '—'}</p></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Section: Team */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '32px' }}>
+                                            <h4 style={{ color: 'var(--primary-blue)', fontSize: '14px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ width: '4px', height: '16px', background: 'var(--primary-blue)', borderRadius: '2px' }} /> 3. Đội ngũ
+                                            </h4>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Thành viên & Vai trò</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{detailProject.teamMembers || '—'}</p></div>
+                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Kỹ năng cốt lõi</label><p style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{detailProject.keySkills || '—'}</p></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Section: Competition */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '32px' }}>
+                                            <h4 style={{ color: 'var(--primary-blue)', fontSize: '14px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <div style={{ width: '4px', height: '16px', background: 'var(--primary-blue)', borderRadius: '2px' }} /> 4. Cạnh tranh
+                                            </h4>
+                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
+                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Kinh nghiệm đội ngũ</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.teamExperience || '—'}</p></div>
+                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Cạnh tranh viên</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.competitors || '—'}</p></div>
+                                            </div>
+                                        </div>
+
+                                        {/* Section: Documents */}
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '32px' }}>
+                                            <h4 style={{ color: 'var(--primary-blue)', fontSize: '14px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                <FileText size={18} /> 5. Tài liệu đính kèm
+                                            </h4>
+                                            {isLoadingDocuments ? <Loader2 className={styles.spinner} size={24} /> : (
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                    {documents.length > 0 ? documents.map((doc) => (
+                                                        <div key={doc.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '16px 20px', background: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '16px', minWidth: 0 }}>
+                                                                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(29, 155, 240, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-blue)', flexShrink: 0 }}><FileText size={20} /></div>
+                                                                <div style={{ overflow: 'hidden' }}>
+                                                                    <div style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.name}</div>
+                                                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>{doc.type.toUpperCase()} • {doc.uploadDate}</div>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                                <button 
+                                                                    onClick={() => handleBlockchainVerification(doc.id, doc.name)}
+                                                                    disabled={isLoadingBlockchain}
+                                                                    style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', background: T.blueDim, color: T.blue, fontSize: '12px', fontWeight: '800', border: '1.5px solid var(--pd-blue-dim)', cursor: isLoadingBlockchain ? 'not-allowed' : 'pointer' }}
+                                                                >
+                                                                    {isLoadingBlockchain ? <Loader2 size={13} className={styles.spinner} /> : <Shield size={13} />}
+                                                                    Xác thực
+                                                                </button>
+                                                                {doc.url && <button onClick={() => window.open(doc.url, '_blank')} style={{ width: '36px', height: '36px', borderRadius: '10px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ExternalLink size={16} /></button>}
+                                                            </div>
+                                                        </div>
+                                                    )) : <p style={{ fontSize: '13px', color: 'var(--text-secondary)', fontStyle: 'italic' }}>Không có tài liệu đính kèm</p>}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Section 3: Team */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '4px' }}>3. Đội ngũ</h4>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Thành viên &amp; Vai trò</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{detailProject.teamMembers || '—'}</p>
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Kỹ năng cốt lõi</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{detailProject.keySkills || '—'}</p>
-                                    </div>
-                                </div>
-
-                                {/* Section 4: Competition */}
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                                    <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '4px' }}>4. Cạnh tranh</h4>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Kinh nghiệm đội ngũ</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.teamExperience || '—'}</p>
-                                    </div>
-                                    <div className={styles.formGroup}>
-                                        <label style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Cạnh tranh viên</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.competitors || '—'}</p>
-                                    </div>
+                                {/* Actions Footer */}
+                                <div style={{ padding: '20px 32px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: 'var(--bg-secondary)', borderRadius: '0 0 16px 16px' }}>
+                                    <button onClick={() => setShowDetailModal(false)} className={styles.secondaryBtn} style={{ padding: '10px 24px' }}>Đóng</button>
+                                    {detailProject.status === 'Pending' && (
+                                        <div style={{ display: 'flex', gap: '12px' }}>
+                                            <button onClick={() => { setShowDetailModal(false); handleRejectProject(detailProject.projectId); }} className={styles.dangerBtn} style={{ padding: '10px 24px' }}>Từ chối</button>
+                                            <button onClick={() => { setShowDetailModal(false); handleApproveProject(detailProject.projectId); }} className={styles.primaryBtn} style={{ padding: '10px 24px' }}>Phê duyệt</button>
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-
-                            {/* Section 5: Documents */}
-                            <div style={{ marginTop: '32px', borderTop: '1px solid var(--border-color)', paddingTop: '24px' }}>
-                                <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <FileText size={18} />
-                                    5. Tài liệu đính kèm
-                                </h4>
-                                {isLoadingDocuments ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px', color: 'var(--text-secondary)', padding: '16px 0' }}>
-                                        <Loader2 size={18} style={{ animation: 'spin 1s linear infinite' }} />
-                                        <span>Đang tải tài liệu...</span>
-                                    </div>
-                                ) : documents.length === 0 ? (
-                                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', padding: '16px 0' }}>Chưa có tài liệu nào được tải lên.</p>
-                                ) : (
-                                    <div className={styles.tableWrapper}>
-                                        <table className={styles.docsTable}>
-                                            <thead>
-                                                <tr>
-                                                    <th>Tên tài liệu</th>
-                                                    <th>Loại</th>
-                                                    <th>Ngày tải</th>
-                                                    <th>Xác thực</th>
-                                                    <th>Thao tác</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {documents.map((doc) => (
-                                                    <tr key={doc.id}>
-                                                        <td>
-                                                            <div className={styles.docNameCell}>
-                                                                <FileText size={16} />
-                                                                <span title={doc.name}>{doc.name}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td>{doc.type}</td>
-                                                        <td>{doc.uploadDate}</td>
-                                                        <td>
-                                                            <span className={styles.statusBadge}>
-                                                                <Shield size={12} />
-                                                                Blockchain
-                                                            </span>
-                                                        </td>
-                                                        <td>
-                                                            <div className={styles.tableActions}>
-                                                                {doc.url && (
-                                                                    <button
-                                                                        className={styles.iconBtn}
-                                                                        title="Xem"
-                                                                        onClick={() => window.open(doc.url, '_blank')}
-                                                                    >
-                                                                        <ExternalLink size={16} />
-                                                                    </button>
-                                                                )}
-                                                            </div>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Modal Footer — Staff Actions */}
-                        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: 'var(--bg-secondary)', borderRadius: '0 0 16px 16px' }}>
-                            <button
-                                onClick={() => setShowDetailModal(false)}
-                                className={styles.secondaryBtn}
-                            >
-                                Đóng
-                            </button>
-                            {detailProject.status === 'Pending' && (
-                                <>
-                                    <button
-                                        onClick={() => {
-                                            setShowDetailModal(false);
-                                            handleRejectProject(detailProject.projectId);
-                                        }}
-                                        className={`${styles.dangerBtn} ${processingProjectId !== null ? local.btnDisabled : ''}`}
-                                        disabled={processingProjectId !== null}
-                                    >
-                                        Từ chối
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setShowDetailModal(false);
-                                            handleApproveProject(detailProject.projectId);
-                                        }}
-                                        className={`${styles.primaryBtn} ${processingProjectId !== null ? local.btnDisabled : ''}`}
-                                        disabled={processingProjectId !== null}
-                                    >
-                                        Phê duyệt
-                                    </button>
-                                </>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -3576,6 +3505,48 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             {/* Global PR News Section */}
             {activeSection === 'pr_news' && (
                 <NewsPRSection user={user} />
+            )}
+
+            {/* Project Image Modal - Standardized with Startup Dashboard */}
+            {showFullImage && detailProject?.projectImageUrl && (
+                <div
+                    className={styles.imageLightbox}
+                    onClick={() => setShowFullImage(false)}
+                >
+                    <div className={styles.lightboxOverlay} />
+                    <button
+                        className={styles.lightboxClose}
+                        onClick={() => setShowFullImage(false)}
+                        title="Đóng"
+                    >
+                        <X size={32} />
+                    </button>
+                    <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()}>
+                        <img
+                            src={detailProject.projectImageUrl}
+                            alt={detailProject.projectName}
+                            className={styles.lightboxImage}
+                        />
+                        <div className={styles.lightboxCaption}>
+                            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 900 }}>{detailProject.projectName}</h3>
+                            <p style={{ margin: '4px 0 0 0', opacity: 0.8, fontSize: '14px', fontWeight: 700 }}>
+                                {STATUS_LABELS[detailProject.status] || 'Bản nháp'}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showBlockchainModal && blockchainData && (
+                <BlockchainVerificationModal
+                    isOpen={showBlockchainModal}
+                    onClose={() => {
+                        setShowBlockchainModal(false);
+                        setBlockchainData(null);
+                    }}
+                    verificationData={blockchainData}
+                    projectName={detailProject.projectName}
+                />
             )}
         </div>
     );

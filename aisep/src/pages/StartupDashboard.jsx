@@ -3093,7 +3093,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                                 </div>
                                                 <div>
                                                     <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px', letterSpacing: '0.05em' }}>Lĩnh vực chính</label>
-                                                    <p style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>{detailProject.mainTag || 'Công nghệ'}</p>
+                                                    <p style={{ margin: 0, fontSize: '16px', fontWeight: 700, color: 'var(--text-primary)' }}>{detailProject.industry || 'Chưa cập nhật'}</p>
                                                 </div>
                                             </div>
 

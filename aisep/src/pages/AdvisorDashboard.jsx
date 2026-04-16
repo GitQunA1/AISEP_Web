@@ -125,7 +125,9 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                 new Promise(resolve => setTimeout(resolve, 1000))
             ]);
             const items = data?.items ?? (Array.isArray(data) ? data : []);
-            setIncomingBookings(items);
+            // Sort newest to oldest (descending ID)
+            const sortedItems = [...items].sort((a, b) => (b.id || 0) - (a.id || 0));
+            setIncomingBookings(sortedItems);
         } catch (e) {
             console.error('Failed to load incoming bookings', e);
         } finally {
