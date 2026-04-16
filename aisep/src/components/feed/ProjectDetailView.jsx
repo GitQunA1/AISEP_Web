@@ -904,7 +904,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
               {project.assignedAdvisorName ? (
                 <div>
                   <div style={{ fontWeight: 700 }}>{project.assignedAdvisorName}</div>
-                  {user?.role?.toString().toLowerCase() !== 'startup' && user?.role !== 0 && (
+                  {(user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1) && (
                     <button onClick={() => setShowBookingWizard(true)} style={{ marginTop: 10, padding: '8px 16px', borderRadius: 8, background: T.blue, color: '#fff', border: 'none', cursor: 'pointer' }}>Đặt lịch tư vấn</button>
                   )}
                 </div>
