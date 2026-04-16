@@ -10,6 +10,7 @@ import BookingWizard from '../booking/BookingWizard';
 import BookingDetailModal from '../booking/BookingDetailModal';
 import UserReportModal from '../booking/UserReportModal';
 import FeedHeader from '../feed/FeedHeader';
+import DashboardStatusFilter from '../common/DashboardStatusFilter';
 
 const BOOKING_STATUS_LABELS = {
     0: { label: 'Chờ xác nhận', cls: 'badgePending', color: 'var(--text-secondary)' },
@@ -25,6 +26,16 @@ const BOOKING_STATUS_LABELS = {
     5: { label: 'Không phản hồi', cls: 'badgeError', color: '#f4212e' },
     NoResponse: { label: 'Không phản hồi', cls: 'badgeError', color: '#f4212e' },
 };
+
+const FILTER_OPTIONS = [
+    { id: 'all', label: 'Tất cả' },
+    { id: 'Pending', label: 'Chờ duyệt' },
+    { id: 'ApprovedAwaitingPayment', label: 'Chờ thanh toán' },
+    { id: 'Confirmed', label: 'Đã xác nhận' },
+    { id: 'Completed', label: 'Hoàn thành' },
+    { id: 'NoResponse', label: 'Không phản hồi' },
+    { id: 'Cancel', label: 'Đã hủy' }
+];
 
 export default function StartupBookings({ user, onViewProject, initialFilterStatus, onFilterStatusChange }) {
     const [bookings, setBookings] = useState([]);
@@ -117,12 +128,22 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
         loadBookings(true); // Silent background refresh
     }, [loadBookings]);
 
-    // Calculate Stats
+    // Calculate Stats for Filter Badges
+    const filterCounts = {
+        all: bookings.length,
+        Pending: bookings.filter(b => b.status === 0 || b.status === 'Pending').length,
+        ApprovedAwaitingPayment: bookings.filter(b => b.status === 1 || b.status === 'ApprovedAwaitingPayment').length,
+        Confirmed: bookings.filter(b => b.status === 2 || b.status === 'Confirmed').length,
+        Completed: bookings.filter(b => b.status === 3 || b.status === 'Completed').length,
+        NoResponse: bookings.filter(b => b.status === 5 || b.status === 'NoResponse').length,
+        Cancel: bookings.filter(b => b.status === 4 || b.status === 'Cancel').length
+    };
+
     const stats = {
         total: bookings.length,
-        completed: bookings.filter(b => b.status === 3 || b.status === 'Completed').length,
-        confirmed: bookings.filter(b => b.status === 2 || b.status === 'Confirmed').length,
-        canceled: bookings.filter(b => [4, 5, 'Cancel', 'NoResponse'].includes(b.status)).length
+        completed: filterCounts.Completed,
+        confirmed: filterCounts.Confirmed,
+        canceled: filterCounts.Cancel + filterCounts.NoResponse
     };
 
     // Derived filtered bookings
@@ -189,28 +210,15 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
                 </div>
 
                 <div className={styles.xToolbar}>
-                    <div className={styles.xFilters}>
-                        {[
-                            { id: 'all', label: 'Tất cả' },
-                            { id: 'Pending', label: 'Chờ duyệt' },
-                            { id: 'ApprovedAwaitingPayment', label: 'Chờ thanh toán' },
-                            { id: 'Confirmed', label: 'Đã xác nhận' },
-                            { id: 'Completed', label: 'Hoàn thành' },
-                            { id: 'NoResponse', label: 'Không phản hồi' },
-                            { id: 'Cancel', label: 'Đã hủy' }
-                        ].map(tab => (
-                            <button 
-                                key={tab.id}
-                                className={`${styles.xFilterTab} ${filterStatus === tab.id ? styles.xFilterTabActive : ''}`} 
-                                onClick={() => {
-                                    setFilterStatus(tab.id);
-                                    if (onFilterStatusChange) onFilterStatusChange(tab.id);
-                                }}
-                            >
-                                {tab.label}
-                            </button>
-                        ))}
-                    </div>
+                    <DashboardStatusFilter 
+                        options={FILTER_OPTIONS}
+                        counts={filterCounts}
+                        activeFilter={filterStatus}
+                        onFilterChange={(id) => {
+                            setFilterStatus(id);
+                            if (onFilterStatusChange) onFilterStatusChange(id);
+                        }}
+                    />
                 </div>
 
                 {loading ? (

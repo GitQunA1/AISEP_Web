@@ -358,6 +358,70 @@
     border-radius: 4px 4px 0 0;
 }
 
+/* Dashboard Status Filter Buttons (New) */
+.statusFilterGroup {
+    display: flex;
+    gap: 8px;
+    padding: 2px;
+    width: fit-content;
+    background: var(--bg-secondary);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow-x: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+}
+
+.statusFilterGroup::-webkit-scrollbar {
+    display: none;
+}
+
+.filterBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 16px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+}
+
+.filterBtn:hover {
+    color: var(--text-primary);
+    background: var(--bg-hover);
+}
+
+.activeFilter {
+    background: var(--bg-primary) !important;
+    color: var(--primary-blue) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.filterCount {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 6px;
+    background: rgba(29, 155, 240, 0.1);
+    color: var(--primary-blue);
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.activeFilter .filterCount {
+    background: var(--primary-blue);
+    color: white;
+}
+
 /* Content Area */
 .content {
     padding: 24px 24px 0 24px;
@@ -1279,7 +1343,7 @@
         display: flex !important;
         flex-direction: column !important;
         gap: 64px !important;
-        padding: 32px 24px 24px 24px !important;
+        padding: 32px 24px 120px 24px !important;
         background-color: var(--bg-primary);
     }
 
@@ -3473,11 +3537,9 @@
     gap: 16px;
     margin-bottom: 24px;
     flex-wrap: nowrap;
-    /* Prevent forcing wrap if possible */
-    padding: 10px;
-    background: rgba(255, 255, 255, 0.02);
-    border-radius: 12px;
-    border: 1px solid var(--border-color);
+    padding: 10px 0;
+    background: transparent;
+    border: none;
 }
 
 .xFilters {
@@ -3495,6 +3557,9 @@
 }
 
 .xFilterTab {
+    display: flex;
+    align-items: center;
+    gap: 8px;
     padding: 8px 16px;
     border-radius: 9999px;
     font-size: 13px;
@@ -3516,6 +3581,26 @@
     background: var(--primary-blue);
     border-color: var(--primary-blue);
     color: #fff;
+}
+
+.xFilterBadge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    border-radius: 999px;
+    font-size: 10px;
+    font-weight: 800;
+    background: rgba(29, 155, 240, 0.12);
+    color: var(--primary-blue);
+    transition: all 0.2s;
+}
+
+.xFilterTabActive .xFilterBadge {
+    background: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
 }
 
 @media (max-width: 768px) {
