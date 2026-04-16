@@ -683,7 +683,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
             ✓ Đã duyệt
           </span>
         )}
-        {(user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1) && (
+        {user && (
           <button 
             onClick={handleBlockchainVerification} 
             disabled={isLoadingBlockchain || documents.length === 0} 
@@ -702,7 +702,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
             {isLoadingBlockchain ? (
               <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />
             ) : (
-              <><Shield size={13} /> 🔗 Xác minh</>
+              <><Shield size={13} /> 🔗 Xác thực</>
             )}
           </button>
         )}

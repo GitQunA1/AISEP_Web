@@ -14,14 +14,19 @@ export default function BlockchainVerificationModal({ isOpen, verificationData, 
 
     // Extract data from API response format
     const apiData = verificationData?.data || verificationData || {};
-    const isFullyVerified = apiData.isFullyVerified;
-    const totalDocs = apiData.totalDocuments || 1;
-    const verifiedDocs = apiData.verifiedDocuments || 0;
+    
+    // Support both multi-doc (staff) and single-doc (startup) response formats
+    const isFullyVerified = apiData.isFullyVerified ?? apiData.isAuthentic ?? false;
+    const totalDocs = apiData.totalDocuments ?? 1;
+    const verifiedDocs = apiData.verifiedDocuments ?? (isFullyVerified ? 1 : 0);
+    
     const docDetails = apiData.verifiedDocumentDetails || [];
     const firstDoc = docDetails[0] || {};
-    const txHash = firstDoc.txHash;
-    const timestamp = firstDoc.timestampOnBlockchain;
-    const signerAddress = firstDoc.signerAddress;
+    
+    // Fallback to top-level fields if not in details array
+    const txHash = firstDoc.txHash || apiData.txHash;
+    const timestamp = firstDoc.timestampOnBlockchain || apiData.timestampOnBlockchain;
+    const signerAddress = firstDoc.signerAddress || apiData.signerAddress;
 
     const truncateName = (name, maxLength = 16) => {
         if (!name || name.length <= maxLength) return name;
