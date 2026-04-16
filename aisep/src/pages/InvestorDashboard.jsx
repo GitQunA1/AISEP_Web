@@ -99,7 +99,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     // Contract signing states
     const [showContractModal, setShowContractModal] = useState(false);
     const [contractPreviewHtml, setContractPreviewHtml] = useState(null);
-    const [isLoadingContract, setIsLoadingContract] = useState(false);
+    // isLoadingContract removed - using actionLoading instead
     const [contractDealData, setContractDealData] = useState(null);
     const [contractStatus, setContractStatus] = useState(null);
     const [isSigningContract, setIsSigningContract] = useState(false);
@@ -107,7 +107,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     // Blockchain Ownership Transfer States
     const [showBlockchainOwnershipModal, setShowBlockchainOwnershipModal] = useState(false);
     const [blockchainOwnershipData, setBlockchainOwnershipData] = useState(null);
-    const [isLoadingBlockchainOwnership, setIsLoadingBlockchainOwnership] = useState(false);
+    // isLoadingBlockchainOwnership removed - using actionLoading instead
     const [blockchainOwnershipError, setBlockchainOwnershipError] = useState(null);
     const [selectedDealForOwnership, setSelectedDealForOwnership] = useState(null);
     const blockchainPollingIntervalRef = useRef(null);
@@ -177,21 +177,17 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         { value: 'Growth', label: 'Phát triển' }
     ];
 
-    // Fetch industries on mount
-    React.useEffect(() => {
-        const fetchIndustries = async () => {
-            try {
-                const industries = await enumService.getEnumOptions('Industry');
-                if (industries && industries.length > 0) {
-                    setAvailableIndustries(industries);
-                }
-            } catch (error) {
-                console.error('Failed to fetch industries:', error);
-            }
-        };
+    // Mapping helpers for API strings <-> UI integers
+    const RISK_TOLERANCE_MAP = {
+        'Low': 0, 'Medium': 1, 'High': 2,
+        0: 'Low', 1: 'Medium', 2: 'High'
+    };
+    const STAGE_MAP = {
+        'Idea': 0, 'MVP': 1, 'Growth': 2,
+        0: 'Idea', 1: 'MVP', 2: 'Growth'
+    };
 
-        fetchIndustries();
-    }, []);
+    // Fetching industries removed from here - moved to consolidated fetchAllData below
 
     // Contract signing form states
     const [signFormData, setSignFormData] = useState({
@@ -288,15 +284,20 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             try {
                 console.log('[InvestorDashboard] Starting fetch of all data (First load:', isFirstLoad.current, ')');
                 
-                const [followingRes, connectRes, dealsRes, profileRes, aiReportsRes, allProjectsRes] = await Promise.all([
+                const [followingRes, connectRes, dealsRes, profileRes, aiReportsRes, allProjectsRes, industriesRes] = await Promise.all([
                     followerService.getMyFollowing().catch(err => null),
                     connectionService.getMyConnectionRequests().catch(err => null),
                     dealsService.getInvestorDeals({ pageSize: 100 }).catch(err => null),
                     investorService.getMyProfile().catch(err => null),
                     AIEvaluationService.getAllInvestorAnalyses({ pageSize: 100 }).catch(err => null),
-                    projectSubmissionService.getAllProjects().catch(err => null)
+                    projectSubmissionService.getAllProjects().catch(err => null),
+                    enumService.getEnumOptions('Industry').catch(err => [])
                 ]);
 
+                if (industriesRes && industriesRes.length > 0) {
+                    setAvailableIndustries(industriesRes);
+                }
+                
                 // Update States... (Omitted logic remains same)
                 if (profileRes) {
                     setInvestorProfile(profileRes);
@@ -305,10 +306,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                         investmentTaste: profileRes.investmentTaste || '',
                         walletAddress: profileRes.walletAddress || '',
                         investmentAmount: profileRes.investmentAmount || 0,
-                        riskTolerance: profileRes.riskTolerance || 1,
+                        riskTolerance: RISK_TOLERANCE_MAP[profileRes.riskTolerance] ?? 1,
                         investmentRegion: profileRes.investmentRegion || '',
-                        focusIndustry: profileRes.focusIndustry || 0,
-                        preferredStage: profileRes.preferredStage || 0,
+                        focusIndustry: industriesRes.find(i => i.label === profileRes.focusIndustry)?.value || 0,
+                        preferredStage: STAGE_MAP[profileRes.preferredStage] ?? 0,
                         previousInvestments: profileRes.previousInvestments || '',
                         minAIScore: profileRes.minAIScore || 70,
                         typicalInvestmentSize: profileRes.typicalInvestmentSize || ''
@@ -477,8 +478,9 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     };
 
     const handleShowContractPreview = async (deal) => {
+        const actionKey = `contract-${deal.dealId}`;
         console.log('[InvestorDashboard] handleShowContractPreview called for deal:', deal.dealId, 'status:', deal.status);
-        setIsLoadingContract(true);
+        setActionLoading(prev => ({ ...prev, [actionKey]: true }));
 
         try {
             setContractDealData(deal);
@@ -502,7 +504,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             console.error('[InvestorDashboard] Error loading contract:', error);
             alert('Lỗi: Không thể tải hợp đồng');
         } finally {
-            setIsLoadingContract(false);
+            setActionLoading(prev => ({ ...prev, [actionKey]: false }));
         }
     };
 
@@ -651,6 +653,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     };
 
     const handleCheckBlockchainOwnership = async (deal) => {
+        const actionKey = `ownership-${deal.dealId}`;
         console.log('[InvestorDashboard] handleCheckBlockchainOwnership called for deal:', deal.dealId);
         
         if (!deal.dealId) {
@@ -660,7 +663,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
         setSelectedDealForOwnership(deal);
         setShowBlockchainOwnershipModal(true);
-        setIsLoadingBlockchainOwnership(true);
+        setActionLoading(prev => ({ ...prev, [actionKey]: true }));
         setBlockchainOwnershipError(null);
         setBlockchainOwnershipData(null);
 
@@ -680,10 +683,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                     
                     if (updateInfo.status === 'polling' || updateInfo.status === 'completed') {
                         setBlockchainOwnershipData(updateInfo.data);
-                        setIsLoadingBlockchainOwnership(updateInfo.status === 'polling');
+                        setActionLoading(prev => ({ ...prev, [actionKey]: updateInfo.status === 'polling' }));
                     } else if (updateInfo.status === 'error') {
                         setBlockchainOwnershipError(updateInfo.error);
-                        setIsLoadingBlockchainOwnership(false);
+                        setActionLoading(prev => ({ ...prev, [actionKey]: false }));
                     }
                 }
             );
@@ -692,15 +695,15 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             
             if (pollResult.status === 'completed' || pollResult.status === 'timeout') {
                 setBlockchainOwnershipData(pollResult.data);
-                setIsLoadingBlockchainOwnership(false);
+                setActionLoading(prev => ({ ...prev, [actionKey]: false }));
             } else if (pollResult.status === 'error') {
                 setBlockchainOwnershipError(pollResult.error);
-                setIsLoadingBlockchainOwnership(false);
+                setActionLoading(prev => ({ ...prev, [actionKey]: false }));
             }
         } catch (error) {
             console.error('[InvestorDashboard] Error checking blockchain ownership:', error);
             setBlockchainOwnershipError(error.message || 'Không thể kiểm tra trạng thái blockchain.');
-            setIsLoadingBlockchainOwnership(false);
+            setActionLoading(prev => ({ ...prev, [actionKey]: false }));
         }
     };
 
@@ -709,7 +712,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         setBlockchainOwnershipData(null);
         setBlockchainOwnershipError(null);
         setSelectedDealForOwnership(null);
-        setIsLoadingBlockchainOwnership(false);
+        // setIsLoadingBlockchainOwnership removed - using actionLoading pattern
 
         // Clear polling interval
         if (blockchainPollingIntervalRef.current) {
@@ -757,10 +760,14 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             formData.append('walletAddress', prefFormData.walletAddress || '');
             formData.append('investmentAmount', prefFormData.investmentAmount || 0);
             if (prefFormData.investmentDate) formData.append('investmentDate', prefFormData.investmentDate);
-            formData.append('riskTolerance', prefFormData.riskTolerance);
+            formData.append('riskTolerance', RISK_TOLERANCE_MAP[prefFormData.riskTolerance] || 'Medium');
             formData.append('investmentRegion', prefFormData.investmentRegion || '');
-            formData.append('focusIndustry', prefFormData.focusIndustry);
-            formData.append('preferredStage', prefFormData.preferredStage);
+            
+            // Map focusIndustry back to Label if it's an ID
+            const industryLabel = availableIndustries.find(i => i.value === prefFormData.focusIndustry)?.label || prefFormData.focusIndustry;
+            formData.append('focusIndustry', industryLabel);
+            
+            formData.append('preferredStage', STAGE_MAP[prefFormData.preferredStage] || 'Idea');
             formData.append('previousInvestments', prefFormData.previousInvestments || '');
 
             let response;
@@ -1428,116 +1435,100 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
                                             {/* Actions */}
                                             <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', flexWrap: 'wrap', paddingTop: '8px' }}>
-                                                <button
-                                                    style={{
+                                                {/* Common Button Style */}
+                                                {(() => {
+                                                    const btnStyle = {
                                                         flex: 1,
+                                                        minHeight: '38px',
                                                         padding: '8px 12px',
-                                                        backgroundColor: 'var(--bg-secondary)',
-                                                        color: 'var(--text-primary)',
-                                                        border: '1px solid var(--border-color)',
-                                                        borderRadius: '4px',
+                                                        borderRadius: '10px',
                                                         fontSize: '12px',
-                                                        fontWeight: '600',
+                                                        fontWeight: '700',
                                                         cursor: 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
-                                                        gap: '4px',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                    onClick={() => handleShowDealDetail(deal)}
-                                                >
-                                                    <Eye size={12} /> Chi tiết
-                                                </button>
+                                                        gap: '6px',
+                                                        transition: 'all 0.2s',
+                                                        border: 'none',
+                                                        minWidth: '100px'
+                                                    };
 
-                                                {(deal.status === 'Confirmed' || deal.status === 1) && (
-                                                    <button
-                                                        style={{
-                                                            flex: 1,
-                                                            padding: '8px 12px',
-                                                            backgroundColor: '#667eea',
-                                                            color: '#fff',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            gap: '4px',
-                                                            transition: 'all 0.2s',
-                                                            opacity: isLoadingContract ? 0.7 : 1
-                                                        }}
-                                                        onClick={() => handleShowContractPreview(deal)}
-                                                        disabled={isLoadingContract}
-                                                    >
-                                                        {isLoadingContract ? <Loader2 size={12} className="animate-spin" /> : <FileText size={12} />}
-                                                        Ký hợp đồng
-                                                    </button>
-                                                )}
+                                                    return (
+                                                        <>
+                                                            <button
+                                                                style={{
+                                                                    ...btnStyle,
+                                                                    backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                                                    color: 'var(--text-primary)',
+                                                                    border: '1px solid rgba(255, 255, 255, 0.1)'
+                                                                }}
+                                                                onClick={() => handleShowDealDetail(deal)}
+                                                            >
+                                                                <Eye size={14} /> Chi tiết
+                                                            </button>
 
-                                                {(isContractSigned || deal.status === 'Contract_Signed' || deal.status === 3) && deal.contractPdfUrl && (
-                                                    <button
-                                                        style={{
-                                                            flex: 1,
-                                                            padding: '8px 12px',
-                                                            backgroundColor: '#10b981',
-                                                            color: '#fff',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            gap: '4px',
-                                                            transition: 'all 0.2s'
-                                                        }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleShowContractPreview(deal);
-                                                        }}
-                                                    >
-                                                        <FileText size={12} /> Xem hợp đồng
-                                                    </button>
-                                                )}
+                                                            {(deal.status === 'Confirmed' || deal.status === 1) && (
+                                                                <button
+                                                                    style={{
+                                                                        ...btnStyle,
+                                                                        backgroundColor: '#2D7EFF',
+                                                                        color: '#fff',
+                                                                        opacity: actionLoading[`contract-${deal.dealId}`] ? 0.7 : 1
+                                                                    }}
+                                                                    onClick={() => handleShowContractPreview(deal)}
+                                                                    disabled={actionLoading[`contract-${deal.dealId}`]}
+                                                                >
+                                                                    {actionLoading[`contract-${deal.dealId}`] ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+                                                                    Ký hợp đồng
+                                                                </button>
+                                                            )}
 
-                                                {(isContractSigned || deal.status === 'Contract_Signed' || deal.status === 3) && (
-                                                    <button
-                                                        style={{
-                                                            flex: 1,
-                                                            padding: '8px 12px',
-                                                            backgroundColor: '#3b82f6',
-                                                            color: '#fff',
-                                                            border: 'none',
-                                                            borderRadius: '4px',
-                                                            fontSize: '12px',
-                                                            fontWeight: '600',
-                                                            cursor: 'pointer',
-                                                            display: 'flex',
-                                                            alignItems: 'center',
-                                                            justifyContent: 'center',
-                                                            gap: '4px',
-                                                            transition: 'all 0.2s',
-                                                            opacity: isLoadingBlockchainOwnership && selectedDealForOwnership?.dealId === deal.dealId ? 0.7 : 1
-                                                        }}
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleCheckBlockchainOwnership(deal);
-                                                        }}
-                                                        disabled={isLoadingBlockchainOwnership && selectedDealForOwnership?.dealId === deal.dealId}
-                                                        title="Xác thực chuyển giao quyền sở hữu trên blockchain"
-                                                    >
-                                                        {isLoadingBlockchainOwnership && selectedDealForOwnership?.dealId === deal.dealId ? (
-                                                            <Loader2 size={12} className="animate-spin" />
-                                                        ) : (
-                                                            <Shield size={12} />
-                                                        )}
-                                                        Xác thực Quyền sở hữu
-                                                    </button>
-                                                )}
+                                                            {(isContractSigned || deal.status === 'Contract_Signed' || deal.status === 3) && deal.contractPdfUrl && (
+                                                                <button
+                                                                    style={{
+                                                                        ...btnStyle,
+                                                                        backgroundColor: '#10b981',
+                                                                        color: '#fff',
+                                                                        opacity: actionLoading[`contract-${deal.dealId}`] ? 0.7 : 1
+                                                                    }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleShowContractPreview(deal);
+                                                                    }}
+                                                                    disabled={actionLoading[`contract-${deal.dealId}`]}
+                                                                >
+                                                                    {actionLoading[`contract-${deal.dealId}`] ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
+                                                                    Xem hợp đồng
+                                                                </button>
+                                                            )}
+
+                                                            {(isContractSigned || deal.status === 'Contract_Signed' || deal.status === 3) && (
+                                                                <button
+                                                                    style={{
+                                                                        ...btnStyle,
+                                                                        backgroundColor: '#3b82f6',
+                                                                        color: '#fff',
+                                                                        opacity: actionLoading[`ownership-${deal.dealId}`] ? 0.7 : 1
+                                                                    }}
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleCheckBlockchainOwnership(deal);
+                                                                    }}
+                                                                    disabled={actionLoading[`ownership-${deal.dealId}`]}
+                                                                    title="Xác thực chuyển giao quyền sở hữu trên blockchain"
+                                                                >
+                                                                    {actionLoading[`ownership-${deal.dealId}`] ? (
+                                                                        <Loader2 size={14} className="animate-spin" />
+                                                                    ) : (
+                                                                        <Shield size={14} />
+                                                                    )}
+                                                                    Xác thực Quyền sở hữu
+                                                                </button>
+                                                            )}
+                                                        </>
+                                                    );
+                                                })()}
                                             </div>
                                         </div>
                                     );
@@ -1944,7 +1935,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                     <div className={contractStyles.sectionTitle}>
                                         <FileText size={16} /> Hợp đồng đầu tư
                                     </div>
-                                    {isLoadingContract ? (
+                                    {actionLoading[`contract-${contractDealData?.dealId}`] ? (
                                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-secondary)' }}>
                                             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
                                                 <Loader2 size={24} className="animate-spin" />
@@ -2120,7 +2111,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 isOpen={showBlockchainOwnershipModal}
                 ownershipData={blockchainOwnershipData}
                 onClose={handleCloseBlockchainOwnershipModal}
-                isLoading={isLoadingBlockchainOwnership}
+                isLoading={actionLoading[`ownership-${selectedDealForOwnership?.dealId}`]}
                 error={blockchainOwnershipError}
                 dealId={selectedDealForOwnership?.dealId}
             />

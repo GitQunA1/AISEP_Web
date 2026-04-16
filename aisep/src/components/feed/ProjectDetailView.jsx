@@ -686,18 +686,17 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
         {user && (
           <button 
             onClick={handleBlockchainVerification} 
-            disabled={isLoadingBlockchain || documents.length === 0} 
+            disabled={isLoadingBlockchain} 
             style={{ 
               display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, 
               fontSize: 11.5, fontWeight: 700, 
-              background: documents.length === 0 ? 'rgba(29, 155, 240, 0.05)' : T.blueDim, 
+              background: T.blueDim, 
               color: T.blue, 
               border: `1px solid ${T.blueDim}`, 
-              cursor: (isLoadingBlockchain || documents.length === 0) ? 'not-allowed' : 'pointer',
-              opacity: documents.length === 0 ? 0.4 : 1,
+              cursor: isLoadingBlockchain ? 'not-allowed' : 'pointer',
+              opacity: 1,
               transition: 'all 0.2s'
             }}
-            title={documents.length === 0 ? "Không có tài liệu để xác minh" : ""}
           >
             {isLoadingBlockchain ? (
               <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />

@@ -21,6 +21,13 @@ export default function PayoutManagement({ searchTerm = '' }) {
   const [loading, setLoading] = useState(true);
   const [loadingItems, setLoadingItems] = useState(false);
   const [showGenerateModal, setShowGenerateModal] = useState(false);
+  const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' && window.innerWidth < 1024);
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 1024);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
   
   // Feedback modals
   const [showSuccess, setShowSuccess] = useState(false);
@@ -102,6 +109,7 @@ export default function PayoutManagement({ searchTerm = '' }) {
           batch={selectedBatch} 
           items={batchItems} 
           loading={loadingItems} 
+          isMobile={isMobile}
           onBack={() => setSelectedBatch(null)} 
           onExport={handleExportBatch}
           onMarkPaid={openMarkPaidModal}
@@ -129,7 +137,15 @@ export default function PayoutManagement({ searchTerm = '' }) {
 
   return (
     <div className={styles.withdrawSection}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: '16px', gap: '20px', flexWrap: 'wrap' }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row',
+        justifyContent: 'space-between', 
+        alignItems: isMobile ? 'stretch' : 'flex-end', 
+        marginBottom: '16px', 
+        gap: isMobile ? '12px' : '20px', 
+        flexWrap: 'wrap' 
+      }}>
         <div style={{ display: 'flex', gap: '24px' }}>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: '700', letterSpacing: '0.5px', marginBottom: '4px' }}>
@@ -144,7 +160,16 @@ export default function PayoutManagement({ searchTerm = '' }) {
         <div style={{ display: 'flex' }}>
           <button 
             className={styles.baBtn} 
-            style={{ background: 'var(--primary-blue)', color: 'white', border: 'none', padding: '10px 24px', borderRadius: '12px', height: '44px', width: 'fit-content' }}
+            style={{ 
+              background: 'var(--primary-blue)', 
+              color: 'white', 
+              border: 'none', 
+              padding: '10px 24px', 
+              borderRadius: '12px', 
+              height: '44px', 
+              width: isMobile ? '100%' : 'fit-content',
+              justifyContent: 'center'
+            }}
             onClick={() => setShowGenerateModal(true)}
           >
             <Calculator size={18} /> Kết toán theo kỳ
@@ -168,23 +193,38 @@ export default function PayoutManagement({ searchTerm = '' }) {
             const batchStatusColor = batch.status === 'Completed' ? '#10b981' : '#f59e0b';
             const batchStatusText = batch.status === 'Completed' ? 'Hoàn tất' : 'Đang xử lý';
             return (
-              <div key={batch.monthlyPayoutBatchId} className={styles.pendingItem} onClick={() => handleViewBatch(batch)} style={{ cursor: 'pointer' }}>
-                <div className={styles.pendingItemLeft}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <h4 className={styles.pendingItemTitle}>
+              <div 
+                key={batch.monthlyPayoutBatchId} 
+                className={styles.pendingItem} 
+                onClick={() => handleViewBatch(batch)} 
+                style={{ 
+                  cursor: 'pointer',
+                  flexDirection: isMobile ? 'column' : 'row',
+                  alignItems: isMobile ? 'stretch' : 'center',
+                  gap: isMobile ? '12px' : '32px'
+                }}
+              >
+                <div className={styles.pendingItemLeft} style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '4px' }}>
+                    <h4 className={styles.pendingItemTitle} style={{ margin: 0 }}>
                       Kỳ {batch.month}/{batch.year}
-                      {batch.fromDate && batch.toDate && (
-                        <span style={{ fontSize: '11px', fontWeight: 500, color: 'var(--text-muted)', marginLeft: 8 }}>
-                          ({new Date(batch.fromDate).toLocaleDateString('vi-VN')} – {new Date(batch.toDate).toLocaleDateString('vi-VN')})
-                        </span>
-                      )}
                     </h4>
-                    <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>#{batch.monthlyPayoutBatchId}</span>
+                    <span style={{ fontSize: '11px', color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '2px 6px', borderRadius: '4px' }}>
+                      #{batch.monthlyPayoutBatchId}
+                    </span>
                     <span style={{ fontSize: '11px', fontWeight: 700, color: batchStatusColor, background: `${batchStatusColor}18`, padding: '2px 8px', borderRadius: 6 }}>
                       {batchStatusText}
                     </span>
                   </div>
-                  <div className={styles.pendingItemSubtitle} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                  
+                  {batch.fromDate && batch.toDate && (
+                    <div style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <Calendar size={12} />
+                      {new Date(batch.fromDate).toLocaleDateString('vi-VN')} – {new Date(batch.toDate).toLocaleDateString('vi-VN')}
+                    </div>
+                  )}
+
+                  <div className={styles.pendingItemSubtitle} style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', opacity: 0.8 }}>
                     <span>Tạo ngày: <strong>{new Date(batch.createdAt).toLocaleDateString('vi-VN')}</strong></span>
                     <span>Bill: <strong>{batch.totalBillCount || 0}</strong></span>
                     {batch.pendingBillCount > 0 && <span style={{ color: '#f59e0b' }}>Chờ: <strong>{batch.pendingBillCount}</strong></span>}
@@ -192,22 +232,34 @@ export default function PayoutManagement({ searchTerm = '' }) {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: '32px', alignItems: 'center' }}>
-                  <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--text-primary)' }}>
-                      {(batch.actualPayableAmount ?? 0).toLocaleString('vi-VN')} <span style={{ fontSize: '12px' }}>VND</span>
+                <div style={{ 
+                  display: 'flex', 
+                  gap: isMobile ? '12px' : '32px', 
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  borderTop: isMobile ? '1px solid var(--border-color)' : 'none',
+                  paddingTop: isMobile ? '10px' : '0'
+                }}>
+                  <div style={{ textAlign: isMobile ? 'left' : 'right' }}>
+                    <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-primary)', lineHeight: 1.2 }}>
+                      {(batch.actualPayableAmount ?? 0).toLocaleString('vi-VN')} <span style={{ fontSize: '12px', fontWeight: 400 }}>VND</span>
                     </div>
-                    <div style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                    <div style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '2px' }}>
                       Dự kiến: {(batch.estimatedTotalAmount ?? 0).toLocaleString('vi-VN')} VND
                     </div>
                     {batch.rejectedAmount > 0 && (
-                      <div style={{ fontSize: '11px', color: '#ef4444' }}>
+                      <div style={{ fontSize: '11px', color: '#ef4444', fontWeight: 600, marginTop: '2px' }}>
                         Từ chối: {batch.rejectedAmount.toLocaleString('vi-VN')} VND
                       </div>
                     )}
                   </div>
 
-                  <ChevronRight size={20} color="var(--text-muted)" />
+                  {!isMobile && <ChevronRight size={20} color="var(--text-muted)" />}
+                  {isMobile && (
+                    <button style={{ background: 'var(--bg-secondary)', border: 'none', borderRadius: '10px', padding: '8px', display: 'flex', alignItems: 'center', color: 'var(--text-primary)' }}>
+                      <Eye size={16} />
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -245,25 +297,33 @@ function getStatusInfo(status) {
 
 // ─── BatchDetailView ────────────────────────────────────────────────────────────
 
-function BatchDetailView({ batch, items, loading, onBack, onExport, onMarkPaid, onReject }) {
+function BatchDetailView({ batch, items, loading, onBack, onExport, onMarkPaid, onReject, isMobile }) {
   return (
     <div className={styles.withdrawSection}>
       {/* Header row: back + title + export inline */}
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+      <div style={{ 
+        display: 'flex', 
+        flexDirection: isMobile ? 'column' : 'row',
+        alignItems: isMobile ? 'stretch' : 'flex-start', 
+        justifyContent: 'space-between', 
+        gap: isMobile ? 16 : 12, 
+        marginBottom: 20, 
+        flexWrap: 'wrap' 
+      }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
           <button onClick={onBack} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', fontWeight: 600, padding: 0, fontSize: 14, width: 'fit-content' }}>
             <ArrowLeft size={16} /> Quay lại
           </button>
           <div>
-            <h2 style={{ fontSize: 'clamp(18px, 3vw, 24px)', fontWeight: 900, margin: 0, whiteSpace: 'nowrap' }}>
+            <h2 style={{ fontSize: isMobile ? '20px' : '24px', fontWeight: 900, margin: 0, lineHeight: 1.2 }}>
               Kỳ chi trả Tháng {batch.month}/{batch.year}
             </h2>
             {batch.fromDate && batch.toDate && (
-              <p style={{ color: 'var(--text-secondary)', fontSize: 13, margin: '3px 0 0 0', fontWeight: 600 }}>
-                📅 {new Date(batch.fromDate).toLocaleDateString('vi-VN')} – {new Date(batch.toDate).toLocaleDateString('vi-VN')}
+              <p style={{ color: 'var(--text-secondary)', fontSize: 13, margin: '6px 0 0 0', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Calendar size={13} /> {new Date(batch.fromDate).toLocaleDateString('vi-VN')} – {new Date(batch.toDate).toLocaleDateString('vi-VN')}
               </p>
             )}
-            <p style={{ color: 'var(--text-secondary)', fontSize: 13, margin: '2px 0 0 0' }}>Đối soát và xác nhận thanh toán cho các cố vấn.</p>
+            <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: '4px 0 0 0', lineHeight: 1.4 }}>Đối soát và xác nhận thanh toán cho các cố vấn.</p>
           </div>
         </div>
         <button 
@@ -273,33 +333,49 @@ function BatchDetailView({ batch, items, loading, onBack, onExport, onMarkPaid, 
             background: 'var(--staff-success)', 
             color: 'white', 
             border: 'none', 
-            height: 40, 
-            padding: '0 20px', 
-            flex: 'none', 
-            width: 'fit-content',
+            height: 44, 
+            padding: '0 24px', 
+            flex: isMobile ? 'none' : 'none', 
+            width: isMobile ? '100%' : 'fit-content',
+            justifyContent: 'center',
+            fontSize: '14px',
             whiteSpace: 'nowrap' 
           }}
         >
-          <Download size={16} /> Xuất Excel
+          <Download size={18} /> Xuất Excel
         </button>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 12, marginBottom: 20 }}>
-        <div style={{ background: 'var(--bg-secondary)', padding: '12px 16px', borderRadius: 16, border: '1px solid var(--border-color)' }}>
-          <span style={{ fontSize: 11, textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700, display: 'block', marginBottom: 4 }}>Dự kiến</span>
-          <span style={{ fontSize: 16, fontWeight: 900 }}>{(batch.estimatedTotalAmount ?? 0).toLocaleString('vi-VN')} <span style={{ fontSize: 11 }}>VND</span></span>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(140px, 1fr))', 
+        gap: isMobile ? 8 : 12, 
+        marginBottom: 24 
+      }}>
+        <div style={{ background: 'var(--bg-secondary)', padding: '12px', borderRadius: 16, border: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: 10, textTransform: 'uppercase', color: 'var(--text-muted)', fontWeight: 700 }}>Dự kiến</span>
+          <span style={{ fontSize: isMobile ? 14 : 16, fontWeight: 900 }}>{(batch.estimatedTotalAmount ?? 0).toLocaleString('vi-VN')} <span style={{ fontSize: 10, fontWeight: 400 }}>VND</span></span>
         </div>
-        <div style={{ background: 'rgba(16,185,129,0.05)', padding: '12px 16px', borderRadius: 16, border: '1px solid rgba(16,185,129,0.2)' }}>
-          <span style={{ fontSize: 11, textTransform: 'uppercase', color: '#10b981', fontWeight: 700, display: 'block', marginBottom: 4 }}>Thực tế (Sẽ chi)</span>
-          <span style={{ fontSize: 16, fontWeight: 900, color: '#10b981' }}>{(batch.actualPayableAmount ?? 0).toLocaleString('vi-VN')} <span style={{ fontSize: 11 }}>VND</span></span>
+        <div style={{ background: 'rgba(16,185,129,0.05)', padding: '12px', borderRadius: 16, border: '1px solid rgba(16,185,129,0.2)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: 10, textTransform: 'uppercase', color: '#10b981', fontWeight: 700 }}>Sẽ chi</span>
+          <span style={{ fontSize: isMobile ? 14 : 16, fontWeight: 900, color: '#10b981' }}>{(batch.actualPayableAmount ?? 0).toLocaleString('vi-VN')} <span style={{ fontSize: 10, fontWeight: 400 }}>VND</span></span>
         </div>
-        <div style={{ background: 'rgba(239,68,68,0.05)', padding: '12px 16px', borderRadius: 16, border: '1px solid rgba(239,68,68,0.2)' }}>
-          <span style={{ fontSize: 11, textTransform: 'uppercase', color: '#ef4444', fontWeight: 700, display: 'block', marginBottom: 4 }}>Bị từ chối</span>
-          <span style={{ fontSize: 16, fontWeight: 900, color: '#ef4444' }}>{(batch.rejectedAmount ?? 0).toLocaleString('vi-VN')} <span style={{ fontSize: 11 }}>VND</span></span>
+        <div style={{ background: 'rgba(239,68,68,0.05)', padding: '12px', borderRadius: 16, border: '1px solid rgba(239,68,68,0.2)', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: 10, textTransform: 'uppercase', color: '#ef4444', fontWeight: 700 }}>Từ chối</span>
+          <span style={{ fontSize: isMobile ? 14 : 16, fontWeight: 900, color: '#ef4444' }}>{(batch.rejectedAmount ?? 0).toLocaleString('vi-VN')} <span style={{ fontSize: 10, fontWeight: 400 }}>VND</span></span>
         </div>
-        <div style={{ background: 'rgba(99,102,241,0.05)', padding: '12px 16px', borderRadius: 16, border: '1px solid rgba(99,102,241,0.2)' }}>
-          <span style={{ fontSize: 11, textTransform: 'uppercase', color: '#6366f1', fontWeight: 700, display: 'block', marginBottom: 4 }}>Bill</span>
-          <span style={{ fontSize: 13, fontWeight: 900, color: '#6366f1', lineHeight: 1.4 }}>
+        <div style={{ 
+          background: 'rgba(99,102,241,0.05)', 
+          padding: '12px', 
+          borderRadius: 16, 
+          border: '1px solid rgba(99,102,241,0.2)',
+          gridColumn: isMobile ? 'span 2' : 'auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 4
+        }}>
+          <span style={{ fontSize: 10, textTransform: 'uppercase', color: '#6366f1', fontWeight: 700 }}>Trạng thái Bill</span>
+          <span style={{ fontSize: 12, fontWeight: 800, color: '#6366f1', lineHeight: 1.4 }}>
             {batch.totalBillCount || 0} tổng &nbsp;·&nbsp; {batch.pendingBillCount || 0} chờ &nbsp;·&nbsp; {batch.rejectedBillCount || 0} từ chối
           </span>
         </div>
@@ -321,93 +397,131 @@ function BatchDetailView({ batch, items, loading, onBack, onExport, onMarkPaid, 
             const s = getStatusInfo(item.status);
             const isPendingAction = item.status === 'Pending' || item.status === 'PendingRecheck';
             return (
-              <div key={item.monthlyPayoutId} className={styles.pendingItem} style={{ flexDirection: 'column', alignItems: 'stretch', gap: 12 }}>
-
-                {/* ── Top row: identity, amount, actions ─────────────────── */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-
-                  {/* Left: name + bank */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 5, minWidth: 0 }}>
+              <div 
+                key={item.monthlyPayoutId} 
+                className={styles.pendingItem} 
+                style={{ 
+                  flexDirection: 'column', 
+                  alignItems: 'stretch', 
+                  gap: 16,
+                  padding: isMobile ? '16px' : '20px'
+                }}
+              >
+                {/* ── Top row: identity + amount ─────────────────── */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12 }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, flex: 1 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <span style={{ fontWeight: 800, fontSize: 14, color: 'var(--text-primary)' }}>{item.advisorName}</span>
-                      <span style={{ fontSize: 11, color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '1px 7px', borderRadius: 5 }}>ID: {item.advisorId}</span>
+                      <span style={{ fontWeight: 900, fontSize: isMobile ? 15 : 16, color: 'var(--text-primary)' }}>{item.advisorName}</span>
+                      <span style={{ fontSize: 10, color: 'var(--text-muted)', background: 'var(--bg-secondary)', padding: '2px 8px', borderRadius: 6, fontWeight: 600 }}>ID: {item.advisorId}</span>
                     </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                      <span>{item.bankName} · <span style={{ fontFamily: 'monospace', letterSpacing: '0.04em' }}>{item.accountNumber}</span></span>
-                    </div>
-                    <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>
-                      {item.accountHolderName}
+                    <div style={{ fontSize: 12, color: 'var(--text-secondary)', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                      <span style={{ fontWeight: 600 }}>{item.bankName}</span>
+                      <span style={{ fontFamily: 'monospace', letterSpacing: '0.04em', fontSize: 13, color: 'var(--text-primary)' }}>{item.accountNumber}</span>
+                      <span style={{ fontSize: 11, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>{item.accountHolderName}</span>
                     </div>
                   </div>
 
-                  {/* Right: amount + status / action buttons */}
-                  <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8, flexShrink: 0 }}>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 17, fontWeight: 900, color: s.color }}>
-                        {(item.amount ?? 0).toLocaleString('vi-VN')} <span style={{ fontSize: 11, fontWeight: 400 }}>VND</span>
-                      </div>
-                      <div style={{ fontSize: 11, color: 'var(--text-muted)' }}>Kỳ {batch.month}/{batch.year}</div>
+                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                    <div style={{ fontSize: isMobile ? 18 : 20, fontWeight: 900, color: s.color, lineHeight: 1 }}>
+                      {(item.amount ?? 0).toLocaleString('vi-VN')} <span style={{ fontSize: 11, fontWeight: 400 }}>VND</span>
                     </div>
-
-                    {isPendingAction ? (
-                      <div style={{ display: 'flex', gap: 8 }}>
-                        <button
-                          className={styles.rejectBtnOutline}
-                          onClick={() => onReject(item)}
-                        >
-                          <XCircle size={15} /> Từ chối
-                        </button>
-                        <button
-                          className={styles.baBtn}
-                          style={{ background: 'var(--staff-success)', color: 'white', border: 'none', padding: '0 14px', height: '34px', flex: 'none', width: 'fit-content' }}
-                          onClick={() => onMarkPaid(item)}
-                        >
-                          <CheckCircle size={15} /> {item.status === 'PendingRecheck' ? 'Đã chuyển lại' : 'Duyệt'}
-                        </button>
-                      </div>
-                    ) : (
-                      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, background: s.bg, color: s.color, padding: '4px 12px', borderRadius: 8, fontSize: 12, fontWeight: 700 }}>
-                        {s.icon} {s.label}
-                      </span>
-                    )}
+                    <div style={{ fontSize: 11, color: 'var(--text-muted)', marginTop: 4 }}>Kỳ {batch.month}/{batch.year}</div>
                   </div>
                 </div>
 
-                {/* ── Paid: date strip ────────────────────────────────────── */}
-                {item.status === 'Paid' && item.paidAt && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'rgba(16,185,129,0.07)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '7px 12px' }}>
-                    <CheckCircle size={13} color="#10b981" style={{ flexShrink: 0 }} />
-                    <span style={{ fontSize: 12, color: '#10b981', fontWeight: 600 }}>
-                      Đã thanh toán · {new Date(item.paidAt).toLocaleDateString('vi-VN')}
-                    </span>
-                  </div>
-                )}
-
-                {/* ── Rejected: reason strip ──────────────────────────────── */}
-                {item.status === 'Rejected' && item.rejectReason && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 10, padding: '7px 12px' }}>
-                    <XCircle size={13} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
-                    <span style={{ fontSize: 12, color: '#ef4444', lineHeight: 1.4 }}>{item.rejectReason}</span>
-                  </div>
-                )}
-
-                {/* ── PendingRecheck: full-width retry note ──────────────── */}
-                {item.status === 'PendingRecheck' && (item.retryRequestNote || item.retryRequestedByName) && (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: 'rgba(245,158,11,0.07)', border: '1px solid rgba(245,158,11,0.2)', borderRadius: 10, padding: '8px 12px' }}>
-                    <RefreshCw size={13} color="#f59e0b" style={{ flexShrink: 0, marginTop: 2 }} />
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                      {item.retryRequestedByName && (
-                        <span style={{ fontSize: 11, fontWeight: 700, color: '#f59e0b' }}>
-                          {item.retryRequestedByName} yêu cầu chuyển lại
-                          {item.retryRequestedAt && <span style={{ fontWeight: 400, opacity: 0.8 }}> · {new Date(item.retryRequestedAt).toLocaleDateString('vi-VN')}</span>}
-                        </span>
-                      )}
-                      {item.retryRequestNote && (
-                        <span style={{ fontSize: 12, color: 'var(--text-secondary)', lineHeight: 1.4 }}>{item.retryRequestNote}</span>
-                      )}
+                {/* ── Action Buttons / Status Badge ────────────────────── */}
+                <div style={{ 
+                  display: 'flex', 
+                  justifyContent: isMobile ? 'stretch' : 'flex-end',
+                  alignItems: 'center',
+                  gap: 10,
+                  borderTop: isMobile ? '1px solid var(--border-color)' : 'none',
+                  paddingTop: isMobile ? 12 : 0
+                }}>
+                  {isPendingAction ? (
+                    <div style={{ display: 'flex', gap: 10, width: isMobile ? '100%' : 'auto' }}>
+                      <button
+                        className={styles.rejectBtnOutline}
+                        onClick={() => onReject(item)}
+                        style={{ flex: isMobile ? 1 : 'none', height: 40, justifyContent: 'center' }}
+                      >
+                        <XCircle size={16} /> Từ chối
+                      </button>
+                      <button
+                        className={styles.baBtn}
+                        style={{ 
+                          background: 'var(--staff-success)', 
+                          color: 'white', 
+                          border: 'none', 
+                          padding: '0 20px', 
+                          height: 40, 
+                          flex: isMobile ? 1 : 'none', 
+                          width: 'fit-content',
+                          justifyContent: 'center',
+                          fontSize: '14px'
+                        }}
+                        onClick={() => onMarkPaid(item)}
+                      >
+                        <CheckCircle size={16} /> {item.status === 'PendingRecheck' ? 'Đã chuyển lại' : 'Duyệt'}
+                      </button>
                     </div>
-                  </div>
-                )}
+                  ) : item.status !== 'Paid' ? (
+                    <span style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center',
+                      gap: 6, 
+                      background: s.bg, 
+                      color: s.color, 
+                      padding: '6px 16px', 
+                      borderRadius: 10, 
+                      fontSize: 12, 
+                      fontWeight: 800,
+                      width: isMobile ? '100%' : 'auto'
+                    }}>
+                      {s.icon} {s.label}
+                    </span>
+                  ) : null}
+                </div>
+
+                {/* ── Status Strips (Paid / Rejected / Retry) ──────────────── */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {item.status === 'Paid' && item.paidAt && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: 12, padding: '10px 14px' }}>
+                      <CheckCircle size={14} color="#10b981" style={{ flexShrink: 0 }} />
+                      <span style={{ fontSize: 13, color: '#10b981', fontWeight: 600 }}>
+                        Đã thanh toán · {new Date(item.paidAt).toLocaleDateString('vi-VN')}
+                      </span>
+                    </div>
+                  )}
+
+                  {item.status === 'Rejected' && item.rejectReason && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: 'rgba(239,68,68,0.05)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 12, padding: '10px 14px' }}>
+                      <AlertCircle size={14} color="#ef4444" style={{ flexShrink: 0, marginTop: 2 }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', textTransform: 'uppercase' }}>Lý do từ chối</span>
+                        <span style={{ fontSize: 13, color: '#ef4444', lineHeight: 1.5 }}>{item.rejectReason}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  {item.status === 'PendingRecheck' && (item.retryRequestNote || item.retryRequestedByName) && (
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, background: 'rgba(245,158,11,0.06)', border: '1px solid rgba(245,158,11,0.15)', borderRadius: 12, padding: '10px 14px' }}>
+                      <RefreshCw size={14} color="#f59e0b" style={{ flexShrink: 0, marginTop: 3 }} />
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+                        {item.retryRequestedByName && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                             <span style={{ fontSize: 12, fontWeight: 800, color: '#f59e0b' }}>Yêu cầu gửi lại</span>
+                             <span style={{ fontSize: 11, color: 'var(--text-muted)' }}>{new Date(item.retryRequestedAt).toLocaleDateString('vi-VN')}</span>
+                          </div>
+                        )}
+                        {item.retryRequestNote && (
+                          <span style={{ fontSize: 13, color: 'var(--text-secondary)', lineHeight: 1.5, fontStyle: 'italic' }}>"{item.retryRequestNote}"</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
 
               </div>
             );

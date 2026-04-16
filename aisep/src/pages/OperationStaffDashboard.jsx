@@ -24,6 +24,7 @@ import CommissionManagement from '../components/staff/CommissionManagement';
 import EmptyState from '../components/common/EmptyState';
 import BlockchainVerificationModal from '../components/common/BlockchainVerificationModal';
 import blockchainVerificationService from '../services/blockchainVerificationService';
+import AccountProfileTab from '../components/common/AccountProfileTab';
 
 const T = {
   bg: 'var(--pd-bg)',
