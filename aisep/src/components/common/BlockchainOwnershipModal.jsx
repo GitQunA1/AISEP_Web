@@ -52,15 +52,16 @@ export default function BlockchainOwnershipModal({
         >
             <div
                 style={{
-                    backgroundColor: '#fff',
+                    backgroundColor: 'var(--bg-primary)',
                     borderRadius: '16px',
                     padding: '24px',
                     maxWidth: '600px',
                     width: '100%',
                     maxHeight: '90vh',
                     overflowY: 'auto',
-                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)',
-                    position: 'relative'
+                    boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.3)',
+                    position: 'relative',
+                    border: '1px solid var(--border-color)'
                 }}
                 onClick={(e) => e.stopPropagation()}
             >
@@ -118,8 +119,8 @@ export default function BlockchainOwnershipModal({
                 {/* Error State */}
                 {error && (
                     <div style={{
-                        backgroundColor: '#fee2e2',
-                        border: '1px solid #fecaca',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        border: '1px solid rgba(239, 68, 68, 0.2)',
                         borderRadius: '8px',
                         padding: '16px',
                         marginBottom: '20px',
@@ -127,12 +128,12 @@ export default function BlockchainOwnershipModal({
                         gap: '12px',
                         alignItems: 'flex-start'
                     }}>
-                        <AlertCircle size={20} color="#dc2626" style={{ flexShrink: 0, marginTop: '2px' }} />
+                        <AlertCircle size={20} color="#ef4444" style={{ flexShrink: 0, marginTop: '2px' }} />
                         <div>
-                            <p style={{ margin: '0 0 4px 0', fontWeight: '600', color: '#dc2626' }}>
+                            <p style={{ margin: '0 0 4px 0', fontWeight: '600', color: '#ef4444' }}>
                                 Lỗi kiểm tra trạng thái
                             </p>
-                            <p style={{ margin: 0, color: '#991b1b', fontSize: '12px' }}>{error}</p>
+                            <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '12px' }}>{error}</p>
                         </div>
                     </div>
                 )}
@@ -142,8 +143,8 @@ export default function BlockchainOwnershipModal({
                     <>
                         {/* Status Badge */}
                         <div style={{
-                            backgroundColor: isOwnerAssigned ? '#ecfdf5' : '#fffbeb',
-                            border: `1px solid ${isOwnerAssigned ? '#bbf7d0' : '#fed7aa'}`,
+                            backgroundColor: isOwnerAssigned ? 'rgba(16, 185, 129, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                            border: `1px solid ${isOwnerAssigned ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)'}`,
                             borderRadius: '8px',
                             padding: '16px',
                             marginBottom: '20px',
@@ -152,7 +153,7 @@ export default function BlockchainOwnershipModal({
                             <div style={{
                                 fontSize: '14px',
                                 fontWeight: '600',
-                                color: isOwnerAssigned ? '#065f46' : '#92400e',
+                                color: isOwnerAssigned ? '#10b981' : '#f59e0b',
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
@@ -242,10 +243,10 @@ export default function BlockchainOwnershipModal({
                                                     alignItems: 'center',
                                                     gap: '8px',
                                                     padding: '10px 12px',
-                                                    backgroundColor: '#eff6ff',
-                                                    border: '1px solid #bfdbfe',
+                                                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                                                    border: '1px solid rgba(59, 130, 246, 0.2)',
                                                     borderRadius: '6px',
-                                                    color: '#0369a1',
+                                                    color: 'var(--primary-blue)',
                                                     textDecoration: 'none',
                                                     fontSize: '12px',
                                                     fontWeight: '600',
@@ -253,12 +254,10 @@ export default function BlockchainOwnershipModal({
                                                     cursor: 'pointer'
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    e.target.style.backgroundColor = '#dbeafe';
-                                                    e.target.style.borderColor = '#93c5fd';
+                                                    e.target.style.backgroundColor = 'rgba(59, 130, 246, 0.2)';
                                                 }}
                                                 onMouseLeave={(e) => {
-                                                    e.target.style.backgroundColor = '#eff6ff';
-                                                    e.target.style.borderColor = '#bfdbfe';
+                                                    e.target.style.backgroundColor = 'rgba(59, 130, 246, 0.1)';
                                                 }}
                                             >
                                                 🔗 Xem biên lai xác nhận quyền sở hữu
@@ -276,10 +275,10 @@ export default function BlockchainOwnershipModal({
                                                     alignItems: 'center',
                                                     gap: '8px',
                                                     padding: '10px 12px',
-                                                    backgroundColor: '#f0fdf4',
-                                                    border: '1px solid #bbf7d0',
+                                                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                                                    border: '1px solid rgba(16, 185, 129, 0.2)',
                                                     borderRadius: '6px',
-                                                    color: '#047857',
+                                                    color: '#10b981',
                                                     textDecoration: 'none',
                                                     fontSize: '12px',
                                                     fontWeight: '600',
@@ -287,12 +286,10 @@ export default function BlockchainOwnershipModal({
                                                     cursor: 'pointer'
                                                 }}
                                                 onMouseEnter={(e) => {
-                                                    e.target.style.backgroundColor = '#dcfce7';
-                                                    e.target.style.borderColor = '#86efac';
+                                                    e.target.style.backgroundColor = 'rgba(16, 185, 129, 0.2)';
                                                 }}
                                                 onMouseLeave={(e) => {
-                                                    e.target.style.backgroundColor = '#f0fdf4';
-                                                    e.target.style.borderColor = '#bbf7d0';
+                                                    e.target.style.backgroundColor = 'rgba(16, 185, 129, 0.1)';
                                                 }}
                                             >
                                                 🔗 Xem lịch sử bản quyền tài liệu gốc
@@ -375,18 +372,18 @@ export default function BlockchainOwnershipModal({
 
                                 {/* Info Message */}
                                 <div style={{
-                                    backgroundColor: '#f0f7ff',
-                                    border: '1px solid #bae6fd',
+                                    backgroundColor: 'rgba(59, 130, 246, 0.05)',
+                                    border: '1px solid rgba(59, 130, 246, 0.2)',
                                     borderRadius: '8px',
                                     padding: '12px',
                                     display: 'flex',
                                     gap: '12px',
                                     fontSize: '13px',
-                                    color: '#0369a1'
+                                    color: 'var(--text-secondary)'
                                 }}>
                                     <span style={{ fontSize: '18px', flexShrink: 0 }}>ℹ️</span>
                                     <div>
-                                        <strong>Ghi chú:</strong> Quyền sở hữu hợp đồng này đã được bảo chứng trên mạng lưới Blockchain Sepolia Testnet. Bạn có thể xác minh độc lập bất kỳ lúc nào qua Etherscan.
+                                        <strong style={{ color: 'var(--primary-blue)' }}>Ghi chú:</strong> Quyền sở hữu hợp đồng này đã được bảo chứng trên mạng lưới Blockchain Sepolia Testnet. Bạn có thể xác minh độc lập bất kỳ lúc nào qua Etherscan.
                                     </div>
                                 </div>
                             </>
