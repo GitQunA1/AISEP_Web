@@ -10,7 +10,7 @@ const InvestorStatusBanner = ({ status, reason, onUpdateProfile }) => {
         <div className={`${sharedStyles.onboardingBanner} ${
             status === 'Rejected' ? sharedStyles.bannerRejected : 
             status === 'Pending' ? sharedStyles.bannerPending : ''
-        }`} style={{ marginBottom: '16px', flexShrink: 0 }}>
+        }`} style={{ flexShrink: 0 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flex: 1, minWidth: 0 }}>
                 <div style={{ 
                     width: 32, height: 32, borderRadius: '8px', flexShrink: 0,
