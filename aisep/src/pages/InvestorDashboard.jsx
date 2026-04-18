@@ -22,6 +22,8 @@ import investorService from '../services/investorService';
 import blockchainOwnershipService from '../services/blockchainOwnershipService';
 import BlockchainOwnershipModal from '../components/common/BlockchainOwnershipModal';
 import AccountProfileTab from '../components/common/AccountProfileTab';
+import { isEthereumAddress, isValidProfileString } from '../utils/validation';
+import CustomSelect from '../components/common/CustomSelect';
 
 
 /**
@@ -36,8 +38,9 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const [indicatorStyle, setIndicatorStyle] = useState({});
     const tabsRef = useRef(null);
     const isFirstLoad = useRef(true);
+    const isFormDirty = useRef(false);
     const [investorProfile, setInvestorProfile] = useState(null);
-    
+
     // Sync activeSection with initialSection prop + handle removed/invalid sections
     React.useEffect(() => {
         if (initialSection === 'overview' || initialSection === 'statistics' || !initialSection) {
@@ -148,9 +151,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
     // Preference States (Custom UI)
     const [preferredIndustries, setPreferredIndustries] = useState([]);
+    const [errors, setErrors] = useState({});
+    const [isUpdatingPrefs, setIsUpdatingPrefs] = useState(false);
     const [preferredStages, setPreferredStages] = useState([]);
     const [availableIndustries, setAvailableIndustries] = useState([]);
-    const [isUpdatingPrefs, setIsUpdatingPrefs] = useState(false);
 
     // Industry mapping for Vietnamese labels
     const INDUSTRY_MAP = {
@@ -250,6 +254,17 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         };
     }, []);
 
+    // Reset form dirty state when leaving preferences tab and trigger fresh sync when entering
+    React.useEffect(() => {
+        if (activeSection !== 'preferences') {
+            isFormDirty.current = false;
+            setErrors({});
+        } else {
+            // Immediate sync when entering preferences to ensure data is fresh
+            setRefreshTrigger(prev => prev + 1);
+        }
+    }, [activeSection]);
+
     // Silent background polling to keep all tabs fresh without disrupting the UI.
     // fetchAllData is optimized to only show loading skeletons on the absolute first mount.
     React.useEffect(() => {
@@ -280,10 +295,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             if (isFirstLoad.current) {
                 setIsLoading(true);
             }
-            
+
             try {
                 console.log('[InvestorDashboard] Starting fetch of all data (First load:', isFirstLoad.current, ')');
-                
+
                 const [followingRes, connectRes, dealsRes, profileRes, aiReportsRes, allProjectsRes, industriesRes] = await Promise.all([
                     followerService.getMyFollowing().catch(err => null),
                     connectionService.getMyConnectionRequests().catch(err => null),
@@ -297,60 +312,64 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 if (industriesRes && industriesRes.length > 0) {
                     setAvailableIndustries(industriesRes);
                 }
-                
+
                 // Update States... (Omitted logic remains same)
                 if (profileRes) {
                     setInvestorProfile(profileRes);
-                    setPrefFormData({
-                        organizationName: profileRes.organizationName || '',
-                        investmentTaste: profileRes.investmentTaste || '',
-                        walletAddress: profileRes.walletAddress || '',
-                        investmentAmount: profileRes.investmentAmount || 0,
-                        riskTolerance: RISK_TOLERANCE_MAP[profileRes.riskTolerance] ?? 1,
-                        investmentRegion: profileRes.investmentRegion || '',
-                        focusIndustry: industriesRes.find(i => i.label === profileRes.focusIndustry)?.value || 0,
-                        preferredStage: STAGE_MAP[profileRes.preferredStage] ?? 0,
-                        previousInvestments: profileRes.previousInvestments || '',
-                        minAIScore: profileRes.minAIScore || 70,
-                        typicalInvestmentSize: profileRes.typicalInvestmentSize || ''
-                    });
 
-                    let industries = [];
-                    if (profileRes.focusIndustry) industries.push(profileRes.focusIndustry);
-                    let stages = [];
-                    if (profileRes.preferredStage) stages.push(profileRes.preferredStage);
+                    // Only sync form state if user hasn't modified it locally
+                    if (!isFormDirty.current) {
+                        setPrefFormData({
+                            organizationName: profileRes.organizationName || '',
+                            investmentTaste: profileRes.investmentTaste || '',
+                            walletAddress: profileRes.walletAddress || '',
+                            investmentAmount: profileRes.investmentAmount || 0,
+                            riskTolerance: RISK_TOLERANCE_MAP[profileRes.riskTolerance] ?? 1,
+                            investmentRegion: profileRes.investmentRegion || '',
+                            focusIndustry: industriesRes.find(i => i.label === profileRes.focusIndustry)?.value || 0,
+                            preferredStage: STAGE_MAP[profileRes.preferredStage] ?? 0,
+                            previousInvestments: profileRes.previousInvestments || '',
+                            minAIScore: profileRes.minAIScore || 70,
+                            typicalInvestmentSize: profileRes.typicalInvestmentSize || ''
+                        });
 
-                    if (profileRes.preferredIndustries) {
-                        try {
-                            const parsed = JSON.parse(profileRes.preferredIndustries);
-                            if (Array.isArray(parsed)) industries = [...new Set([...industries, ...parsed])];
-                        } catch (e) {
-                            if (typeof profileRes.preferredIndustries === 'string') {
-                                const csv = profileRes.preferredIndustries.split(',').map(s => s.trim()).filter(Boolean);
-                                industries = [...new Set([...industries, ...csv])];
+                        let industries = [];
+                        if (profileRes.focusIndustry) industries.push(profileRes.focusIndustry);
+                        let stages = [];
+                        if (profileRes.preferredStage) stages.push(profileRes.preferredStage);
+
+                        if (profileRes.preferredIndustries) {
+                            try {
+                                const parsed = JSON.parse(profileRes.preferredIndustries);
+                                if (Array.isArray(parsed)) industries = [...new Set([...industries, ...parsed])];
+                            } catch (e) {
+                                if (typeof profileRes.preferredIndustries === 'string') {
+                                    const csv = profileRes.preferredIndustries.split(',').map(s => s.trim()).filter(Boolean);
+                                    industries = [...new Set([...industries, ...csv])];
+                                }
                             }
                         }
-                    }
 
-                    if (profileRes.preferredStages) {
-                        try {
-                            const parsed = JSON.parse(profileRes.preferredStages);
-                            if (Array.isArray(parsed)) stages = [...new Set([...stages, ...parsed])];
-                        } catch (e) {
-                            if (typeof profileRes.preferredStages === 'string') {
-                                const csv = profileRes.preferredStages.split(',').map(s => s.trim()).filter(Boolean);
-                                stages = [...new Set([...stages, ...csv])];
+                        if (profileRes.preferredStages) {
+                            try {
+                                const parsed = JSON.parse(profileRes.preferredStages);
+                                if (Array.isArray(parsed)) stages = [...new Set([...stages, ...parsed])];
+                            } catch (e) {
+                                if (typeof profileRes.preferredStages === 'string') {
+                                    const csv = profileRes.preferredStages.split(',').map(s => s.trim()).filter(Boolean);
+                                    stages = [...new Set([...stages, ...csv])];
+                                }
                             }
                         }
-                    }
 
-                    setPreferredIndustries(industries);
-                    setPreferredStages(stages);
+                        setPreferredIndustries(industries);
+                        setPreferredStages(stages);
+                    }
                 }
 
                 if (followingRes?.data) {
                     let followedProjects = Array.isArray(followingRes.data.items) ? followingRes.data.items : Array.isArray(followingRes.data) ? followingRes.data : [];
-                    
+
                     // Sort by newest to oldest based on followedAt
                     followedProjects.sort((a, b) => new Date(b.followedAt) - new Date(a.followedAt));
 
@@ -435,7 +454,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const handleStartChat = async (connectionRequestId) => {
         const actionKey = `chat-${connectionRequestId}`;
         setActionLoading(prev => ({ ...prev, [actionKey]: true }));
-        
+
         console.log('[InvestorDashboard] Starting chat for connectionRequestId:', connectionRequestId);
 
         // Artificial delay for UX feedback
@@ -453,7 +472,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         } else {
             console.warn('[InvestorDashboard] Cannot start chat - no chatSessionId for connectionRequestId:', connectionRequestId);
         }
-        
+
         setActionLoading(prev => ({ ...prev, [actionKey]: false }));
     };
 
@@ -655,7 +674,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const handleCheckBlockchainOwnership = async (deal) => {
         const actionKey = `ownership-${deal.dealId}`;
         console.log('[InvestorDashboard] handleCheckBlockchainOwnership called for deal:', deal.dealId);
-        
+
         if (!deal.dealId) {
             console.error('[InvestorDashboard] Deal ID not found');
             return;
@@ -675,12 +694,12 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         try {
             // Start polling for blockchain status
             console.log('[InvestorDashboard] Starting to poll blockchain status for deal:', deal.dealId);
-            
+
             const pollResult = await blockchainOwnershipService.pollBlockchainStatus(
                 deal.dealId,
                 (updateInfo) => {
                     console.log('[InvestorDashboard] Polling update:', updateInfo);
-                    
+
                     if (updateInfo.status === 'polling' || updateInfo.status === 'completed') {
                         setBlockchainOwnershipData(updateInfo.data);
                         setActionLoading(prev => ({ ...prev, [actionKey]: updateInfo.status === 'polling' }));
@@ -692,7 +711,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             );
 
             console.log('[InvestorDashboard] Polling result:', pollResult);
-            
+
             if (pollResult.status === 'completed' || pollResult.status === 'timeout') {
                 setBlockchainOwnershipData(pollResult.data);
                 setActionLoading(prev => ({ ...prev, [actionKey]: false }));
@@ -731,15 +750,104 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
     // Preference Handlers
     const toggleIndustry = (industryLabel) => {
-        setPreferredIndustries(prev => 
+        isFormDirty.current = true;
+        setPreferredIndustries(prev =>
             prev.includes(industryLabel)
                 ? prev.filter(i => i !== industryLabel)
                 : [...prev, industryLabel]
         );
     };
 
+    const validateField = (name, value) => {
+        switch (name) {
+            case 'organizationName':
+                if (!value) return 'Vui lòng nhập tên tổ chức/cá nhân.';
+                if (!isValidProfileString(value, 255)) return 'Tên chứa ký tự không hợp lệ hoặc quá dài (tối đa 255 ký tự).';
+                return null;
+            case 'walletAddress':
+                if (!value) return 'Vui lòng nhập địa chỉ ví blockchain.';
+                const trimmed = value.trim();
+                if (trimmed.length !== 42 && trimmed.length !== 40) {
+                    return `Địa chỉ ví phải có 42 ký tự (Hiện có: ${trimmed.length}).`;
+                }
+                if (!isEthereumAddress(trimmed)) return 'Địa chỉ ví không đúng định dạng Hex (0x...).';
+                return null;
+            case 'investmentAmount':
+                if (value === '' || value === null || value === undefined) return 'Vui lòng nhập số tiền.';
+                if (Number(value) <= 0) return 'Ngân sách đầu tư phải lớn hơn 0.';
+                return null;
+            case 'investmentTaste':
+                if (!value) return 'Vui lòng mô tả gu đầu tư/chiến lược.';
+                return null;
+            case 'investmentRegion':
+                if (value && !isValidProfileString(value, 255)) return 'Khu vực đầu tư chứa ký tự không hợp lệ.';
+                return null;
+            case 'previousInvestments':
+                if (value && !isValidProfileString(value, 1000)) return 'Kinh nghiệm đầu tư chứa ký tự không hợp lệ.';
+                return null;
+            default:
+                return null;
+        }
+    };
+
+    const handleProfileInputChange = (e) => {
+        let { name, value } = e.target;
+        // Mark form as dirty to prevent background polling from overwriting edits
+        isFormDirty.current = true;
+
+        // Auto-trim wallet address to prevent accidental spaces when copy-pasting
+        if (name === 'walletAddress' && typeof value === 'string') {
+            value = value.trim();
+            console.log(`[Wallet Debug] Length: ${value.length}, Value: ${value}`);
+        }
+
+        // Handle numeric inputs
+        const finalValue = e.target.type === 'number' ? (value === '' ? '' : Number(value)) : value;
+        setPrefFormData(prev => ({ ...prev, [name]: finalValue }));
+
+        // Real-time validation as requested
+        const error = validateField(name, finalValue);
+        setErrors(prev => ({ ...prev, [name]: error }));
+    };
+
+    const validateProfileForm = () => {
+        const newErrors = {};
+
+        if (!prefFormData.organizationName?.trim()) {
+            newErrors.organizationName = 'Vui lòng nhập tên tổ chức/cá nhân.';
+        } else if (!isValidProfileString(prefFormData.organizationName, 255)) {
+            newErrors.organizationName = 'Tên chứa ký tự không hợp lệ hoặc quá dài (tối đa 255 ký tự).';
+        }
+
+        if (!prefFormData.walletAddress?.trim()) {
+            newErrors.walletAddress = 'Vui lòng nhập địa chỉ ví blockchain.';
+        } else if (!isEthereumAddress(prefFormData.walletAddress)) {
+            newErrors.walletAddress = 'Địa chỉ ví không hợp lệ hoặc sai định dạng EIP-55 checksum.';
+        }
+
+        if (!prefFormData.investmentAmount || prefFormData.investmentAmount <= 0) {
+            newErrors.investmentAmount = 'Ngân sách đầu tư phải lớn hơn 0.';
+        }
+
+        if (!prefFormData.investmentTaste?.trim()) {
+            newErrors.investmentTaste = 'Vui lòng mô tả gu đầu tư/chiến lược.';
+        }
+
+        if (prefFormData.investmentRegion && !isValidProfileString(prefFormData.investmentRegion, 255)) {
+            newErrors.investmentRegion = 'Khu vực đầu tư chứa ký tự không hợp lệ (VD: <, >, {, }).';
+        }
+
+        if (prefFormData.previousInvestments && !isValidProfileString(prefFormData.previousInvestments, 1000)) {
+            newErrors.previousInvestments = 'Kinh nghiệm đầu tư chứa ký tự không hợp lệ (VD: <, >, {, }).';
+        }
+
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
     const toggleStage = (stageValue) => {
-        setPreferredStages(prev => 
+        isFormDirty.current = true;
+        setPreferredStages(prev =>
             prev.includes(stageValue)
                 ? prev.filter(s => s !== stageValue)
                 : [...prev, stageValue]
@@ -748,11 +856,20 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
     const handleUpdatePreferences = async (e) => {
         if (e) e.preventDefault();
-        
+
+        if (!validateProfileForm()) {
+            const firstError = Object.values(errors)[0];
+            if (firstError) {
+                // We'll show errors in UI, but alert just in case they are not visible
+                // alert(`Vui lòng kiểm tra lại thông tin:\n${firstError}`);
+            }
+            return;
+        }
+
         setIsUpdatingPrefs(true);
         try {
             console.log('[InvestorDashboard] Saving profile...');
-            
+
             // Prepare the payload as FormData because backend uses [FromForm]
             const formData = new FormData();
             formData.append('organizationName', prefFormData.organizationName || '');
@@ -762,11 +879,11 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             if (prefFormData.investmentDate) formData.append('investmentDate', prefFormData.investmentDate);
             formData.append('riskTolerance', RISK_TOLERANCE_MAP[prefFormData.riskTolerance] || 'Medium');
             formData.append('investmentRegion', prefFormData.investmentRegion || '');
-            
+
             // Map focusIndustry back to Label if it's an ID
             const industryLabel = availableIndustries.find(i => i.value === prefFormData.focusIndustry)?.label || prefFormData.focusIndustry;
             formData.append('focusIndustry', industryLabel);
-            
+
             formData.append('preferredStage', STAGE_MAP[prefFormData.preferredStage] || 'Idea');
             formData.append('previousInvestments', prefFormData.previousInvestments || '');
 
@@ -780,30 +897,50 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 response = await investorService.createInvestor(formData);
                 setSuccessMessage('Hồ sơ nhà đầu tư của bạn đã được tạo thành công và đang chờ xét duyệt!');
             }
-            
+
             if (response) {
+                isFormDirty.current = false;
                 setShowSuccessModal(true);
                 setRefreshTrigger(prev => prev + 1);
             }
         } catch (error) {
             console.error('[InvestorDashboard] Failed to save profile:', error);
-            
-            // apiClient normalized error contains .message and .errors
-            let errorMsg = error.message || 'Không thể lưu hồ sơ. Vui lòng thử lại sau.';
-            
-            // If backend returned a list of validation errors (array of strings)
-            if (error.errors && Array.isArray(error.errors) && error.errors.length > 0) {
-                errorMsg = error.errors.join('\n');
+
+            // Map backend errors back to fields if possible
+            if (error.errors) {
+                const backendErrors = {};
+                // handle both object format { FieldName: [msgs] } and array format [Field: msg]
+                if (!Array.isArray(error.errors)) {
+                    Object.keys(error.errors).forEach(key => {
+                        const camelKey = key.charAt(0).toLowerCase() + key.slice(1);
+                        backendErrors[camelKey] = Array.isArray(error.errors[key]) ? error.errors[key][0] : error.errors[key];
+                    });
+                } else {
+                    // Try to extract from strings like "WalletAddress: message"
+                    error.errors.forEach(err => {
+                        if (typeof err === 'string' && err.includes(':')) {
+                            const [field, msg] = err.split(':').map(s => s.trim());
+                            const camelField = field.charAt(0).toLowerCase() + field.slice(1);
+                            backendErrors[camelField] = msg;
+                        }
+                    });
+                }
+
+                if (Object.keys(backendErrors).length > 0) {
+                    setErrors(prev => ({ ...prev, ...backendErrors }));
+                    return; // Don't show the fallback error message if we mapped fields
+                }
             }
-            
-            alert(`Lỗi:\n${errorMsg}`);
+
+            // Fallback: show the general error at the top of the form or in a specific error state
+            setErrors(prev => ({ ...prev, general: error.message || 'Không thể lưu hồ sơ. Vui lòng thử lại sau.' }));
         } finally {
             setIsUpdatingPrefs(false);
         }
     };
 
     const PreferenceChip = ({ label, selected, onClick }) => (
-        <div 
+        <div
             onClick={onClick}
             style={{
                 padding: '10px 20px',
@@ -841,66 +978,59 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
     return (
         <div className={styles.container}>
-            {/* Unified Header - Hidden for PR News */}
+            {/* Page Header - Regular scroll behavior */}
             {activeSection !== 'pr_news' && (
-                <>
-                    <FeedHeader
-                        title={activeSection === 'account_profile' ? "Hồ sơ người dùng" : "Bảng điều khiển Nhà đầu tư"}
-                        subtitle={activeSection === 'account_profile' ? "Quản lý thông tin tài khoản và mật khẩu của bạn." : `Xin chào, ${user?.name || 'Nhà đầu tư'}! Quản lý đầu tư và khám phá startup.`}
-                        showFilter={false}
-                        user={user}
-                        onOpenChat={(chatSessionId) => {
-                            setActiveChatSession({
-                                chatSessionId,
-                                displayName: 'Startup Founder',
-                                currentUserId: user?.userId,
-                                sentTime: new Date().toISOString(),
-                            });
-                        }}
-                    />
-                    <InvestorStatusBanner
-                        status={investorProfile ? (investorProfile.status || 'Pending') : (isLoading ? null : 'Missing')}
-                        reason={investorProfile?.rejectionReason}
-                        onUpdateProfile={() => setActiveSection('preferences')}
-                    />
-                </>
+                <FeedHeader
+                    title={activeSection === 'account_profile' ? "Hồ sơ người dùng" : "Bảng điều khiển Nhà đầu tư"}
+                    subtitle={activeSection === 'account_profile' ? "Quản lý thông tin tài khoản và mật khẩu của bạn." : `Xin chào, ${user?.name || 'Nhà đầu tư'}! Quản lý đầu tư và khám phá startup.`}
+                    showFilter={false}
+                    user={user}
+                    onOpenChat={(chatSessionId) => {
+                        setActiveChatSession({
+                            chatSessionId,
+                            displayName: 'Startup Founder',
+                            currentUserId: user?.userId,
+                            sentTime: new Date().toISOString(),
+                        });
+                    }}
+                />
             )}
 
+            {/* Sticky Navigation Area: Banner + Tabs */}
             {activeSection !== 'pr_news' && (
-                <>
-                    {/* Stats Section - Removed Overview specific Stats Wrapper */}
-                                        {/* Tabs Section */}
+                <div className={styles.tabSwitcherWrapper}>
+                    {/* Tabs Section */}
                     {activeSection !== 'account_profile' && (
-                        <div 
+                        <div
                             className={`${styles.tabs} ${styles.animatedTabs}`}
                             ref={tabsRef}
                             onScroll={checkTabScroll}
                         >
-                            <button 
+                            <button
                                 className={`${styles.tab} ${activeSection === 'investments' ? styles.active : ''}`}
                                 onClick={() => setActiveSection('investments')}
                             >
                                 Khoản đầu tư
                             </button>
-                            <button 
+                            <button
                                 className={`${styles.tab} ${activeSection === 'connectionrequests' ? styles.active : ''}`}
                                 onClick={() => setActiveSection('connectionrequests')}
                             >
                                 Yêu cầu kết nối
                             </button>
-                            <button 
+                            <button
                                 className={`${styles.tab} ${activeSection === 'interests' ? styles.active : ''}`}
                                 onClick={() => setActiveSection('interests')}
                             >
                                 Dự án quan tâm
                             </button>
-                            <button 
+                            <button
                                 className={`${styles.tab} ${activeSection === 'ai_reports' ? styles.active : ''}`}
                                 onClick={() => setActiveSection('ai_reports')}
                             >
                                 Lịch sử phân tích AI
                             </button>
-                            <button 
+                            <button
                                 className={`${styles.tab} ${activeSection === 'preferences' ? styles.active : ''}`}
                                 onClick={() => setActiveSection('preferences')}
                             >
@@ -911,7 +1041,13 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                             <div className={styles.tabIndicator} style={indicatorStyle} />
                         </div>
                     )}
-                </>
+
+                    <InvestorStatusBanner
+                        status={investorProfile ? (investorProfile.status || 'Pending') : (isLoading ? null : 'Missing')}
+                        reason={investorProfile?.rejectionReason}
+                        onUpdateProfile={() => setActiveSection('preferences')}
+                    />
+                </div>
             )}
 
             {/* Content Sections */}
@@ -922,7 +1058,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
                 {/* Sent Connection Requests Section */}
                 {activeSection === 'connectionrequests' && (
-                    <div className={styles.section} style={{ paddingBottom: '40px' }}>
+                    <div className={styles.section}>
                         {/* Header Stats */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                             <div className={styles.card} style={{ padding: '16px' }}>
@@ -1138,7 +1274,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
                 {/* Sent Interests Section */}
                 {activeSection === 'interests' && (
-                    <div className={styles.section} style={{ paddingBottom: '40px' }}>
+                    <div className={styles.section}>
                         {/* Header Stats */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                             <div className={styles.card} style={{ padding: '16px' }}>
@@ -1235,12 +1371,12 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                     style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                 />
                                             ) : (
-                                                <div style={{ 
-                                                    width: '100%', 
-                                                    height: '100%', 
-                                                    backgroundColor: 'var(--bg-secondary)', 
-                                                    display: 'flex', 
-                                                    alignItems: 'center', 
+                                                <div style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    backgroundColor: 'var(--bg-secondary)',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
                                                     justifyContent: 'center',
                                                     padding: '20px',
                                                     textAlign: 'center',
@@ -1300,7 +1436,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
                 {/* Investments (Deals) Section */}
                 {activeSection === 'investments' && (
-                    <div className={styles.section} style={{ paddingBottom: '40px' }}>
+                    <div className={styles.section}>
                         {/* Header Stats */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                             <div className={styles.card} style={{ padding: '16px' }}>
@@ -1540,7 +1676,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
                 {/* AI Analysis History Section */}
                 {activeSection === 'ai_reports' && (
-                    <div className={styles.section} style={{ paddingBottom: '40px' }}>
+                    <div className={styles.section}>
                         {/* Header Stats */}
                         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
                             <div className={styles.card} style={{ padding: '16px' }}>
@@ -1579,10 +1715,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                 {aiReports.map((report, index) => {
                                     const project = projectMap[report.projectId] || {};
                                     return (
-                                        <div 
-                                            key={report.analysisId} 
-                                            className={`${styles.card} ${styles.itemAppear}`} 
-                                            style={{ 
+                                        <div
+                                            key={report.analysisId}
+                                            className={`${styles.card} ${styles.itemAppear}`}
+                                            style={{
                                                 borderLeft: `4px solid ${(() => {
                                                     const verdict = (report.investmentVerdict || '').toLowerCase();
                                                     if (verdict.includes('strong')) return '#00ba7c';
@@ -1590,93 +1726,93 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                     if (verdict.includes('pass')) return '#1d9bf0';
                                                     if (verdict.includes('reject') || verdict.includes('fail')) return '#f4212e';
                                                     return '#0ea5e9';
-                                                })()}`, 
-                                                display: 'flex', 
-                                                flexDirection: 'column', 
+                                                })()}`,
+                                                display: 'flex',
+                                                flexDirection: 'column',
                                                 gap: '12px',
                                                 animationDelay: `${index * 0.05}s`
                                             }}
                                         >
                                             {/* Report Header */}
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                                                 <div style={{ flex: 1 }}>
-                                                     <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: '#e7e9ea', letterSpacing: '-0.01em' }}>
-                                                         {project.projectName || `Dự án #${report.projectId}`}
-                                                     </h4>
-                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                <div style={{ flex: 1 }}>
+                                                    <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: '#e7e9ea', letterSpacing: '-0.01em' }}>
+                                                        {project.projectName || `Dự án #${report.projectId}`}
+                                                    </h4>
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                         <Clock size={12} color="#71767b" />
                                                         <p style={{ margin: 0, fontSize: '12px', color: '#71767b' }}>
                                                             {new Date(report.createdAt).toLocaleDateString('vi-VN')}
                                                         </p>
-                                                     </div>
-                                                 </div>
-                                                 <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
-                                                     <div style={{ 
-                                                         backgroundColor: '#1d9bf020', 
-                                                         color: '#1d9bf0', 
-                                                         padding: '2px 10px', 
-                                                         borderRadius: '6px', 
-                                                         fontSize: '11px', 
-                                                         fontWeight: '800',
-                                                         border: '1px solid #1d9bf030'
-                                                     }}>
-                                                         DIỂM: {report.potentialScore || 0}
-                                                     </div>
-                                                     {(() => {
-                                                         const verdict = (report.investmentVerdict || '').toLowerCase();
-                                                         let colors = { bg: '#2f3336', text: '#e7e9ea', border: '#3e4144' };
-                                                         let label = report.investmentVerdict || 'Unknown';
-                                                         
-                                                         if (verdict.includes('strong')) {
-                                                             colors = { bg: '#00ba7c20', text: '#00ba7c', border: '#00ba7c40' };
-                                                             label = 'STRONG';
-                                                         } else if (verdict.includes('watchlist')) {
-                                                             colors = { bg: '#ffd40020', text: '#ffd400', border: '#ffd40040' };
-                                                             label = 'WATCHLIST';
-                                                         } else if (verdict.includes('pass')) {
-                                                             colors = { bg: '#1d9bf020', text: '#1d9bf0', border: '#1d9bf030' };
-                                                             label = 'PASS';
-                                                         } else if (verdict.includes('reject') || verdict.includes('fail')) {
-                                                             colors = { bg: '#f4212e20', text: '#f4212e', border: '#f4212e40' };
-                                                             label = 'REJECT';
-                                                         }
+                                                    </div>
+                                                </div>
+                                                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                                                    <div style={{
+                                                        backgroundColor: '#1d9bf020',
+                                                        color: '#1d9bf0',
+                                                        padding: '2px 10px',
+                                                        borderRadius: '6px',
+                                                        fontSize: '11px',
+                                                        fontWeight: '800',
+                                                        border: '1px solid #1d9bf030'
+                                                    }}>
+                                                        DIỂM: {report.potentialScore || 0}
+                                                    </div>
+                                                    {(() => {
+                                                        const verdict = (report.investmentVerdict || '').toLowerCase();
+                                                        let colors = { bg: '#2f3336', text: '#e7e9ea', border: '#3e4144' };
+                                                        let label = report.investmentVerdict || 'Unknown';
 
-                                                         return (
-                                                             <div style={{ 
-                                                                 backgroundColor: colors.bg, 
-                                                                 color: colors.text, 
-                                                                 padding: '2px 10px', 
-                                                                 borderRadius: '6px', 
-                                                                 fontSize: '10px', 
-                                                                 fontWeight: '900',
-                                                                 textTransform: 'uppercase',
-                                                                 border: `1px solid ${colors.border}`,
-                                                                 letterSpacing: '0.05em'
-                                                             }}>
-                                                                 {label}
-                                                             </div>
-                                                         );
-                                                     })()}
-                                                 </div>
+                                                        if (verdict.includes('strong')) {
+                                                            colors = { bg: '#00ba7c20', text: '#00ba7c', border: '#00ba7c40' };
+                                                            label = 'STRONG';
+                                                        } else if (verdict.includes('watchlist')) {
+                                                            colors = { bg: '#ffd40020', text: '#ffd400', border: '#ffd40040' };
+                                                            label = 'WATCHLIST';
+                                                        } else if (verdict.includes('pass')) {
+                                                            colors = { bg: '#1d9bf020', text: '#1d9bf0', border: '#1d9bf030' };
+                                                            label = 'PASS';
+                                                        } else if (verdict.includes('reject') || verdict.includes('fail')) {
+                                                            colors = { bg: '#f4212e20', text: '#f4212e', border: '#f4212e40' };
+                                                            label = 'REJECT';
+                                                        }
+
+                                                        return (
+                                                            <div style={{
+                                                                backgroundColor: colors.bg,
+                                                                color: colors.text,
+                                                                padding: '2px 10px',
+                                                                borderRadius: '6px',
+                                                                fontSize: '10px',
+                                                                fontWeight: '900',
+                                                                textTransform: 'uppercase',
+                                                                border: `1px solid ${colors.border}`,
+                                                                letterSpacing: '0.05em'
+                                                            }}>
+                                                                {label}
+                                                            </div>
+                                                        );
+                                                    })()}
+                                                </div>
                                             </div>
 
                                             {/* Project Image */}
                                             <div style={{ width: '100%', height: '140px', borderRadius: '8px', overflow: 'hidden' }}>
                                                 {project.projectImageUrl ? (
-                                                    <img 
-                                                        src={project.projectImageUrl} 
-                                                        alt={project.projectName} 
-                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                                                    <img
+                                                        src={project.projectImageUrl}
+                                                        alt={project.projectName}
+                                                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                                     />
                                                 ) : (
-                                                    <div style={{ 
-                                                        width: '100%', 
-                                                        height: '100%', 
-                                                        backgroundColor: 'var(--bg-secondary)', 
-                                                        display: 'flex', 
-                                                        alignItems: 'center', 
-                                                        justifyContent: 'center', 
-                                                        border: '1px dashed var(--border-color)', 
+                                                    <div style={{
+                                                        width: '100%',
+                                                        height: '100%',
+                                                        backgroundColor: 'var(--bg-secondary)',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        border: '1px dashed var(--border-color)',
                                                         borderRadius: '8px',
                                                         color: 'var(--text-secondary)',
                                                         fontSize: '12px'
@@ -1689,17 +1825,17 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
                                             {/* Actions */}
                                             <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', paddingTop: '8px' }}>
-                                                <button 
-                                                    onClick={() => { setSelectedAIReport(report); setShowAIReportModal(true); }} 
-                                                    style={{ 
-                                                        flex: 1, 
-                                                        padding: '8px 12px', 
-                                                        backgroundColor: 'rgba(14, 165, 233, 0.1)', 
-                                                        color: '#0ea5e9', 
-                                                        border: '1px solid rgba(14, 165, 233, 0.2)', 
-                                                        borderRadius: '4px', 
-                                                        fontSize: '12px', 
-                                                        fontWeight: '600', 
+                                                <button
+                                                    onClick={() => { setSelectedAIReport(report); setShowAIReportModal(true); }}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '8px 12px',
+                                                        backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                                                        color: '#0ea5e9',
+                                                        border: '1px solid rgba(14, 165, 233, 0.2)',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        fontWeight: '600',
                                                         cursor: 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -1709,17 +1845,17 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                 >
                                                     <FileText size={12} /> Xem báo cáo
                                                 </button>
-                                                <button 
-                                                    onClick={() => onViewProject ? onViewProject(report.projectId, activeSection) : window.location.href = `/project/${report.projectId}`} 
-                                                    style={{ 
-                                                        flex: 1, 
-                                                        padding: '8px 12px', 
-                                                        backgroundColor: 'var(--bg-secondary)', 
-                                                        color: 'var(--text-primary)', 
-                                                        border: '1px solid var(--border-color)', 
-                                                        borderRadius: '4px', 
-                                                        fontSize: '12px', 
-                                                        fontWeight: '600', 
+                                                <button
+                                                    onClick={() => onViewProject ? onViewProject(report.projectId, activeSection) : window.location.href = `/project/${report.projectId}`}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '8px 12px',
+                                                        backgroundColor: 'var(--bg-secondary)',
+                                                        color: 'var(--text-primary)',
+                                                        border: '1px solid var(--border-color)',
+                                                        borderRadius: '4px',
+                                                        fontSize: '12px',
+                                                        fontWeight: '600',
                                                         cursor: 'pointer',
                                                         display: 'flex',
                                                         alignItems: 'center',
@@ -1759,55 +1895,115 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                         <div className={styles.card}>
                             <h3 className={styles.cardTitle}>{investorProfile ? 'Cập nhật hồ sơ nhà đầu tư' : 'Hoàn thiện hồ sơ nhà đầu tư'}</h3>
                             <form className={styles.form} onSubmit={handleUpdatePreferences}>
+                                {errors.general && (
+                                    <div style={{ marginBottom: '20px', padding: '12px 16px', backgroundColor: 'rgba(239, 68, 68, 0.1)', border: '1px solid #ef4444', borderRadius: '8px', color: '#ef4444', fontSize: '14px', fontWeight: '600' }}>
+                                        <AlertCircle size={16} style={{ display: 'inline', marginRight: '8px', verticalAlign: 'text-bottom' }} />
+                                        {errors.general}
+                                    </div>
+                                )}
                                 <div className={styles.formGrid} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginBottom: '24px' }}>
                                     <div className={styles.formGroup}>
                                         <label>Tên tổ chức / Cá nhân *</label>
-                                        <input 
+                                        <input
+                                            name="organizationName"
                                             type="text" required
                                             value={prefFormData.organizationName}
-                                            onChange={(e) => setPrefFormData({ ...prefFormData, organizationName: e.target.value })}
+                                            onChange={handleProfileInputChange}
                                             placeholder="Tên công ty hoặc tên cá nhân đầu tư"
-                                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                            style={{
+                                                backgroundColor: 'var(--bg-secondary)',
+                                                border: errors.organizationName ? '1.5px solid #f4212e' : '1px solid var(--border-color)',
+                                                color: 'var(--text-primary)',
+                                                borderRadius: '12px',
+                                                padding: '12px 16px',
+                                                transition: 'all 0.2s',
+                                                width: '100%'
+                                            }}
                                         />
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+                                            <span style={{ color: errors.organizationName ? '#f4212e' : 'var(--text-secondary)', fontSize: '11px', fontWeight: '500' }}>
+                                                {errors.organizationName || 'Tối đa 255 ký tự, không chứa ký tự đặc biệt.'}
+                                            </span>
+                                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{prefFormData.organizationName?.length || 0}/255</span>
+                                        </div>
                                     </div>
 
                                     <div className={styles.formGroup}>
                                         <label>Địa chỉ Ví Blockchain *</label>
-                                        <input 
+                                        <input
+                                            name="walletAddress"
                                             type="text" required
                                             value={prefFormData.walletAddress}
-                                            onChange={(e) => setPrefFormData({ ...prefFormData, walletAddress: e.target.value })}
+                                            onChange={handleProfileInputChange}
                                             placeholder="0x..."
-                                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                            style={{
+                                                backgroundColor: 'var(--bg-secondary)',
+                                                border: errors.walletAddress ? '1.5px solid #f4212e' : '1px solid var(--border-color)',
+                                                color: 'var(--text-primary)',
+                                                borderRadius: '12px',
+                                                padding: '12px 16px',
+                                                transition: 'all 0.2s',
+                                                width: '100%'
+                                            }}
                                         />
+                                        <p style={{ color: errors.walletAddress ? '#f4212e' : 'var(--text-secondary)', fontSize: '11px', marginTop: '6px', fontWeight: '500' }}>
+                                            {errors.walletAddress || 'Địa chỉ ví chuẩn EIP-55 checksum (Mix-case).'}
+                                        </p>
                                     </div>
 
                                     <div className={styles.formGroup}>
                                         <label>Ngân sách đầu tư (VNĐ) *</label>
-                                        <input 
+                                        <input
+                                            name="investmentAmount"
                                             type="number" required min="0"
                                             value={prefFormData.investmentAmount}
-                                            onChange={(e) => setPrefFormData({ ...prefFormData, investmentAmount: e.target.value })}
+                                            onChange={handleProfileInputChange}
                                             placeholder="Số tiền bạn dự kiến đầu tư"
-                                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                            style={{
+                                                backgroundColor: 'var(--bg-secondary)',
+                                                border: errors.investmentAmount ? '1.5px solid #f4212e' : '1px solid var(--border-color)',
+                                                color: 'var(--text-primary)',
+                                                borderRadius: '12px',
+                                                padding: '12px 16px',
+                                                transition: 'all 0.2s',
+                                                width: '100%'
+                                            }}
                                         />
+                                        <p style={{ color: errors.investmentAmount ? '#f4212e' : 'var(--text-secondary)', fontSize: '11px', marginTop: '6px', fontWeight: '500' }}>
+                                            {errors.investmentAmount || 'Nhập ngân sách đầu tư dự kiến của bạn.'}
+                                        </p>
                                     </div>
 
                                     <div className={styles.formGroup}>
                                         <label>Khu vực đầu tư</label>
-                                        <input 
+                                        <input
+                                            name="investmentRegion"
                                             type="text"
                                             value={prefFormData.investmentRegion}
-                                            onChange={(e) => setPrefFormData({ ...prefFormData, investmentRegion: e.target.value })}
+                                            onChange={handleProfileInputChange}
                                             placeholder="VD: Việt Nam, Đông Nam Á..."
-                                            style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                            style={{
+                                                backgroundColor: 'var(--bg-secondary)',
+                                                border: errors.investmentRegion ? '1.5px solid #f4212e' : '1px solid var(--border-color)',
+                                                color: 'var(--text-primary)',
+                                                borderRadius: '12px',
+                                                padding: '12px 16px',
+                                                transition: 'all 0.2s',
+                                                width: '100%'
+                                            }}
                                         />
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+                                            <span style={{ color: errors.investmentRegion ? '#f4212e' : 'var(--text-secondary)', fontSize: '11px', fontWeight: '500' }}>
+                                                {errors.investmentRegion || 'Tối đa 255 ký tự.'}
+                                            </span>
+                                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{prefFormData.investmentRegion?.length || 0}/255</span>
+                                        </div>
                                     </div>
                                 </div>
 
                                 <div className={styles.formGrid} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
                                     <div className={styles.formGroup}>
-                                        <label>Mức độ chấp nhận rủi ro</label>
+                                        <label>Mức độ chấp nhận rủi ro *</label>
                                         <div style={{ display: 'flex', gap: '8px' }}>
                                             {[0, 1, 2].map(r => (
                                                 <button
@@ -1827,58 +2023,99 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                     </div>
 
                                     <div className={styles.formGroup}>
-                                        <label>Giai đoạn ưu tiên</label>
-                                        <select 
+                                        <label>Giai đoạn ưu tiên *</label>
+                                        <CustomSelect
+                                            name="preferredStage"
                                             value={prefFormData.preferredStage}
-                                            onChange={(e) => setPrefFormData({ ...prefFormData, preferredStage: parseInt(e.target.value) })}
-                                            style={{ width: '100%', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
-                                        >
-                                            <option value={0}>Ý tưởng (Idea)</option>
-                                            <option value={1}>Sản phẩm khả thi (MVP)</option>
-                                            <option value={2}>Tăng trưởng (Growth)</option>
-                                        </select>
+                                            onChange={(e) => {
+                                                isFormDirty.current = true;
+                                                setPrefFormData({
+                                                    ...prefFormData,
+                                                    preferredStage: parseInt(e.target.value)
+                                                });
+                                            }}
+                                            options={[
+                                                { label: 'Ý tưởng (Idea)', value: 0 },
+                                                { label: 'Sản phẩm khả thi (MVP)', value: 1 },
+                                                { label: 'Tăng trưởng (Growth)', value: 2 }
+                                            ]}
+                                        />
                                     </div>
 
                                     <div className={styles.formGroup}>
-                                        <label>Lĩnh vực quan tâm chính</label>
-                                        <select 
+                                        <label>Lĩnh vực quan tâm chính *</label>
+                                        <CustomSelect
+                                            name="focusIndustry"
                                             value={prefFormData.focusIndustry}
-                                            onChange={(e) => setPrefFormData({ ...prefFormData, focusIndustry: parseInt(e.target.value) })}
-                                            style={{ width: '100%', backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
-                                        >
-                                            {availableIndustries.map(opt => (
-                                                <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                            ))}
-                                        </select>
+                                            onChange={(e) => {
+                                                isFormDirty.current = true;
+                                                setPrefFormData({
+                                                    ...prefFormData,
+                                                    focusIndustry: parseInt(e.target.value)
+                                                });
+                                            }}
+                                            placeholder="Chọn lĩnh vực..."
+                                            options={availableIndustries.map(opt => ({
+                                                label: opt.label,
+                                                value: opt.value
+                                            }))}
+                                        />
                                     </div>
                                 </div>
 
                                 <div className={styles.formGroup} style={{ marginBottom: '24px' }}>
                                     <label>Gu đầu tư / Chiến lược *</label>
-                                    <textarea 
+                                    <textarea
+                                        name="investmentTaste"
                                         required rows={4}
                                         value={prefFormData.investmentTaste}
-                                        onChange={(e) => setPrefFormData({ ...prefFormData, investmentTaste: e.target.value })}
+                                        onChange={handleProfileInputChange}
                                         placeholder="Mô tả gu đầu tư, các tiêu chí lựa chọn startup của bạn..."
-                                        style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                        style={{
+                                            backgroundColor: 'var(--bg-secondary)',
+                                            border: errors.investmentTaste ? '1.5px solid #f4212e' : '1px solid var(--border-color)',
+                                            color: 'var(--text-primary)',
+                                            borderRadius: '12px',
+                                            padding: '12px 16px',
+                                            transition: 'all 0.2s',
+                                            width: '100%'
+                                        }}
                                     />
+                                    <p style={{ color: errors.investmentTaste ? '#f4212e' : 'var(--text-secondary)', fontSize: '11px', marginTop: '6px', fontWeight: '500' }}>
+                                        {errors.investmentTaste || 'Mô tả chi tiết chiến lược đầu tư của bạn.'}
+                                    </p>
                                 </div>
 
                                 <div className={styles.formGroup} style={{ marginBottom: '24px' }}>
                                     <label>Kinh nghiệm đầu tư trước đây</label>
-                                    <textarea 
+                                    <textarea
+                                        name="previousInvestments"
                                         rows={3}
                                         value={prefFormData.previousInvestments}
-                                        onChange={(e) => setPrefFormData({ ...prefFormData, previousInvestments: e.target.value })}
+                                        onChange={handleProfileInputChange}
                                         placeholder="Liệt kê các danh mục đầu tư hoặc kinh nghiệm nổi bật..."
-                                        style={{ backgroundColor: 'var(--bg-secondary)', border: '1px solid var(--border-color)', color: 'var(--text-primary)', borderRadius: '12px', padding: '12px 16px' }}
+                                        style={{
+                                            backgroundColor: 'var(--bg-secondary)',
+                                            border: errors.previousInvestments ? '1.5px solid #f4212e' : '1px solid var(--border-color)',
+                                            color: 'var(--text-primary)',
+                                            borderRadius: '12px',
+                                            padding: '12px 16px',
+                                            transition: 'all 0.2s',
+                                            width: '100%'
+                                        }}
                                     />
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
+                                        <span style={{ color: errors.previousInvestments ? '#f4212e' : 'var(--text-secondary)', fontSize: '11px', fontWeight: '500' }}>
+                                            {errors.previousInvestments || 'Danh sách các startup bạn đã từng đầu tư (Tối đa 1000 ký tự).'}
+                                        </span>
+                                        <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{prefFormData.previousInvestments?.length || 0}/1000</span>
+                                    </div>
                                 </div>
 
                                 <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '32px' }}>
-                                    <button 
-                                        type="submit" 
-                                        className={styles.primaryBtn} 
+                                    <button
+                                        type="submit"
+                                        className={styles.primaryBtn}
                                         disabled={isUpdatingPrefs}
                                         style={{ padding: '14px 40px', height: 'auto', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '10px', boxShadow: '0 4px 12px rgba(29, 155, 240, 0.3)' }}
                                     >
@@ -1894,10 +2131,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 {activeSection === 'pr_news' && (
                     <NewsPRSection user={user} onOpenChat={(sessionId) => {
                         setActiveChatSession({ chatSessionId: sessionId, displayName: 'Thông báo', currentUserId: user?.userId, sentTime: new Date().toISOString() });
-                    }} 
-                    investorProfileStatus={investorProfile ? (investorProfile.status || 'Pending') : (isLoading ? null : 'Missing')}
-                    investorProfileReason={investorProfile?.rejectionReason}
-                    onUpdateProfile={() => setActiveSection('preferences')}
+                    }}
+                        investorProfileStatus={investorProfile ? (investorProfile.status || 'Pending') : (isLoading ? null : 'Missing')}
+                        investorProfileReason={investorProfile?.rejectionReason}
+                        onUpdateProfile={() => setActiveSection('preferences')}
                     />
                 )}
 
@@ -1953,101 +2190,101 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                 {/* Right: Signing Form - Only show when NOT Signed */}
                                 {![3, 4, '3', '4', 'Contract_Signed', 'Minted_NFT'].includes(contractStatus) && (
                                     <div className={contractStyles.formColumn}>
-                                    <div className={contractStyles.sectionTitle}>
-                                        <Settings size={16} /> Điều khoản ký kết
-                                    </div>
+                                        <div className={contractStyles.sectionTitle}>
+                                            <Settings size={16} /> Điều khoản ký kết
+                                        </div>
 
-                                    <div className={styles.formGroup}>
-                                        <label>Số tiền cuối cùng (VND) *</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={signFormData.finalAmount || ''}
-                                            onChange={(e) => setSignFormData({ ...signFormData, finalAmount: e.target.value ? parseFloat(e.target.value) : 0 })}
-                                            placeholder="Nhập số tiền"
-                                        />
-                                    </div>
-
-                                    <div className={styles.formGroup}>
-                                        <label>Phần trăm cổ phần (%) *</label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={signFormData.finalEquityPercentage || ''}
-                                            onChange={(e) => setSignFormData({ ...signFormData, finalEquityPercentage: e.target.value ? parseFloat(e.target.value) : 0 })}
-                                            placeholder="Nhập phần trăm"
-                                        />
-                                    </div>
-
-                                    <div className={styles.formGroup}>
-                                        <label>Điều khoản bổ sung</label>
-                                        <textarea
-                                            value={signFormData.additionalTerms}
-                                            onChange={(e) => setSignFormData({ ...signFormData, additionalTerms: e.target.value })}
-                                            placeholder="Nhập các điều khoản bổ sung (nếu có)"
-                                            rows={4}
-                                        />
-                                    </div>
-
-                                    {/* Signature Section */}
-                                    <div className={styles.formGroup}>
-                                        <label>Chữ ký (vẽ bên dưới) *</label>
-                                        <div className={contractStyles.signaturePaper}>
-                                            <SignatureCanvas
-                                                ref={signatureCanvasRef}
-                                                onEnd={handleSignatureChange}
-                                                penColor="#000"
-                                                canvasProps={{
-                                                    width: 400,
-                                                    height: 150,
-                                                    className: 'signature-canvas',
-                                                    style: {
-                                                        display: 'block',
-                                                        backgroundColor: '#fff',
-                                                        cursor: 'crosshair',
-                                                        touchAction: 'none'
-                                                    }
-                                                }}
+                                        <div className={styles.formGroup}>
+                                            <label>Số tiền cuối cùng (VND) *</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={signFormData.finalAmount || ''}
+                                                onChange={(e) => setSignFormData({ ...signFormData, finalAmount: e.target.value ? parseFloat(e.target.value) : 0 })}
+                                                placeholder="Nhập số tiền"
                                             />
                                         </div>
-                                        
-                                        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                            <button
-                                                type="button"
-                                                onClick={handleClearSignature}
-                                                className={styles.dangerBtn}
-                                                style={{ flex: 1, padding: '10px' }}
-                                            >
-                                                <Trash2 size={16} /> Xóa chữ ký
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleSaveSignature}
-                                                disabled={signFormData.signatureBase64 || isSignatureEmpty}
-                                                className={styles.primaryBtn}
-                                                style={{ 
-                                                    flex: 1, 
-                                                    padding: '10px',
-                                                    backgroundColor: signFormData.signatureBase64 ? '#10b981' : undefined,
-                                                    opacity: signFormData.signatureBase64 ? 0.8 : (isSignatureEmpty ? 0.5 : 1),
-                                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                                                }}
-                                            >
-                                                {signFormData.signatureBase64 ? (
-                                                    <><CheckCircle size={16} /> Đã lưu chữ ký</>
-                                                ) : (
-                                                    <><Check size={16} /> Lưu chữ ký</>
-                                                )}
-                                            </button>
+
+                                        <div className={styles.formGroup}>
+                                            <label>Phần trăm cổ phần (%) *</label>
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                value={signFormData.finalEquityPercentage || ''}
+                                                onChange={(e) => setSignFormData({ ...signFormData, finalEquityPercentage: e.target.value ? parseFloat(e.target.value) : 0 })}
+                                                placeholder="Nhập phần trăm"
+                                            />
                                         </div>
 
-                                        <div className={contractStyles.signatureHint}>
-                                            <Info size={16} />
-                                            <div>
-                                                Vẽ chữ ký ở trên rồi click <b>"Lưu chữ ký"</b> để xác nhận. 
+                                        <div className={styles.formGroup}>
+                                            <label>Điều khoản bổ sung</label>
+                                            <textarea
+                                                value={signFormData.additionalTerms}
+                                                onChange={(e) => setSignFormData({ ...signFormData, additionalTerms: e.target.value })}
+                                                placeholder="Nhập các điều khoản bổ sung (nếu có)"
+                                                rows={4}
+                                            />
+                                        </div>
+
+                                        {/* Signature Section */}
+                                        <div className={styles.formGroup}>
+                                            <label>Chữ ký (vẽ bên dưới) *</label>
+                                            <div className={contractStyles.signaturePaper}>
+                                                <SignatureCanvas
+                                                    ref={signatureCanvasRef}
+                                                    onEnd={handleSignatureChange}
+                                                    penColor="#000"
+                                                    canvasProps={{
+                                                        width: 400,
+                                                        height: 150,
+                                                        className: 'signature-canvas',
+                                                        style: {
+                                                            display: 'block',
+                                                            backgroundColor: '#fff',
+                                                            cursor: 'crosshair',
+                                                            touchAction: 'none'
+                                                        }
+                                                    }}
+                                                />
+                                            </div>
+
+                                            <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleClearSignature}
+                                                    className={styles.dangerBtn}
+                                                    style={{ flex: 1, padding: '10px' }}
+                                                >
+                                                    <Trash2 size={16} /> Xóa chữ ký
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleSaveSignature}
+                                                    disabled={signFormData.signatureBase64 || isSignatureEmpty}
+                                                    className={styles.primaryBtn}
+                                                    style={{
+                                                        flex: 1,
+                                                        padding: '10px',
+                                                        backgroundColor: signFormData.signatureBase64 ? '#10b981' : undefined,
+                                                        opacity: signFormData.signatureBase64 ? 0.8 : (isSignatureEmpty ? 0.5 : 1),
+                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
+                                                    }}
+                                                >
+                                                    {signFormData.signatureBase64 ? (
+                                                        <><CheckCircle size={16} /> Đã lưu chữ ký</>
+                                                    ) : (
+                                                        <><Check size={16} /> Lưu chữ ký</>
+                                                    )}
+                                                </button>
+                                            </div>
+
+                                            <div className={contractStyles.signatureHint}>
+                                                <Info size={16} />
+                                                <div>
+                                                    Vẽ chữ ký ở trên rồi click <b>"Lưu chữ ký"</b> để xác nhận.
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
                                     </div>
                                 )}
                             </div>
@@ -2098,318 +2335,318 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 )}
 
 
-            {/* Success Modal */}
-            {showSuccessModal && (
-                <SuccessModal 
-                    message={successMessage}
-                    onClose={() => setShowSuccessModal(false)}
+                {/* Success Modal */}
+                {showSuccessModal && (
+                    <SuccessModal
+                        message={successMessage}
+                        onClose={() => setShowSuccessModal(false)}
+                    />
+                )}
+
+                {/* Blockchain Ownership Transfer Modal */}
+                <BlockchainOwnershipModal
+                    isOpen={showBlockchainOwnershipModal}
+                    ownershipData={blockchainOwnershipData}
+                    onClose={handleCloseBlockchainOwnershipModal}
+                    isLoading={actionLoading[`ownership-${selectedDealForOwnership?.dealId}`]}
+                    error={blockchainOwnershipError}
+                    dealId={selectedDealForOwnership?.dealId}
                 />
-            )}
 
-            {/* Blockchain Ownership Transfer Modal */}
-            <BlockchainOwnershipModal
-                isOpen={showBlockchainOwnershipModal}
-                ownershipData={blockchainOwnershipData}
-                onClose={handleCloseBlockchainOwnershipModal}
-                isLoading={actionLoading[`ownership-${selectedDealForOwnership?.dealId}`]}
-                error={blockchainOwnershipError}
-                dealId={selectedDealForOwnership?.dealId}
-            />
+                {/* Detail Modal */}
+                {/* AI Report Detail Modal - Redesigned Sleek/Twitter Aesthetic */}
+                {showAIReportModal && selectedAIReport && (
+                    <div className={styles.modalOverlay} onClick={() => setShowAIReportModal(false)} style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)' }}>
+                        <div className={styles.modalContent} style={{ maxWidth: '800px', width: '95%', maxHeight: '92vh', backgroundColor: '#000000', border: '1px solid #2f3336', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
 
-            {/* Detail Modal */}
-            {/* AI Report Detail Modal - Redesigned Sleek/Twitter Aesthetic */}
-            {showAIReportModal && selectedAIReport && (
-                <div className={styles.modalOverlay} onClick={() => setShowAIReportModal(false)} style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)' }}>
-                    <div className={styles.modalContent} style={{ maxWidth: '800px', width: '95%', maxHeight: '92vh', backgroundColor: '#000000', border: '1px solid #2f3336', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
-                        
-                        {/* Header */}
-                        <div style={{ padding: '16px 24px', borderBottom: '1px solid #2f3336', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <div>
-                                <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#e7e9ea', letterSpacing: '-0.02em' }}>Báo cáo phân tích AI</h3>
-                                <div style={{ fontSize: '13px', color: '#71767b', marginTop: '2px' }}>
-                                    {projectMap[selectedAIReport.projectId]?.projectName || `#${selectedAIReport.projectId}`} • {new Date(selectedAIReport.createdAt).toLocaleDateString('vi-VN')}
+                            {/* Header */}
+                            <div style={{ padding: '16px 24px', borderBottom: '1px solid #2f3336', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#e7e9ea', letterSpacing: '-0.02em' }}>Báo cáo phân tích AI</h3>
+                                    <div style={{ fontSize: '13px', color: '#71767b', marginTop: '2px' }}>
+                                        {projectMap[selectedAIReport.projectId]?.projectName || `#${selectedAIReport.projectId}`} • {new Date(selectedAIReport.createdAt).toLocaleDateString('vi-VN')}
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowAIReportModal(false)} style={{ background: 'none', border: 'none', color: '#e7e9ea', cursor: 'pointer', padding: '8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(231, 233, 234, 0.1)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Body */}
+                            <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+                                {/* Key Metric: Potential Score */}
+                                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '40px', alignItems: 'start', marginBottom: '32px' }}>
+                                    <div style={{ textAlign: 'center', padding: '16px', border: '1px solid #2f3336', borderRadius: '12px', minWidth: '140px' }}>
+                                        <div style={{ fontSize: '11px', color: '#71767b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Điểm tiềm năng</div>
+                                        <div style={{ fontSize: '48px', fontWeight: '900', color: '#0ea5e9' }}>{selectedAIReport.potentialScore || 0}</div>
+                                        <div style={{ fontSize: '12px', color: '#71767b' }}>trên 100 điểm</div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                                        {(() => {
+                                            const breakdownData = selectedAIReport.scoreBreakdown;
+                                            let items = Array.isArray(breakdownData) ? breakdownData : (typeof breakdownData === 'string' ? JSON.parse(breakdownData || '[]') : []);
+
+                                            const labelsMap = { 'Team': 'Đội ngũ', 'Opportunity': 'Thị trường', 'Product': 'Sản phẩm', 'Competition': 'Cạnh tranh', 'Marketing': 'Tiếp thị', 'Investment': 'Tài chính', 'Other': 'Khác' };
+
+                                            return items.map((item, idx) => (
+                                                <div key={idx} style={{ width: '100%' }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px', color: '#e7e9ea' }}>
+                                                        <span style={{ fontWeight: '600' }}>{labelsMap[item.component] || item.component}</span>
+                                                        <span style={{ color: '#71767b' }}>{item.score}/{item.maxPoints}</span>
+                                                    </div>
+                                                    <div style={{ height: '4px', width: '100%', backgroundColor: '#2f3336', borderRadius: '2px', overflow: 'hidden' }}>
+                                                        <div style={{ height: '100%', width: `${(item.score / item.maxPoints) * 100}%`, backgroundColor: '#0ea5e9', transition: 'width 1s ease-out' }}></div>
+                                                    </div>
+                                                </div>
+                                            ));
+                                        })()}
+                                    </div>
+                                </div>
+
+                                {/* Investment Verdict Card */}
+                                <div style={{ marginBottom: '32px' }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#71767b', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>
+                                        <MessageSquare size={14} /> Nhận định đầu tư
+                                    </div>
+                                    <div style={{
+                                        padding: '24px',
+                                        borderRadius: '16px',
+                                        border: `1px solid ${(() => {
+                                            const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
+                                            if (v.includes('strong')) return '#00ba7c';
+                                            if (v.includes('watchlist')) return '#ffd400';
+                                            if (v.includes('pass')) return '#1d9bf0';
+                                            if (v.includes('reject') || v.includes('fail')) return '#f4212e';
+                                            return '#2f3336';
+                                        })()}40`,
+                                        backgroundColor: `${(() => {
+                                            const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
+                                            if (v.includes('strong')) return '#00ba7c20';
+                                            if (v.includes('watchlist')) return '#ffd40020';
+                                            if (v.includes('pass')) return '#1d9bf020';
+                                            if (v.includes('reject') || v.includes('fail')) return '#f4212e20';
+                                            return '#1d9bf020';
+                                        })()}`,
+                                        borderLeft: `6px solid ${(() => {
+                                            const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
+                                            if (v.includes('strong')) return '#00ba7c';
+                                            if (v.includes('watchlist')) return '#ffd400';
+                                            if (v.includes('pass')) return '#1d9bf0';
+                                            if (v.includes('reject') || v.includes('fail')) return '#f4212e';
+                                            return '#1d9bf0';
+                                        })()}`,
+                                        position: 'relative'
+                                    }}>
+                                        <div style={{
+                                            fontSize: '18px',
+                                            fontWeight: '900',
+                                            color: (() => {
+                                                const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
+                                                if (v.includes('strong')) return '#00ba7c';
+                                                if (v.includes('watchlist')) return '#ffd400';
+                                                if (v.includes('pass')) return '#1d9bf0';
+                                                if (v.includes('reject') || v.includes('fail')) return '#f4212e';
+                                                return '#e7e9ea';
+                                            })(),
+                                            marginBottom: '12px',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '8px',
+                                            letterSpacing: '-0.02em',
+                                            textTransform: 'uppercase'
+                                        }}>
+                                            <Shield size={20} />
+                                            {selectedAIReport.investmentVerdict || 'Evaluation Complete'}
+                                        </div>
+                                        <div style={{ fontSize: '15px', color: '#e7e9ea', lineHeight: '1.6', fontWeight: '400', fontStyle: 'italic' }}>
+                                            "{(() => {
+                                                const fullData = typeof selectedAIReport.analysisJson === 'string' ? JSON.parse(selectedAIReport.analysisJson || '{}') : (selectedAIReport.analysis || {});
+                                                return fullData.Summary || 'AI has evaluated this project. Please review the detailed breakdown below for next steps.';
+                                            })()}"
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Risks and Strategy */}
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#f4212e', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>
+                                            <AlertCircle size={14} /> Cảnh báo rủi ro
+                                        </div>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                            {(() => {
+                                                const risks = Array.isArray(selectedAIReport.riskFlags) ? selectedAIReport.riskFlags : (typeof selectedAIReport.riskFlags === 'string' ? JSON.parse(selectedAIReport.riskFlags || '[]') : []);
+                                                return risks.length > 0 ? risks.map((risk, i) => (
+                                                    <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '14px', lineHeight: '1.4', color: '#e7e9ea' }}>
+                                                        <span style={{ color: '#f4212e', flexShrink: 0 }}>•</span>
+                                                        <span>{risk}</span>
+                                                    </div>
+                                                )) : <span style={{ color: '#71767b', fontSize: '13px' }}>Không có rủi ro đáng kể.</span>;
+                                            })()}
+                                        </div>
+                                    </div>
+
+                                    <div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#00ba7c', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>
+                                            <ArrowRight size={14} /> Bước tiếp theo
+                                        </div>
+                                        <div style={{ padding: '16px', borderRadius: '12px', border: '1px dashed #2f3336', backgroundColor: 'rgba(0, 186, 124, 0.03)', color: '#e7e9ea', fontSize: '14px', lineHeight: '1.5' }}>
+                                            {(() => {
+                                                const nextStep = selectedAIReport.investorNextStep;
+                                                if (nextStep) return nextStep;
+                                                const fullData = typeof selectedAIReport.analysisJson === 'string' ? JSON.parse(selectedAIReport.analysisJson || '{}') : (selectedAIReport.analysis || {});
+                                                return fullData.InvestorNextStep || 'Tiếp tục theo dõi và thẩm định dự án.';
+                                            })()}
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
-                            <button onClick={() => setShowAIReportModal(false)} style={{ background: 'none', border: 'none', color: '#e7e9ea', cursor: 'pointer', padding: '8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(231, 233, 234, 0.1)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>
-                                <X size={20} />
-                            </button>
-                        </div>
 
-                        {/* Body */}
-                        <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-                             {/* Key Metric: Potential Score */}
-                             <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '40px', alignItems: 'start', marginBottom: '32px' }}>
-                                 <div style={{ textAlign: 'center', padding: '16px', border: '1px solid #2f3336', borderRadius: '12px', minWidth: '140px' }}>
-                                     <div style={{ fontSize: '11px', color: '#71767b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Điểm tiềm năng</div>
-                                     <div style={{ fontSize: '48px', fontWeight: '900', color: '#0ea5e9' }}>{selectedAIReport.potentialScore || 0}</div>
-                                     <div style={{ fontSize: '12px', color: '#71767b' }}>trên 100 điểm</div>
-                                 </div>
-
-                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                     {(() => {
-                                         const breakdownData = selectedAIReport.scoreBreakdown;
-                                         let items = Array.isArray(breakdownData) ? breakdownData : (typeof breakdownData === 'string' ? JSON.parse(breakdownData || '[]') : []);
-                                         
-                                         const labelsMap = { 'Team': 'Đội ngũ', 'Opportunity': 'Thị trường', 'Product': 'Sản phẩm', 'Competition': 'Cạnh tranh', 'Marketing': 'Tiếp thị', 'Investment': 'Tài chính', 'Other': 'Khác' };
-
-                                         return items.map((item, idx) => (
-                                             <div key={idx} style={{ width: '100%' }}>
-                                                 <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px', color: '#e7e9ea' }}>
-                                                     <span style={{ fontWeight: '600' }}>{labelsMap[item.component] || item.component}</span>
-                                                     <span style={{ color: '#71767b' }}>{item.score}/{item.maxPoints}</span>
-                                                 </div>
-                                                 <div style={{ height: '4px', width: '100%', backgroundColor: '#2f3336', borderRadius: '2px', overflow: 'hidden' }}>
-                                                     <div style={{ height: '100%', width: `${(item.score / item.maxPoints) * 100}%`, backgroundColor: '#0ea5e9', transition: 'width 1s ease-out' }}></div>
-                                                 </div>
-                                             </div>
-                                         ));
-                                     })()}
-                                 </div>
-                             </div>
-
-                             {/* Investment Verdict Card */}
-                             <div style={{ marginBottom: '32px' }}>
-                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#71767b', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>
-                                     <MessageSquare size={14} /> Nhận định đầu tư
-                                 </div>
-                                 <div style={{ 
-                                     padding: '24px', 
-                                     borderRadius: '16px', 
-                                     border: `1px solid ${(() => {
-                                         const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
-                                         if (v.includes('strong')) return '#00ba7c';
-                                         if (v.includes('watchlist')) return '#ffd400';
-                                         if (v.includes('pass')) return '#1d9bf0';
-                                         if (v.includes('reject') || v.includes('fail')) return '#f4212e';
-                                         return '#2f3336';
-                                     })()}40`, 
-                                     backgroundColor: `${(() => {
-                                         const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
-                                         if (v.includes('strong')) return '#00ba7c20';
-                                         if (v.includes('watchlist')) return '#ffd40020';
-                                         if (v.includes('pass')) return '#1d9bf020';
-                                         if (v.includes('reject') || v.includes('fail')) return '#f4212e20';
-                                         return '#1d9bf020';
-                                     })()}`, 
-                                     borderLeft: `6px solid ${(() => {
-                                         const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
-                                         if (v.includes('strong')) return '#00ba7c';
-                                         if (v.includes('watchlist')) return '#ffd400';
-                                         if (v.includes('pass')) return '#1d9bf0';
-                                         if (v.includes('reject') || v.includes('fail')) return '#f4212e';
-                                         return '#1d9bf0';
-                                     })()}`,
-                                     position: 'relative' 
-                                 }}>
-                                     <div style={{ 
-                                         fontSize: '18px', 
-                                         fontWeight: '900', 
-                                         color: (() => {
-                                             const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
-                                             if (v.includes('strong')) return '#00ba7c';
-                                             if (v.includes('watchlist')) return '#ffd400';
-                                             if (v.includes('pass')) return '#1d9bf0';
-                                             if (v.includes('reject') || v.includes('fail')) return '#f4212e';
-                                             return '#e7e9ea';
-                                         })(),
-                                         marginBottom: '12px',
-                                         display: 'flex',
-                                         alignItems: 'center',
-                                         gap: '8px',
-                                         letterSpacing: '-0.02em',
-                                         textTransform: 'uppercase'
-                                     }}>
-                                         <Shield size={20} />
-                                         {selectedAIReport.investmentVerdict || 'Evaluation Complete'}
-                                     </div>
-                                     <div style={{ fontSize: '15px', color: '#e7e9ea', lineHeight: '1.6', fontWeight: '400', fontStyle: 'italic' }}>
-                                         "{(() => {
-                                             const fullData = typeof selectedAIReport.analysisJson === 'string' ? JSON.parse(selectedAIReport.analysisJson || '{}') : (selectedAIReport.analysis || {});
-                                             return fullData.Summary || 'AI has evaluated this project. Please review the detailed breakdown below for next steps.';
-                                         })()}"
-                                     </div>
-                                 </div>
-                             </div>
-
-                             {/* Risks and Strategy */}
-                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-                                 <div>
-                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#f4212e', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>
-                                         <AlertCircle size={14} /> Cảnh báo rủi ro
-                                     </div>
-                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                         {(() => {
-                                             const risks = Array.isArray(selectedAIReport.riskFlags) ? selectedAIReport.riskFlags : (typeof selectedAIReport.riskFlags === 'string' ? JSON.parse(selectedAIReport.riskFlags || '[]') : []);
-                                             return risks.length > 0 ? risks.map((risk, i) => (
-                                                 <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '14px', lineHeight: '1.4', color: '#e7e9ea' }}>
-                                                     <span style={{ color: '#f4212e', flexShrink: 0 }}>•</span>
-                                                     <span>{risk}</span>
-                                                 </div>
-                                             )) : <span style={{ color: '#71767b', fontSize: '13px' }}>Không có rủi ro đáng kể.</span>;
-                                         })()}
-                                     </div>
-                                 </div>
-
-                                 <div>
-                                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#00ba7c', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>
-                                         <ArrowRight size={14} /> Bước tiếp theo
-                                     </div>
-                                     <div style={{ padding: '16px', borderRadius: '12px', border: '1px dashed #2f3336', backgroundColor: 'rgba(0, 186, 124, 0.03)', color: '#e7e9ea', fontSize: '14px', lineHeight: '1.5' }}>
-                                         {(() => {
-                                             const nextStep = selectedAIReport.investorNextStep;
-                                             if (nextStep) return nextStep;
-                                             const fullData = typeof selectedAIReport.analysisJson === 'string' ? JSON.parse(selectedAIReport.analysisJson || '{}') : (selectedAIReport.analysis || {});
-                                             return fullData.InvestorNextStep || 'Tiếp tục theo dõi và thẩm định dự án.';
-                                         })()}
-                                     </div>
-                                 </div>
-                             </div>
-                        </div>
-
-                        {/* Footer Actions */}
-                        <div style={{ padding: '16px 24px', borderTop: '1px solid #2f3336', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', backgroundColor: '#000000', gap: '12px' }}>
-                             <button 
-                                onClick={() => setShowAIReportModal(false)} 
-                                style={{ backgroundColor: 'transparent', border: '1px solid #536471', color: '#e7e9ea', padding: '10px 24px', borderRadius: '9999px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'background 0.2s' }}
-                                onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(231, 233, 234, 0.1)'}
-                                onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                             >
-                                 Đóng
-                             </button>
-                             <button 
-                                onClick={() => onViewProject ? onViewProject(selectedAIReport.projectId, activeSection) : window.location.href = `/project/${selectedAIReport.projectId}`} 
-                                style={{ backgroundColor: '#eff3f4', border: 'none', color: '#0f1419', padding: '10px 24px', borderRadius: '9999px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'opacity 0.2s' }}
-                                onMouseEnter={(e) => e.target.style.opacity = '0.9'}
-                                onMouseLeave={(e) => e.target.style.opacity = '1'}
-                             >
-                                 Xem chi tiết dự án
-                             </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Standardized Detail Modal */}
-            {showDetailModal && selectedItem && (
-                <div className={styles.modalOverlay} onClick={handleCloseDetailModal}>
-                    <div className={styles.modalContent} style={{ maxWidth: '600px', height: 'auto', maxHeight: '85vh' }} onClick={e => e.stopPropagation()}>
-                        {/* Unified Modal Header */}
-                        <div className={styles.modalSplitDesktopHeader} style={{ padding: '20px 24px' }}>
-                            <div>
-                                <h3 className={styles.modalSplitDesktopTitle} style={{ fontSize: '20px' }}>
-                                    {detailType === 'connection' ? 'Chi tiết yêu cầu kết nối' : 'Chi tiết khoản đầu tư'}
-                                </h3>
-                                <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', fontWeight: '500' }}>
-                                    {detailType === 'connection' 
-                                        ? `Gửi tới ${selectedItem.startupName || 'Startup'}` 
-                                        : `Dự án: ${selectedItem.projectName || selectedItem.startupName || '—'}`}
-                                </div>
+                            {/* Footer Actions */}
+                            <div style={{ padding: '16px 24px', borderTop: '1px solid #2f3336', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', backgroundColor: '#000000', gap: '12px' }}>
+                                <button
+                                    onClick={() => setShowAIReportModal(false)}
+                                    style={{ backgroundColor: 'transparent', border: '1px solid #536471', color: '#e7e9ea', padding: '10px 24px', borderRadius: '9999px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'background 0.2s' }}
+                                    onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(231, 233, 234, 0.1)'}
+                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                                >
+                                    Đóng
+                                </button>
+                                <button
+                                    onClick={() => onViewProject ? onViewProject(selectedAIReport.projectId, activeSection) : window.location.href = `/project/${selectedAIReport.projectId}`}
+                                    style={{ backgroundColor: '#eff3f4', border: 'none', color: '#0f1419', padding: '10px 24px', borderRadius: '9999px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'opacity 0.2s' }}
+                                    onMouseEnter={(e) => e.target.style.opacity = '0.9'}
+                                    onMouseLeave={(e) => e.target.style.opacity = '1'}
+                                >
+                                    Xem chi tiết dự án
+                                </button>
                             </div>
-                            <button onClick={handleCloseDetailModal} className={styles.modalCloseBtnInline}>
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {/* Modal Body */}
-                        <div className={styles.modalContentBody} style={{ padding: '24px', gap: '24px', overflowY: 'auto' }}>
-                            {detailType === 'connection' ? (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                    {/* Status Section */}
-                                    <div className={styles.projectDetailSection}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                            <Info size={14} /> Trạng thái yêu cầu
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                                            <span style={{
-                                                backgroundColor: selectedItem.status === 'Accepted' ? 'rgba(23, 191, 99, 0.1)' : selectedItem.status === 'Pending' ? 'rgba(255, 173, 31, 0.15)' : 'rgba(244, 33, 46, 0.1)',
-                                                color: selectedItem.status === 'Accepted' ? '#17bf63' : selectedItem.status === 'Pending' ? '#d97706' : '#f4212e',
-                                                padding: '6px 14px', borderRadius: '9999px', fontSize: '13px', fontWeight: '700', border: '1px solid transparent'
-                                            }}>
-                                                {selectedItem.status === 'Accepted' ? 'Đã chấp nhận' : selectedItem.status === 'Pending' ? 'Đang chờ phản hồi' : 'Đã từ chối'}
-                                            </span>
-                                        </div>
-                                    </div>
-
-                                    {/* Message Section */}
-                                    <div className={styles.projectDetailSection}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                            <MessageSquare size={14} /> Tin nhắn giới thiệu
-                                        </div>
-                                        <div style={{ backgroundColor: 'var(--bg-hover)', padding: '16px', borderRadius: '16px', border: '1px solid var(--border-color)', fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6', fontWeight: '450' }}>
-                                            {selectedItem.message || 'Không có nội dung tin nhắn đính kèm.'}
-                                        </div>
-                                    </div>
-
-                                    {/* Date Section */}
-                                    {selectedItem.responseDate && (
-                                        <div className={styles.projectDetailSection}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                <Calendar size={14} /> Thời gian phản hồi
-                                            </div>
-                                            <div style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '600', paddingLeft: '4px' }}>
-                                                {selectedItem.responseDate}
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                    {/* Investment Stats */}
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                        <div style={{ backgroundColor: 'var(--bg-hover)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                                            <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Số tiền đầu tư</div>
-                                            <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-blue)' }}>
-                                                {selectedItem.amount?.toLocaleString('vi-VN')} <span style={{ fontSize: '14px', opacity: 0.8 }}>VND</span>
-                                            </div>
-                                        </div>
-                                        <div style={{ backgroundColor: 'var(--bg-hover)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                                            <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Cổ phần nắm giữ</div>
-                                            <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-primary)' }}>
-                                                {selectedItem.equityPercentage}<span style={{ fontSize: '14px', marginLeft: '2px' }}>%</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Status Section */}
-                                    <div className={styles.projectDetailSection}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                            <Info size={14} /> Trạng thái hiện tại
-                                        </div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                            <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--primary-blue)', boxShadow: '0 0 8px var(--primary-blue)' }}></div>
-                                            <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>{selectedItem.status}</span>
-                                        </div>
-                                    </div>
-
-                                    {/* Contract Info */}
-                                    {selectedItem.contractSignedAt && (
-                                        <div className={styles.projectDetailSection}>
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                <FileText size={14} /> Thông tin hợp đồng
-                                            </div>
-                                            <div style={{ backgroundColor: 'rgba(29, 155, 240, 0.05)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(29, 155, 240, 0.1)', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <CheckCircle size={16} color="var(--primary-blue)" />
-                                                <span style={{ fontWeight: '500' }}>Đã ký vào lúc {new Date(selectedItem.contractSignedAt).toLocaleString('vi-VN')}</span>
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Standardized Sticky Footer */}
-                        <div className={styles.stickyActions} style={{ padding: '16px 24px', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
-                            <button 
-                                onClick={handleCloseDetailModal} 
-                                className={styles.secondaryBtn}
-                                style={{ padding: '10px 32px' }}
-                            >
-                                Đóng
-                            </button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+
+                {/* Standardized Detail Modal */}
+                {showDetailModal && selectedItem && (
+                    <div className={styles.modalOverlay} onClick={handleCloseDetailModal}>
+                        <div className={styles.modalContent} style={{ maxWidth: '600px', height: 'auto', maxHeight: '85vh' }} onClick={e => e.stopPropagation()}>
+                            {/* Unified Modal Header */}
+                            <div className={styles.modalSplitDesktopHeader} style={{ padding: '20px 24px' }}>
+                                <div>
+                                    <h3 className={styles.modalSplitDesktopTitle} style={{ fontSize: '20px' }}>
+                                        {detailType === 'connection' ? 'Chi tiết yêu cầu kết nối' : 'Chi tiết khoản đầu tư'}
+                                    </h3>
+                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginTop: '4px', fontWeight: '500' }}>
+                                        {detailType === 'connection'
+                                            ? `Gửi tới ${selectedItem.startupName || 'Startup'}`
+                                            : `Dự án: ${selectedItem.projectName || selectedItem.startupName || '—'}`}
+                                    </div>
+                                </div>
+                                <button onClick={handleCloseDetailModal} className={styles.modalCloseBtnInline}>
+                                    <X size={20} />
+                                </button>
+                            </div>
+
+                            {/* Modal Body */}
+                            <div className={styles.modalContentBody} style={{ padding: '24px', gap: '24px', overflowY: 'auto' }}>
+                                {detailType === 'connection' ? (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                        {/* Status Section */}
+                                        <div className={styles.projectDetailSection}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                <Info size={14} /> Trạng thái yêu cầu
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center' }}>
+                                                <span style={{
+                                                    backgroundColor: selectedItem.status === 'Accepted' ? 'rgba(23, 191, 99, 0.1)' : selectedItem.status === 'Pending' ? 'rgba(255, 173, 31, 0.15)' : 'rgba(244, 33, 46, 0.1)',
+                                                    color: selectedItem.status === 'Accepted' ? '#17bf63' : selectedItem.status === 'Pending' ? '#d97706' : '#f4212e',
+                                                    padding: '6px 14px', borderRadius: '9999px', fontSize: '13px', fontWeight: '700', border: '1px solid transparent'
+                                                }}>
+                                                    {selectedItem.status === 'Accepted' ? 'Đã chấp nhận' : selectedItem.status === 'Pending' ? 'Đang chờ phản hồi' : 'Đã từ chối'}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        {/* Message Section */}
+                                        <div className={styles.projectDetailSection}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                <MessageSquare size={14} /> Tin nhắn giới thiệu
+                                            </div>
+                                            <div style={{ backgroundColor: 'var(--bg-hover)', padding: '16px', borderRadius: '16px', border: '1px solid var(--border-color)', fontSize: '15px', color: 'var(--text-primary)', lineHeight: '1.6', fontWeight: '450' }}>
+                                                {selectedItem.message || 'Không có nội dung tin nhắn đính kèm.'}
+                                            </div>
+                                        </div>
+
+                                        {/* Date Section */}
+                                        {selectedItem.responseDate && (
+                                            <div className={styles.projectDetailSection}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                    <Calendar size={14} /> Thời gian phản hồi
+                                                </div>
+                                                <div style={{ fontSize: '15px', color: 'var(--text-primary)', fontWeight: '600', paddingLeft: '4px' }}>
+                                                    {selectedItem.responseDate}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                        {/* Investment Stats */}
+                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                                            <div style={{ backgroundColor: 'var(--bg-hover)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                                                <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Số tiền đầu tư</div>
+                                                <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-blue)' }}>
+                                                    {selectedItem.amount?.toLocaleString('vi-VN')} <span style={{ fontSize: '14px', opacity: 0.8 }}>VND</span>
+                                                </div>
+                                            </div>
+                                            <div style={{ backgroundColor: 'var(--bg-hover)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                                                <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Cổ phần nắm giữ</div>
+                                                <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-primary)' }}>
+                                                    {selectedItem.equityPercentage}<span style={{ fontSize: '14px', marginLeft: '2px' }}>%</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Status Section */}
+                                        <div className={styles.projectDetailSection}>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                <Info size={14} /> Trạng thái hiện tại
+                                            </div>
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--primary-blue)', boxShadow: '0 0 8px var(--primary-blue)' }}></div>
+                                                <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>{selectedItem.status}</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Contract Info */}
+                                        {selectedItem.contractSignedAt && (
+                                            <div className={styles.projectDetailSection}>
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                                                    <FileText size={14} /> Thông tin hợp đồng
+                                                </div>
+                                                <div style={{ backgroundColor: 'rgba(29, 155, 240, 0.05)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(29, 155, 240, 0.1)', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                    <CheckCircle size={16} color="var(--primary-blue)" />
+                                                    <span style={{ fontWeight: '500' }}>Đã ký vào lúc {new Date(selectedItem.contractSignedAt).toLocaleString('vi-VN')}</span>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Standardized Sticky Footer */}
+                            <div className={styles.stickyActions} style={{ padding: '16px 24px', justifyContent: 'flex-end', borderTop: '1px solid var(--border-color)', backgroundColor: 'var(--bg-primary)' }}>
+                                <button
+                                    onClick={handleCloseDetailModal}
+                                    className={styles.secondaryBtn}
+                                    style={{ padding: '10px 32px' }}
+                                >
+                                    Đóng
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
         </div>
     );
