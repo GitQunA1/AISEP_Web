@@ -6,8 +6,8 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.88);
-  backdrop-filter: blur(12px);
+  background: var(--overlay-bg-dark);
+  backdrop-filter: blur(8px);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -16,27 +16,22 @@
 }
 
 .modal {
-  background: rgba(24, 25, 26, 0.7);
+  background: var(--bg-primary);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
   width: 100%;
   max-width: 740px;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
   max-height: 92vh;
   position: relative;
   box-shadow: 
-    0 12px 60px rgba(0, 0, 0, 0.6),
-    0 0 20px rgba(29, 155, 240, 0.1);
+    0 12px 60px rgba(0, 0, 0, 0.3),
+    0 0 20px rgba(29, 155, 240, 0.05);
   animation: modalEnter 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
   overflow: hidden;
-}
-
-:global([data-theme='light']) .modal {
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid rgba(0, 0, 0, 0.05);
 }
 
 @keyframes modalEnter {
@@ -49,8 +44,8 @@
   justify-content: space-between;
   align-items: center;
   padding: 20px 28px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  background-color: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-secondary);
   box-sizing: border-box;
 }
 
@@ -115,7 +110,7 @@
   gap: 24px;
   background-color: transparent;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.1) transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
   min-height: 0;
   overscroll-behavior: contain;
   -webkit-overflow-scrolling: touch;
@@ -192,11 +187,11 @@
 
 .footer {
   padding: 16px 24px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  border-top: 1px solid var(--border-color);
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: var(--bg-secondary);
 }
 
 .secondaryBtn {
@@ -216,7 +211,7 @@
 }
 
 .secondaryBtn:hover {
-  background: rgba(239, 243, 244, 0.1);
+  background: var(--bg-hover);
 }
 
 @media (max-width: 768px) {
