@@ -25,25 +25,27 @@ import EmptyState from '../components/common/EmptyState';
 import BlockchainVerificationModal from '../components/common/BlockchainVerificationModal';
 import blockchainVerificationService from '../services/blockchainVerificationService';
 import AccountProfileTab from '../components/common/AccountProfileTab';
+import StartupApprovalCard from '../components/staff/StartupApprovalCard';
+import StartupDetailModal from '../components/staff/StartupDetailModal';
 
 const T = {
-  bg: 'var(--pd-bg)',
-  surface: 'var(--pd-surface)',
-  card: 'var(--pd-card)',
-  surface2: 'var(--pd-card)',
-  surface3: 'var(--pd-surface-accent)',
-  border: 'var(--pd-border)',
-  blue: 'var(--pd-blue)',
-  blueDim: 'var(--pd-blue-dim)',
-  text: 'var(--pd-text)',
-  textMuted: 'var(--pd-text-muted)',
-  textDim: 'var(--pd-text-dim)',
-  green: 'var(--pd-green)',
-  greenDim: 'var(--pd-green-dim)',
-  shadow: 'var(--pd-shadow)',
-  amber: '#ffad1f',
-  amberDim: 'rgba(255, 173, 31, 0.12)',
-  red: '#f4212e',
+    bg: 'var(--pd-bg)',
+    surface: 'var(--pd-surface)',
+    card: 'var(--pd-card)',
+    surface2: 'var(--pd-card)',
+    surface3: 'var(--pd-surface-accent)',
+    border: 'var(--pd-border)',
+    blue: 'var(--pd-blue)',
+    blueDim: 'var(--pd-blue-dim)',
+    text: 'var(--pd-text)',
+    textMuted: 'var(--pd-text-muted)',
+    textDim: 'var(--pd-text-dim)',
+    green: 'var(--pd-green)',
+    greenDim: 'var(--pd-green-dim)',
+    shadow: 'var(--pd-shadow)',
+    amber: '#ffad1f',
+    amberDim: 'rgba(255, 173, 31, 0.12)',
+    red: '#f4212e',
 };
 
 
@@ -170,14 +172,24 @@ const BookingKanbanCard = ({ booking, status, onDetail }) => {
         localStatus = 'comp';
     } else if (status === 'canc' || status === 'Cancel' || status === 'Cancelled') {
         statusLabel = 'Đã hủy';
-        localStatus = 'rej'; // Re-use the rejected/red CSS class from projects
+        localStatus = 'rej';
+    } else if (status === 'pay' || status === 'ApprovedAwaitingPayment' || status === 'AwaitingPayment') {
+        statusLabel = 'Chờ thanh toán';
+        localStatus = 'pay';
     } else {
         localStatus = 'pend';
     }
 
+    const formatTimeUTC = (dateStr) => {
+        if (!dateStr) return '—';
+        const d = new Date(dateStr);
+        return d.getUTCHours().toString().padStart(2, '0') + ':' +
+            d.getUTCMinutes().toString().padStart(2, '0');
+    };
+
     return (
-        <div className={local.inv_card}>
-            <div className={`${local.inv_cardStrip} ${local[localStatus]}`}></div>
+        <div className={local.bcard}>
+            <div className={`${local.bcardStrip} ${local[localStatus]}`}></div>
             <div className={local.bcardBody}>
                 <div className={local.bcardRow1}>
                     <div className={local.bcardMainInfo}>
@@ -185,8 +197,8 @@ const BookingKanbanCard = ({ booking, status, onDetail }) => {
                             #{booking?.id || '-'}
                         </div>
                         <span className={`${local.btag}`} style={{
-                            background: localStatus === 'pend' ? 'rgba(255, 122, 0, 0.1)' : localStatus === 'conf' ? 'rgba(29, 155, 240, 0.1)' : localStatus === 'comp' ? 'rgba(16, 185, 129, 0.1)' : 'rgba(244, 33, 46, 0.1)',
-                            color: localStatus === 'pend' ? '#ff7a00' : localStatus === 'conf' ? '#1d9bf0' : localStatus === 'comp' ? '#10b981' : '#f4212e'
+                            background: localStatus === 'pend' ? 'rgba(255, 122, 0, 0.1)' : localStatus === 'conf' ? 'rgba(29, 155, 240, 0.1)' : localStatus === 'comp' ? 'rgba(16, 185, 129, 0.1)' : localStatus === 'pay' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(244, 33, 46, 0.1)',
+                            color: localStatus === 'pend' ? '#ff7a00' : localStatus === 'conf' ? '#1d9bf0' : localStatus === 'comp' ? '#10b981' : localStatus === 'pay' ? '#f59e0b' : '#f4212e'
                         }}>
                             {statusLabel}
                         </span>
@@ -198,7 +210,7 @@ const BookingKanbanCard = ({ booking, status, onDetail }) => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: '600', width: '50px', flexShrink: 0, textTransform: 'uppercase' }}>Cố vấn</span>
                             <span style={{
-                                color: localStatus === 'pend' ? '#ff7a00' : localStatus === 'conf' ? '#1d9bf0' : localStatus === 'comp' ? '#10b981' : '#f4212e',
+                                color: localStatus === 'pend' ? '#ff7a00' : localStatus === 'conf' ? '#1d9bf0' : localStatus === 'comp' ? '#10b981' : localStatus === 'pay' ? '#f59e0b' : '#f4212e',
                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                             }}>
                                 {booking?.advisorName || 'N/A'}
@@ -207,7 +219,7 @@ const BookingKanbanCard = ({ booking, status, onDetail }) => {
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                             <span style={{ color: 'var(--text-muted)', fontSize: '11px', fontWeight: '600', width: '50px', flexShrink: 0, textTransform: 'uppercase' }}>Khách</span>
                             <span style={{
-                                color: localStatus === 'pend' ? '#ff7a00' : localStatus === 'conf' ? '#1d9bf0' : localStatus === 'comp' ? '#10b981' : '#f4212e',
+                                color: localStatus === 'pend' ? '#ff7a00' : localStatus === 'conf' ? '#1d9bf0' : localStatus === 'comp' ? '#10b981' : localStatus === 'pay' ? '#f59e0b' : '#f4212e',
                                 overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap'
                             }}>
                                 {booking?.customerName || 'N/A'}
@@ -225,7 +237,9 @@ const BookingKanbanCard = ({ booking, status, onDetail }) => {
                         <Calendar size={13} style={{ flexShrink: 0 }} />
                         <span style={{ whiteSpace: 'nowrap' }}>{booking?.startTime ? new Date(booking.startTime).toLocaleDateString('vi-VN') : '-'}</span>
                         <Clock size={13} style={{ marginLeft: '4px', flexShrink: 0 }} />
-                        <span style={{ whiteSpace: 'nowrap' }}>{booking?.startTime ? new Date(booking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }) : '-'}</span>
+                        <span style={{ whiteSpace: 'nowrap' }}>
+                            {booking?.startTime ? `${formatTimeUTC(booking.startTime)} - ${formatTimeUTC(booking.endTime)}` : '-'}
+                        </span>
                     </div>
                 </div>
 
@@ -247,77 +261,96 @@ const InvestorKanbanCard = ({ investor, status, onDetail, onApprove, onReject, p
     const isAnyProcessing = !!processingId;
 
     return (
-        <div className={local.inv_card}>
-            <div className={`${local.inv_cardStrip} ${local[status]}`}></div>
-            <div className={local.bcardBody}>
-                <div className={local.bcardRow1}>
-                    <div className={local.bcardMainInfo}>
-                        <div className={local.bcardName} title={investor.organizationName || investor.fullName}>
-                            {investor.organizationName || investor.fullName || 'Nhà đầu tư'}
-                        </div>
-                        <span className={`${local.inv_btag} ${status === 'apr' ? local.inv_btag_apr : local.btagGrowth}`} style={status !== 'apr' ? {
-                            background: 'rgba(29, 155, 240, 0.1)',
-                            color: '#1d9bf0'
-                        } : {}}>
+        <div className={local.investorProCard}>
+            <div className={`${local.investorProCardStrip} ${local[status]}`}></div>
+
+            <div className={local.investorProHeader}>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <h4 className={local.investorProName} title={investor.organizationName || investor.fullName}>
+                        {investor.organizationName || investor.fullName || 'Nhà đầu tư'}
+                    </h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                        <span className={local.investorProBadge}>
                             Nhà đầu tư
+                        </span>
+                        <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
+                            ID: {investor.investorId}
                         </span>
                     </div>
                 </div>
+            </div>
 
-                <div style={{ marginTop: '12px', marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '13px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: '600', width: '60px', flexShrink: 0, textTransform: 'uppercase' }}>Ví</span>
-                            <span style={{ color: 'var(--text-primary)', fontFamily: 'monospace', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {investor.walletAddress ? `${investor.walletAddress.substring(0, 6)}...${investor.walletAddress.substring(investor.walletAddress.length - 4)}` : 'Chưa cập nhật'}
-                            </span>
-                        </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ color: 'var(--text-muted)', fontSize: '10px', fontWeight: '600', width: '60px', flexShrink: 0, textTransform: 'uppercase' }}>Email</span>
-                            <span style={{ color: 'var(--text-primary)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {investor.email || 'N/A'}
-                            </span>
+            <div className={local.investorProBody}>
+                <div className={local.investorProRow}>
+                    <span className={local.investorProLabel}>Ví</span>
+                    <span className={local.investorProValue} style={{ fontFamily: 'monospace' }}>
+                        {investor.walletAddress ? `${investor.walletAddress.substring(0, 6)}...${investor.walletAddress.substring(investor.walletAddress.length - 4)}` : '-'}
+                    </span>
+                </div>
+                <div className={local.investorProRow}>
+                    <span className={local.investorProLabel}>Email</span>
+                    <span className={local.investorProValue} title={investor.email}>
+                        {investor.email || '-'}
+                    </span>
+                </div>
+                <div className={local.investorProRow}>
+                    <span className={local.investorProLabel}>Ngân sách</span>
+                    <span className={local.investorProValue} style={{ color: '#10b981', fontWeight: '700' }}>
+                        {investor.investmentAmount ? Number(investor.investmentAmount).toLocaleString() : 'Chưa cập nhật'} ₫
+                    </span>
+                </div>
+
+                {investor.focusIndustry && (
+                    <div className={local.investorProRow} style={{ alignItems: 'flex-start' }}>
+                        <span className={local.investorProLabel} style={{ marginTop: '2px' }}>Lĩnh vực</span>
+                        <div className={local.investorProTags} style={{ margin: '0', flex: 1 }}>
+                            {investor.focusIndustry.split(',').slice(0, 3).map((ind, idx) => (
+                                <span key={idx} className={local.investorProTag}>{ind.trim()}</span>
+                            ))}
+                            {investor.focusIndustry.split(',').length > 3 && (
+                                <span className={local.investorProTag}>+{investor.focusIndustry.split(',').length - 3}</span>
+                            )}
                         </div>
                     </div>
-                </div>
+                )}
+            </div>
 
-                <div className={local.bcardActions} style={{ marginTop: 'auto' }}>
-                    <button className={local.baBtn} onClick={() => onDetail(investor)} title="Chi tiết">
-                        <ArrowRight size={16} />
-                        Chi tiết
-                    </button>
+            <div className={local.investorProFooter}>
+                <button className={local.investorProBtn} onClick={() => onDetail(investor)} title="Chi tiết">
+                    <ArrowRight size={16} />
+                    Chi tiết
+                </button>
 
-                    {status === 'pend' && (
-                        <>
-                            <button
-                                className={`${local.baBtn} ${local.rej} ${isAnyProcessing ? local.btnDisabled : ''}`}
-                                onClick={() => onReject(investor)}
-                                disabled={isAnyProcessing}
-                                title="Từ chối"
-                            >
-                                {isProcessing && processingAction === 'reject' ? (
-                                    <Loader2 size={16} className="animate-spin" />
-                                ) : (
-                                    <XCircle size={16} />
-                                )}
-                                <span style={{ marginLeft: '4px' }}>Từ chối</span>
-                            </button>
-                            <button
-                                className={`${local.baBtn} ${local.apr} ${isAnyProcessing ? local.btnDisabled : ''}`}
-                                onClick={() => onApprove(investor.investorId)}
-                                disabled={isAnyProcessing}
-                                title="Phê duyệt"
-                            >
-                                {isProcessing && processingAction === 'approve' ? (
-                                    <Loader2 size={16} className="animate-spin" />
-                                ) : (
-                                    <CheckCircle size={16} />
-                                )}
-                                <span style={{ marginLeft: '4px' }}>Duyệt</span>
-                            </button>
-                        </>
-                    )}
-                </div>
+                {status === 'pend' && (
+                    <>
+                        <button
+                            className={`${local.investorProBtn} ${local.investorProRejectBtn} ${isAnyProcessing ? local.btnDisabled : ''}`}
+                            onClick={() => onReject(investor)}
+                            disabled={isAnyProcessing}
+                            title="Từ chối"
+                        >
+                            {isProcessing && processingAction === 'reject' ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <XCircle size={16} />
+                            )}
+                            Từ chối
+                        </button>
+                        <button
+                            className={`${local.investorProBtn} ${local.investorProApproveBtn} ${isAnyProcessing ? local.btnDisabled : ''}`}
+                            onClick={() => onApprove(investor.investorId)}
+                            disabled={isAnyProcessing}
+                            title="Phê duyệt"
+                        >
+                            {isProcessing && processingAction === 'approve' ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <CheckCircle size={16} />
+                            )}
+                            Duyệt
+                        </button>
+                    </>
+                )}
             </div>
         </div>
     );
@@ -456,7 +489,7 @@ const KanbanSkeleton = ({ count = 3 }) => {
 
 
 
-const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics' }) => {
+const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics', targetId, onNotificationNavigate }) => {
 
     // Safety check for styles
     const s = local || {};
@@ -466,13 +499,19 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
     const [activeSection, setActiveSection] = useState(initialSection);
     const [activePRTab, setActivePRTab] = useState('posting'); // 'posting' or 'news'
+    
+    // Deep LINK State
+    const [hasAttemptedDeepLink, setHasAttemptedDeepLink] = useState(false);
 
     // Sync internal state with prop changes from sidebar
     useEffect(() => {
         if (initialSection) {
             setActiveSection(initialSection);
+            // Reset deep link attempt when section changes manually
+            setHasAttemptedDeepLink(false);
         }
     }, [initialSection]);
+
 
     const [pendingProjects, setPendingProjects] = useState([]);
     const [approvedProjects, setApprovedProjects] = useState([]);
@@ -480,19 +519,29 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [isLoadingProjects, setIsLoadingProjects] = useState(false);
     const [projectSubmissions, setProjectSubmissions] = useState([]);
     const [pendingStartups, setPendingStartups] = useState([]);
+    const [approvedStartups, setApprovedStartups] = useState([]);
+    const [rejectedStartups, setRejectedStartups] = useState([]);
     const [isLoadingStartups, setIsLoadingStartups] = useState(false);
+    const [selectedStartupForDetail, setSelectedStartupForDetail] = useState(null);
+    const [showStartupDetailModal, setShowStartupDetailModal] = useState(false);
+    const [activeMobileStartupTab, setActiveMobileStartupTab] = useState('pend'); // 'all', 'pend', 'appr', 'rej'
+    
+    // Core Modal & UI States
     const [showModal, setShowModal] = useState(false);
-    const [modalType, setModalType] = useState('success'); // 'success' or 'error'
+    const [modalType, setModalType] = useState('success');
     const [modalMessage, setModalMessage] = useState('');
     const [showRejectionModal, setShowRejectionModal] = useState(false);
     const [selectedProject, setSelectedProject] = useState(null);
-    // Detail modal state
+    
+    // Project Detail Modal state
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [detailProject, setDetailProject] = useState(null);
     const [documents, setDocuments] = useState([]);
     const [isLoadingDocuments, setIsLoadingDocuments] = useState(false);
+
     const [processingProjectId, setProcessingProjectId] = useState(null);
     const [processingAction, setProcessingAction] = useState(null); // 'approve' or 'reject'
+    const [rejectionTarget, setRejectionTarget] = useState(null); // 'project' | 'startup'
 
     // AI History state
     const [analysisHistory, setAnalysisHistory] = useState([]);
@@ -683,6 +732,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
     // Derived booking lists
     const pendingBookingsList = filterBookings(allBookings.filter(b => b.status === 'Pending'));
+    const awaitingPaymentBookingsList = filterBookings(allBookings.filter(b => b.status === 'ApprovedAwaitingPayment'));
     const confirmedBookingsList = filterBookings(allBookings.filter(b => b.status === 'Confirmed'));
     const completedBookingsList = filterBookings(allBookings.filter(b => b.status === 'Completed'));
     const cancelledBookingsList = filterBookings(allBookings.filter(b => b.status === 'Cancel' || b.status === 'Cancelled'));
@@ -730,9 +780,10 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const displayedBookings = bookingFilters === ''
         ? allBookings
         : bookingFilters === 'status:Pending' ? pendingBookingsList
-            : bookingFilters === 'status:Confirmed' ? confirmedBookingsList
-                : bookingFilters === 'status:Completed' ? completedBookingsList
-                    : allBookings;
+            : bookingFilters === 'status:ApprovedAwaitingPayment' ? awaitingPaymentBookingsList
+                : bookingFilters === 'status:Confirmed' ? confirmedBookingsList
+                    : bookingFilters === 'status:Completed' ? completedBookingsList
+                        : allBookings;
 
     // We can slice displayedBookings if we want client-side pagination
     const paginatedBookings = displayedBookings.slice((bookingPage - 1) * bookingPageSize, bookingPage * bookingPageSize);
@@ -840,15 +891,25 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         }
     };
 
-    const fetchPendingStartups = async () => {
+    const fetchStartupsData = async () => {
         setIsLoadingStartups(true);
         try {
             const response = await startupProfileService.getAllStartups();
             const items = Array.isArray(response) ? response : (response?.data?.items || response?.items || []);
-            const unverified = items.filter(s => (s.status || s.approvalStatus) === 'Pending' || (s.status || s.approvalStatus) === 'Unverified');
-            setPendingStartups(unverified);
+            
+            // Map statuses correctly
+            const pend = items.filter(s => (s.status || s.approvalStatus) === 'Pending' || (s.status || s.approvalStatus) === 'Unverified');
+            const appr = items.filter(s => (s.status || s.approvalStatus) === 'Approved');
+            const rej = items.filter(s => (s.status || s.approvalStatus) === 'Rejected');
+            
+            // Sort by latest created/updated
+            const sortByDate = (list) => [...list].sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
+
+            setPendingStartups(sortByDate(pend));
+            setApprovedStartups(sortByDate(appr));
+            setRejectedStartups(sortByDate(rej));
         } catch (error) {
-            console.error('Error fetching pending startups:', error);
+            console.error('Error fetching startups data:', error);
         } finally {
             setIsLoadingStartups(false);
         }
@@ -870,7 +931,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         } else if (activeSection === 'bookings') {
             fetchBookings();
         } else if (activeSection === 'approvals') {
-            fetchPendingStartups();
+            fetchStartupsData();
         } else if (activeSection === 'user_reports') {
             fetchUserReports();
         } else if (activeSection === 'pr_management') {
@@ -912,14 +973,14 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
     const fetchAnalysisHistory = async (projectId) => {
         if (!projectId) return;
-        
+
         // 1. Fetch Startup-initiated history
         setIsLoadingHistory(true);
         try {
             const response = await AIEvaluationService.getProjectAnalysisHistory(projectId);
             if (response.success) {
                 // Filter: Only include Startup-initiated analyses (those with potentialScore)
-                const startupReports = (response.data || []).filter(h => 
+                const startupReports = (response.data || []).filter(h =>
                     h.potentialScore !== undefined && h.potentialScore !== null
                 );
                 setAnalysisHistory(startupReports);
@@ -941,7 +1002,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             const response = await AIEvaluationService.getStaffAnalysisHistory(projectId);
             if (response.success) {
                 // Filter: Only include Staff-initiated eligibility analyses
-                const staffReports = (response.data || []).filter(h => 
+                const staffReports = (response.data || []).filter(h =>
                     h.isEligibleStartup !== undefined || h.is_eligible_startup !== undefined || h.data?.is_eligible_startup !== undefined
                 );
                 setStaffAnalysisHistory(staffReports);
@@ -961,7 +1022,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
      */
     const handleRunStaffAIEvaluation = async (projectId) => {
         if (!projectId || isEvaluatingStaffAI) return;
-        
+
         setIsEvaluatingStaffAI(true);
         try {
             const result = await AIEvaluationService.evaluateProjectByStaffAPI(projectId);
@@ -997,8 +1058,16 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         setProcessingProjectId(id);
         setProcessingAction('approve');
         try {
-            await startupProfileService.approveStartup(id);
-            setPendingStartups(pendingStartups.filter(s => s.id !== id));
+            const response = await startupProfileService.approveStartup(id);
+            
+            // Update local state for immediate UI response
+            const startupToMove = pendingStartups.find(s => s.id === id);
+            if (startupToMove) {
+                setApprovedStartups([{ ...startupToMove, status: 'Approved' }, ...approvedStartups]);
+                setPendingStartups(pendingStartups.filter(s => s.id !== id));
+            }
+            
+            setShowStartupDetailModal(false);
             setModalType('success');
             setModalMessage('✓ Startup đã được phê duyệt thành công!');
             setShowModal(true);
@@ -1018,6 +1087,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             const startup = pendingStartups.find(s => s.id === id);
             // Use selectedProject for the rejection modal since it requires a ProjectName
             setSelectedProject({ projectId: id, projectName: startup?.companyName || 'Startup' });
+            setRejectionTarget('startup');
             setShowRejectionModal(true);
             return;
         }
@@ -1027,7 +1097,14 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         setProcessingAction('reject');
         try {
             await startupProfileService.rejectStartup(id, reason);
-            setPendingStartups(pendingStartups.filter(s => s.id !== id));
+            
+            const startupToMove = pendingStartups.find(s => s.id === id);
+            if (startupToMove) {
+                setRejectedStartups([{ ...startupToMove, status: 'Rejected' }, ...rejectedStartups]);
+                setPendingStartups(pendingStartups.filter(s => s.id !== id));
+            }
+            
+            setShowStartupDetailModal(false);
             setModalType('success');
             setModalMessage('✓ Startup đã bị từ chối!');
             setShowModal(true);
@@ -1041,6 +1118,86 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             setProcessingAction(null);
         }
     };
+    
+    const openStartupDetail = (startup) => {
+        setSelectedStartupForDetail(startup);
+        setShowStartupDetailModal(true);
+    };
+
+    // INTELLIGENT DEEP LINKING EFFECT
+    useEffect(() => {
+        if (!targetId || hasAttemptedDeepLink) return;
+
+        // 1. Handling Bookings
+        if (activeSection === 'bookings' && bookings.length > 0) {
+            const match = bookings.find(b => String(b.id) === String(targetId));
+            if (match) {
+                console.log(`[DeepLink] Auto-opening Booking Details: ${targetId}`);
+                handleViewBookingDetails(match.id);
+                setHasAttemptedDeepLink(true);
+            }
+            return;
+        }
+
+        // 2. Handling Startup Management / Approvals
+        if (activeSection === 'startup_management') {
+            const allStartups = [...pendingStartups, ...approvedStartups, ...rejectedStartups];
+            if (allStartups.length > 0) {
+                const match = allStartups.find(st => String(st.id) === String(targetId));
+                if (match) {
+                    console.log(`[DeepLink] Auto-opening Startup Details: ${targetId}`);
+                    openStartupDetail(match);
+                    setHasAttemptedDeepLink(true);
+                }
+            }
+            return;
+        }
+
+        // 3. Handling Project Management / Approvals
+        if (activeSection === 'project_management') {
+            const allProjects = [...pendingProjects, ...approvedProjects, ...rejectedProjects];
+            if (allProjects.length > 0) {
+                const match = allProjects.find(p => String(p.projectId) === String(targetId));
+                if (match) {
+                    console.log(`[DeepLink] Auto-opening Project Details: ${targetId}`);
+                    openDetailModal(match);
+                    setHasAttemptedDeepLink(true);
+                }
+            }
+            return;
+        }
+
+        // 4. Handling Investor Approvals
+        if (activeSection === 'investor_approval') {
+            const allInvestors = [...pendingInvestors, ...approvedInvestors, ...rejectedInvestors];
+            if (allInvestors.length > 0) {
+                const match = allInvestors.find(inv => String(inv.investorId) === String(targetId));
+                if (match) {
+                    console.log(`[DeepLink] Auto-opening Investor Details: ${targetId}`);
+                    setSelectedInvestor(match);
+                    setShowInvestorDetailModal(true);
+                    setHasAttemptedDeepLink(true);
+                }
+            }
+            return;
+        }
+
+        // 5. Handling User Reports
+        if (activeSection === 'user_reports' && userReports.length > 0) {
+            const match = userReports.find(r => String(r.userReportId) === String(targetId));
+            if (match) {
+                console.log(`[DeepLink] Found User Report: ${targetId}. Scrolling into view.`);
+                const element = document.getElementById(`report-card-${targetId}`);
+                if (element) {
+                    element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    element.style.ring = '2px solid var(--primary-blue)';
+                    setHasAttemptedDeepLink(true);
+                }
+            }
+            return;
+        }
+
+    }, [targetId, activeSection, bookings, pendingProjects, approvedProjects, rejectedProjects, pendingStartups, approvedStartups, rejectedStartups, pendingInvestors, approvedInvestors, rejectedInvestors, userReports, hasAttemptedDeepLink]);
 
     const handleApproveProject = async (projectId) => {
         if (processingProjectId) return;
@@ -1084,6 +1241,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         if (!reason) {
             const project = pendingProjects.find(p => p.projectId === projectId);
             setSelectedProject(project);
+            setRejectionTarget('project');
             setShowRejectionModal(true);
             return;
         }
@@ -1501,6 +1659,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                         (activeSection === 'advisor_approval' ? "Tìm kiếm cố vấn..." : "Tìm kiếm..."))))
                     }
                     showNotification={true}
+                    onNotificationNavigate={onNotificationNavigate}
                 />
             )}
 
@@ -1855,7 +2014,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                         if (activeMobileTab === 'pend') listToShow = filteredPending;
                                         else if (activeMobileTab === 'appr') listToShow = filteredApproved;
                                         else if (activeMobileTab === 'rej') listToShow = filteredRejected;
-                                        else listToShow = [...filteredPending, ...filteredApproved, ...filteredRejected].sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt));
+                                        else listToShow = [...filteredPending, ...filteredApproved, ...filteredRejected].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
                                         if (listToShow.length === 0) {
                                             return (
@@ -1926,7 +2085,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                         if (activeMobileInvTab === 'pend') listToShow = pendingInvestors;
                                         else if (activeMobileInvTab === 'apr') listToShow = approvedInvestors;
                                         else if (activeMobileInvTab === 'rej') listToShow = rejectedInvestors;
-                                        else listToShow = [...pendingInvestors, ...approvedInvestors, ...rejectedInvestors].sort((a,b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+                                        else listToShow = [...pendingInvestors, ...approvedInvestors, ...rejectedInvestors].sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
 
                                         if (listToShow.length === 0) {
                                             return (
@@ -2325,6 +2484,11 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                     Chờ xác nhận
                                     <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{pendingBookingsList.length}</span>
                                 </button>
+                                <button className={`${styles.tab} ${activeMobileBookingTab === 'pay' ? styles.active : ''}`} onClick={() => setActiveMobileBookingTab('pay')}>
+                                    <div className={`${local.bctDot}`} style={{ display: 'inline-block', marginRight: '6px', backgroundColor: '#f59e0b', width: '8px', height: '8px', borderRadius: '50%' }}></div>
+                                    Chờ thanh toán
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{awaitingPaymentBookingsList.length}</span>
+                                </button>
                                 <button className={`${styles.tab} ${activeMobileBookingTab === 'conf' ? styles.active : ''}`} onClick={() => setActiveMobileBookingTab('conf')}>
                                     <div className={`${local.bctDot} ${local.conf}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
                                     Đã xác nhận
@@ -2372,10 +2536,11 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                     ) : (
                                         (() => {
                                             const baseList = activeMobileBookingTab === 'pend' ? pendingBookingsList :
-                                                activeMobileBookingTab === 'conf' ? confirmedBookingsList :
-                                                    activeMobileBookingTab === 'comp' ? completedBookingsList :
-                                                        activeMobileBookingTab === 'canc' ? cancelledBookingsList :
-                                                            filterBookings(allBookings);
+                                                activeMobileBookingTab === 'pay' ? awaitingPaymentBookingsList :
+                                                    activeMobileBookingTab === 'conf' ? confirmedBookingsList :
+                                                        activeMobileBookingTab === 'comp' ? completedBookingsList :
+                                                            activeMobileBookingTab === 'canc' ? cancelledBookingsList :
+                                                                filterBookings(allBookings);
 
                                             const activeList = [...baseList].sort((a, b) => {
                                                 const dateB = new Date(b.updatedAt || b.createdAt || b.startTime || 0);
@@ -2401,7 +2566,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                                         <BookingKanbanCard
                                                             key={booking.id}
                                                             booking={booking}
-                                                            status={booking.status === 'Pending' ? 'pend' : booking.status === 'Confirmed' ? 'conf' : booking.status === 'Completed' ? 'comp' : 'canc'}
+                                                            status={booking.status === 'Pending' ? 'pend' : booking.status === 'ApprovedAwaitingPayment' ? 'pay' : booking.status === 'Confirmed' ? 'conf' : booking.status === 'Completed' ? 'comp' : 'canc'}
                                                             onDetail={() => handleViewBookingDetails(booking.id)}
                                                         />
                                                     ))}
@@ -2416,62 +2581,72 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
                     {/* Startup Approvals Section */}
                     {activeSection === 'approvals' && (
-                        <div className={styles.section} style={{ flex: 1, minHeight: 0, padding: 0, display: 'flex', flexDirection: 'column' }}>
-                            <div className={styles.card} style={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0, border: 'none', boxShadow: 'none', background: 'transparent' }}>
-                                <h3 className={styles.cardTitle} style={{ padding: '0 24px 16px 24px' }}>
-                                    Phê duyệt Startup
-                                    {dashboardData.pendingApprovals > 0 && (
-                                        <span className={`${styles.badge} ${styles.badgeInfo}`} style={{ marginLeft: '12px' }}>
-                                            {dashboardData.pendingApprovals} Chờ xử lý
-                                        </span>
-                                    )}
-                                </h3>
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
+                            {/* Tab Switcher */}
+                            <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                                <button className={`${styles.tab} ${activeMobileStartupTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileStartupTab('all')}>
+                                    Tất cả
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{pendingStartups.length + approvedStartups.length + rejectedStartups.length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileStartupTab === 'pend' ? styles.active : ''}`} onClick={() => setActiveMobileStartupTab('pend')}>
+                                    <div className={`${local.bctDot} ${local.pend}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Chờ Duyệt
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{pendingStartups.length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileStartupTab === 'appr' ? styles.active : ''}`} onClick={() => setActiveMobileStartupTab('appr')}>
+                                    <div className={`${local.bctDot} ${local.appr}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Đã Duyệt
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{approvedStartups.length}</span>
+                                </button>
+                                <button className={`${styles.tab} ${activeMobileStartupTab === 'rej' ? styles.active : ''}`} onClick={() => setActiveMobileStartupTab('rej')}>
+                                    <div className={`${local.bctDot} ${local.rej}`} style={{ display: 'inline-block', marginRight: '6px' }}></div>
+                                    Từ Chối
+                                    <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{rejectedStartups.length}</span>
+                                </button>
+                            </div>
 
-                                <div className={styles.scrollableSection} style={{ paddingLeft: '24px', paddingRight: '24px' }}>
-                                    {isLoadingStartups ? (
-                                        <div style={{ padding: '40px', textAlign: 'center', color: 'var(--text-secondary)' }}>
-                                            <Loader2 size={24} className={styles.spinner} style={{ margin: '0 auto 12px' }} />
-                                            <p>Đang tải dữ liệu...</p>
-                                        </div>
-                                    ) : pendingStartups.length === 0 ? (
-                                        <EmptyState
-                                            icon={Shield}
-                                            title="Trống"
-                                            message="Chưa có yêu cầu phê duyệt Startup nào."
-                                        />
-                                    ) : (
-                                        <div className={styles.list}>
-                                            {pendingStartups.map(startup => (
-                                                <div key={startup?.id || Math.random()} className={styles.listItem}>
-                                                    <div className={styles.listContent} style={{ width: '100%' }}>
-                                                        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '8px' }}>
-                                                            <h4 className={styles.listTitle} style={{ margin: 0 }}>
-                                                                {startup?.companyName || startup?.name || 'Công ty khởi nghiệp'}
-                                                            </h4>
-                                                            <span className={`${styles.badge} ${styles.badgePending}`}>
-                                                                {startup?.industry || 'Chưa xác định'}
-                                                            </span>
-                                                        </div>
-                                                        <div className={styles.listMeta} style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
-                                                            <span>Người đại diện: {startup?.founder || startup?.representName || 'Chưa cập nhật'}</span>
-                                                            <span>Email: {startup?.email || 'Chưa cập nhật'}</span>
-                                                            <span>Ngày đăng ký: {startup?.createdAt ? new Date(startup.createdAt).toLocaleDateString('vi-VN') : 'N/A'}</span>
-                                                        </div>
-                                                        <div className={styles.listAction} style={{ marginTop: '12px' }}>
-                                                            <button
-                                                                className={`${styles.button} ${styles.buttonPrimary}`}
-                                                                onClick={() => handleApproveStartup(startup)}
-                                                                disabled={processingProjectId === startup?.id}
-                                                            >
-                                                                {processingProjectId === startup?.id ? <Loader2 size={16} className={styles.spinner} /> : 'Xem chi tiết & Phê duyệt'}
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
+                            <div className={`${local.inv_scrollCardsContainer} ${styles.scrollableSection}`}>
+                                {isLoadingStartups ? (
+                                    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px' }}>
+                                        <Loader2 size={24} className="animate-spin" style={{ color: 'var(--text-secondary)' }} />
+                                    </div>
+                                ) : (
+                                    (() => {
+                                        let listToShow = [];
+                                        if (activeMobileStartupTab === 'pend') listToShow = pendingStartups;
+                                        else if (activeMobileStartupTab === 'appr') listToShow = approvedStartups;
+                                        else if (activeMobileStartupTab === 'rej') listToShow = rejectedStartups;
+                                        else listToShow = [...pendingStartups, ...approvedStartups, ...rejectedStartups].sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt));
+
+                                        if (listToShow.length === 0) {
+                                            return (
+                                                <EmptyState
+                                                    icon={Shield}
+                                                    title="Trống"
+                                                    message="Hiện chưa có startup nào trong danh mục này"
+                                                />
+                                            );
+                                        }
+
+                                        return (
+                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                                {listToShow.map(s => (
+                                                    <StartupApprovalCard
+                                                        key={s.id}
+                                                        startup={s}
+                                                        status={(s.status || s.approvalStatus) === 'Approved' ? 'appr' : ((s.status || s.approvalStatus) === 'Rejected' ? 'rej' : 'pend')}
+                                                        onDetail={openStartupDetail}
+                                                        onApprove={handleApproveStartup}
+                                                        onReject={handleRejectStartup}
+                                                        isProcessing={processingProjectId === s.id}
+                                                        processingAction={processingAction}
+                                                        isAnyProcessing={!!processingProjectId}
+                                                    />
+                                                ))}
+                                            </div>
+                                        );
+                                    })()
+                                )}
                             </div>
                         </div>
                     )}
@@ -2551,12 +2726,13 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 ) : (
                                     <div className={local.reportGrid}>
                                         {filteredUserReports.map(report => (
-                                            <UserReportCard
-                                                key={report.userReportId}
-                                                report={report}
-                                                onResolve={handleResolveReport}
-                                                isProcessing={processingProjectId === report.userReportId}
-                                            />
+                                            <div key={report.userReportId} id={`report-card-${report.userReportId}`}>
+                                                <UserReportCard
+                                                    report={report}
+                                                    onResolve={handleResolveReport}
+                                                    isProcessing={processingProjectId === report.userReportId}
+                                                />
+                                            </div>
                                         ))}
                                     </div>
                                 )}
@@ -2592,6 +2768,17 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
                 </div>
             )}
+
+            {/* Startup Detail Modal */}
+            <StartupDetailModal 
+                isOpen={showStartupDetailModal}
+                onClose={() => setShowStartupDetailModal(false)}
+                startup={selectedStartupForDetail}
+                onApprove={handleApproveStartup}
+                onReject={handleRejectStartup}
+                isProcessing={!!processingProjectId}
+                processingAction={processingAction}
+            />
 
             {/* PR Posting Modal */}
             {showPRModal && selectedDealForPR && (
@@ -2978,7 +3165,12 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     projectName={selectedProject.projectName}
                     onSubmit={(reason) => {
                         setShowRejectionModal(false);
-                        handleRejectProject(selectedProject.projectId, reason);
+                        if (rejectionTarget === 'startup') {
+                            handleRejectStartup(selectedProject.projectId, reason);
+                        } else {
+                            handleRejectProject(selectedProject.projectId, reason);
+                        }
+                        setRejectionTarget(null);
                     }}
                     onCancel={() => {
                         setShowRejectionModal(false);
@@ -2997,10 +3189,10 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                         {/* Global Close button */}
                         <button
                             onClick={() => setShowDetailModal(false)}
-                            style={{ 
-                                zIndex: 1000, 
-                                position: 'absolute', 
-                                top: '16px', 
+                            style={{
+                                zIndex: 1000,
+                                position: 'absolute',
+                                top: '16px',
                                 right: '16px',
                                 width: '36px',
                                 height: '36px',
@@ -3079,10 +3271,10 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                             {detailProject.projectName}
                                         </h2>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
-                                            <span 
-                                                className={styles.badge} 
-                                                style={{ 
-                                                    backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}25`, 
+                                            <span
+                                                className={styles.badge}
+                                                style={{
+                                                    backgroundColor: `${STATUS_COLORS[detailProject.status || 'Draft']}25`,
                                                     color: STATUS_COLORS[detailProject.status || 'Draft'],
                                                     padding: '4px 12px',
                                                     fontSize: '12px'
@@ -3217,7 +3409,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                                                 </div>
                                                             </div>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                                <button 
+                                                                <button
                                                                     onClick={() => handleBlockchainVerification(doc.id, doc.name)}
                                                                     disabled={isLoadingBlockchain}
                                                                     style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '8px 14px', borderRadius: '10px', background: T.blueDim, color: T.blue, fontSize: '12px', fontWeight: '800', border: '1.5px solid var(--pd-blue-dim)', cursor: isLoadingBlockchain ? 'not-allowed' : 'pointer' }}
@@ -3266,15 +3458,17 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 </h2>
                                 <span
                                     className={`${local.bookingBadge} ${selectedBooking.status === 'Pending' ? local.bookingBadgePending :
-                                        selectedBooking.status === 'Confirmed' ? local.bookingBadgeConfirmed :
-                                            selectedBooking.status === 'Completed' ? local.bookingBadgeCompleted :
-                                                local.bookingBadgeCancelled
+                                        (selectedBooking.status === 'Confirmed' || selectedBooking.status === 2) ? local.bookingBadgeConfirmed :
+                                            (selectedBooking.status === 'Completed' || selectedBooking.status === 3) ? local.bookingBadgeCompleted :
+                                                (selectedBooking.status === 'ApprovedAwaitingPayment' || selectedBooking.status === 1) ? local.bookingBadgePending :
+                                                    local.bookingBadgeCancelled
                                         }`}
                                     style={{ marginTop: '0', width: 'fit-content' }}
                                 >
                                     {selectedBooking.status === 'Pending' ? 'Chờ xác nhận' :
-                                        selectedBooking.status === 'Confirmed' ? 'Đã xác nhận' :
-                                            selectedBooking.status === 'Completed' ? 'Hoàn thành' : 'Đã hủy'}
+                                        (selectedBooking.status === 'Confirmed' || selectedBooking.status === 2) ? 'Đã xác nhận' :
+                                            (selectedBooking.status === 'Completed' || selectedBooking.status === 3) ? 'Hoàn thành' :
+                                                (selectedBooking.status === 'ApprovedAwaitingPayment' || selectedBooking.status === 1) ? 'Chờ thanh toán' : 'Đã hủy'}
                                 </span>
                             </div>
                             <button
@@ -3302,25 +3496,27 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                                 <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700' }}>Cố vấn chuyên môn</div>
                                                 <div style={{
                                                     fontSize: '16px', fontWeight: '800', marginBottom: '4px',
-                                                    color: selectedBooking.status === 'Pending' ? '#ff7a00' :
-                                                        selectedBooking.status === 'Confirmed' ? '#1d9bf0' :
-                                                            selectedBooking.status === 'Completed' ? '#10b981' : '#f4212e'
+                                                    color: (selectedBooking.status === 'Pending' || selectedBooking.status === 0) ? '#ff7a00' :
+                                                        (selectedBooking.status === 'Confirmed' || selectedBooking.status === 2) ? '#1d9bf0' :
+                                                            (selectedBooking.status === 'Completed' || selectedBooking.status === 3) ? '#10b981' :
+                                                                (selectedBooking.status === 'ApprovedAwaitingPayment' || selectedBooking.status === 1) ? '#f59e0b' : '#f4212e'
                                                 }}>
                                                     {selectedBooking.advisorName}
                                                 </div>
-                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>Mã: {selectedBooking.advisorId}</div>
                                             </div>
                                             <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700' }}>Startup / Khách hàng</div>
+                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700' }}>
+                                                    {selectedBooking.customerRole === 'Investor' ? 'Nhà đầu tư / Khách hàng' : 'Startup / Khách hàng'}
+                                                </div>
                                                 <div style={{
                                                     fontSize: '16px', fontWeight: '800', marginBottom: '4px',
-                                                    color: selectedBooking.status === 'Pending' ? '#ff7a00' :
-                                                        selectedBooking.status === 'Confirmed' ? '#1d9bf0' :
-                                                            selectedBooking.status === 'Completed' ? '#10b981' : '#f4212e'
+                                                    color: (selectedBooking.status === 'Pending' || selectedBooking.status === 0) ? '#ff7a00' :
+                                                        (selectedBooking.status === 'Confirmed' || selectedBooking.status === 2) ? '#1d9bf0' :
+                                                            (selectedBooking.status === 'Completed' || selectedBooking.status === 3) ? '#10b981' :
+                                                                (selectedBooking.status === 'ApprovedAwaitingPayment' || selectedBooking.status === 1) ? '#f59e0b' : '#f4212e'
                                                 }}>
                                                     {selectedBooking.customerName}
                                                 </div>
-                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', fontFamily: 'monospace' }}>Mã: {selectedBooking.customerId}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -3338,7 +3534,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                                     <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
                                                         {new Date(selectedBooking.startTime).toLocaleDateString('vi-VN')}
                                                         <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '400', marginLeft: '8px' }}>
-                                                            {new Date(selectedBooking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                            {new Date(selectedBooking.startTime).getUTCHours().toString().padStart(2, '0')}:{new Date(selectedBooking.startTime).getUTCMinutes().toString().padStart(2, '0')}
                                                         </span>
                                                     </div>
                                                 </div>
@@ -3352,39 +3548,67 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                                     <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
                                                         {new Date(selectedBooking.endTime).toLocaleDateString('vi-VN')}
                                                         <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '400', marginLeft: '8px' }}>
-                                                            {new Date(selectedBooking.endTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                                                            {new Date(selectedBooking.endTime).getUTCHours().toString().padStart(2, '0')}:{new Date(selectedBooking.endTime).getUTCMinutes().toString().padStart(2, '0')}
                                                         </span>
                                                     </div>
                                                 </div>
                                             </div>
                                         </div>
+                                        <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', borderLeft: '4px solid var(--primary-blue)', marginTop: '8px' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700' }}>Ghi chú</div>
+                                            <div style={{ fontSize: '14px', color: 'var(--text-primary)', fontStyle: 'italic', lineHeight: '1.5' }}>
+                                                {selectedBooking.note && selectedBooking.note.trim() ? `"${selectedBooking.note}"` : "Không có ghi chú"}
+                                            </div>
+                                        </div>
                                     </div>
 
-                                    {/* 3. Chi phí & Hệ thống */}
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                        <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>3. Chi phí &amp; Hệ thống</h4>
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                            <div style={{ padding: '20px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', position: 'relative', overflow: 'hidden' }}>
-                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700' }}>Chi phí tư vấn</div>
-                                                <div style={{ fontSize: '24px', fontWeight: '900', color: '#f59e0b' }}>
-                                                    {Number(selectedBooking.price).toLocaleString('vi-VN')} <span style={{ fontSize: '14px', fontWeight: '600' }}>₫</span>
+                                        <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>3. Chi phí</h4>
+                                        <div style={{
+                                            background: 'var(--bg-secondary)',
+                                            borderRadius: '16px',
+                                            border: '1px solid var(--border-color)',
+                                            overflow: 'hidden'
+                                        }}>
+                                            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '600' }}>Tổng chi phí tư vấn</span>
+                                                    <span style={{ fontSize: '16px', color: 'var(--text-primary)', fontWeight: '800' }}>
+                                                        {Number(selectedBooking.price).toLocaleString('vi-VN')} ₫
+                                                    </span>
                                                 </div>
-                                                <div style={{ position: 'absolute', right: '12px', bottom: '-10px', fontSize: '60px', fontWeight: '900', opacity: 0.05, color: '#f59e0b', userSelect: 'none' }}>₫</div>
+
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '600' }}>
+                                                        Hoa hồng hệ thống ({selectedBooking.systemCommissionPercent || selectedBooking.commissionSnapshot || 0}%)
+                                                    </span>
+                                                    <span style={{ fontSize: '16px', color: '#ef4444', fontWeight: '700' }}>
+                                                        - {Number(selectedBooking.systemCommissionAmount || (selectedBooking.price * (selectedBooking.systemCommissionPercent || selectedBooking.commissionSnapshot || 0) / 100)).toLocaleString('vi-VN')} ₫
+                                                    </span>
+                                                </div>
+
+                                                <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
+
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <span style={{ fontSize: '15px', color: '#10b981', fontWeight: '900' }}>Advisor thực nhận (Net)</span>
+                                                    <span style={{ fontSize: '24px', color: '#10b981', fontWeight: '950' }}>
+                                                        {Number(selectedBooking.price - (selectedBooking.systemCommissionAmount || (selectedBooking.price * (selectedBooking.systemCommissionPercent || selectedBooking.commissionSnapshot || 0) / 100))).toLocaleString('vi-VN')} ₫
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <div style={{ padding: '20px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '12px', textTransform: 'uppercase', fontWeight: '700' }}>Trạng thái hiện tại</div>
-                                                <div className={`${local.bookingBadge} ${selectedBooking.status === 'Pending' ? local.bookingBadgePending :
-                                                    selectedBooking.status === 'Confirmed' ? local.bookingBadgeConfirmed :
-                                                        selectedBooking.status === 'Completed' ? local.bookingBadgeCompleted :
-                                                            local.bookingBadgeCancelled
-                                                    }`} style={{ padding: '8px 16px', fontSize: '13px' }}>
-                                                    {selectedBooking.status === 'Pending' ? <Clock size={14} /> :
-                                                        selectedBooking.status === 'Confirmed' ? <CheckCircle size={14} /> :
-                                                            selectedBooking.status === 'Completed' ? <CheckCircle size={14} /> : <X size={14} />}
-                                                    {selectedBooking.status === 'Pending' ? 'Chờ xác nhận' :
-                                                        selectedBooking.status === 'Confirmed' ? 'Đã xác nhận' :
-                                                            selectedBooking.status === 'Completed' ? 'Hoàn thành' : 'Đã hủy'}
-                                                </div>
+
+                                            <div style={{
+                                                backgroundColor: 'rgba(29, 155, 240, 0.05)',
+                                                borderTop: '1px solid var(--border-color)',
+                                                padding: '12px 20px',
+                                                display: 'flex',
+                                                gap: '12px',
+                                                alignItems: 'center'
+                                            }}>
+                                                <AlertCircle size={16} color="#1d9bf0" style={{ flexShrink: 0 }} />
+                                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: '1.4' }}>
+                                                    Mức hoa hồng này là cuối cùng và sẽ được áp dụng xuyên suốt quá trình đơn hàng này được thực hiện.
+                                                </span>
                                             </div>
                                         </div>
                                     </div>
@@ -3451,16 +3675,16 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                             <div className={local.inv_detailGrid}>
                                 <div>
                                     <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Tên tổ chức / Cá nhân</label>
-                                    <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.organizationName || selectedInvestor.userFullName}</p>
+                                    <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.organizationName || selectedInvestor.fullName}</p>
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
                                     <div>
                                         <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Email</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', fontWeight: '500' }}>{selectedInvestor.userEmail || '-'}</p>
+                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', fontWeight: '500' }}>{selectedInvestor.email || '-'}</p>
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Số điện thoại</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', fontWeight: '500' }}>{selectedInvestor.phoneNumber || '-'}</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Khu vực đầu tư</label>
+                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', fontWeight: '500' }}>{selectedInvestor.investmentRegion || '-'}</p>
                                     </div>
                                 </div>
                                 <div>
@@ -3479,12 +3703,14 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 </div>
                                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Ngân sách tối thiểu</label>
-                                        <p style={{ fontSize: '15px', fontWeight: '800', color: '#10b981', margin: '4px 0 0 0' }}>{selectedInvestor.minInvestment ? Number(selectedInvestor.minInvestment).toLocaleString() : '0'} ₫</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Ngân sách đầu tư</label>
+                                        <p style={{ fontSize: '15px', fontWeight: '800', color: '#10b981', margin: '4px 0 0 0' }}>{selectedInvestor.investmentAmount ? Number(selectedInvestor.investmentAmount).toLocaleString() : 'Chưa cập nhật'} ₫</p>
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Ngân sách tối đa</label>
-                                        <p style={{ fontSize: '15px', fontWeight: '800', color: '#10b981', margin: '4px 0 0 0' }}>{selectedInvestor.maxInvestment ? Number(selectedInvestor.maxInvestment).toLocaleString() : 'Không giới hạn'} ₫</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Giai đoạn ưu tiên</label>
+                                        <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--primary-blue)', margin: '4px 0 0 0' }}>
+                                            {selectedInvestor.preferredStage === 'Idea' || selectedInvestor.preferredStage === 0 ? 'Ý tưởng (Idea)' : (selectedInvestor.preferredStage === 'MVP' || selectedInvestor.preferredStage === 1 ? 'MVP' : (selectedInvestor.preferredStage === 'Growth' || selectedInvestor.preferredStage === 2 ? 'Phát triển (Growth)' : '-'))}
+                                        </p>
                                     </div>
                                 </div>
                                 {(selectedInvestor.status || selectedInvestor.approvalStatus) === 'Rejected' && selectedInvestor.rejectionReason && (

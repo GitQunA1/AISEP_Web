@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Newspaper, CheckCircle, AlertCircle, Archive, Loader2, Search } from 'lucide-react';
 import styles from '../../styles/SharedDashboard.module.css';
 import prService from '../../services/prService';
+import NewsCard from './NewsCard';
+import NewsDetailModal from './NewsDetailModal';
 
 const EmptyState = ({ icon: Icon, title, message }) => (
     <div style={{textAlign: 'center', padding: '60px 20px'}}>
@@ -20,6 +22,7 @@ export default function PRNewsSection() {
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedPR, setSelectedPR] = useState(null);
 
     useEffect(() => {
         fetchPRNews();
@@ -121,85 +124,30 @@ export default function PRNewsSection() {
 
             {/* PR News List */}
             {!isLoading && filteredPRs.length > 0 && (
-                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '16px'}}>
-                    {filteredPRs.map(pr => (
-                        <div
+                <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(350px, 1fr))', gap: '20px'}}>
+                    {filteredPRs.map((pr, idx) => (
+                        <NewsCard
                             key={pr.postPrId}
-                            className={styles.card}
-                            style={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                gap: '12px',
-                                borderLeft: '4px solid var(--primary-blue)',
-                                transition: 'all 0.2s ease'
-                            }}
-                        >
-                            {/* PR Image */}
-                            {pr.projectImage && (
-                                <img
-                                    src={pr.projectImage}
-                                    alt={pr.projectName}
-                                    style={{
-                                        width: '100%',
-                                        height: '180px',
-                                        objectFit: 'cover',
-                                        borderRadius: '6px'
-                                    }}
-                                />
-                            )}
-
-                            {/* PR Header */}
-                            <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '8px'}}>
-                                <div style={{flex: 1}}>
-                                    <h4 style={{margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)', lineHeight: '1.3'}}>
-                                        {pr.title}
-                                    </h4>
-                                    <p style={{margin: 0, fontSize: '12px', color: 'var(--text-secondary)'}}>
-                                        {pr.projectName}
-                                    </p>
-                                </div>
-                            </div>
-
-                            {/* PR Content Preview */}
-                            <p style={{
-                                margin: 0,
-                                fontSize: '13px',
-                                color: 'var(--text-secondary)',
-                                lineHeight: '1.5',
-                                display: '-webkit-box',
-                                WebkitLineClamp: 3,
-                                WebkitBoxOrient: 'vertical',
-                                overflow: 'hidden'
-                            }}>
-                                {pr.content}
-                            </p>
-
-                            {/* PR Meta Info */}
-                            <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '12px', paddingTop: '8px', borderTop: '1px solid var(--border-color)'}}>
-                                <div>
-                                    <div style={{color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px'}}>Startup</div>
-                                    <div style={{color: 'var(--text-primary)', fontWeight: '600'}}>
-                                        {pr.startupName}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div style={{color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px'}}>Nhà đầu tư</div>
-                                    <div style={{color: 'var(--text-primary)', fontWeight: '600'}}>
-                                        {pr.investorName}
-                                    </div>
-                                </div>
-
-                                <div style={{gridColumn: '1 / -1'}}>
-                                    <div style={{color: 'var(--text-secondary)', fontSize: '10px', fontWeight: '600', textTransform: 'uppercase', marginBottom: '2px'}}>Ngày đăng</div>
-                                    <div style={{color: 'var(--text-primary)', fontSize: '11px'}}>
-                                        {pr.publishedAt ? new Date(pr.publishedAt).toLocaleDateString('vi-VN') : 'Chưa xuất bản'}
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                            index={idx}
+                            thumbnail={pr.projectImage}
+                            title={pr.title}
+                            description={pr.content}
+                            category="Đầu tư"
+                            projectName={pr.projectName}
+                            investorName={pr.investorName}
+                            timestamp={pr.publishedAt}
+                            onClick={() => setSelectedPR(pr)}
+                        />
                     ))}
                 </div>
+            )}
+
+            {/* Detail Modal */}
+            {selectedPR && (
+                <NewsDetailModal
+                    pr={selectedPR}
+                    onClose={() => setSelectedPR(null)}
+                />
             )}
 
             {/* No Results */}

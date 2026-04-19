@@ -5,7 +5,7 @@ import notificationService from '../../services/notificationService';
 import chatService from '../../services/chatService';
 import signalRService from '../../services/signalRService';
 
-const NotificationCenter = ({ onOpenChat }) => {
+const NotificationCenter = ({ onOpenChat, onNavigate }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [notifications, setNotifications] = useState([]);
@@ -18,7 +18,6 @@ const NotificationCenter = ({ onOpenChat }) => {
   // Load notifications on mount and setup SignalR
   useEffect(() => {
     loadNotifications();
-    loadUnreadCount();
     
     // Subscribe to real-time notifications via SignalR
     if (!signalRSubscribed.current) {
@@ -69,23 +68,6 @@ const NotificationCenter = ({ onOpenChat }) => {
     }
   };
 
-  const loadUnreadCount = async () => {
-    try {
-      const response = await notificationService.getUnreadCount();
-      // Extract unread count from multiple possible ApiResponse shapes
-      const raw =
-        (typeof response?.data === 'number' ? response.data : undefined) ??
-        (typeof response?.data?.unreadCount === 'number' ? response.data.unreadCount : undefined) ??
-        (typeof response?.data?.count === 'number' ? response.data.count : undefined) ??
-        (typeof response?.unreadCount === 'number' ? response.unreadCount : undefined);
-
-      const count = Number.isFinite(Number(raw)) ? Number(raw) : 0;
-      setUnreadCount(prev => Math.max(prev || 0, count));
-    } catch (error) {
-      console.error('Error loading unread count:', error);
-    }
-  };
-
   const togglePanel = () => {
     if (isOpen) {
       setIsClosing(true);
@@ -97,7 +79,6 @@ const NotificationCenter = ({ onOpenChat }) => {
       setIsOpen(true);
       // Refresh counts when opening (keeps badge accurate).
       loadNotifications();
-      loadUnreadCount();
     }
   };
 
@@ -134,36 +115,17 @@ const NotificationCenter = ({ onOpenChat }) => {
       console.error('Error marking as read:', error);
     }
 
-    if (!notification.referenceId) return;
-
     try {
-      // Handle different notification types
-      if (notification.referenceType === 'ChatSession') {
-        console.log('[NotificationCenter] Opening chat session:', notification.referenceId);
-        onOpenChat?.(notification.referenceId, notification);
+      const refType = notification.referenceType || notification.ReferenceType || notification.type || notification.Type;
+      const refId = notification.referenceId || notification.ReferenceId;
+      
+      if (refType === 'ChatSession' && refId) {
+        console.log('[NotificationCenter] Opening chat session:', refId);
+        onOpenChat?.(refId, notification);
         togglePanel();
-      } else if (notification.referenceType === 'ConnectionRequest') {
-        console.log('[NotificationCenter] Opening connection request chat');
-        const session = await chatService.getChatSessionFromConnectionRequest(notification.referenceId);
-        if (session && session.chatSessionId) {
-          onOpenChat?.(session.chatSessionId, notification);
-          togglePanel();
-        }
-      } else if (notification.referenceType === 'Deal') {
-        console.log('[NotificationCenter] Navigating to deal:', notification.referenceId);
-        // Navigate to appropriate dashboard section
-        const userRole = localStorage.getItem('userRole');
-        let dashboardUrl = '/dashboard';
-        if (userRole === 'Investor') {
-          dashboardUrl = '/investor-dashboard';
-        } else if (userRole === 'Startup') {
-          dashboardUrl = '/startup-dashboard';
-        }
-        window.location.href = dashboardUrl;
-        togglePanel();
-      } else if (notification.referenceType === 'Project') {
-        console.log('[NotificationCenter] Navigating to project:', notification.referenceId);
-        window.location.href = `/project/${notification.referenceId}`;
+      } else if (onNavigate) {
+        console.log('[NotificationCenter] Navigating via onNavigate:', refType, refId);
+        onNavigate(refType, refId);
         togglePanel();
       }
     } catch (error) {

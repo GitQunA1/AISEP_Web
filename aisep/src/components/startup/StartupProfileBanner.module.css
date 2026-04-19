@@ -4,8 +4,15 @@
 }
 
 @keyframes slideDown {
-  from { transform: translateY(-5px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+  from {
+    transform: translateY(-5px);
+    opacity: 0;
+  }
+
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
 }
 
 .bannerContent {
@@ -79,7 +86,7 @@
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .actionBtn {
     width: 100%;
     justify-content: center;

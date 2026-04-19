@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { Rocket, Loader, AlertCircle, ChevronRight } from 'lucide-react';
+import React, { useState, useRef, useEffect, useCallback, useMemo, startTransition } from 'react';
+import { Rocket, AlertCircle, ChevronRight } from 'lucide-react';
 import styles from './MainLayout.module.css';
 import sharedStyles from '../../styles/SharedDashboard.module.css';
 import Sidebar from './Sidebar';
@@ -13,6 +13,7 @@ import InvestorDetail from '../investors/InvestorDetail';
 import ProjectSubmissionForm from '../startup/ProjectSubmissionForm';
 import investorService from '../../services/investorService';
 import projectSubmissionService from '../../services/projectSubmissionService';
+import { filterProjectsForPublicDiscovery } from '../../utils/projectDiscoveryFilters';
 import followerService from '../../services/followerService';
 import connectionService from '../../services/connectionService';
 import dealsService from '../../services/dealsService';
@@ -54,7 +55,8 @@ function MainLayout({
   showInvestors = false,
   showAI = false,
   activeView = 'main',
-  isFullWidthContent = false
+  isFullWidthContent = false,
+  onNotificationNavigate
 }) {
   const token = localStorage.getItem('aisep_token') || sessionStorage.getItem('token');
   const [userSubscription, setUserSubscription] = useState(null);
@@ -180,14 +182,12 @@ function MainLayout({
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
-  // Fetch all projects (we use getAllProjects to get public feed)
+  // Public feed: non-premium list filtered to approved/published only (see utils/projectDiscoveryFilters.js)
   const [allStartups, setAllStartups] = useState([]);
-  const [filteredStartups, setFilteredStartups] = useState([]);
   const [topRatedStartups, setTopRatedStartups] = useState([]);
   const [trendingSectors, setTrendingSectors] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [isScoresLoading, setIsScoresLoading] = useState(false);
   const [feedError, setFeedError] = useState(null);
   const [investorCount, setInvestorCount] = useState(0);
   const [followedProjectIds, setFollowedProjectIds] = useState(new Set()); // Cache for quick lookup
@@ -503,13 +503,7 @@ function MainLayout({
       setIsLoading(true);
       setFeedError(null);
       try {
-        const roleStr = user?.role?.toString().toLowerCase() || '';
-        const roleNum = Number(user?.role);
-        const isBypassRole = roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 3 || roleNum === 2;
-
-        const projectsPromise = isBypassRole
-          ? projectSubmissionService.getApprovedProjects()
-          : projectSubmissionService.getAllProjects();
+        const projectsPromise = projectSubmissionService.getAllProjects();
 
         // Fetch both projects and startup profiles with large pageSize to ensure all are joined
         const [projectsRes, startupsRes] = await Promise.all([
@@ -535,8 +529,9 @@ function MainLayout({
         }
 
         if (projectsRes.statusCode === 200 && projectsRes.data && projectsRes.data.items) {
-          // Filter for published projects and map to UI model
-          let publishedProjects = projectsRes.data.items
+          const approvedOnly = filterProjectsForPublicDiscovery(projectsRes.data.items);
+          // Map to UI model (non-premium API may return mixed statuses; discovery is approved/published only)
+          let publishedProjects = approvedOnly
             .map(p => {
               // Try every possible ID field that backend might use to link project to startup/owner
               const sid = p.startupId || p.StartupId || p.userId || p.UserId || p.ownerId || p.authorId;
@@ -576,7 +571,6 @@ function MainLayout({
             });
 
           setAllStartups(publishedProjects);
-          setFilteredStartups(publishedProjects);
 
           // Extract trending sectors based on industry tags frequency
           const industryCounts = publishedProjects.reduce((acc, p) => {
@@ -604,7 +598,6 @@ function MainLayout({
           // Update Top Rated Startups based on real startupPotentialScore
           const sortedByScore = [...publishedProjects].filter(p => p.aiScore > 0).sort((a, b) => b.aiScore - a.aiScore);
           setTopRatedStartups(sortedByScore.slice(0, 3));
-          setIsScoresLoading(false);
 
         } else {
           setFeedError(projectsRes.message || "Không thể tải danh sách dự án.");
@@ -656,27 +649,26 @@ function MainLayout({
   const closeMobileMenu = () => setIsMobileMenuOpen(false);
 
   const handleFilterChange = (filters) => {
-    // When filters change, reset isReturning so the new list can animate
     setIsReturning(false);
-    setActiveFilters(filters);
+    startTransition(() => {
+      setActiveFilters(filters);
+    });
   };
 
-  // Combined Filtering Logic
-  useEffect(() => {
+  /** Derived list: one render per tab/filter change (no useEffect + setState delay). */
+  const filteredStartups = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
 
-    let filtered = allStartups.filter(startup => {
-      // 1. Core Filters (Industry, Stage, Score)
+    let filtered = allStartups.filter((startup) => {
       if (activeFilters.industry && startup.industry !== activeFilters.industry) return false;
       if (activeFilters.stage && startup.stage !== activeFilters.stage) return false;
       if (activeFilters.minScore && (startup.aiScore || 0) < activeFilters.minScore) return false;
       if (activeFilters.fundingStage && startup.fundingStage !== activeFilters.fundingStage) return false;
 
-      // 2. Search Query (Name, Description, Tags)
       if (query) {
         const matchesName = (startup.name || '').toLowerCase().includes(query);
         const matchesDesc = (startup.description || '').toLowerCase().includes(query);
-        const matchesTags = (startup.tags || []).some(tag => tag.toLowerCase().includes(query));
+        const matchesTags = (startup.tags || []).some((tag) => tag.toLowerCase().includes(query));
 
         if (!matchesName && !matchesDesc && !matchesTags) return false;
       }
@@ -684,7 +676,6 @@ function MainLayout({
       return true;
     });
 
-    // 3. Sort Logic
     if (activeFilters.sort) {
       switch (activeFilters.sort) {
         case 'newest':
@@ -706,15 +697,16 @@ function MainLayout({
           filtered.sort((a, b) => (b.aiScore || 0) - (a.aiScore || 0));
           break;
         case 'funded':
-          // Keep only projects explicitly indicating they are actively raising or having a funding stage
-          filtered = filtered.filter(p => p.fundingStage && p.fundingStage !== 'Không gọi vốn' && p.fundingStage.trim() !== '');
+          filtered = filtered.filter(
+            (p) => p.fundingStage && p.fundingStage !== 'Không gọi vốn' && p.fundingStage.trim() !== ''
+          );
           break;
         default:
           break;
       }
     }
 
-    setFilteredStartups(filtered);
+    return filtered;
   }, [allStartups, activeFilters, searchQuery]);
 
   const handleProjectUnlock = useCallback((projectId) => {
@@ -723,6 +715,42 @@ function MainLayout({
       String(s.id) === String(projectId) ? { ...s, isUnlockedByCurrentUser: true } : s
     ));
   }, []);
+
+  const feedHeaderStats = useMemo(
+    () => ({
+      approvedCount: allStartups.length,
+      investorCount,
+      industryCount: new Set(allStartups.flatMap((s) => s.tags || [])).size,
+    }),
+    [allStartups, investorCount]
+  );
+
+  const feedIndustryCounts = useMemo(() => {
+    return allStartups.reduce((acc, s) => {
+      (s.tags || []).forEach((tag) => {
+        acc[tag] = (acc[tag] || 0) + 1;
+      });
+      return acc;
+    }, {});
+  }, [allStartups]);
+
+  const handleFeedOpenChat = useCallback((chatSessionId, notification) => {
+    setActiveChatSession({
+      chatSessionId,
+      displayName: notification?.title || 'Chat mới',
+      currentUserId: user?.userId,
+      sentTime: new Date().toISOString()
+    });
+  }, [user?.userId]);
+
+  const handleFeedShowProjectForm = useCallback(() => {
+    const userRole = (user?.role !== undefined && user?.role !== null) ? user.role.toString().toLowerCase() : '';
+    if ((userRole === 'startup' || userRole === '0') && !hasStartupProfile) {
+      setShowProfileModal(true);
+    } else {
+      setShowProjectForm(true);
+    }
+  }, [user?.role, hasStartupProfile]);
 
   return (
     <div className={`${styles.mainContainer} ${showAI ? styles.aiMode : ''}`}>
@@ -760,8 +788,7 @@ function MainLayout({
 
       <main
         ref={mainContentRef}
-        key={activeView}
-        className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} ${isFullWidthContent ? styles.fullWidthContent : ''} view-enter`}
+        className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} ${isFullWidthContent ? styles.fullWidthContent : ''}`}
       >
 
         {/* Feed Content or Profile Page */}
@@ -779,6 +806,7 @@ function MainLayout({
             <AdvisorsPage
               user={user}
               onShowLogin={onShowLogin}
+              onNotificationNavigate={onNotificationNavigate}
               investorProfileStatus={investorProfileStatus}
               investorProfileReason={investorProfile?.rejectionReason}
               onUpdateProfile={() => onShowDashboard('preferences')}
@@ -792,7 +820,11 @@ function MainLayout({
             />
           )
         ) : showInvestors ? (
-          <InvestorDiscovery user={user} onShowLogin={onShowLogin} />
+          <InvestorDiscovery
+            user={user}
+            onShowLogin={onShowLogin}
+            onNotificationNavigate={onNotificationNavigate}
+          />
         ) : showAI ? (
           <AIChatAssistant />
         ) : selectedStartupProfileId ? (
@@ -832,41 +864,17 @@ function MainLayout({
         ) : (
           <>
             {/* WRAPPER FOR CONSTRAINED STREAM */}
-            <div className={styles.feedStreamWrapper}>
+            <div className={`${styles.feedStreamWrapper} view-enter`}>
               <FeedHeader
                 user={user}
                 onFilterChange={handleFilterChange}
                 activeFilters={activeFilters}
                 showStats={true}
-                onOpenChat={(chatSessionId, notification) => {
-                  setActiveChatSession({
-                    chatSessionId,
-                    displayName: notification?.title || 'Chat mới',
-                    currentUserId: user?.userId,
-                    sentTime: new Date().toISOString()
-                  });
-                }}
-                onShowProjectForm={() => {
-                  const userRole = (user?.role !== undefined && user?.role !== null) ? user.role.toString().toLowerCase() : '';
-                  if ((userRole === 'startup' || userRole === '0') && !hasStartupProfile) {
-                    setShowProfileModal(true);
-                  } else {
-                    setShowProjectForm(true);
-                  }
-                }}
-                stats={{
-                  approvedCount: allStartups.length,
-                  investorCount: investorCount,
-                  industryCount: new Set(allStartups.flatMap(s => s.tags)).size
-                }}
-                industryCounts={
-                  allStartups.reduce((acc, s) => {
-                    s.tags.forEach(tag => {
-                      acc[tag] = (acc[tag] || 0) + 1;
-                    });
-                    return acc;
-                  }, {})
-                }
+                onOpenChat={handleFeedOpenChat}
+                onShowProjectForm={handleFeedShowProjectForm}
+                stats={feedHeaderStats}
+                industryCounts={feedIndustryCounts}
+                onNotificationNavigate={onNotificationNavigate}
               />
 
               {/* Status Alert Banner (Discovery Tab) */}
@@ -884,16 +892,9 @@ function MainLayout({
                   onDismiss={() => setShowProfileModal(false)}
                 />
               )}
-              {isLoading || (isScoresLoading && activeFilters.sort === 'rated') ? (
+              {isLoading ? (
                 <div style={{ padding: '40px 20px', textAlign: 'center', color: '#64748b' }}>
-                  {isScoresLoading && activeFilters.sort === 'rated' ? (
-                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-                      <Loader size={24} className={styles.spinIcon} />
-                      <p style={{ margin: 0 }}>Đang phân tích điểm AI...</p>
-                    </div>
-                  ) : (
-                    <p>Đang tải dự án...</p>
-                  )}
+                  <p>Đang tải dự án...</p>
                 </div>
               ) : feedError ? (
                 <div className={styles.emptyState}>
@@ -967,7 +968,7 @@ function MainLayout({
           onShowLogin={onShowLogin}
           topRatedStartups={topRatedStartups}
           trendingSectors={trendingSectors}
-          isLoading={isLoading || isScoresLoading}
+          isLoading={isLoading}
           user={user}
         />
       </div>

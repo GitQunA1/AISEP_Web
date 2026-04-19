@@ -23,12 +23,13 @@ import ProjectDetailView from '../components/feed/ProjectDetailView';
 import AdvisorPayoutSection from '../components/advisor/AdvisorPayoutSection';
 import AdvisorWalletSection from '../components/advisor/AdvisorWalletSection';
 import AccountProfileTab from '../components/common/AccountProfileTab';
+import BookingRejectionModal from '../components/booking/BookingRejectionModal';
 
 
 /**
  * AdvisorDashboard – Dashboard cho Advisor
  */
-export default function AdvisorDashboard({ user, initialSection = 'overview', onSectionChange, onShowProfile, onLogout }) {
+export default function AdvisorDashboard({ user, initialSection = 'overview', targetId, onSectionChange, onShowProfile, onLogout, onNotificationNavigate }) {
     const [activeSection, setActiveSection] = useState(initialSection);
     const [advisorProfile, setAdvisorProfile] = useState(null);
     const [activeChatSession, setActiveChatSession] = useState(null);
@@ -161,15 +162,15 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
             {!activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
                 <FeedHeader
                     title={
-                        activeSection === 'account_profile' ? "Hồ sơ người dùng" : 
-                        activeSection === 'wallet' ? "Thu nhập" : 
-                        activeSection === 'approve_bookings' ? "Duyệt Booking" :
-                        "Bảng điều khiển Cố vấn"
+                        activeSection === 'account_profile' ? "Hồ sơ người dùng" :
+                            activeSection === 'wallet' ? "Thu nhập" :
+                                activeSection === 'approve_bookings' ? "Duyệt Booking" :
+                                    "Bảng điều khiển Cố vấn"
                     }
                     subtitle={
-                        activeSection === 'account_profile' 
+                        activeSection === 'account_profile'
                             ? "Quản lý thông tin tài khoản và mật khẩu của bạn."
-                            : activeSection === 'wallet' 
+                            : activeSection === 'wallet'
                                 ? "Quản lý số dư và lịch sử thu nhập của bạn."
                                 : activeSection === 'approve_bookings'
                                     ? "Các yêu cầu tư vấn mới cần bạn xác nhận."
@@ -183,6 +184,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                     onOpenChat={handleOpenChat}
                     showFilter={false}
                     user={user}
+                    onNotificationNavigate={onNotificationNavigate}
                 />
             )}
 
@@ -276,7 +278,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                             <p>Bạn cần hoàn tất hồ sơ trước khi xét duyệt các yêu cầu.</p>
                         </div>
                     ) : (
-                        <BookingApprovalSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} onNavigate={handleNavigate} />
+                        <BookingApprovalSection bookings={incomingBookings} targetId={targetId} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} onNavigate={handleNavigate} />
                     )
                 )}
                 {activeSection === 'bookings' && (
@@ -286,7 +288,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                             <p>Bạn cần hoàn tất hồ sơ trước khi xem danh sách Booking.</p>
                         </div>
                     ) : (
-                        <IncomingBookingsSection bookings={incomingBookings} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} activeSection={activeSection} onNavigate={handleNavigate} />
+                        <IncomingBookingsSection bookings={incomingBookings} targetId={targetId} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} activeSection={activeSection} onNavigate={handleNavigate} />
                     )
                 )}
                 {activeSection === 'availability' && (
@@ -311,9 +313,9 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', on
                 )}
 
                 {activeSection === 'pr_news' && (
-                    <NewsPRSection user={user} />
+                    <NewsPRSection user={user} onNotificationNavigate={onNotificationNavigate} />
                 )}
-                
+
 
                 {activeSection === 'payouts' && (
                     isNewAdvisor ? (
@@ -508,6 +510,14 @@ const AdvisorBookingKanbanCard = ({ booking, onDetail, onApprove, onReject, onCh
         statusBg = 'rgba(255, 122, 0, 0.1)';
     }
 
+    // Helper for literal UTC time display
+    const formatTimeUTC = (dateStr) => {
+        if (!dateStr) return '—';
+        const d = new Date(dateStr);
+        return d.getUTCHours().toString().padStart(2, '0') + ':' + 
+               d.getUTCMinutes().toString().padStart(2, '0');
+    };
+
     return (
         <div className={avStyles.bcard}>
             <div className={`${avStyles.bcardStrip} ${avStyles[localStatus]}`}></div>
@@ -550,7 +560,7 @@ const AdvisorBookingKanbanCard = ({ booking, onDetail, onApprove, onReject, onCh
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
                         <Clock size={13} style={{ color: 'var(--primary-blue)' }} />
-                        <span>{new Date(booking.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span>{formatTimeUTC(booking.startTime)} - {formatTimeUTC(booking.endTime)}</span>
                     </div>
                 </div>
 
@@ -618,33 +628,82 @@ const EmptyState = ({ icon: Icon, title, message }) => (
 /**
  * BookingApprovalSection - Dedicated section for approving NEW bookings (status 0)
  */
-function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate }) {
+function BookingApprovalSection({ bookings, targetId, loading, onRefresh, user, onNavigate }) {
     const [actionLoading, setActionLoading] = useState({});
+    const [actionError, setActionError] = useState({});
     const [selectedBooking, setSelectedBooking] = useState(null);
+    const [rejectingBooking, setRejectingBooking] = useState(null);
+    const [showRejectionModal, setShowRejectionModal] = useState(false);
+    
+    // Deep Linking State Tracking
+    const [hasAttemptedDeepLink, setHasAttemptedDeepLink] = useState(false);
+    
     const pendingBookings = bookings.filter(b => b.status === 0 || b.status === 'Pending');
+
+    // Deep Linking Hook
+    useEffect(() => {
+        if (targetId && pendingBookings.length > 0 && !hasAttemptedDeepLink) {
+            const match = pendingBookings.find(b => String(b.id || b.bookingId) === String(targetId));
+            if (match) {
+                setSelectedBooking(match);
+                setHasAttemptedDeepLink(true);
+                console.log(`[DeepLink] Auto-opened Booking Approval Details for ID: ${targetId}`);
+            }
+        }
+    }, [targetId, pendingBookings, hasAttemptedDeepLink]);
+
+    // Helper for literal UTC time display
+    const formatTimeUTC = (dateStr) => {
+        if (!dateStr) return '—';
+        const d = new Date(dateStr);
+        return d.getUTCHours().toString().padStart(2, '0') + ':' +
+               d.getUTCMinutes().toString().padStart(2, '0');
+    };
 
     const handleApprove = async (bookingId) => {
         setActionLoading(prev => ({ ...prev, [bookingId]: 'approve' }));
+        setActionError(prev => ({ ...prev, [bookingId]: null }));
         try {
             await bookingService.approveBooking(bookingId);
             onRefresh();
         } catch (e) {
-            console.error(e);
+            setActionError(prev => ({
+                ...prev,
+                [bookingId]: e.message || 'Không thể chấp nhận booking. Vui lòng thử lại.'
+            }));
         } finally {
             setActionLoading(prev => ({ ...prev, [bookingId]: null }));
         }
     };
 
-    const handleReject = async (bookingId) => {
-        setActionLoading(prev => ({ ...prev, [bookingId]: 'reject' }));
+    const handleRejectClick = (booking) => {
+        setRejectingBooking(booking);
+        setShowRejectionModal(true);
+    };
+
+    const handleConfirmReject = async (reason) => {
+        if (!rejectingBooking) return;
+        setActionLoading(prev => ({ ...prev, [rejectingBooking.id]: 'reject' }));
+        setActionError(prev => ({ ...prev, [rejectingBooking.id]: null }));
         try {
-            await bookingService.rejectBooking(bookingId);
+            await bookingService.rejectBooking(rejectingBooking.id, reason);
             onRefresh();
+            setShowRejectionModal(false);
+            setRejectingBooking(null);
         } catch (e) {
-            console.error(e);
+            setActionError(prev => ({
+                ...prev,
+                [rejectingBooking.id]: e.message || 'Không thể từ chối booking. Vui lòng thử lại.'
+            }));
+            // Keep modal open so user can retry
         } finally {
-            setActionLoading(prev => ({ ...prev, [bookingId]: null }));
+            setActionLoading(prev => ({ ...prev, [rejectingBooking?.id]: null }));
         }
+    };
+
+    const handleCancelReject = () => {
+        setShowRejectionModal(false);
+        setRejectingBooking(null);
     };
 
     return (
@@ -695,7 +754,7 @@ function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate
                                     <span style={{ fontSize: '11px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '600' }}>Thời gian</span>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '14px', fontWeight: '700', color: 'var(--text-primary)' }}>
                                         <Calendar size={14} style={{ color: 'var(--primary-blue)' }} />
-                                        {new Date(b.startTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {new Date(b.startTime).toLocaleDateString('vi-VN')}
+                                        {formatTimeUTC(b.startTime)} - {formatTimeUTC(b.endTime)}
                                     </div>
                                 </div>
 
@@ -719,7 +778,7 @@ function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate
                                     <Eye size={18} />
                                 </button>
                                 <button
-                                    onClick={() => handleReject(b.id)}
+                                    onClick={() => handleRejectClick(b)}
                                     disabled={!!actionLoading[b.id]}
                                     style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(244, 33, 46, 0.1)', border: 'none', color: '#f4212e', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0 }}
                                     title="Từ chối"
@@ -737,6 +796,34 @@ function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate
                                     {actionLoading[b.id] === 'approve' ? <Loader size={16} className={styles.spinner} /> : 'Chấp nhận'}
                                 </button>
                             </div>
+
+                            {/* Error message for this booking */}
+                            {actionError[b.id] && (
+                                <div style={{
+                                    gridColumn: '1 / -1',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    marginTop: '8px',
+                                    padding: '8px 12px',
+                                    background: 'rgba(244, 33, 46, 0.05)',
+                                    border: '1px solid rgba(244, 33, 46, 0.2)',
+                                    borderRadius: '8px',
+                                    color: '#f4212e',
+                                    fontSize: '13px',
+                                    fontWeight: '500'
+                                }}>
+                                    <AlertCircle size={14} />
+                                    <span>{actionError[b.id]}</span>
+                                    <button
+                                        onClick={() => setActionError(prev => ({ ...prev, [b.id]: null }))}
+                                        style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#f4212e', cursor: 'pointer', padding: '4px' }}
+                                        title="Đóng"
+                                    >
+                                        <X size={14} />
+                                    </button>
+                                </div>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -748,11 +835,25 @@ function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate
                     onClose={() => setSelectedBooking(null)}
                     userRole="Advisor"
                     onAction={(act, b) => {
-                        if (act === 'Approve') handleApprove(b.id);
-                        if (act === 'Reject') handleReject(b.id);
+                        if (act === 'approve') handleApprove(b.id);
+                        if (act === 'reject') {
+                            handleRejectClick(b);
+                            setSelectedBooking(null);
+                        }
                         if (act === 'viewProject') onNavigate('project_' + b.projectId);
-                        setSelectedBooking(null);
+                        if (act !== 'reject') setSelectedBooking(null);
                     }}
+                />,
+                document.body
+            )}
+
+            {/* Booking Rejection Modal */}
+            {showRejectionModal && rejectingBooking && createPortal(
+                <BookingRejectionModal
+                    booking={rejectingBooking}
+                    onSubmit={handleConfirmReject}
+                    onCancel={handleCancelReject}
+                    submitError={actionError[rejectingBooking.id]}
                 />,
                 document.body
             )}
@@ -760,7 +861,7 @@ function BookingApprovalSection({ bookings, loading, onRefresh, user, onNavigate
     );
 }
 
-function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSection, onNavigate }) {
+function IncomingBookingsSection({ bookings, targetId, loading, onRefresh, user, activeSection, onNavigate }) {
     const [actionLoading, setActionLoading] = useState({});
     const [actionError, setActionError] = useState({});
     const [reportModal, setReportModal] = useState(null);
@@ -771,6 +872,23 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSec
     const tabSwitcherRef = React.useRef(null);
     const [showLeftTabIndicator, setShowLeftTabIndicator] = useState(false);
     const [showRightTabIndicator, setShowRightTabIndicator] = useState(false);
+    const [rejectingBooking, setRejectingBooking] = useState(null);
+    const [showRejectionModal, setShowRejectionModal] = useState(false);
+    
+    // Deep Linking State Tracking
+    const [hasAttemptedDeepLink, setHasAttemptedDeepLink] = useState(false);
+
+    // Deep Linking Hook
+    useEffect(() => {
+        if (targetId && bookings.length > 0 && !hasAttemptedDeepLink) {
+            const match = bookings.find(b => String(b.id || b.bookingId) === String(targetId));
+            if (match) {
+                setSelectedBooking(match);
+                setHasAttemptedDeepLink(true);
+                console.log(`[DeepLink] Auto-opened Incoming Booking Details for ID: ${targetId}`);
+            }
+        }
+    }, [targetId, bookings, hasAttemptedDeepLink]);
 
     const checkTabScroll = () => {
         if (tabSwitcherRef.current) {
@@ -817,16 +935,34 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSec
         }
     };
 
-    const handleReject = async (bookingId) => {
-        setActionLoading(prev => ({ ...prev, [bookingId]: 'reject' }));
+    const handleRejectClick = (booking) => {
+        setRejectingBooking(booking);
+        setShowRejectionModal(true);
+    };
+
+    const handleConfirmReject = async (reason) => {
+        if (!rejectingBooking) return;
+        setActionLoading(prev => ({ ...prev, [rejectingBooking.id]: 'reject' }));
+        setActionError(prev => ({ ...prev, [rejectingBooking.id]: null }));
         try {
-            await bookingService.rejectBooking(bookingId);
+            await bookingService.rejectBooking(rejectingBooking.id, reason);
             onRefresh();
+            setShowRejectionModal(false);
+            setRejectingBooking(null);
         } catch (e) {
-            setActionError(prev => ({ ...prev, [bookingId]: e.message || 'Lỗi khi từ chối.' }));
+            setActionError(prev => ({
+                ...prev,
+                [rejectingBooking.id]: e.message || 'Không thể từ chối booking. Vui lòng thử lại.'
+            }));
+            // Keep modal open so user can retry with corrected reason if needed
         } finally {
-            setActionLoading(prev => ({ ...prev, [bookingId]: null }));
+            setActionLoading(prev => ({ ...prev, [rejectingBooking?.id]: null }));
         }
+    };
+
+    const handleCancelReject = () => {
+        setShowRejectionModal(false);
+        setRejectingBooking(null);
     };
 
     const handleOpenChat = async (booking) => {
@@ -878,7 +1014,7 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSec
                                 isActioning={actionLoading[b.id]}
                                 onDetail={() => setSelectedBooking(b)}
                                 onApprove={() => handleApprove(b.id)}
-                                onReject={() => handleReject(b.id)}
+                                onReject={() => handleRejectClick(b)}
                                 onChat={() => handleOpenChat(b)}
                                 isChatLoading={!!chatLoading[b.id]}
                                 onReport={() => setReportModal({ bookingId: b.id, advisorName: b.customerName, userRole: 'Advisor' })}
@@ -943,12 +1079,27 @@ function IncomingBookingsSection({ bookings, loading, onRefresh, user, activeSec
                     userRole="Advisor"
                     onAction={(act, b) => {
                         if (act === 'approve') handleApprove(b.id);
-                        if (act === 'reject') handleReject(b.id);
+                        if (act === 'reject') {
+                            handleRejectClick(b);
+                            setSelectedBooking(null);
+                        }
                         if (act === 'chat') handleOpenChat(b);
                         if (act === 'report') setReportModal({ bookingId: b.id, advisorName: b.customerName, userRole: 'Advisor' });
                         if (act === 'viewProject') onNavigate('project_' + b.projectId);
+                        if (act !== 'reject') setSelectedBooking(null);
                     }}
                 />
+            )}
+
+            {/* Booking Rejection Modal for IncomingBookingsSection */}
+            {showRejectionModal && rejectingBooking && createPortal(
+                <BookingRejectionModal
+                    booking={rejectingBooking}
+                    onSubmit={handleConfirmReject}
+                    onCancel={handleCancelReject}
+                    submitError={actionError[rejectingBooking.id]}
+                />,
+                document.body
             )}
 
             {reportModal && (

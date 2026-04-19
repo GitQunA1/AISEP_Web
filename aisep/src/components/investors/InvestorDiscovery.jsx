@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, CheckCircle, TrendingUp, MapPin, Building2, Filter, Flame, Wallet, Award } from 'lucide-react';
+import { MagnifyingGlass, CheckCircle, TrendUp, MapPin, Buildings, Faders, Fire, Wallet, Medal, Briefcase, ChartBar } from '@phosphor-icons/react';
 import FilterModal from './FilterModal';
 import InvestorDetail from './InvestorDetail';
 import investorService from '../../services/investorService';
@@ -8,7 +8,7 @@ import NotificationCenter from '../common/NotificationCenter';
 import FloatingChatWidget from '../common/FloatingChatWidget';
 import styles from './InvestorDiscovery.module.css';
 
-export default function InvestorDiscovery({ user, onShowLogin }) {
+export default function InvestorDiscovery({ user, onShowLogin, onNotificationNavigate }) {
     const [searchQuery, setSearchQuery] = useState('');
     const [isFilterOpen, setIsFilterOpen] = useState(false);
     const [selectedInvestorId, setSelectedInvestorId] = useState(null);
@@ -105,14 +105,16 @@ export default function InvestorDiscovery({ user, onShowLogin }) {
                                     currentUserId: user?.userId,
                                     sentTime: new Date().toISOString()
                                 });
-                            }} />
+                            }} 
+                            onNavigate={onNotificationNavigate}
+                            />
                         )}
                     </div>
                 </div>
                 
                 <div className={styles.searchRow}>
                     <div className={styles.searchContainer}>
-                        <Search className={styles.searchIcon} size={19} />
+                        <MagnifyingGlass className={styles.searchIcon} size={19} weight="bold" />
                         <input
                             type="text"
                             placeholder="Tìm kiếm quỹ, cá nhân..."
@@ -124,7 +126,7 @@ export default function InvestorDiscovery({ user, onShowLogin }) {
                     
                     <div className={styles.filterWrapper}>
                         <button className={styles.filterButton} onClick={() => setIsFilterOpen(!isFilterOpen)}>
-                            <Filter size={18} />
+                            <Faders size={18} weight="bold" />
                             <span>Lọc</span>
                             {activeFilterCount > 0 && <span className={styles.badge}>{activeFilterCount}</span>}
                         </button>
@@ -178,7 +180,7 @@ export default function InvestorDiscovery({ user, onShowLogin }) {
                     </div>
                 ) : filteredInvestors.length === 0 ? (
                     <div className={styles.emptyState}>
-                        <TrendingUp size={48} className={styles.emptyIcon} />
+                        <TrendUp size={48} weight="duotone" className={styles.emptyIcon} />
                         <h3>Không tìm thấy nhà đầu tư</h3>
                     </div>
                 ) : (
@@ -201,10 +203,6 @@ export default function InvestorDiscovery({ user, onShowLogin }) {
                                         )}
                                         <span className={styles.investorType}>· {investor.type}</span>
                                     </div>
-                                    <div className={styles.matchBadge}>
-                                        <Flame size={13} fill="currentColor" />
-                                        <span>Phù hợp: cập nhật sau</span>
-                                    </div>
                                 </div>
 
                                 <p className={styles.thesis}>{investor.thesis}</p>
@@ -212,13 +210,13 @@ export default function InvestorDiscovery({ user, onShowLogin }) {
                                 {/* Metadata Icons Row (📍, 💼, 📊) */}
                                 <div className={styles.metadata}>
                                     <div className={styles.metaItem}>
-                                        📍 <span>{investor.location}</span>
+                                        <MapPin size={14} weight="duotone" /> <span>{investor.location}</span>
                                     </div>
                                     <div className={styles.metaItem}>
-                                        💼 <span>{investor.ticketSize}</span>
+                                        <Briefcase size={14} weight="duotone" /> <span>{investor.ticketSize}</span>
                                     </div>
                                     <div className={styles.metaItem}>
-                                        📊 <span>{investor.portfolioSize}</span>
+                                        <ChartBar size={14} weight="duotone" /> <span>{investor.portfolioSize}</span>
                                     </div>
                                 </div>
 

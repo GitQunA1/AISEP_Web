@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, Building2, MapPin, Target, TrendingUp, CheckCircle, Briefcase, Mail, Wallet, AlertCircle, Calendar } from 'lucide-react';
+import { ArrowLeft, Buildings, MapPin, Target, TrendUp, CheckCircle, Briefcase, EnvelopeSimple, Wallet, WarningCircle, CalendarBlank, Scales, Handshake, Scroll, CurrencyCircleDollar } from '@phosphor-icons/react';
 import styles from './InvestorDetail.module.css';
 import investorService from '../../services/investorService';
 import ProfileLoading from '../common/ProfileLoading';
@@ -114,7 +114,7 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
                     <div className={styles.nameRow}>
                         <h1 className={styles.name}>{investor.organizationName || investor.userName}</h1>
                         <span className={styles.verifiedChip}>
-                            <CheckCircle size={14} /> Đã xác minh
+                            <CheckCircle size={14} weight="fill" /> Đã xác minh
                         </span>
                     </div>
 
@@ -126,11 +126,11 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
 
                     <div className={styles.metaRow}>
                         <div className={styles.metaItem}>
-                            <MapPin size={15} />
+                            <MapPin size={15} weight="duotone" style={{ color: 'var(--primary-blue)' }} />
                             <span>{investor.investmentRegion || 'Khu vực Đông Nam Á'}</span>
                         </div>
                         <div className={styles.metaItem}>
-                            <Calendar size={15} />
+                            <CalendarBlank size={15} weight="duotone" style={{ color: 'var(--primary-blue)' }} />
                             <span>Tham gia {formatJoinDate(investor.investmentDate)}</span>
                         </div>
                     </div>
@@ -139,22 +139,22 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
                 {/* Info Stats Strip */}
                 <div className={styles.statsStrip}>
                     <div className={styles.statItem}>
-                        <div className={styles.statEmoji}>💰</div>
+                        <div className={styles.statIcon}><CurrencyCircleDollar size={24} weight="duotone" color="#10b981" /></div>
                         <div className={styles.statValue}>{investor.investmentAmount?.toLocaleString() || '0'}</div>
                         <div className={styles.statLabel}>Vốn (VND)</div>
                     </div>
                     <div className={styles.statItem}>
-                        <div className={styles.statEmoji}>📈</div>
+                        <div className={styles.statIcon}><TrendUp size={24} weight="duotone" color="var(--primary-blue)" /></div>
                         <div className={styles.statValue}>Stage {investor.preferredStage || 'Sớm'}</div>
                         <div className={styles.statLabel}>Giai đoạn</div>
                     </div>
                     <div className={styles.statItem}>
-                        <div className={styles.statEmoji}>⚖️</div>
+                        <div className={styles.statIcon}><Scales size={24} weight="duotone" color="#ffad1f" /></div>
                         <div className={styles.statValue}>{investor.riskTolerance || 'N/A'}</div>
                         <div className={styles.statLabel}>Rủi ro</div>
                     </div>
                     <div className={styles.statItem}>
-                        <div className={styles.statEmoji}>🤝</div>
+                        <div className={styles.statIcon}><Handshake size={24} weight="duotone" color="#8b5cf6" /></div>
                         <div className={styles.statValue}>{investor.previousInvestments ? investor.previousInvestments.split(',').length : 0}</div>
                         <div className={styles.statLabel}>Khoản đầu tư</div>
                     </div>
@@ -184,7 +184,9 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
                     <>
                         {/* Feed Row: Strategy */}
                         <div className={styles.feedRow}>
-                            <div className={`${styles.iconBox} ${styles.blueBox}`}>🎯</div>
+                            <div className={`${styles.iconBox} ${styles.blueBox}`}>
+                                <Target size={22} weight="duotone" />
+                            </div>
                             <div className={styles.rowContent}>
                                 <div className={styles.rowTitle}>Chiến lược đầu tư</div>
                                 <div className={styles.rowText}>
@@ -195,7 +197,9 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
 
                         {/* Feed Row: Region */}
                         <div className={styles.feedRow}>
-                            <div className={`${styles.iconBox} ${styles.greenBox}`}>📍</div>
+                            <div className={`${styles.iconBox} ${styles.greenBox}`}>
+                                <MapPin size={22} weight="duotone" />
+                            </div>
                             <div className={styles.rowContent}>
                                 <div className={styles.rowTitle}>Khu vực trọng điểm</div>
                                 <div className={styles.rowText}>{investor.investmentRegion || 'Toàn quốc'}</div>
@@ -204,7 +208,9 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
 
                         {/* Feed Row: Detailed Taste */}
                         <div className={styles.feedRow}>
-                            <div className={`${styles.iconBox} ${styles.purpleBox}`}>📝</div>
+                            <div className={`${styles.iconBox} ${styles.purpleBox}`}>
+                                <Scroll size={22} weight="duotone" />
+                            </div>
                             <div className={styles.rowContent}>
                                 <div className={styles.rowTitle}>Khẩu vị đầu tư chi tiết</div>
                                 <div className={styles.rowText}>{investor.investmentTaste || 'Xem phần giới thiệu chung.'}</div>
@@ -221,7 +227,9 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
                     <>
                         {/* Feed Row: Portfolio Highlights */}
                         <div className={styles.feedRow}>
-                            <div className={`${styles.iconBox} ${styles.blueBox}`}>💼</div>
+                            <div className={`${styles.iconBox} ${styles.blueBox}`}>
+                                <Briefcase size={22} weight="duotone" />
+                            </div>
                             <div className={styles.rowContent}>
                                 <div className={styles.rowTitle}>Các khoản đầu tư trước đây</div>
                                 <div className={styles.rowText}>

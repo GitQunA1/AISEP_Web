@@ -45,12 +45,14 @@ import AIAnalyzeConfirmationModal from '../components/common/AIAnalyzeConfirmati
  * StartupDashboard - Comprehensive dashboard for startup founders
  * Features: Overview stats, Profile completion, Documents, AI Score, Advisor requests
  */
-export default function StartupDashboard({ user, initialSection = 'my-projects', onLogout }) {
+export default function StartupDashboard({ user, initialSection = 'my-projects', targetId, onLogout, onNotificationNavigate }) {
     const [activeSection, setActiveSection] = React.useState(initialSection);
     const [isMobile, setIsMobile] = React.useState(window.innerWidth <= 1024);
     const [showLeftTabIndicator, setShowLeftTabIndicator] = React.useState(false);
     const [showRightTabIndicator, setShowRightTabIndicator] = React.useState(false);
 
+    // Deep Linking State Tracking
+    const [hasAttemptedDeepLink, setHasAttemptedDeepLink] = React.useState(false);
 
     // Sync activeSection with initialSection prop + handle removed/invalid sections
     React.useEffect(() => {
@@ -59,6 +61,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         } else {
             setActiveSection(initialSection);
         }
+        setHasAttemptedDeepLink(false); // Reset when section explicitly changes from outside
     }, [initialSection]);
 
     // Handle window resize for mobile check
@@ -240,6 +243,57 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     const [blockedFiles, setBlockedFiles] = React.useState([]); // Session-based blacklist for verified docs
     const hiddenFileInput = React.useRef(null);
 
+    // --- Deep Linking Enforcement ---
+    React.useEffect(() => {
+        if (!targetId || hasAttemptedDeepLink) return;
+
+        console.log(`[StartupDashboard] Processing targetId: ${targetId} for activeSection: ${activeSection}`);
+        let matchFound = false;
+
+        // 1. My Projects Deep Link
+        if (activeSection === 'my-projects' && myProjects.length > 0) {
+            const matchProject = myProjects.find(p => String(p.id || p.projectId) === String(targetId));
+            if (matchProject) {
+                setActiveSection(`project_${matchProject.id || matchProject.projectId}`);
+                matchFound = true;
+                console.log(`[DeepLink] Transitioned to project_${targetId}`);
+            }
+        }
+        
+        // 2. Deals Deep Link
+        else if (activeSection === 'deals' && dealsToApprove.length > 0) {
+            const matchDeal = dealsToApprove.find(d => String(d.dealId) === String(targetId));
+            if (matchDeal) {
+                // If it's ready to sign, pop the contract modal
+                if (matchDeal.status === 'Confirmed' || matchDeal.status === 1 || matchDeal.status === 'Waiting_For_Startup_Signature' || matchDeal.status === 2) {
+                    setContractDealData(matchDeal);
+                    setContractPreviewHtml(null); // Will trigger fetch down the line
+                    setShowContractModal(true);
+                    console.log(`[DeepLink] Popped Deal Modal for dealId: ${targetId}`);
+                } else {
+                    // Just scroll to it
+                    const el = document.getElementById(`deal-card-${targetId}`);
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                matchFound = true;
+            }
+        }
+        
+        // 3. Connect Requests Deep Link (No modal, just scrolling to active element)
+        else if (activeSection === 'connection-requests' && connectionRequests.length > 0) {
+            const matchReq = connectionRequests.find(r => String(r.connectionRequestId) === String(targetId));
+            if (matchReq) {
+                const el = document.getElementById(`connection-card-${targetId}`);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                matchFound = true;
+            }
+        }
+
+        if (matchFound) {
+            setHasAttemptedDeepLink(true);
+        }
+    }, [targetId, activeSection, myProjects, dealsToApprove, connectionRequests, hasAttemptedDeepLink]);
+
     // --- Filter Configurations & Counts ---
 
     const projectFilterOptions = [
@@ -302,7 +356,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         const desc = (p.shortDescription || p.description || '').toLowerCase();
         const search = projectSearchTerm.toLowerCase();
         const matchesSearch = name.includes(search) || desc.includes(search);
-        
+
         // Status filter
         if (projectFilter === 'all') return matchesSearch;
         const activeOpt = projectFilterOptions.find(o => o.id === projectFilter);
@@ -315,7 +369,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         const msg = (r.message || r.investorMessage || '').toLowerCase();
         const search = connectionSearchTerm.toLowerCase();
         const matchesSearch = name.includes(search) || msg.includes(search);
-        
+
         // Status filter
         if (connectionFilter === 'all') return matchesSearch;
         const activeOpt = connectionFilterOptions.find(o => o.id === connectionFilter);
@@ -1791,6 +1845,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                         sentTime: new Date().toISOString(),
                                     });
                                 }}
+                                onNotificationNavigate={onNotificationNavigate}
                             />
                         );
                     })()}
@@ -2112,24 +2167,25 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
 
                                         return (
                                             <div
+                                                id={`connection-card-${request.connectionRequestId}`}
                                                 key={request.connectionRequestId}
                                                 className={styles.card}
                                                 style={{
                                                     display: 'flex',
                                                     flexDirection: 'column',
                                                     gap: '12px',
-                                                     borderLeft: '4px solid ' + statusInfo.color,
-                                                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                                                     transition: 'all 0.3s ease'
-                                                 }}
-                                                 onMouseEnter={(e) => {
-                                                     e.currentTarget.style.boxShadow = `0 8px 24px ${statusInfo.color}25`;
-                                                     e.currentTarget.style.transform = 'translateY(-2px)';
-                                                 }}
-                                                 onMouseLeave={(e) => {
-                                                     e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
-                                                     e.currentTarget.style.transform = 'translateY(0)';
-                                                 }}
+                                                    borderLeft: '4px solid ' + statusInfo.color,
+                                                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
+                                                    transition: 'all 0.3s ease'
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    e.currentTarget.style.boxShadow = `0 8px 24px ${statusInfo.color}25`;
+                                                    e.currentTarget.style.transform = 'translateY(-2px)';
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(0, 0, 0, 0.1)';
+                                                    e.currentTarget.style.transform = 'translateY(0)';
+                                                }}
                                             >
                                                 {/* Header */}
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -2413,6 +2469,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
 
                                         return (
                                             <div
+                                                id={`deal-card-${deal.dealId}`}
                                                 key={deal.dealId}
                                                 className={styles.card}
                                                 style={{
@@ -3885,14 +3942,18 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
 
             {/* PR News Section — direct child of container, no styles.content padding */}
             {activeSection === 'pr_news' && (
-                <NewsPRSection user={user} onOpenChat={(chatSessionId, notification) => {
-                    setActiveChatSession({
-                        chatSessionId,
-                        displayName: notification?.title || 'Chat mới',
-                        currentUserId: user?.userId,
-                        sentTime: new Date().toISOString(),
-                    });
-                }} />
+                <NewsPRSection 
+                    user={user} 
+                    onOpenChat={(chatSessionId, notification) => {
+                        setActiveChatSession({
+                            chatSessionId,
+                            displayName: notification?.title || 'Chat mới',
+                            currentUserId: user?.userId,
+                            sentTime: new Date().toISOString(),
+                        });
+                    }}
+                    onNotificationNavigate={onNotificationNavigate}
+                />
             )}
         </div>
     );

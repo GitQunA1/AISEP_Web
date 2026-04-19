@@ -55,9 +55,13 @@
 
 .subtitle {
   font-size: 13px;
-  color: var(--text-secondary);
   margin-top: 4px;
-  font-weight: 500;
+  font-weight: 600;
+  color: #536471;
+}
+
+:global([data-theme='dark']) .subtitle {
+  color: var(--text-secondary, #8899aa);
 }
 
 .closeBtn {

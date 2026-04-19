@@ -1,9 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { Search, MapPin, Rocket, Filter, TrendingUp, CheckCircle, Target, Building2, Newspaper, Calendar, User, ExternalLink } from 'lucide-react';
+import { 
+  MagnifyingGlass, 
+  MapPin, 
+  RocketLaunch, 
+  Funnel, 
+  TrendUp, 
+  CheckCircle, 
+  Target, 
+  Buildings, 
+  Newspaper, 
+  Calendar, 
+  User, 
+  ArrowSquareOut 
+} from '@phosphor-icons/react';
 import FeedHeader from '../components/feed/FeedHeader';
 import InvestmentModal from '../components/common/InvestmentModal';
 import startupProfileService from '../services/startupProfileService';
 import projectSubmissionService from '../services/projectSubmissionService';
+import { filterProjectsForPublicDiscovery } from '../utils/projectDiscoveryFilters';
 import dealsService from '../services/dealsService';
 import prService from '../services/prService';
 import NotificationCenter from '../components/common/NotificationCenter';
@@ -14,7 +28,7 @@ import styles from './DiscoveryHub.module.css';
  * StartupDiscovery - Explore and discover startup companies
  * Featuring search, industry filtering, and premium startup cards.
  */
-const DiscoveryHub = ({ user, onSelectStartup }) => {
+const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate }) => {
     const [startups, setStartups] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -52,7 +66,8 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
             try {
                 // Fetch projects instead of startups
                 const response = await projectSubmissionService.getAllProjects();
-                const items = response?.data?.items || response?.items || [];
+                const raw = response?.data?.items || response?.items || [];
+                const items = filterProjectsForPublicDiscovery(raw);
                 setStartups(items);
                 
                 if (isInvestor) {
@@ -153,14 +168,16 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
                                     currentUserId: user?.userId,
                                     sentTime: new Date().toISOString()
                                 });
-                            }} />
+                            }} 
+                                onNavigate={onNotificationNavigate}
+                            />
                         )}
                     </div>
                 </div>
 
                 <div className={styles.searchRow}>
                     <div className={styles.searchContainer}>
-                        <Search size={18} className={styles.searchIcon} />
+                        <MagnifyingGlass size={18} weight="bold" className={styles.searchIcon} />
                         <input
                             type="text"
                             placeholder="Tìm tên dự án, lĩnh vực hoặc từ khóa..."
@@ -194,12 +211,12 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
                 <div>
                     {isLoading ? (
                         <div className={styles.loadingState}>
-                            <Rocket size={32} className={styles.loadingIcon} />
+                            <RocketLaunch size={32} weight="duotone" className={styles.loadingIcon} />
                             <p>Đang tìm kiếm dự án tiềm năng...</p>
                         </div>
                     ) : filteredStartups.length === 0 ? (
                         <div className={styles.emptyState}>
-                            <Search size={48} color="var(--text-secondary)" />
+                            <MagnifyingGlass size={48} weight="duotone" color="var(--text-secondary)" />
                             <h3>Không tìm thấy dự án phù hợp</h3>
                             <p>Hãy thử thay đổi tiêu chí lọc hoặc từ khóa tìm kiếm</p>
                         </div>
@@ -224,12 +241,12 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
                                             <div className={styles.startupInfo}>
                                                 <div className={styles.nameRow}>
                                                     <h3 className={styles.startupName}>{startup.projectName}</h3>
-                                                    {startup.isVerified && <CheckCircle size={16} className={styles.verifiedIcon} />}
+                                                    {startup.isVerified && <CheckCircle size={16} weight="fill" className={styles.verifiedIcon} />}
                                                 </div>
                                                 <span className={styles.industryTag}>{startup.industry}</span>
                                             </div>
                                             <div className={styles.scoreBadge}>
-                                                <Target size={14} />
+                                                <Target size={14} weight="bold" />
                                                 <span>{startup.startupPotentialScore || 'N/A'} AI Score</span>
                                             </div>
                                         </div>
@@ -240,11 +257,11 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
 
                                         <div className={styles.metadata}>
                                             <div className={styles.metaItem}>
-                                                <MapPin size={14} />
+                                                <MapPin size={14} weight="bold" />
                                                 <span>{startup.location || 'Chưa cập nhật'}</span>
                                             </div>
                                             <div className={styles.metaItem}>
-                                                <TrendingUp size={14} />
+                                                <TrendUp size={14} weight="bold" />
                                                 <span>{startup.developmentStage || 'Giai đoạn sớm'}</span>
                                             </div>
                                         </div>
@@ -295,7 +312,7 @@ const DiscoveryHub = ({ user, onSelectStartup }) => {
                     }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                             <h2 style={{ fontSize: '16px', fontWeight: '700', margin: 0 }}>Tin tức mới nhất</h2>
-                            <Newspaper size={18} color="var(--primary-blue)" />
+                            <Newspaper size={18} weight="duotone" color="var(--primary-blue)" />
                         </div>
 
                         {isLoadingPRs ? (

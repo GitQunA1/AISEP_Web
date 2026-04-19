@@ -12,13 +12,14 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
     companyName: '',
     logoUrl: '',
     founder: '',
-    contactInfo: '',
+    email: '',
+    phoneNumber: '',
     countryCity: '',
     website: '',
     industry: 0,
     businessLicenseUrl: '',
   });
-  
+
   const [logoFile, setLogoFile] = useState(null);
   const [licenseFile, setLicenseFile] = useState(null);
 
@@ -45,7 +46,8 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
         companyName: initialData.companyName || initialData.CompanyName || '',
         logoUrl: initialData.logoUrl || initialData.LogoUrl || '',
         founder: initialData.founder || initialData.Founder || '',
-        contactInfo: initialData.contactInfo || initialData.ContactInfo || '',
+        email: initialData.email || initialData.Email || '',
+        phoneNumber: initialData.phoneNumber || initialData.PhoneNumber || '',
         countryCity: initialData.countryCity || initialData.CountryCity || '',
         website: initialData.website || initialData.Website || '',
         industry: industryVal,
@@ -64,10 +66,15 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
     const newErrors = {};
     if (!formData.companyName.trim()) newErrors.companyName = 'Tên công ty là bắt buộc';
     if (!formData.founder.trim()) newErrors.founder = 'Tên người sáng lập là bắt buộc';
-    if (!formData.contactInfo.trim()) newErrors.contactInfo = 'Thông tin liên hệ là bắt buộc';
+    if (!formData.email.trim()) {
+      newErrors.email = 'Email liên hệ là bắt buộc';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = 'Email không hợp lệ';
+    }
+    if (!formData.phoneNumber.trim()) newErrors.phoneNumber = 'Số điện thoại là bắt buộc';
     if (!formData.countryCity.trim()) newErrors.countryCity = 'Địa phương là bắt buộc';
     if (!formData.website.trim()) newErrors.website = 'Website là bắt buộc';
-    
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -82,15 +89,16 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
     try {
       // Create FormData properly for multipart/form-data
       const dataPayload = new FormData();
-      
-      // Append basic fields
-      dataPayload.append('companyName', formData.companyName);
-      dataPayload.append('founder', formData.founder);
-      dataPayload.append('contactInfo', formData.contactInfo);
-      dataPayload.append('countryCity', formData.countryCity);
-      dataPayload.append('website', formData.website);
-      dataPayload.append('industry', formData.industry);
-      
+
+      // Append basic fields matching backend DTO property names dokładnie
+      dataPayload.append('CompanyName', formData.companyName);
+      dataPayload.append('Founder', formData.founder);
+      dataPayload.append('Email', formData.email);
+      dataPayload.append('PhoneNumber', formData.phoneNumber);
+      dataPayload.append('CountryCity', formData.countryCity);
+      dataPayload.append('Website', formData.website);
+      dataPayload.append('Industry', formData.industry);
+
       // Append files with keys matching backend IFormFile properties
       if (logoFile) {
         dataPayload.append('LogoFile', logoFile);
@@ -102,24 +110,24 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
       // Determine if we should create or update
       const isUpdate = !!(initialData && (initialData.id || initialData.startupId));
       let response;
-      
+
       if (isUpdate) {
         // Fix: Use the startup's own ID for update, not the userId
         const targetId = initialData.id || initialData.startupId;
-        response = await startupProfileService.updateStartupProfile({ 
-          ...Object.fromEntries(dataPayload), 
-          LogoFile: logoFile, 
-          BusinessLicenseFile: licenseFile, 
-          userId: targetId 
+        response = await startupProfileService.updateStartupProfile({
+          ...Object.fromEntries(dataPayload),
+          LogoFile: logoFile,
+          BusinessLicenseFile: licenseFile,
+          userId: targetId
         });
       } else {
-        response = await startupProfileService.createStartupProfile({ 
-          ...Object.fromEntries(dataPayload), 
-          LogoFile: logoFile, 
-          BusinessLicenseFile: licenseFile 
+        response = await startupProfileService.createStartupProfile({
+          ...Object.fromEntries(dataPayload),
+          LogoFile: logoFile,
+          BusinessLicenseFile: licenseFile
         });
       }
-      
+
       if (response && (response.isSuccess || response.success)) {
         setSuccessMessage(isUpdate ? 'Thông tin startup đã được cập nhật thành công!' : 'Hồ sơ startup đã được tạo thành công!');
         if (onSuccess) {
@@ -145,8 +153,8 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
         {initialData ? 'Cập nhật Thông tin Startup' : 'Tạo Hồ sơ Startup'}
       </h3>
       <p className={styles.subtitle}>
-        {initialData 
-          ? 'Cập nhật thông tin công ty để nhà đầu tư và cố vấn hiểu rõ hơn về doanh nghiệp của bạn.' 
+        {initialData
+          ? 'Cập nhật thông tin công ty để nhà đầu tư và cố vấn hiểu rõ hơn về doanh nghiệp của bạn.'
           : 'Vì bạn chưa có hồ sơ, vui lòng điền các thông tin cơ bản của doanh nghiệp để bắt đầu.'}
       </p>
 
@@ -162,7 +170,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
               <p className={styles.sectionSubtitle}>Các thông tin chính về doanh nghiệp của bạn</p>
             </div>
           </div>
-          
+
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
               <label className={styles.label}>
@@ -202,20 +210,50 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
 
             <div className={styles.formGroup}>
               <label className={styles.label}>
-                Thông tin liên hệ <span className={styles.required}>*</span>
+                Email liên hệ <span className={styles.required}>*</span>
               </label>
               <div className={styles.inputWrapper}>
                 <Mail className={styles.fieldIcon} size={18} />
                 <input
-                  type="text"
-                  name="contactInfo"
-                  value={formData.contactInfo}
+                  type="email"
+                  name="email"
+                  value={formData.email}
                   onChange={handleInputChange}
-                  className={`${styles.input} ${errors.contactInfo ? styles.inputError : ''}`}
-                  placeholder="Email hoặc số điện thoại"
+                  className={`${styles.input} ${errors.email ? styles.inputError : ''}`}
+                  placeholder="Ví dụ: contact@startup.com"
                 />
               </div>
-              {errors.contactInfo && <span className={styles.errorText}>{errors.contactInfo}</span>}
+              {errors.email && <span className={styles.errorText}>{errors.email}</span>}
+            </div>
+
+            <div className={styles.formGroup}>
+              <label className={styles.label}>
+                Số điện thoại <span className={styles.required}>*</span>
+              </label>
+              <div className={styles.inputWrapper}>
+                <span className={styles.fieldIcon} style={{
+                  fontSize: '13px',
+                  fontWeight: '800',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  opacity: 1, /* Full opacity for the prefix */
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  left: '12px',
+                  color: 'var(--text-secondary)'
+                }}>+84</span>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleInputChange}
+                  className={`${styles.input} ${errors.phoneNumber ? styles.inputError : ''}`}
+                  placeholder="090..."
+                  style={{ paddingLeft: '48px' }}
+                />
+              </div>
+              {errors.phoneNumber && <span className={styles.errorText}>{errors.phoneNumber}</span>}
             </div>
 
             <div className={styles.formGroup}>
@@ -303,7 +341,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
             {/* Logo Upload */}
             <div className={styles.formGroup}>
               <label className={styles.label}>Logo công ty</label>
-              <div 
+              <div
                 className={`${styles.uploadCard} ${logoFile || formData.logoUrl ? styles.hasFile : ''}`}
                 onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add(styles.dragOver); }}
                 onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove(styles.dragOver); }}
@@ -326,16 +364,16 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                     <div className={styles.previewContainer}>
                       <img src={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} alt="Logo Preview" className={styles.logoPreview} />
                       <div className={styles.previewActions}>
-                        <a 
-                          href={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl} 
-                          target="_blank" 
-                          rel="noreferrer" 
+                        <a
+                          href={logoFile ? URL.createObjectURL(logoFile) : formData.logoUrl}
+                          target="_blank"
+                          rel="noreferrer"
                           className={styles.viewBtn}
                           onClick={(e) => e.stopPropagation()}
                         >
                           <ExternalLink size={18} />
                         </a>
-                        <button type="button" className={styles.removeBtn} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLogoFile(null); if (!logoFile) setFormData(p => ({...p, logoUrl: ''})); }}>
+                        <button type="button" className={styles.removeBtn} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLogoFile(null); if (!logoFile) setFormData(p => ({ ...p, logoUrl: '' })); }}>
                           <X size={18} />
                         </button>
                       </div>
@@ -355,7 +393,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
             {/* License Upload */}
             <div className={styles.formGroup}>
               <label className={styles.label}>Giấy phép kinh doanh</label>
-              <div 
+              <div
                 className={`${styles.uploadCard} ${licenseFile || formData.businessLicenseUrl ? styles.hasFile : ''}`}
                 onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add(styles.dragOver); }}
                 onDragLeave={(e) => { e.preventDefault(); e.currentTarget.classList.remove(styles.dragOver); }}
@@ -384,17 +422,17 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                       </div>
                       <div className={styles.fileActionsMini}>
                         {(licenseFile || formData.businessLicenseUrl) && (
-                          <a 
-                            href={licenseFile ? URL.createObjectURL(licenseFile) : formData.businessLicenseUrl} 
-                            target="_blank" 
-                            rel="noreferrer" 
+                          <a
+                            href={licenseFile ? URL.createObjectURL(licenseFile) : formData.businessLicenseUrl}
+                            target="_blank"
+                            rel="noreferrer"
                             className={styles.viewBtnMini}
                             onClick={(e) => e.stopPropagation()}
                           >
                             <ExternalLink size={18} />
                           </a>
                         )}
-                        <button type="button" className={styles.removeBtnMini} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLicenseFile(null); if (!licenseFile) setFormData(p => ({...p, businessLicenseUrl: ''})); }}>
+                        <button type="button" className={styles.removeBtnMini} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setLicenseFile(null); if (!licenseFile) setFormData(p => ({ ...p, businessLicenseUrl: '' })); }}>
                           <X size={18} />
                         </button>
                       </div>

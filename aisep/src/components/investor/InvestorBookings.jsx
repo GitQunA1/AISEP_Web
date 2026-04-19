@@ -29,7 +29,15 @@ const BOOKING_STATUS_LABELS = {
     NoResponse: { label: 'Không phản hồi', cls: 'badgeError', color: '#f4212e' },
 };
 
-export default function InvestorBookings({ user, onViewProject, initialFilterStatus, onFilterStatusChange, onUpdateProfile }) {
+// Helper for literal UTC time display
+const formatTimeUTC = (dateStr) => {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    return d.getUTCHours().toString().padStart(2, '0') + ':' + 
+           d.getUTCMinutes().toString().padStart(2, '0');
+};
+
+export default function InvestorBookings({ user, targetId, onViewProject, initialFilterStatus, onFilterStatusChange, onUpdateProfile }) {
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
 
@@ -52,6 +60,9 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
     // Booking Wizard State (for re-booking)
     const [showBookingWizard, setShowBookingWizard] = useState(false);
     const [rebookData, setRebookData] = useState({ projectId: null, advisorId: null, sourceBookingId: null });
+
+    // Deep Linking State Tracking
+    const [hasAttemptedDeepLink, setHasAttemptedDeepLink] = useState(false);
 
     const loadBookings = useCallback(async (isSilent = false) => {
         if (!isSilent) setLoading(true);
@@ -80,6 +91,18 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
     useEffect(() => {
         loadBookings();
     }, [loadBookings]);
+
+    // Apply Deep Linking target
+    useEffect(() => {
+        if (targetId && bookings.length > 0 && !hasAttemptedDeepLink) {
+            const match = bookings.find(b => String(b.id || b.bookingId) === String(targetId));
+            if (match) {
+                setDetailBooking(match);
+                setHasAttemptedDeepLink(true); // Ensure it only pops open once
+                console.log(`[DeepLink] Auto-opened Booking Details for ID: ${targetId}`);
+            }
+        }
+    }, [targetId, bookings, hasAttemptedDeepLink]);
 
     // Initialize SignalR on mount
     useEffect(() => {
@@ -307,7 +330,7 @@ export default function InvestorBookings({ user, onViewProject, initialFilterSta
                                         <div className={styles.xMetaRow}>
                                             <div className={styles.xMetaItem}><Calendar size={13} /> {startTime.toLocaleDateString('vi-VN')}</div>
                                             <span className={styles.xDot}>•</span>
-                                            <div className={styles.xMetaItem}><Clock size={13} /> {startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {endTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
+                                            <div className={styles.xMetaItem}><Clock size={13} /> {formatTimeUTC(booking.startTime)} - {formatTimeUTC(booking.endTime)}</div>
                                             <span className={styles.xDot}>•</span>
                                             <div className={styles.xMetaItem}>{booking.slotCount} giờ</div>
                                         </div>
