@@ -3,7 +3,6 @@ import { X, ChevronLeft, ChevronRight, Check, AlertCircle, Loader, Calendar, Clo
 import bookingService from '../../services/bookingService';
 import advisorAvailabilityService from '../../services/advisorAvailabilityService';
 import advisorService from '../../services/advisorService';
-import commissionService from '../../services/commissionService';
 import SlotPicker from './SlotPicker';
 import PaymentModal from './PaymentModal';
 import styles from './BookingWizard.module.css';
@@ -50,8 +49,6 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
   const [isSuccess, setIsSuccess] = useState(false);
   const [createdBooking, setCreatedBooking] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [commissionPercent, setCommissionPercent] = useState(null);
-  const [isLoadingComm, setIsLoadingComm] = useState(false);
 
   // Auto-advance if initial data is provided
   useEffect(() => {
@@ -247,26 +244,6 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
     };
     load();
   }, [step, selectedAdvisor]);
-  
-  // ── Load Commission Rate on Confirmation Step ──────────────────────────
-  useEffect(() => {
-    if (step === 3 && commissionPercent === null) {
-      const loadComm = async () => {
-        setIsLoadingComm(true);
-        try {
-          const res = await commissionService.getCurrentCommission();
-          const data = res?.data || res;
-          setCommissionPercent(data?.percent ?? 0);
-        } catch (err) {
-          console.error("Failed to load commission rate", err);
-          setCommissionPercent(0); 
-        } finally {
-          setIsLoadingComm(false);
-        }
-      };
-      loadComm();
-    }
-  }, [step, commissionPercent]);
 
   // ── Validation slots ────────────────────────────────────────────────────
   const validateSlots = useCallback((selectedIds) => {
@@ -395,7 +372,7 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
               Yêu cầu của bạn đã được gửi đến <strong>{selectedAdvisor?.advisorName || adv.userName}</strong>.
               {needsPayment
                 ? ' Cố vấn đã chấp nhận. Vui lòng hoàn thành thanh toán để xác nhận lịch.'
-                : ' Cố vấn sẽ xem xét và phản hồi trong vòng 1 phút.'}
+                : ' Cố vấn sẽ xem xét và phản hồi trong vòng 10 phút.'}
             </p>
             {createdBooking && (() => {
               const b = createdBooking;
@@ -751,28 +728,6 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
                       </span>
                     )}
                   </div>
-                </div>
-
-                {!isFreeBooking && commissionPercent !== null && (
-                  <div className={styles.pricingBreakdown}>
-                    <div className={styles.breakdownRow}>
-                      <span className={styles.breakdownLabel}>Thanh toán thực tế cho Cố vấn</span>
-                      <span className={styles.breakdownValue}>
-                        {formatPrice(estimatedPrice * (1 - commissionPercent / 100))}
-                      </span>
-                    </div>
-                    <div className={styles.breakdownRow}>
-                      <span className={styles.breakdownLabel}>Phí nền tảng AISEP ({commissionPercent}%)</span>
-                      <span className={styles.breakdownValue}>
-                        {formatPrice(estimatedPrice * (commissionPercent / 100))}
-                      </span>
-                    </div>
-                  </div>
-                )}
-
-                <div className={styles.commissionNotice}>
-                  <AlertCircle size={14} style={{ flexShrink: 0 }} />
-                  <span>Chỉ số hoa hồng này là cuối cùng và sẽ có hiệu lực với lượt đặt cố vấn này của bạn cho đến khi hoàn thành quá trình tư vấn.</span>
                 </div>
 
                 {note && (

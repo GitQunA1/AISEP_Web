@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 import './styles/global.css';
 import MainLayout from './components/layout/MainLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -27,6 +27,7 @@ function App() {
   const [isSessionExpired, setIsSessionExpired] = useState(false);
   const [lastInvestorBookingFilter, setLastInvestorBookingFilter] = useState('all');
   const [lastDashboardSection, setLastDashboardSection] = useState('investments');
+  const [dashboardTargetId, setDashboardTargetId] = useState(null);
 
   // Listen for global session_expired events from apiClient
   useEffect(() => {
@@ -153,8 +154,8 @@ function App() {
   };
 
   const handleBackToMain = () => {
-    setCurrentView('main');
     setSelectedRole(null);
+    startTransition(() => setCurrentView('main'));
   };
 
   const handleBackToRoleSelection = () => {
@@ -171,7 +172,7 @@ function App() {
   };
 
   const handleShowHome = () => {
-    setCurrentView('main');
+    startTransition(() => setCurrentView('main'));
   };
 
   const handleShowAdvisors = () => {
@@ -182,7 +183,8 @@ function App() {
     setCurrentView('investors');
   };
 
-  const handleShowDashboard = (section = 'statistics') => {
+  const handleShowDashboard = (section = 'statistics', targetId = null) => {
+    setDashboardTargetId(targetId);
     if (section === 'statistics' || section === '') {
       setCurrentView('dashboard');
     } else {
@@ -202,6 +204,80 @@ function App() {
     setCurrentView('profile');
   };
 
+  const handleNotificationNavigate = (referenceType, referenceId) => {
+    if (!user) return;
+    
+    // Convert referenceId to string to be safe
+    const safeRefId = referenceId ? referenceId.toString() : null;
+
+    const roleStr = user.role?.toString().toLowerCase() || '';
+    const roleNum = Number(user.role);
+    const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
+    const isAdvisor = roleStr === 'advisor' || roleNum === 2;
+    const isInvestor = roleStr === 'investor' || roleNum === 1;
+    const isStartup = roleStr === 'startup' || roleNum === 0;
+
+    console.log(`[App] Navigating for notification: type=${referenceType}, id=${safeRefId}`);
+
+    // Mapping logic
+    const normalizedType = referenceType ? referenceType.toString().toLowerCase() : '';
+
+    switch (normalizedType) {
+      case 'connectionrequest':
+      case 'connection':
+        if (isStartup) handleShowDashboard('connection-requests', safeRefId); // Fixed from investor-requests
+        else if (isInvestor) handleShowDashboard('startup-requests', safeRefId); // Check investor sections too!
+        break;
+      
+      case 'chatsession':
+      case 'chatmessage':
+        if (isStartup) handleShowDashboard('connection-requests', safeRefId); // Fixed
+        else if (isInvestor) handleShowDashboard('startup-requests', safeRefId);
+        else if (isAdvisor) handleShowDashboard('overview', safeRefId);
+        break;
+
+      case 'deal':
+      case 'investment':
+        if (isStartup || isInvestor) handleShowDashboard('deals', safeRefId);
+        break;
+
+      case 'booking':
+      case 'appointment':
+        if (isAdvisor) handleShowDashboard('bookings', safeRefId);
+        else if (isInvestor) handleShowDashboard('bookings', safeRefId);
+        else if (isStartup) handleShowDashboard('bookings', safeRefId); // Fixed from advisor-bookings
+        else if (isStaff) handleShowDashboard('bookings', safeRefId); // Fixed from booking-management
+        break;
+
+      case 'startup':
+      case 'project':
+        if (isStaff) handleShowDashboard('approvals', safeRefId);
+        else if (isStartup) handleShowDashboard('my-projects', safeRefId);
+        break;
+
+      case 'advisor':
+      case 'investor':
+        if (isStaff && normalizedType === 'advisor') handleShowDashboard('advisor_approval');
+        else if (isStaff && normalizedType === 'investor') handleShowDashboard('investor_approval');
+        else if (isAdvisor) setCurrentView('profile');
+        break;
+
+      case 'subscription':
+        if (isStartup || isInvestor) handleShowDashboard('subscription');
+        break;
+
+      case 'consultingreport':
+      case 'report':
+        if (isStartup) handleShowDashboard('advisor-bookings');
+        else if (isAdvisor) handleShowDashboard('bookings');
+        break;
+
+      default:
+        handleShowDashboard('');
+        break;
+    }
+  };
+
   return (
     <>
       {isSessionExpired && (
@@ -212,7 +288,7 @@ function App() {
           }}
           onHome={() => {
             setIsSessionExpired(false);
-            setCurrentView('main');
+            startTransition(() => setCurrentView('main'));
           }}
         />
       )}
@@ -241,6 +317,7 @@ function App() {
           onShowSubscription={handleShowSubscription}
           onShowAI={handleShowAI}
           onShowProfile={handleShowProfile}
+          onNotificationNavigate={handleNotificationNavigate}
           user={user}
           onLogout={handleLogout}
           showAdvisors={currentView === 'advisors'}
@@ -259,12 +336,13 @@ function App() {
               
               if (roleStr === 'startup' || roleNum === 0) {
                 const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'my-projects';
-                return <StartupDashboard user={user} initialSection={section} onLogout={handleLogout} />;
+                return <StartupDashboard user={user} initialSection={section} targetId={dashboardTargetId} onLogout={handleLogout} />;
               } else if (roleStr === 'investor' || roleNum === 1) {
                 if (currentView === 'dashboard_bookings') {
                   return (
                     <InvestorBookings 
                       user={user} 
+                      targetId={dashboardTargetId}
                       onViewProject={(pid) => {
                         setLastDashboardSection('bookings');
                         setCurrentView('dashboard_project_' + pid);
@@ -291,6 +369,7 @@ function App() {
                   <InvestorDashboard 
                     user={user} 
                     initialSection={section} 
+                    targetId={dashboardTargetId}
                     onLogout={handleLogout} 
                     onViewProject={(pid, currentSection) => {
                       if (currentSection) setLastDashboardSection(currentSection);
@@ -300,10 +379,10 @@ function App() {
                 );
               } else if (roleStr === 'advisor' || roleNum === 2) {
                 const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
-                return <AdvisorDashboard user={user} initialSection={section} onSectionChange={handleShowDashboard} onShowProfile={handleShowProfile} onLogout={handleLogout} />;
+                return <AdvisorDashboard user={user} initialSection={section} targetId={dashboardTargetId} onSectionChange={handleShowDashboard} onShowProfile={handleShowProfile} onLogout={handleLogout} />;
               } else if (isStaff) {
                 const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'statistics';
-                return <OperationStaffDashboard user={user} initialSection={section} onLogout={handleLogout} />;
+                return <OperationStaffDashboard user={user} initialSection={section} targetId={dashboardTargetId} onLogout={handleLogout} />;
               } else {
                 return <div style={{ padding: '20px', textAlign: 'center' }}><p>Dashboard not available for your role</p></div>;
               }

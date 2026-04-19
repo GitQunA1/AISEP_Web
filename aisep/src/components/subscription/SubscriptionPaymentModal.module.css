@@ -53,9 +53,14 @@
 
 .subtitle {
   font-size: 13px;
-  color: var(--text-secondary, #8899aa);
   margin-top: 4px;
-  font-weight: 500;
+  font-weight: 600;
+  /* Explicit muted tone on light modals; token alone can resolve too faint on white. */
+  color: #536471;
+}
+
+:global([data-theme='dark']) .subtitle {
+  color: var(--text-secondary, #8899aa);
 }
 
 .closeBtn {
@@ -163,13 +168,21 @@
 .warningText {
   font-size: 13px;
   line-height: 1.6;
-  color: #fbbf24;
   margin: 0;
+  color: #92400e;
 }
 
 .warningText strong {
-  color: #fff;
+  color: #713f12;
   font-weight: 800;
+}
+
+:global([data-theme='dark']) .warningText {
+  color: #fbbf24;
+}
+
+:global([data-theme='dark']) .warningText strong {
+  color: #fff;
 }
 
 .amountRow {

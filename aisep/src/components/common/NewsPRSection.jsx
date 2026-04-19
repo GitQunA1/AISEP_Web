@@ -15,7 +15,7 @@ import InvestorStatusBanner from './InvestorStatusBanner';
  * Data from GET /api/PostPRs (prService.getPRs).
  * Clicking a card opens NewsDetailModal.
  */
-export default function NewsPRSection({ user, onOpenChat, investorProfileStatus, investorProfileReason, onUpdateProfile }) {
+export default function NewsPRSection({ user, onOpenChat, investorProfileStatus, investorProfileReason, onUpdateProfile, onNotificationNavigate }) {
     const [prNewsList, setPrNewsList] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -94,7 +94,7 @@ export default function NewsPRSection({ user, onOpenChat, investorProfileStatus,
 
                         {/* Right: Notification bell */}
                         <div className={feedHeaderStyles.headerRightActions}>
-                            {user && <NotificationCenter onOpenChat={onOpenChat} />}
+                            {user && <NotificationCenter onOpenChat={onOpenChat} onNavigate={onNotificationNavigate} />}
                         </div>
                     </div>
                 </div>

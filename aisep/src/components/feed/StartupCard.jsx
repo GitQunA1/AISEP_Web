@@ -1,5 +1,20 @@
-import React, { useState } from 'react';
-import { MoreHorizontal, DollarSign, BarChart3, TrendingUp, Swords, Lightbulb, Lock, Heart, MessageSquare, TrendingUpIcon, MessageCircle, CheckCheck, AlertTriangle, HeartOff, Star, Briefcase, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  DotsThree, 
+  CurrencyDollar, 
+  ChartBar, 
+  Sword, 
+  Star, 
+  Briefcase, 
+  LockSimple, 
+  Heart, 
+  ChatCircleText, 
+  Checks, 
+  WarningCircle, 
+  HeartBreak, 
+  TrendUp,
+  CaretRight
+} from '@phosphor-icons/react';
 import Badge from '../common/Badge';
 import InvestmentModal from '../common/InvestmentModal';
 import styles from './StartupCard.module.css';
@@ -34,7 +49,6 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
   React.useEffect(() => {
     if (isInvestor && startup.id && followedProjectIds) {
       const isFollowing = followedProjectIds.has(startup.id);
-      console.log(`[StartupCard ${startup.id}] Using cached followedProjectIds. Is following: ${isFollowing}`);
       setIsInterested(isFollowing);
     }
   }, [isInvestor, startup.id, followedProjectIds]);
@@ -43,7 +57,6 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
   React.useEffect(() => {
     if (isInvestor && startup.id && sentConnectionIds) {
       const hasRequest = sentConnectionIds.has(startup.id);
-      console.log(`[StartupCard ${startup.id}] Using cached sentConnectionIds. Has request: ${hasRequest}`);
       setHasRequested(hasRequest);
     }
   }, [isInvestor, startup.id, sentConnectionIds]);
@@ -235,13 +248,13 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
     if (isUnlocked) {
       return (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px', fontWeight: 'bold', color: 'var(--primary-blue)', background: 'rgba(45, 126, 255, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-          Xem chi tiết <ChevronRight size={12} strokeWidth={2.5} />
+          Xem chi tiết <CaretRight size={12} weight="bold" />
         </div>
       );
     }
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px', fontSize: '11px', fontWeight: 'bold', color: '#ffad1f', background: 'rgba(255, 173, 31, 0.1)', padding: '2px 8px', borderRadius: '4px' }}>
-        <Lock size={12} strokeWidth={2.5} /> {isPaidUser ? 'Mở khóa ngay' : 'Premium'}
+        <LockSimple size={12} weight="bold" /> {isPaidUser ? 'Mở khóa ngay' : 'Premium'}
       </div>
     );
   };
@@ -251,13 +264,13 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
     if (isUnlocked) {
       return (
         <span style={{ color: 'var(--primary-blue)', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-          Xem chi tiết <ChevronRight size={12} strokeWidth={2.5} />
+          Xem chi tiết <CaretRight size={12} weight="bold" />
         </span>
       );
     }
     return (
       <span style={{ color: '#ffad1f', fontSize: '13px', fontWeight: '600', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        <Lock size={12} strokeWidth={2.5} /> {isPaidUser ? 'Mở khóa ngay' : 'Yêu cầu Premium'}
+        <LockSimple size={12} weight="bold" /> {isPaidUser ? 'Mở khóa ngay' : 'Yêu cầu Premium'}
       </span>
     );
   };
@@ -328,7 +341,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
         </div>
         
         <div className={styles.menuIconWrapper}>
-          <MoreHorizontal size={18} />
+          <DotsThree size={18} weight="bold" />
         </div>
       </div>
 
@@ -348,7 +361,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
               {/* Follower Pill */}
               {startup.followerCount > 0 && (
                 <div className={`${styles.proofPill} ${styles.followerPill}`}>
-                  <Star size={14} fill="currentColor" strokeWidth={0} />
+                  <Star size={14} weight="fill" />
                   <span>
                     <span className={styles.pillLabel}>{startup.followerCount}</span>
                     <span className={styles.statText}>người quan tâm</span>
@@ -368,7 +381,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
                   }}
                   title={investors.length === 1 ? `Xem hồ sơ ${investors[0].name}` : `${investors.length} nhà đầu tư chuyên nghiệp`}
                 >
-                  <Briefcase size={14} fill="currentColor" strokeWidth={0} />
+                  <Briefcase size={14} weight="fill" />
                   <span className={styles.statText} style={{ marginRight: '4px' }}>Được đầu tư bởi</span>
                   
                   <div className={styles.avatarStack}>
@@ -418,7 +431,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
       <div className={styles.gridRow} onClick={(e) => e.stopPropagation()}>
         {/* Revenue */}
         <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(45, 126, 255, 0.08)', borderColor: 'rgba(45, 126, 255, 0.2)' }}>
-          <div className={styles.boxIcon}><DollarSign size={20} style={{ color: '#2D7EFF' }} strokeWidth={2.5} /></div>
+          <div className={styles.boxIcon}><CurrencyDollar size={24} weight="duotone" style={{ color: '#2D7EFF' }} /></div>
           {startup.revenue !== undefined ? (
             <div className={`${styles.boxValue} ${styles.blueText}`} style={{ fontSize: '15px' }}>
               {startup.revenue ? `${startup.revenue.toLocaleString('vi-VN')} VND` : '0 VND'}
@@ -429,7 +442,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
 
         {/* Market Size */}
         <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(0, 186, 124, 0.08)', borderColor: 'rgba(0, 186, 124, 0.2)' }}>
-          <div className={styles.boxIcon}><BarChart3 size={20} style={{ color: '#00ba7c' }} strokeWidth={2.5} /></div>
+          <div className={styles.boxIcon}><ChartBar size={24} weight="duotone" style={{ color: '#00ba7c' }} /></div>
           {startup.marketSize !== undefined ? (
             <div className={`${styles.boxValue} ${styles.greenText}`} style={{ fontSize: '15px' }}>
               {startup.marketSize ? `${startup.marketSize.toLocaleString('vi-VN')} VND` : '0 VND'}
@@ -440,7 +453,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
 
         {/* Competitors (Always Show) */}
         <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(113, 118, 123, 0.08)', borderColor: 'rgba(113, 118, 123, 0.2)' }}>
-          <div className={styles.boxIcon}><Swords size={20} style={{ color: '#71767b' }} strokeWidth={2.5} /></div>
+          <div className={styles.boxIcon}><Sword size={24} weight="duotone" style={{ color: '#71767b' }} /></div>
           {startup.competitors !== undefined ? (
             <div className={`${styles.boxValue} ${styles.grayText}`} style={{ fontSize: '15px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {startup.competitors || '—'}
@@ -495,17 +508,17 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
               {isInterested ? (
                 <>
                   <div className={`${styles.stateLayer} ${styles.followingNormal}`}>
-                    <Heart size={18} fill="currentColor" strokeWidth={0} />
+                    <Heart size={18} weight="fill" />
                     <span>{isLoading ? 'Đang xử lý...' : 'Đang quan tâm'}</span>
                   </div>
                   <div className={`${styles.stateLayer} ${styles.followingHover}`}>
-                    <HeartOff size={18} strokeWidth={2} />
+                    <HeartBreak size={18} weight="bold" />
                     <span>{isLoading ? 'Đang xử lý...' : 'Hủy theo dõi'}</span>
                   </div>
                 </>
               ) : (
                 <>
-                  <Heart size={18} strokeWidth={2} />
+                  <Heart size={18} weight="bold" />
                   <span>{isLoading ? 'Đang xử lý...' : 'Quan tâm'}</span>
                 </>
               )}
@@ -516,16 +529,16 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
               onClick={(e) => {
                 e.stopPropagation();
                 if (!isInvestorApproved) {
-                  showToast('Vui lòng hoàn thiện hồ sơ để yêu cầu kết nối', 'error');
+                  showToast('Vui lòng hoàn tất/phê duyệt hồ sơ nhà đầu tư.', 'error');
                   return;
                 }
                 if (!hasRequested) setShowRequestModal(true);
               }}
-              disabled={hasRequested || !isInvestorApproved}
+              disabled={hasRequested}
               className={`${styles.pillButton} ${hasRequested ? styles.btnRequested : styles.btnRequest} ${!isInvestorApproved ? styles.btnDisabled : ''}`}
             >
               <div className={styles.btnInner}>
-                {hasRequested ? <CheckCheck size={18} /> : <MessageCircle size={18} />}
+                {hasRequested ? <Checks size={18} weight="bold" /> : <ChatCircleText size={18} weight="bold" />}
                 <span className={styles.btnLabel}>
                   <span className={styles.desktopText}>
                     {hasRequested ? 'Đã yêu cầu thông tin' : 'Yêu cầu thông tin'}
@@ -560,22 +573,21 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
               </div>
             ) : investedProjectIds && investedProjectIds.has(startup.id) ? (
               <div className={`${styles.pillButton} ${styles.btnInvested}`}>
-                <TrendingUp size={18} /> Đã đầu tư
+                <TrendUp size={18} weight="bold" /> Đã đầu tư
               </div>
             ) : (
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!isInvestorApproved) {
-                    showToast('Vui lòng hoàn thiện hồ sơ để đề xuất đầu tư', 'error');
-                    return;
-                  }
+                  showToast('Vui lòng hoàn tất/phê duyệt hồ sơ nhà đầu tư.', 'error');
+                  return;
+                }
                   setShowInvestmentModal(true);
                 }}
-                disabled={!isInvestorApproved}
                 className={`${styles.pillButton} ${styles.btnInvest} ${!isInvestorApproved ? styles.btnDisabled : ''}`}
               >
-                <DollarSign size={18} />
+                <CurrencyDollar size={18} weight="bold" />
                 Đầu tư
               </button>
             )}
@@ -584,7 +596,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
           {/* Micro-Toast Feedback */}
           <div className={`${styles.toastContainer} ${toast.visible ? styles.toastVisible : ''}`}>
             <div className={`${styles.toastContent} ${toast.type === 'error' ? styles.toastError : styles.toastSuccess}`}>
-              {toast.type === 'success' ? <CheckCheck size={16} /> : <AlertTriangle size={16} />}
+              {toast.type === 'success' ? <Checks size={16} weight="bold" /> : <WarningCircle size={16} weight="bold" />}
               {toast.message}
             </div>
           </div>

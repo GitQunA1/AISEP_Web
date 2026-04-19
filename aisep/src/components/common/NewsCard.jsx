@@ -15,10 +15,21 @@ function relativeTime(dateString) {
 }
 
 /**
- * NewsCard — Unified news card using site CSS variable palette.
- * Props: thumbnail, category, title, description, source, timestamp, onClick
+ * NewsCard — Unified news card with glassmorphism support.
+ * Props: thumbnail, category, title, description, source, timestamp, onClick, projectName, investorName
  */
-export default function NewsCard({ thumbnail, category, title, description, source, timestamp, onClick, index = 0 }) {
+export default function NewsCard({ 
+    thumbnail, 
+    category, 
+    title, 
+    description, 
+    source, 
+    timestamp, 
+    onClick, 
+    index = 0,
+    projectName,
+    investorName 
+}) {
     return (
         <div 
             className={`${styles.newsCard} ${styles.itemAppear}`} 
@@ -40,13 +51,19 @@ export default function NewsCard({ thumbnail, category, title, description, sour
                 </div>
             )}
             <div className={styles.newsBody}>
-                {category && <span className={styles.newsCategory}>{category}</span>}
+                <div className={styles.newsBadgeRow}>
+                    {category && <span className={styles.newsCategory}>{category}</span>}
+                    {projectName && <span className={styles.newsProjectTag}>📊 {projectName}</span>}
+                    {investorName && <span className={styles.newsInvestorTag}>💼 {investorName}</span>}
+                </div>
+                
                 <h3 className={styles.newsTitle} title={title}>{title}</h3>
                 {description && <p className={styles.newsDesc}>{description}</p>}
+                
                 <div className={styles.newsMeta}>
-                    {source && <span>{source}</span>}
-                    {source && timestamp && <span>·</span>}
-                    {timestamp && <span>{relativeTime(timestamp)}</span>}
+                    {source && <span className={styles.newsSource}>{source}</span>}
+                    {source && timestamp && <span className={styles.metaDivider}>·</span>}
+                    {timestamp && <span className={styles.newsDate}>{relativeTime(timestamp)}</span>}
                 </div>
             </div>
         </div>

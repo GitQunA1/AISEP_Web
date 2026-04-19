@@ -27,6 +27,14 @@ const BOOKING_STATUS_LABELS = {
     NoResponse: { label: 'Không phản hồi', cls: 'badgeError', color: '#f4212e' },
 };
 
+// Helper for literal UTC time display
+const formatTimeUTC = (dateStr) => {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    return d.getUTCHours().toString().padStart(2, '0') + ':' +
+        d.getUTCMinutes().toString().padStart(2, '0');
+};
+
 const FILTER_OPTIONS = [
     { id: 'all', label: 'Tất cả' },
     { id: 'Pending', label: 'Chờ duyệt' },
@@ -37,10 +45,10 @@ const FILTER_OPTIONS = [
     { id: 'Cancel', label: 'Đã hủy' }
 ];
 
-export default function StartupBookings({ user, onViewProject, initialFilterStatus, onFilterStatusChange }) {
+export default function StartupBookings({ user, targetId, onViewProject, initialFilterStatus, onFilterStatusChange }) {
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
- 
+
     // Filter & Search State
     const [filterStatus, setFilterStatus] = useState(initialFilterStatus || 'all');
     const [searchTerm, setSearchTerm] = useState('');
@@ -52,6 +60,9 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
     const [paymentBooking, setPaymentBooking] = useState(null);
     const [detailBooking, setDetailBooking] = useState(null);
     const [complainBooking, setComplainBooking] = useState(null);
+    
+    // Deep Linking State Tracking
+    const [hasAttemptedDeepLink, setHasAttemptedDeepLink] = useState(false);
 
     // Booking Wizard State (for re-booking)
     const [showBookingWizard, setShowBookingWizard] = useState(false);
@@ -73,6 +84,18 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
     useEffect(() => {
         loadBookings();
     }, [loadBookings]);
+
+    // Apply Deep Linking target
+    useEffect(() => {
+        if (targetId && bookings.length > 0 && !hasAttemptedDeepLink) {
+            const match = bookings.find(b => String(b.id || b.bookingId) === String(targetId));
+            if (match) {
+                setDetailBooking(match);
+                setHasAttemptedDeepLink(true); // Ensure it only pops open once
+                console.log(`[DeepLink] Auto-opened Booking Details for ID: ${targetId}`);
+            }
+        }
+    }, [targetId, bookings, hasAttemptedDeepLink]);
 
     const handleOpenChat = async (booking) => {
         setChatLoading(prev => ({ ...prev, [booking.id]: true }));
@@ -148,7 +171,7 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
 
     // Derived filtered bookings
     const filteredBookings = bookings.filter(b => {
-        const matchesStatus = 
+        const matchesStatus =
             filterStatus === 'all' ||
             (filterStatus === 'ApprovedAwaitingPayment' && (b.status === 1 || b.status === 'ApprovedAwaitingPayment')) ||
             (filterStatus === 'Pending' && (b.status === 0 || b.status === 'Pending')) ||
@@ -210,7 +233,7 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
                 </div>
 
                 <div className={styles.xToolbar}>
-                    <DashboardStatusFilter 
+                    <DashboardStatusFilter
                         options={FILTER_OPTIONS}
                         counts={filterCounts}
                         activeFilter={filterStatus}
@@ -252,7 +275,7 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
                                         <div className={styles.xMetaRow}>
                                             <div className={styles.xMetaItem}><Calendar size={13} /> {startTime.toLocaleDateString('vi-VN')}</div>
                                             <span className={styles.xDot}>•</span>
-                                            <div className={styles.xMetaItem}><Clock size={13} /> {startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {endTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
+                                            <div className={styles.xMetaItem}><Clock size={13} /> {formatTimeUTC(booking.startTime)} - {formatTimeUTC(booking.endTime)}</div>
                                             <span className={styles.xDot}>•</span>
                                             <div className={styles.xMetaItem}>{booking.slotCount} giờ</div>
                                         </div>
@@ -314,21 +337,21 @@ export default function StartupBookings({ user, onViewProject, initialFilterStat
                 )}
                 <FloatingChatWidget chatSessionId={chatSession?.chatSessionId} displayName={chatSession?.displayName} currentUserId={chatSession?.currentUserId} sentTime={chatSession?.sentTime} onClose={() => setChatSession(null)} />
                 {paymentBooking && (
-                    <PaymentModal 
-                        bookingId={paymentBooking.id} 
-                        advisorName={paymentBooking.advisorName} 
-                        slotCount={paymentBooking.slotCount} 
-                        onClose={handleClosePayment} 
-                        onPaid={handlePaymentSuccess} 
+                    <PaymentModal
+                        bookingId={paymentBooking.id}
+                        advisorName={paymentBooking.advisorName}
+                        slotCount={paymentBooking.slotCount}
+                        onClose={handleClosePayment}
+                        onPaid={handlePaymentSuccess}
                     />
                 )}
                 {complainBooking && (
-                    <UserReportModal 
-                        bookingId={complainBooking.id} 
-                        targetUserId={complainBooking.advisorId} 
-                        targetUserName={complainBooking.advisorName} 
-                        onClose={() => setComplainBooking(null)} 
-                        onDone={() => setComplainBooking(null)} 
+                    <UserReportModal
+                        bookingId={complainBooking.id}
+                        targetUserId={complainBooking.advisorId}
+                        targetUserName={complainBooking.advisorName}
+                        onClose={() => setComplainBooking(null)}
+                        onDone={() => setComplainBooking(null)}
                     />
                 )}
                 {detailBooking && (

@@ -24,13 +24,15 @@ import BlockchainOwnershipModal from '../components/common/BlockchainOwnershipMo
 import AccountProfileTab from '../components/common/AccountProfileTab';
 import { isEthereumAddress, isValidProfileString } from '../utils/validation';
 import CustomSelect from '../components/common/CustomSelect';
-
-
+import InvestorAIHistoryModal from '../components/common/InvestorAIHistoryModal';
+import AIAnalyzeConfirmationModal from '../components/common/AIAnalyzeConfirmationModal';
+import subscriptionService from '../services/subscriptionService';
+import paymentService from '../services/paymentService';
 /**
  * InvestorDashboard - Comprehensive dashboard for investors
  * Features: Portfolio overview, Watchlist, Sent interests, Active investments, Preferences
  */
-export default function InvestorDashboard({ user, initialSection = 'investments', onLogout, onViewProject }) {
+export default function InvestorDashboard({ user, initialSection = 'investments', targetId, onLogout, onViewProject, onNotificationNavigate }) {
     const [activeSection, setActiveSection] = useState(initialSection);
     const [isMobile, setIsMobile] = useState(window.innerWidth <= 1024);
     const [showLeftTabIndicator, setShowLeftTabIndicator] = useState(false);
@@ -40,6 +42,9 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const isFirstLoad = useRef(true);
     const isFormDirty = useRef(false);
     const [investorProfile, setInvestorProfile] = useState(null);
+    
+    // Deep Linking State Tracking
+    const [hasAttemptedDeepLink, setHasAttemptedDeepLink] = useState(false);
 
     // Sync activeSection with initialSection prop + handle removed/invalid sections
     React.useEffect(() => {
@@ -48,6 +53,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         } else {
             setActiveSection(initialSection);
         }
+        setHasAttemptedDeepLink(false); // Reset when section explicitly changes from outside
     }, [initialSection]);
 
     React.useLayoutEffect(() => {
@@ -135,6 +141,42 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const [showAIReportModal, setShowAIReportModal] = useState(false);
     const [selectedAIReport, setSelectedAIReport] = useState(null);
 
+    // --- Deep Linking Enforcement ---
+    React.useEffect(() => {
+        if (!targetId || hasAttemptedDeepLink) return;
+
+        console.log(`[InvestorDashboard] Processing targetId: ${targetId} for activeSection: ${activeSection}`);
+        let matchFound = false;
+
+        // 1. Deals Deep Link
+        if (activeSection === 'deals' && deals.length > 0) {
+            const matchDeal = deals.find(d => String(d.dealId) === String(targetId));
+            if (matchDeal) {
+                setDetailType('deal');
+                setSelectedItem(matchDeal);
+                setShowDetailModal(true);
+                matchFound = true;
+                console.log(`[DeepLink] Popped Deal Detail for dealId: ${targetId}`);
+            }
+        }
+        
+        // 2. Connection Requests Deep Link
+        else if (activeSection === 'connections' && sentConnectionRequests.length > 0) {
+            const matchReq = sentConnectionRequests.find(r => String(r.connectionRequestId) === String(targetId));
+            if (matchReq) {
+                setDetailType('connection');
+                setSelectedItem(matchReq);
+                setShowDetailModal(true);
+                matchFound = true;
+                console.log(`[DeepLink] Popped Connection Detail for requestId: ${targetId}`);
+            }
+        }
+
+        if (matchFound) {
+            setHasAttemptedDeepLink(true);
+        }
+    }, [targetId, activeSection, deals, sentConnectionRequests, hasAttemptedDeepLink]);
+
     // Dashboard Data States
     const [prefFormData, setPrefFormData] = useState({
         organizationName: '',
@@ -155,6 +197,14 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const [isUpdatingPrefs, setIsUpdatingPrefs] = useState(false);
     const [preferredStages, setPreferredStages] = useState([]);
     const [availableIndustries, setAvailableIndustries] = useState([]);
+
+    // AI Re-analyze States
+    const [showAIConfirmModal, setShowAIConfirmModal] = useState(false);
+    const [pendingReanalyzeProjectId, setPendingReanalyzeProjectId] = useState(null);
+    const [isLoadingQuota, setIsLoadingQuota] = useState(false);
+    const [isAnalyzingAI, setIsAnalyzingAI] = useState(false);
+    const [subscription, setSubscription] = useState(null);
+    const [currentPackage, setCurrentPackage] = useState(null);
 
     // Industry mapping for Vietnamese labels
     const INDUSTRY_MAP = {
@@ -976,6 +1026,78 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     );
 
 
+    // Quota fetching for AI re-analyze
+    const fetchQuotaData = async () => {
+        try {
+            setIsLoadingQuota(true);
+            const [subRes, pkgRes] = await Promise.all([
+                subscriptionService.getMySubscription(),
+                paymentService.getInvestorPackages()
+            ]);
+
+            const finalSub = subRes?.data && typeof subRes.data === 'object' && !Array.isArray(subRes.data)
+                ? subRes.data
+                : subRes;
+
+            const finalPkgs = pkgRes?.data && Array.isArray(pkgRes.data)
+                ? pkgRes.data
+                : (Array.isArray(pkgRes) ? pkgRes : []);
+
+            if (finalSub && typeof finalSub === 'object') {
+                setSubscription(finalSub);
+            }
+            if (finalPkgs.length > 0) {
+                setCurrentPackage(finalPkgs.find(p => p.packageId === finalSub?.packageId) || finalPkgs[0]);
+            }
+        } catch (err) {
+            console.error("Error fetching quota:", err);
+        } finally {
+            setIsLoadingQuota(false);
+        }
+    };
+
+    // Handle re-analyze click from AI modal
+    const handleReanalyzeClick = () => {
+        if (!selectedAIReport) return;
+        setPendingReanalyzeProjectId(selectedAIReport.projectId);
+        fetchQuotaData().then(() => {
+            setShowAIReportModal(false);
+            setShowAIConfirmModal(true);
+        });
+    };
+
+    // Handle confirmed re-analyze (after quota check passes)
+    const handleConfirmReanalyze = async () => {
+        if (!pendingReanalyzeProjectId) return;
+        
+        setIsAnalyzingAI(true);
+        try {
+            const res = await AIEvaluationService.analyzeProjectByInvestorAPI(pendingReanalyzeProjectId);
+            if (res.success && res.data) {
+                // Success: Show the report modal right here
+                setSelectedAIReport(res.data);
+                setShowAIReportModal(true);
+                setShowAIConfirmModal(false);
+                setPendingReanalyzeProjectId(null);
+                
+                // Refresh history list so the new report appears
+                setRefreshTrigger(prev => prev + 1);
+            } else {
+                alert(res.message || 'Có lỗi xảy ra khi thực hiện phân tích AI.');
+            }
+        } catch (err) {
+            console.error('[InvestorDashboard] AI analysis failed:', err);
+            alert('Không thể kết nối với hệ thống AI. Vui lòng thử lại sau.');
+        } finally {
+            setIsAnalyzingAI(false);
+        }
+    };
+
+    // Compute quota for modal
+    const maxAiRequests = Number(currentPackage?.maxAiRequests ?? subscription?.maxAiRequests ?? 0);
+    const usedAiRequests = Number(subscription?.usedAiRequests ?? 0);
+    const remainingAiRequests = Math.max(0, maxAiRequests - usedAiRequests);
+
     return (
         <div className={styles.container}>
             {/* Page Header - Regular scroll behavior */}
@@ -993,6 +1115,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                             sentTime: new Date().toISOString(),
                         });
                     }}
+                    onNotificationNavigate={onNotificationNavigate}
                 />
             )}
 
@@ -2135,6 +2258,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                         investorProfileStatus={investorProfile ? (investorProfile.status || 'Pending') : (isLoading ? null : 'Missing')}
                         investorProfileReason={investorProfile?.rejectionReason}
                         onUpdateProfile={() => setActiveSection('preferences')}
+                        onNotificationNavigate={onNotificationNavigate}
                     />
                 )}
 
@@ -2354,177 +2478,31 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 />
 
                 {/* Detail Modal */}
-                {/* AI Report Detail Modal - Redesigned Sleek/Twitter Aesthetic */}
-                {showAIReportModal && selectedAIReport && (
-                    <div className={styles.modalOverlay} onClick={() => setShowAIReportModal(false)} style={{ backgroundColor: 'rgba(0, 0, 0, 0.85)', backdropFilter: 'blur(4px)' }}>
-                        <div className={styles.modalContent} style={{ maxWidth: '800px', width: '95%', maxHeight: '92vh', backgroundColor: '#000000', border: '1px solid #2f3336', borderRadius: '16px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }} onClick={e => e.stopPropagation()}>
-
-                            {/* Header */}
-                            <div style={{ padding: '16px 24px', borderBottom: '1px solid #2f3336', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '800', color: '#e7e9ea', letterSpacing: '-0.02em' }}>Báo cáo phân tích AI</h3>
-                                    <div style={{ fontSize: '13px', color: '#71767b', marginTop: '2px' }}>
-                                        {projectMap[selectedAIReport.projectId]?.projectName || `#${selectedAIReport.projectId}`} • {new Date(selectedAIReport.createdAt).toLocaleDateString('vi-VN')}
-                                    </div>
-                                </div>
-                                <button onClick={() => setShowAIReportModal(false)} style={{ background: 'none', border: 'none', color: '#e7e9ea', cursor: 'pointer', padding: '8px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(231, 233, 234, 0.1)'} onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}>
-                                    <X size={20} />
-                                </button>
-                            </div>
-
-                            {/* Body */}
-                            <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-                                {/* Key Metric: Potential Score */}
-                                <div style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '40px', alignItems: 'start', marginBottom: '32px' }}>
-                                    <div style={{ textAlign: 'center', padding: '16px', border: '1px solid #2f3336', borderRadius: '12px', minWidth: '140px' }}>
-                                        <div style={{ fontSize: '11px', color: '#71767b', fontWeight: '700', textTransform: 'uppercase', marginBottom: '4px' }}>Điểm tiềm năng</div>
-                                        <div style={{ fontSize: '48px', fontWeight: '900', color: '#0ea5e9' }}>{selectedAIReport.potentialScore || 0}</div>
-                                        <div style={{ fontSize: '12px', color: '#71767b' }}>trên 100 điểm</div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                        {(() => {
-                                            const breakdownData = selectedAIReport.scoreBreakdown;
-                                            let items = Array.isArray(breakdownData) ? breakdownData : (typeof breakdownData === 'string' ? JSON.parse(breakdownData || '[]') : []);
-
-                                            const labelsMap = { 'Team': 'Đội ngũ', 'Opportunity': 'Thị trường', 'Product': 'Sản phẩm', 'Competition': 'Cạnh tranh', 'Marketing': 'Tiếp thị', 'Investment': 'Tài chính', 'Other': 'Khác' };
-
-                                            return items.map((item, idx) => (
-                                                <div key={idx} style={{ width: '100%' }}>
-                                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', marginBottom: '6px', color: '#e7e9ea' }}>
-                                                        <span style={{ fontWeight: '600' }}>{labelsMap[item.component] || item.component}</span>
-                                                        <span style={{ color: '#71767b' }}>{item.score}/{item.maxPoints}</span>
-                                                    </div>
-                                                    <div style={{ height: '4px', width: '100%', backgroundColor: '#2f3336', borderRadius: '2px', overflow: 'hidden' }}>
-                                                        <div style={{ height: '100%', width: `${(item.score / item.maxPoints) * 100}%`, backgroundColor: '#0ea5e9', transition: 'width 1s ease-out' }}></div>
-                                                    </div>
-                                                </div>
-                                            ));
-                                        })()}
-                                    </div>
-                                </div>
-
-                                {/* Investment Verdict Card */}
-                                <div style={{ marginBottom: '32px' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px', color: '#71767b', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>
-                                        <MessageSquare size={14} /> Nhận định đầu tư
-                                    </div>
-                                    <div style={{
-                                        padding: '24px',
-                                        borderRadius: '16px',
-                                        border: `1px solid ${(() => {
-                                            const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
-                                            if (v.includes('strong')) return '#00ba7c';
-                                            if (v.includes('watchlist')) return '#ffd400';
-                                            if (v.includes('pass')) return '#1d9bf0';
-                                            if (v.includes('reject') || v.includes('fail')) return '#f4212e';
-                                            return '#2f3336';
-                                        })()}40`,
-                                        backgroundColor: `${(() => {
-                                            const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
-                                            if (v.includes('strong')) return '#00ba7c20';
-                                            if (v.includes('watchlist')) return '#ffd40020';
-                                            if (v.includes('pass')) return '#1d9bf020';
-                                            if (v.includes('reject') || v.includes('fail')) return '#f4212e20';
-                                            return '#1d9bf020';
-                                        })()}`,
-                                        borderLeft: `6px solid ${(() => {
-                                            const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
-                                            if (v.includes('strong')) return '#00ba7c';
-                                            if (v.includes('watchlist')) return '#ffd400';
-                                            if (v.includes('pass')) return '#1d9bf0';
-                                            if (v.includes('reject') || v.includes('fail')) return '#f4212e';
-                                            return '#1d9bf0';
-                                        })()}`,
-                                        position: 'relative'
-                                    }}>
-                                        <div style={{
-                                            fontSize: '18px',
-                                            fontWeight: '900',
-                                            color: (() => {
-                                                const v = (selectedAIReport.investmentVerdict || '').toLowerCase();
-                                                if (v.includes('strong')) return '#00ba7c';
-                                                if (v.includes('watchlist')) return '#ffd400';
-                                                if (v.includes('pass')) return '#1d9bf0';
-                                                if (v.includes('reject') || v.includes('fail')) return '#f4212e';
-                                                return '#e7e9ea';
-                                            })(),
-                                            marginBottom: '12px',
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px',
-                                            letterSpacing: '-0.02em',
-                                            textTransform: 'uppercase'
-                                        }}>
-                                            <Shield size={20} />
-                                            {selectedAIReport.investmentVerdict || 'Evaluation Complete'}
-                                        </div>
-                                        <div style={{ fontSize: '15px', color: '#e7e9ea', lineHeight: '1.6', fontWeight: '400', fontStyle: 'italic' }}>
-                                            "{(() => {
-                                                const fullData = typeof selectedAIReport.analysisJson === 'string' ? JSON.parse(selectedAIReport.analysisJson || '{}') : (selectedAIReport.analysis || {});
-                                                return fullData.Summary || 'AI has evaluated this project. Please review the detailed breakdown below for next steps.';
-                                            })()}"
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Risks and Strategy */}
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '32px' }}>
-                                    <div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#f4212e', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>
-                                            <AlertCircle size={14} /> Cảnh báo rủi ro
-                                        </div>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                            {(() => {
-                                                const risks = Array.isArray(selectedAIReport.riskFlags) ? selectedAIReport.riskFlags : (typeof selectedAIReport.riskFlags === 'string' ? JSON.parse(selectedAIReport.riskFlags || '[]') : []);
-                                                return risks.length > 0 ? risks.map((risk, i) => (
-                                                    <div key={i} style={{ display: 'flex', gap: '10px', fontSize: '14px', lineHeight: '1.4', color: '#e7e9ea' }}>
-                                                        <span style={{ color: '#f4212e', flexShrink: 0 }}>•</span>
-                                                        <span>{risk}</span>
-                                                    </div>
-                                                )) : <span style={{ color: '#71767b', fontSize: '13px' }}>Không có rủi ro đáng kể.</span>;
-                                            })()}
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '16px', color: '#00ba7c', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase' }}>
-                                            <ArrowRight size={14} /> Bước tiếp theo
-                                        </div>
-                                        <div style={{ padding: '16px', borderRadius: '12px', border: '1px dashed #2f3336', backgroundColor: 'rgba(0, 186, 124, 0.03)', color: '#e7e9ea', fontSize: '14px', lineHeight: '1.5' }}>
-                                            {(() => {
-                                                const nextStep = selectedAIReport.investorNextStep;
-                                                if (nextStep) return nextStep;
-                                                const fullData = typeof selectedAIReport.analysisJson === 'string' ? JSON.parse(selectedAIReport.analysisJson || '{}') : (selectedAIReport.analysis || {});
-                                                return fullData.InvestorNextStep || 'Tiếp tục theo dõi và thẩm định dự án.';
-                                            })()}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Footer Actions */}
-                            <div style={{ padding: '16px 24px', borderTop: '1px solid #2f3336', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', backgroundColor: '#000000', gap: '12px' }}>
-                                <button
-                                    onClick={() => setShowAIReportModal(false)}
-                                    style={{ backgroundColor: 'transparent', border: '1px solid #536471', color: '#e7e9ea', padding: '10px 24px', borderRadius: '9999px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'background 0.2s' }}
-                                    onMouseEnter={(e) => e.target.style.backgroundColor = 'rgba(231, 233, 234, 0.1)'}
-                                    onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                                >
-                                    Đóng
-                                </button>
-                                <button
-                                    onClick={() => onViewProject ? onViewProject(selectedAIReport.projectId, activeSection) : window.location.href = `/project/${selectedAIReport.projectId}`}
-                                    style={{ backgroundColor: '#eff3f4', border: 'none', color: '#0f1419', padding: '10px 24px', borderRadius: '9999px', fontSize: '14px', fontWeight: '700', cursor: 'pointer', transition: 'opacity 0.2s' }}
-                                    onMouseEnter={(e) => e.target.style.opacity = '0.9'}
-                                    onMouseLeave={(e) => e.target.style.opacity = '1'}
-                                >
-                                    Xem chi tiết dự án
-                                </button>
-                            </div>
-                        </div>
-                    </div>
+                {/* AI Analyze Confirmation Modal (for re-analyze) */}
+                {showAIConfirmModal && pendingReanalyzeProjectId && (
+                    <AIAnalyzeConfirmationModal
+                        isOpen={showAIConfirmModal}
+                        onClose={() => setShowAIConfirmModal(false)}
+                        onConfirm={handleConfirmReanalyze}
+                        isAnalyzing={isAnalyzingAI}
+                        isLoadingQuota={isLoadingQuota}
+                        projectName={aiReports.find(r => r.projectId === pendingReanalyzeProjectId)?.projectName || projectMap[pendingReanalyzeProjectId]?.name || `Dự án #${pendingReanalyzeProjectId}`}
+                        remainingAiRequests={remainingAiRequests}
+                        packageName={currentPackage?.packageName || subscription?.packageName || 'Gói của bạn'}
+                    />
                 )}
+
+                {/* AI Report Detail Modal - Redesigned Sleek/Twitter Aesthetic */}
+                <InvestorAIHistoryModal
+                    isOpen={showAIReportModal}
+                    onClose={() => setShowAIReportModal(false)}
+                    selectedAIReport={selectedAIReport}
+                    projectName={projectMap[selectedAIReport?.projectId]?.projectName}
+                    onViewProject={(projId) => onViewProject ? onViewProject(projId, activeSection) : window.location.href = `/project/${projId}`}
+                    onReanalyze={handleReanalyzeClick}
+                />
+
+
 
                 {/* Standardized Detail Modal */}
                 {showDetailModal && selectedItem && (

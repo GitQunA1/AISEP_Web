@@ -4,12 +4,13 @@ import FeedHeader from '../components/feed/FeedHeader';
 import prService from '../services/prService';
 import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import styles from './DiscoveryHub.module.css'; // Reuse DiscoveryHub styles
+import NewsCard from '../components/common/NewsCard';
 
 /**
  * PR Hub - Browse all press releases from the platform
  * Features: Search, filter by project/investor, sort options, detail view
  */
-const PRHubPage = ({ user }) => {
+const PRHubPage = ({ user, onNotificationNavigate }) => {
     const [allPRs, setAllPRs] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [loadError, setLoadError] = useState(null);
@@ -152,6 +153,7 @@ const PRHubPage = ({ user }) => {
                         sentTime: new Date().toISOString()
                     });
                 }}
+                onNotificationNavigate={onNotificationNavigate}
             />
 
             {/* Stats Section */}
@@ -431,140 +433,19 @@ const PRHubPage = ({ user }) => {
                         gap: '20px',
                         marginBottom: '32px'
                     }}>
-                        {paginatedPRs.map(pr => (
-                            <div
+                        {paginatedPRs.map((pr, idx) => (
+                            <NewsCard
                                 key={pr.postPrId}
+                                index={idx}
+                                thumbnail={pr.projectImage}
+                                title={pr.title}
+                                description={pr.content}
+                                category="Đầu tư"
+                                projectName={pr.projectName}
+                                investorName={pr.investorName}
+                                timestamp={pr.publishedAt}
                                 onClick={() => handlePRClick(pr)}
-                                style={{
-                                    backgroundColor: 'white',
-                                    borderRadius: '12px',
-                                    overflow: 'hidden',
-                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.08)',
-                                    border: '1px solid var(--border-color)',
-                                    transition: 'all 0.3s ease',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    flexDirection: 'column'
-                                }}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.boxShadow = '0 12px 32px rgba(0, 0, 0, 0.15)';
-                                    e.currentTarget.style.transform = 'translateY(-8px)';
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.08)';
-                                    e.currentTarget.style.transform = 'translateY(0)';
-                                }}
-                            >
-                                {/* Image */}
-                                {pr.projectImage && (
-                                    <div style={{
-                                        position: 'relative',
-                                        width: '100%',
-                                        paddingBottom: '60%',
-                                        overflow: 'hidden',
-                                        backgroundColor: '#f0f0f0'
-                                    }}>
-                                        <img
-                                            src={pr.projectImage}
-                                            alt={pr.projectName}
-                                            style={{
-                                                position: 'absolute',
-                                                top: 0,
-                                                left: 0,
-                                                width: '100%',
-                                                height: '100%',
-                                                objectFit: 'cover'
-                                            }}
-                                        />
-                                    </div>
-                                )}
-
-                                {/* Content */}
-                                <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                                    {/* Title */}
-                                    <h3 style={{
-                                        margin: '0 0 12px 0',
-                                        fontSize: '16px',
-                                        fontWeight: '700',
-                                        color: 'var(--text-primary)',
-                                        display: '-webkit-box',
-                                        WebkitLineClamp: 2,
-                                        WebkitBoxOrient: 'vertical',
-                                        overflow: 'hidden',
-                                        lineHeight: '1.4'
-                                    }}>
-                                        {pr.title}
-                                    </h3>
-
-                                    {/* Tags */}
-                                    <div style={{
-                                        display: 'flex',
-                                        gap: '8px',
-                                        flexWrap: 'wrap',
-                                        marginBottom: '12px',
-                                        fontSize: '12px'
-                                    }}>
-                                        <span style={{
-                                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                                            color: '#10b981',
-                                            padding: '4px 10px',
-                                            borderRadius: '6px',
-                                            fontWeight: '600',
-                                            whiteSpace: 'nowrap'
-                                        }}>
-                                            📊 {pr.projectName}
-                                        </span>
-                                        <span style={{
-                                            backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                                            color: 'var(--primary-blue)',
-                                            padding: '4px 10px',
-                                            borderRadius: '6px',
-                                            fontWeight: '600',
-                                            whiteSpace: 'nowrap'
-                                        }}>
-                                            💼 {pr.investorName}
-                                        </span>
-                                    </div>
-
-                                    {/* Preview */}
-                                    <p style={{
-                                        margin: '0 0 16px 0',
-                                        fontSize: '13px',
-                                        color: 'var(--text-secondary)',
-                                        display: '-webkit-box',
-                                        WebkitLineClamp: 3,
-                                        WebkitBoxOrient: 'vertical',
-                                        overflow: 'hidden',
-                                        lineHeight: '1.6',
-                                        flex: 1
-                                    }}>
-                                        {pr.content}
-                                    </p>
-
-                                    {/* Footer */}
-                                    <div style={{
-                                        display: 'flex',
-                                        justifyContent: 'space-between',
-                                        alignItems: 'center',
-                                        paddingTop: '12px',
-                                        borderTop: '1px solid var(--border-color)',
-                                        fontSize: '12px',
-                                        color: 'var(--text-secondary)'
-                                    }}>
-                                        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                            <Calendar size={12} />
-                                            {new Date(pr.publishedAt).toLocaleDateString('vi-VN')}
-                                        </span>
-                                        <span style={{
-                                            color: 'var(--primary-blue)',
-                                            fontWeight: '600',
-                                            cursor: 'pointer'
-                                        }}>
-                                            Xem chi tiết →
-                                        </span>
-                                    </div>
-                                </div>
-                            </div>
+                            />
                         ))}
                     </div>
 

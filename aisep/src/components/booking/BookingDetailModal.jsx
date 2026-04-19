@@ -18,16 +18,27 @@ const STATUS_CONFIG = {
   NoResponse: { label: 'Không phản hồi', badgeClass: styles.badgeCancelled },
 };
 
+// Helper for literal UTC time display
+const formatTimeUTC = (dateStr) => {
+  if (!dateStr) return '—';
+  const d = new Date(dateStr);
+  return d.getUTCHours().toString().padStart(2, '0') + ':' +
+    d.getUTCMinutes().toString().padStart(2, '0');
+};
+
 export default function BookingDetailModal({ booking, onClose, onAction, userRole = 'Startup' }) {
   if (!booking) return null;
 
   const statusInfo = STATUS_CONFIG[booking.status] || { label: String(booking.status), badgeClass: styles.badgeConfirmed };
   const startTime = new Date(booking.startTime);
-  const endTime = new Date(booking.endTime);
   const formattedDate = startTime.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-  const timeRange = `${startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} – ${endTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}`;
+  const timeRange = `${formatTimeUTC(booking.startTime)} – ${formatTimeUTC(booking.endTime)}`;
 
   const price = booking.price || booking.estimatedPrice || 0;
+  const commissionPercent = booking.systemCommissionPercent || booking.commissionSnapshot || 0;
+  const commissionAmount = booking.systemCommissionAmount || (price * commissionPercent / 100);
+  const netIncome = price - commissionAmount;
+
   const formatPrice = (p) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
   return createPortal(
@@ -57,12 +68,12 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
               <div className={styles.profileCard}>
                 <span className={styles.profileLabel}>Cố vấn chuyên môn</span>
                 <span className={styles.profileName} style={{ color: '#1d9bf0' }}>{booking.advisorName || 'N/A'}</span>
-                <span className={styles.profileId}>Mã cố vấn: {booking.advisorId || '—'}</span>
               </div>
               <div className={styles.profileCard}>
                 <span className={styles.profileLabel}>{userRole === 'Startup' ? 'Startup / Khách hàng' : 'Nhà đầu tư / Khách hàng'}</span>
-                <span className={styles.profileName} style={{ color: '#10b981' }}>{booking.projectName || (userRole === 'Startup' ? 'Dự án của bạn' : 'Khách hàng')}</span>
-                <span className={styles.profileId}>Mã hồ sơ: {booking.projectId || booking.customerId || '—'}</span>
+                <span className={styles.profileName} style={{ color: '#10b981' }}>
+                  {booking.customerName || booking.investorName || booking.startupName || booking.projectName || (userRole === 'Startup' ? 'Dự án của bạn' : 'Khách hàng')}
+                </span>
               </div>
             </div>
           </div>
@@ -86,32 +97,61 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
                 </div>
               </div>
             </div>
+            <div style={{ marginTop: '8px' }}>
+              <span className={styles.label} style={{ display: 'block', marginBottom: '8px' }}>Ghi chú</span>
+              <div className={styles.noteBox}>
+                {booking.note && booking.note.trim() ? `"${booking.note}"` : "Không có ghi chú"}
+              </div>
+            </div>
           </div>
 
           {/* 3. Chi phí & Ghi chú */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <h4 className={styles.sectionTitle}>3. Chi phí & Ghi chú</h4>
-            <div className={styles.metaGrid}>
-              <div className={styles.metaItem}>
-                <span className={styles.label}>Tổng chi phí</span>
-                <span className={styles.value} style={{ fontSize: '18px', color: '#1d9bf0' }}>
-                  {price === 0 ? 'Miễn phí ✨' : formatPrice(price)}
-                </span>
-              </div>
-              {booking.commissionSnapshot !== undefined && booking.commissionSnapshot !== null && (
-                <div className={styles.metaItem}>
-                  <span className={styles.label}>Hoa hồng hệ thống</span>
-                  <span className={styles.value} style={{ color: '#7c3aed', fontWeight: '800' }}>
-                    {booking.commissionSnapshot}%
-                  </span>
+            <h4 className={styles.sectionTitle}>3. Chi phí</h4>
+
+            {/* Professional Cost Breakdown Table */}
+            <div style={{
+              background: 'var(--bg-secondary)',
+              borderRadius: '16px',
+              border: '1px solid var(--border-color)',
+              overflow: 'hidden'
+            }}>
+              <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '600' }}>Tổng chi phí tư vấn</span>
+                  <span style={{ fontSize: '16px', color: 'var(--text-primary)', fontWeight: '800' }}>{formatPrice(price)}</span>
                 </div>
-              )}
-              {booking.note && (
-                <div className={styles.metaItem} style={{ gridColumn: 'span 2' }}>
-                  <span className={styles.label}>Ghi chú từ khách hàng</span>
-                  <div className={styles.noteBox}>
-                    "{booking.note}"
-                  </div>
+
+                {['Advisor', 'Staff'].includes(userRole) && price > 0 && (
+                  <>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '600' }}>Hoa hồng hệ thống ({commissionPercent}%)</span>
+                      <span style={{ fontSize: '16px', color: '#ef4444', fontWeight: '700' }}>- {formatPrice(commissionAmount)}</span>
+                    </div>
+
+                    <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
+
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '15px', color: '#10b981', fontWeight: '900' }}>Thực nhận dự kiến</span>
+                      <span style={{ fontSize: '22px', color: '#10b981', fontWeight: '950' }}>{formatPrice(netIncome)}</span>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {['Advisor', 'Staff'].includes(userRole) && (
+                <div style={{
+                  backgroundColor: 'rgba(29, 155, 240, 0.05)',
+                  borderTop: '1px solid var(--border-color)',
+                  padding: '12px 20px',
+                  display: 'flex',
+                  gap: '12px',
+                  alignItems: 'center'
+                }}>
+                  <AlertCircle size={16} color="#1d9bf0" style={{ flexShrink: 0 }} />
+                  <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: '1.4' }}>
+                    Mức hoa hồng này là cuối cùng và sẽ được áp dụng xuyên suốt quá trình đơn hàng này được thực hiện.
+                  </span>
                 </div>
               )}
             </div>

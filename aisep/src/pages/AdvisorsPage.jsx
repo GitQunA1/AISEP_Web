@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, MapPin, Star, Users, DollarSign, CheckCircle, Filter, TrendingUp } from 'lucide-react';
+import { MagnifyingGlass, MapPin, Star, Users, CurrencyCircleDollar, CheckCircle, Faders, TrendUp } from '@phosphor-icons/react';
 import AdvisorFilterModal from '../components/profile/AdvisorFilterModal';
 import advisorService from '../services/advisorService';
 import BookingWizard from '../components/booking/BookingWizard';
@@ -9,7 +9,7 @@ import FloatingChatWidget from '../components/common/FloatingChatWidget';
 import InvestorStatusBanner from '../components/common/InvestorStatusBanner';
 import styles from './AdvisorsPage.module.css';
 
-export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin, investorProfileStatus, investorProfileReason, onUpdateProfile }) {
+export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin, investorProfileStatus, investorProfileReason, onUpdateProfile, onNotificationNavigate }) {
     const [advisors, setAdvisors] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -109,14 +109,16 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin, inves
                                     currentUserId: user?.userId,
                                     sentTime: new Date().toISOString()
                                 });
-                            }} />
+                            }} 
+                            onNavigate={onNotificationNavigate}
+                            />
                         )}
                     </div>
                 </div>
 
                 <div className={styles.searchRow}>
                     <div className={styles.searchContainer}>
-                        <Search className={styles.searchIcon} size={19} />
+                        <MagnifyingGlass className={styles.searchIcon} size={19} weight="bold" />
                         <input
                             type="text"
                             placeholder="Tìm kiếm theo tên hoặc chuyên môn..."
@@ -128,7 +130,7 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin, inves
 
                     <div className={styles.filterWrapper}>
                         <button className={styles.filterButton} onClick={() => setIsFilterOpen(!isFilterOpen)}>
-                            <Filter size={18} />
+                            <Faders size={18} weight="bold" />
                             <span>Bộ lọc</span>
                             {activeFilterCount > 0 && <span className={styles.badge}>{activeFilterCount}</span>}
                         </button>
@@ -180,7 +182,7 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin, inves
                     </div>
                 ) : filteredAdvisors.length === 0 ? (
                     <div className={styles.emptyState}>
-                        <Users size={48} className={styles.emptyIcon} />
+                        <Users size={48} weight="duotone" className={styles.emptyIcon} />
                         <h3>Không tìm thấy cố vấn</h3>
                         <p>Hiện không có cố vấn nào phù hợp với tìm kiếm của bạn.</p>
                     </div>
@@ -222,26 +224,26 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin, inves
 
                                     <div className={styles.metadata}>
                                         <div className={styles.metaItem}>
-                                            📍 <span>{advisor.location || 'Nghề nghiệp tự do'}</span>
+                                            <MapPin size={14} weight="duotone" /> <span>{advisor.location || 'Nghề nghiệp tự do'}</span>
                                         </div>
                                         <div className={styles.metaItem}>
-                                            💵 <span>{advisor.hourlyRate?.toLocaleString('vi-VN')} VNĐ/giờ</span>
+                                            <CurrencyCircleDollar size={14} weight="duotone" /> <span>{advisor.hourlyRate?.toLocaleString('vi-VN')} VNĐ/giờ</span>
                                         </div>
                                         <div className={styles.metaItem}>
-                                            ⭐ <span>{advisor.rating || 0}</span>
+                                            <Star size={14} weight="fill" color="#ffad1f" /> <span>{advisor.rating || 0}</span>
                                         </div>
                                     </div>
 
                                     <div className={styles.actions}>
                                         {canBook && (
-                                        <button
-                                            className={styles.connectBtn}
-                                            onClick={(e) => { e.stopPropagation(); handleOpenBookingWizard(advisor); }}
-                                        >
-                                            <TrendingUp size={15} />
-                                            <span>Đặt lịch</span>
-                                        </button>
-                                    )}
+                                            <button
+                                                className={styles.connectBtn}
+                                                onClick={(e) => { e.stopPropagation(); handleOpenBookingWizard(advisor); }}
+                                            >
+                                                <TrendUp size={15} weight="bold" />
+                                                <span>Đặt lịch</span>
+                                            </button>
+                                        )}
                                         <button
                                             className={styles.viewProfileBtn}
                                             onClick={(e) => { e.stopPropagation(); onSelectAdvisor?.(advisor); }}

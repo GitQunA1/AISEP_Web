@@ -1,9 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  ArrowLeft, MapPin, Star, DollarSign, Globe, Briefcase, 
-  Award, Mail, Phone, Calendar, CheckCircle, Clock, TrendingUp
-} from 'lucide-react';
-import bookingService from '../../services/bookingService';
+import {
+  ArrowLeft, MapPin, Star, CurrencyCircleDollar, Globe, Briefcase,
+  Medal, EnvelopeSimple, Phone, CalendarBlank, CheckCircle, Timer, TrendUp, ClipboardText, Trophy
+} from '@phosphor-icons/react';
 import BookingWizard from '../booking/BookingWizard';
 import styles from './AdvisorDetailView.module.css';
 import advisorService from '../../services/advisorService';
@@ -17,8 +16,7 @@ import AuthRequirementScreen from '../common/AuthRequirementScreen';
  */
 const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
   const [activeTab, setActiveTab] = useState('overview');
-  const [bookingStatus, setBookingStatus] = useState(null);
-  
+
   // Modal state
   const [showBookingWizard, setShowBookingWizard] = useState(false);
 
@@ -29,45 +27,24 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
   // Booking dành cho Investor (role 1) và Startup (role 0)
   const canBook = roleStr === 'startup' || roleStr === 'investor' || roleNum === 0 || roleNum === 1;
 
-  useEffect(() => {
-    const fetchStatus = async () => {
-        if (!user || !advisor || !canBook) return;
-        const userId = user.id || user.userId || user.nameid;
-        if (!userId) return;
 
-        try {
-            const response = await bookingService.getMyCustomerBookings(userId);
-            const items = response?.items || response?.data?.items || response || [];
-            const bookingsList = Array.isArray(items) ? items : (items.data && Array.isArray(items.data) ? items.data : []);
-            // check booking status with advisor
-            const currentBooking = bookingsList.find(b => b.advisorId === advisor.advisorId);
-            
-            if (currentBooking) {
-                setBookingStatus(currentBooking.status);
-            }
-        } catch (err) {
-            console.error('Failed to load booking status for detail view:', err);
-        }
-    };
-    fetchStatus();
-  }, [user, advisor, canBook]);
 
   const handleOpenBooking = () => {
-      if (!canBook) return;
-      setShowBookingWizard(true);
+    if (!canBook) return;
+    setShowBookingWizard(true);
   };
-  
+
   const handleBookingSuccess = () => {
-      // Refresh status or show success
-      setBookingStatus(0); // Optimistically set to Pending
+    // Booking successful - Wizard handles its own success UI
+    setShowBookingWizard(false);
   };
 
   if (!user) {
     return (
-      <AuthRequirementScreen 
-        type="cố vấn" 
-        onBack={onBack} 
-        onLogin={onShowLogin} 
+      <AuthRequirementScreen
+        type="cố vấn"
+        onBack={onBack}
+        onLogin={onShowLogin}
       />
     );
   }
@@ -127,37 +104,20 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
         {/* Top row: avatar left, action buttons right */}
         <div className={styles.cardHeaderRow}>
           <div className={styles.avatar} style={{ background: getAvatarGradient() }}>
-            {(advisor.profileImage && 
-              typeof advisor.profileImage === 'string' && 
-              advisor.profileImage.startsWith('http') && 
+            {(advisor.profileImage &&
+              typeof advisor.profileImage === 'string' &&
+              advisor.profileImage.startsWith('http') &&
               !advisor.profileImage.includes('ui-avatars.com'))
               ? <img src={advisor.profileImage} alt={advisor.userName} className={styles.avatarImg} />
               : <span className={styles.initialText}>{initial}</span>
             }
           </div>
           <div className={styles.actionButtons}>
-            {canBook && (() => {
-                if (bookingStatus === 0 || bookingStatus === 'Pending') {
-                    return (
-                        <button className={styles.connectBtn} disabled style={{ opacity: 0.6, cursor: 'not-allowed', backgroundColor: 'var(--text-secondary)' }}>
-                            Đang chờ...
-                        </button>
-                    );
-                }
-                if (bookingStatus === 1 || bookingStatus === 'Confirmed' || bookingStatus === 'Accepted') {
-                    return (
-                        <button className={styles.connectBtn} disabled style={{ backgroundColor: '#10b981', color: 'white' }}>
-                            Đã kết nối
-                        </button>
-                    );
-                }
-                
-                return (
-                    <button className={styles.connectBtn} onClick={handleOpenBooking}>
-                      <TrendingUp size={16} /> Đặt lịch
-                    </button>
-                );
-            })()}
+            {canBook && (
+              <button className={styles.connectBtn} onClick={handleOpenBooking}>
+                <TrendUp size={16} weight="bold" /> Đặt lịch
+              </button>
+            )}
           </div>
         </div>
 
@@ -166,7 +126,7 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
           <h1 className={styles.name}>{advisor.userName}</h1>
           {isApproved && (
             <span className={styles.verifiedChip}>
-              ✓ Đã xác minh
+              <CheckCircle size={14} weight="fill" /> Đã xác minh
             </span>
           )}
         </div>
@@ -186,29 +146,35 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
 
         {/* Meta row: location + join date */}
         <div className={styles.metaRow}>
-          <span className={styles.metaItem}>📍 {advisor.location || 'Nghề nghiệp tự do'}</span>
-          <span className={styles.metaItem}>📅 Tham gia Tháng 3 2024</span>
+          <span className={styles.metaItem}>
+            <MapPin size={16} weight="duotone" style={{ color: 'var(--primary-blue)' }} />
+            {advisor.location || 'Nghề nghiệp tự do'}
+          </span>
+          <span className={styles.metaItem}>
+            <CalendarBlank size={16} weight="duotone" style={{ color: 'var(--primary-blue)' }} />
+            Tham gia Tháng 3 2024
+          </span>
         </div>
 
         {/* Stats strip */}
         <div className={styles.statsStrip}>
           <div className={styles.statItem}>
-            <div className={styles.statEmoji}>💵</div>
+            <div className={styles.statIcon}><CurrencyCircleDollar size={24} weight="duotone" color="#10b981" /></div>
             <div className={styles.statValue}>{formatSalary(advisor.hourlyRate)}</div>
             <div className={styles.statLabel}>VNĐ/giờ</div>
           </div>
           <div className={styles.statItem}>
-            <div className={styles.statEmoji}>⭐</div>
+            <div className={styles.statIcon}><Star size={24} weight="fill" color="#ffad1f" /></div>
             <div className={styles.statValue}>{advisor.rating || '4.8'}</div>
             <div className={styles.statLabel}>Đánh giá</div>
           </div>
           <div className={styles.statItem}>
-            <div className={styles.statEmoji}>🌐</div>
+            <div className={styles.statIcon}><Globe size={24} weight="duotone" color="var(--primary-blue)" /></div>
             <div className={styles.statValue}>{advisor.languagesSpoken || 'VI · EN'}</div>
             <div className={styles.statLabel}>Ngôn ngữ</div>
           </div>
           <div className={styles.statItem}>
-            <div className={styles.statEmoji}>⏱</div>
+            <div className={styles.statIcon}><Timer size={24} weight="duotone" color="#8b5cf6" /></div>
             <div className={styles.statValue}>24h</div>
             <div className={styles.statLabel}>Phản hồi</div>
           </div>
@@ -217,21 +183,21 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
 
       {/* 4. Tabs Navigation (Restyled) */}
       <div className={styles.tabs}>
-        <button 
+        <button
           className={`${styles.tab} ${activeTab === 'overview' ? styles.active : ''}`}
           onClick={() => setActiveTab('overview')}
         >
           Tổng quan
           {activeTab === 'overview' && <div className={styles.indicator} />}
         </button>
-        <button 
+        <button
           className={`${styles.tab} ${activeTab === 'experience' ? styles.active : ''}`}
           onClick={() => setActiveTab('experience')}
         >
           Kinh nghiệm
           {activeTab === 'experience' && <div className={styles.indicator} />}
         </button>
-        <button 
+        <button
           className={`${styles.tab} ${activeTab === 'contact' ? styles.active : ''}`}
           onClick={() => setActiveTab('contact')}
         >
@@ -245,7 +211,9 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
         {activeTab === 'overview' && (
           <>
             <div className={styles.feedRow}>
-              <div className={`${styles.iconBox} ${styles.blueBox}`}>📋</div>
+              <div className={`${styles.iconBox} ${styles.blueBox}`}>
+                <ClipboardText size={22} weight="duotone" />
+              </div>
               <div className={styles.rowContent}>
                 <div className={styles.rowTitle}>Giới thiệu chuyên môn</div>
                 <div className={styles.rowText}>
@@ -258,9 +226,11 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
                 </div>
               </div>
             </div>
-            
+
             <div className={styles.feedRow}>
-              <div className={`${styles.iconBox} ${styles.greenBox}`}>📅</div>
+              <div className={`${styles.iconBox} ${styles.greenBox}`}>
+                <CalendarBlank size={22} weight="duotone" />
+              </div>
               <div className={styles.rowContent}>
                 <div className={styles.rowTitle}>Lịch đặt tư vấn</div>
                 <div className={styles.rowText}>
@@ -274,7 +244,9 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
         {activeTab === 'experience' && (
           <>
             <div className={styles.feedRow}>
-              <div className={`${styles.iconBox} ${styles.purpleBox}`}>🏆</div>
+              <div className={`${styles.iconBox} ${styles.purpleBox}`}>
+                <Trophy size={22} weight="duotone" />
+              </div>
               <div className={styles.rowContent}>
                 <div className={styles.rowTitle}>Lịch sử làm việc & Kinh nghiệm</div>
                 <div className={styles.rowText}>
@@ -283,16 +255,18 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
                 <div className={styles.metaText}>Hiện tại · {advisor.location || 'Đang cập nhật'}</div>
               </div>
             </div>
-            
+
             <div className={styles.feedRow}>
-              <div className={`${styles.iconBox} ${styles.purpleBox}`}>💼</div>
+              <div className={`${styles.iconBox} ${styles.purpleBox}`}>
+                <Briefcase size={22} weight="duotone" />
+              </div>
               <div className={styles.rowContent}>
                 <div className={styles.rowTitle}>Chứng chỉ & Bằng cấp</div>
                 <div className={styles.certGrid}>
                   {advisor.certifications ? (
                     advisor.certifications.split('|').map((cert, i) => (
                       <div key={i} className={styles.certCard}>
-                        <Award size={16} className={styles.certIcon} />
+                        <Medal size={16} weight="duotone" className={styles.certIcon} />
                         <span className={styles.certName}>{cert.trim()}</span>
                       </div>
                     ))
@@ -307,7 +281,9 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
 
         {activeTab === 'contact' && (
           <div className={styles.feedRow}>
-            <div className={`${styles.iconBox} ${styles.blueBox}`}>📧</div>
+            <div className={`${styles.iconBox} ${styles.blueBox}`}>
+              <EnvelopeSimple size={22} weight="duotone" />
+            </div>
             <div className={styles.rowContent}>
               <div className={styles.rowTitle}>Thông tin liên hệ</div>
               <div className={styles.rowText}>

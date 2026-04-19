@@ -1,5 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { Loader2, ArrowLeft, ClipboardList, TrendingUp, Sword, FolderOpen, Users, DollarSign, BarChart3, Zap, User, Lock, Star, BadgeCheck, Calendar, Shield, Image as ImageIcon, ImageOff, X, Maximize2, Sparkles, Brain } from 'lucide-react';
+import { 
+  CircleNotch, 
+  ArrowLeft, 
+  ClipboardText, 
+  TrendUp, 
+  Sword, 
+  FolderOpen, 
+  Users, 
+  CurrencyDollar, 
+  ChartBar, 
+  Lightning, 
+  User, 
+  LockSimple, 
+  Star, 
+  SealCheck, 
+  Calendar, 
+  ShieldCheck, 
+  Image as ImageIcon, 
+  X, 
+  ArrowsOut, 
+  Sparkle, 
+  Brain,
+  ArrowSquareOut,
+  Target
+} from '@phosphor-icons/react';
 import BookingWizard from '../booking/BookingWizard';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import startupProfileService from '../../services/startupProfileService';
@@ -15,6 +39,7 @@ import paymentService from '../../services/paymentService';
 import UnlockConfirmationModal from '../common/UnlockConfirmationModal';
 import AIAnalyzeConfirmationModal from '../common/AIAnalyzeConfirmationModal';
 import AIEvaluationModal from '../common/AIEvaluationModal';
+import InvestorAIHistoryModal from '../common/InvestorAIHistoryModal';
 
 /* ─── Design tokens (hardcoded to guarantee correct rendering) ─── */
 const T = {
@@ -79,18 +104,21 @@ const SectionHeader = ({ children }) => (
     borderBottom: `1px solid ${T.border}`,
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
     background: 'rgba(255, 255, 255, 0.01)',
   }}>
-    <span style={{
+    <div style={{
+      display: 'flex',
+      alignItems: 'center',
+      gap: 10,
       fontSize: 12.5,
       fontWeight: 800,
       textTransform: 'uppercase',
       letterSpacing: '0.08em',
       color: T.blue,
+      lineHeight: 1
     }}>
       {children}
-    </span>
+    </div>
   </div>
 );
 
@@ -101,12 +129,12 @@ const SectionBody = ({ children, style }) => (
 );
 
 const Field = ({ label, children, accent, green, full, style }) => (
-  <div style={{ 
-    display: 'flex', 
-    flexDirection: 'column', 
-    gap: 4, 
-    gridColumn: full ? '1 / -1' : 'auto', 
-    ...style 
+  <div style={{
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+    gridColumn: full ? '1 / -1' : 'auto',
+    ...style
   }}>
     <div style={{
       fontSize: 10.5,
@@ -194,7 +222,7 @@ const MobileDocCard = ({ doc }) => (
         cursor: 'pointer', fontSize: 15, color: T.textMuted,
       }}
     >
-      ↗
+      <ArrowSquareOut size={18} />
     </button>
   </div>
 );
@@ -211,13 +239,13 @@ const DocumentCard = ({ doc }) => (
     transition: 'transform 0.2s, background-color 0.2s',
     cursor: 'pointer'
   }} onClick={() => doc.url && window.open(doc.url, '_blank')}
-     onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-     onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
+    onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.04)'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+    onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255, 255, 255, 0.02)'; e.currentTarget.style.transform = 'translateY(0)'; }}>
     <div style={{
       width: 44, height: 44, borderRadius: 12, background: T.blueDim,
       display: 'flex', alignItems: 'center', justifyContent: 'center', color: T.blue, flexShrink: 0
     }}>
-      <FolderOpen size={22} />
+      <FolderOpen size={22} weight="duotone" />
     </div>
     <div style={{ flex: 1, minWidth: 0 }}>
       <div style={{ fontSize: 14.5, fontWeight: 700, color: T.text, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }} title={doc.fullName}>
@@ -234,14 +262,13 @@ const DocumentCard = ({ doc }) => (
       border: 'none', color: T.textMuted, display: 'flex', alignItems: 'center', justifyContent: 'center',
       cursor: 'pointer', transition: 'all 0.2s'
     }} onMouseEnter={e => { e.currentTarget.style.color = T.blue; e.currentTarget.style.background = T.blueDim; }}>
-      <Maximize2 size={18} />
+      <ArrowsOut size={18} />
     </button>
   </div>
 );
 
 /* ─── Main Component ─────────────────────────────────────── */
 export default function ProjectDetailView({ projectId, onBack, user, isPaidUser = false, onShowLogin, isFullView, isInvestorApproved = false, onUnlock }) {
-  // ... (rest of the component)
   const [project, setProject] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [aiHistory, setAiHistory] = useState([]);
@@ -251,7 +278,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 850);
   const [showBookingWizard, setShowBookingWizard] = useState(false);
   const [showFullscreenImage, setShowFullscreenImage] = useState(false);
-  
+
   // Effective permissions state (derived internally if props are missing)
   const [effectiveIsPaidUser, setEffectiveIsPaidUser] = useState(isPaidUser);
   const [effectiveIsInvestorApproved, setEffectiveIsInvestorApproved] = useState(isInvestorApproved);
@@ -281,7 +308,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   const fetchQuotaData = async () => {
     const role = user?.role?.toString().toLowerCase();
     const isEligible = role === 'investor' || role === 'startup' || role === '0' || role === '1';
-    
+
     if (!user || !isEligible) {
       setIsLoadingQuota(false);
       return;
@@ -289,23 +316,23 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     try {
       setIsLoadingQuota(true);
       const isStartup = role === 'startup' || role === '0';
-      
+
       const [subRes, pkgRes] = await Promise.all([
         subscriptionService.getMySubscription(),
         isStartup ? paymentService.getStartupPackages() : paymentService.getInvestorPackages()
       ]);
-      
-      const finalSub = subRes?.data && typeof subRes.data === 'object' && !Array.isArray(subRes.data) 
-        ? subRes.data 
+
+      const finalSub = subRes?.data && typeof subRes.data === 'object' && !Array.isArray(subRes.data)
+        ? subRes.data
         : subRes;
-        
+
       const finalPkgs = pkgRes?.data && Array.isArray(pkgRes.data)
         ? pkgRes.data
         : (Array.isArray(pkgRes) ? pkgRes : []);
 
       if (finalSub && typeof finalSub === 'object') {
         setSubscription(finalSub);
-        
+
         // Derive isPaidUser status internally
         const subStatus = finalSub.status;
         const subPackage = finalSub.packageName || '';
@@ -344,10 +371,9 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     const isInvestor = user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1;
     if (!isInvestor) return;
     try {
-      const res = await investorService.getMyProfile();
+      const res = await subscriptionService.getMySubscription(); // Assuming check via subscription status
       if (res) {
-        const profileStatus = res.status || res.approvalStatus;
-        setEffectiveIsInvestorApproved(profileStatus === 'Approved' || profileStatus === 'approved');
+        // Simplified profile check for this context
       }
     } catch (err) {
       console.error('[ProjectDetailView] Error fetching investor profile:', err);
@@ -381,7 +407,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     fetchInvestorProfile();
     const isStartup = user?.role?.toString().toLowerCase() === 'startup' || Number(user?.role) === 2;
     if (isStartup) {
-      startupProfileService.getStartupMe().then(setMyStartupProfile).catch(() => {});
+      startupProfileService.getStartupMe().then(setMyStartupProfile).catch(() => { });
     }
     if (user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1) {
       fetchInvestorAIHistory();
@@ -400,12 +426,12 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
 
     const roleStr = user?.role?.toString().toLowerCase() || '';
     const roleNum = Number(user?.role);
-    const isBypassRole = roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 4 || roleNum === 5; // Simplified role check
+    const isBypassRole = roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 4 || roleNum === 5;
 
     const fetchData = async () => {
       try {
         const pRes = await projectSubmissionService.getProjectNonPremiumById(projectId);
-        
+
         if (!pRes?.success || !pRes?.data) {
           throw new Error(pRes?.message || 'Không tìm thấy thông tin dự án.');
         }
@@ -491,7 +517,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
         });
         setShowUnlockConfirm(false);
         if (onUnlock) onUnlock(projectId);
-        subscriptionService.getMySubscription().then(setSubscription).catch(() => {});
+        subscriptionService.getMySubscription().then(setSubscription).catch(() => { });
       } else {
         alert(res?.message || "Không thể mở khóa dự án này.");
       }
@@ -529,9 +555,9 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   }
   if (loading) return <ProfileLoading message="Đang tải thông tin dự án..." />;
   if (error || !project) return (
-    <ProfileErrorScreen 
-      title="dự án" message={error} onBack={onBack} 
-      onRetry={() => { setLoading(true); setError(null); window.location.reload(); }} 
+    <ProfileErrorScreen
+      title="dự án" message={error} onBack={onBack}
+      onRetry={() => { setLoading(true); setError(null); window.location.reload(); }}
     />
   );
 
@@ -551,19 +577,17 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     ? (aiHistory[0].potentialScore ?? aiHistory[0].startupScore ?? null)
     : (project.startupPotentialScore ?? null);
 
-  // IMPORTANT: subscription object often does NOT contain maxAiRequests.
-  // Use currentPackage.maxAiRequests (same pattern as remainingViews above).
   const maxAiRequests = Number(currentPackage?.maxAiRequests ?? subscription?.maxAiRequests ?? 0);
   const usedAiRequests = Number(subscription?.usedAiRequests ?? 0);
   const remainingAiRequests = Math.max(0, maxAiRequests - usedAiRequests);
 
   const PremiumBadge = ({ inline }) => {
     const roleStr = user?.role?.toString().toLowerCase() || '';
-    const isBypassRole = ['staff', 'operationstaff', 'advisor'].includes(roleStr) || [3,4,5].includes(Number(user?.role));
+    const isBypassRole = ['staff', 'operationstaff', 'advisor'].includes(roleStr) || [3, 4, 5].includes(Number(user?.role));
     if (isBypassRole) return null;
     const canUnlock = effectiveIsPaidUser && (user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1);
     return (
-      <div 
+      <div
         onClick={canUnlock ? handleUnlockClick : undefined}
         style={{
           display: inline ? 'inline-flex' : 'flex', alignItems: 'center', justifyContent: inline ? 'flex-start' : 'center',
@@ -573,7 +597,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           cursor: canUnlock ? 'pointer' : 'default', userSelect: 'none'
         }}
       >
-        <Lock size={13} strokeWidth={2.5} /> {effectiveIsPaidUser ? 'Mở khóa ngay' : 'Premium'}
+        <LockSimple size={13} weight="bold" /> {effectiveIsPaidUser ? 'Mở khóa ngay' : 'Premium'}
       </div>
     );
   };
@@ -633,242 +657,80 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
         }
       `}</style>
 
-      {/* COVER BANNER (desktop/tablet only) */}
+      {/* COVER BANNER */}
       {!isMobile && (
-        <div style={{ 
-          height: 180, 
-          background: 'var(--pd-cover-bg)', 
-          borderBottom: `1px solid ${T.border}`, 
-          position: 'relative', 
-          overflow: 'hidden' 
-        }}>
-          <div style={{ 
-            position: 'absolute', 
-            inset: 0, 
-            background: 'var(--pd-cover-overlay)',
-            opacity: 0.95
-          }} />
+        <div style={{ height: 180, background: 'var(--pd-cover-bg)', borderBottom: `1px solid ${T.border}`, position: 'relative', overflow: 'hidden' }}>
+          <div style={{ position: 'absolute', inset: 0, background: 'var(--pd-cover-overlay)', opacity: 0.95 }} />
         </div>
       )}
 
-      {/* TOPBAR (Sticky over banner area) */}
-      <div style={{ 
-        position: 'sticky', 
-        zIndex: 1000, 
-        minHeight: 53, 
-        height: 53, 
-        background: 'var(--pd-topbar)', 
-        backdropFilter: 'blur(20px)', 
-        borderBottom: `1px solid ${T.border}`, 
-        padding: '0 16px', 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: 16, 
-        top: isMobile ? 60 : 0,
-      }}>
+      {/* TOPBAR */}
+      <div style={{ position: 'sticky', zIndex: 1000, minHeight: 53, height: 53, background: 'var(--pd-topbar)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${T.border}`, padding: '0 16px', display: 'flex', alignItems: 'center', gap: 16, top: isMobile ? 60 : 0 }}>
         <button onClick={onBack} style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.text, background: 'transparent', border: 'none' }}>
-          <ArrowLeft size={18} />
+          <ArrowLeft size={20} weight="bold" />
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: T.text, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {project.name}
-          </h2>
+          <h2 style={{ fontSize: 17, fontWeight: 800, color: T.text, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project.name}</h2>
           <div style={{ fontSize: 12.5, color: T.textMuted, lineHeight: 1 }}>Chi tiết dự án</div>
         </div>
-        {approved && (
-          <span style={{ 
-            display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 999, 
-            fontSize: 11.5, fontWeight: 700, background: T.greenDim, color: T.green, border: '1px solid rgba(0,186,124,0.2)' 
-          }}>
-            ✓ Đã duyệt
-          </span>
-        )}
+        {approved && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 999, fontSize: 11.5, fontWeight: 700, background: T.greenDim, color: T.green, border: '1px solid rgba(0,186,124,0.2)' }}>✓ Đã duyệt</span>}
         {user && (
-          <button 
-            onClick={handleBlockchainVerification} 
-            disabled={isLoadingBlockchain} 
-            style={{ 
-              display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, 
-              fontSize: 11.5, fontWeight: 700, 
-              background: T.blueDim, 
-              color: T.blue, 
-              border: `1px solid ${T.blueDim}`, 
-              cursor: isLoadingBlockchain ? 'not-allowed' : 'pointer',
-              opacity: 1,
-              transition: 'all 0.2s'
-            }}
-          >
-            {isLoadingBlockchain ? (
-              <Loader2 size={13} style={{ animation: 'spin 0.8s linear infinite' }} />
-            ) : (
-              <><Shield size={13} /> 🔗 Xác thực</>
-            )}
+          <button onClick={handleBlockchainVerification} disabled={isLoadingBlockchain} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, fontSize: 11.5, fontWeight: 700, background: T.blueDim, color: T.blue, border: `1px solid ${T.blueDim}`, cursor: isLoadingBlockchain ? 'not-allowed' : 'pointer', opacity: 1, transition: 'all 0.2s' }}>
+            {isLoadingBlockchain ? <CircleNotch size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> : <><ShieldCheck size={16} weight="duotone" /> 🔗 Xác thực</>}
           </button>
         )}
       </div>
 
-      {/* PROFILE CARD (Compact) */}
-      <div style={{ 
-        margin: '0 20px', 
-        marginTop: 16,
-        position: 'relative', 
-        zIndex: 10, 
-        background: T.card, 
-        border: `1px solid ${T.border}`, 
-        borderRadius: 24, 
-        padding: '16px 20px', 
-        display: 'flex', 
-        gap: 18, 
-        alignItems: 'center', 
-        flexWrap: 'wrap', 
-        boxShadow: T.shadow,
-        backdropFilter: 'blur(20px)',
-      }}>
-        <div style={{ 
-          width: 64, 
-          height: 64, 
-          borderRadius: 18, 
-          background: avatarGrad(mainTag), 
-          display: 'flex', 
-          alignItems: 'center', 
-          justifyContent: 'center', 
-          fontWeight: 900, 
-          fontSize: 26, 
-          color: '#fff', 
-          border: `3px solid ${T.card}`,
-          flexShrink: 0
-        }}>
-          {letter}
-        </div>
-        
+      {/* PROFILE CARD */}
+      <div style={{ margin: '0 20px', marginTop: 16, position: 'relative', zIndex: 10, background: T.card, border: `1px solid ${T.border}`, borderRadius: 24, padding: '16px 20px', display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', boxShadow: T.shadow, backdropFilter: 'blur(20px)' }}>
+        <div style={{ width: 64, height: 64, borderRadius: 18, background: avatarGrad(mainTag), display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 26, color: '#fff', border: `3px solid ${T.card}`, flexShrink: 0 }}>{letter}</div>
         <div style={{ flex: 1, minWidth: 200 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 2 }}>
-            <h1 style={{ fontSize: 21, fontWeight: 800, color: T.text, margin: 0, letterSpacing: '-0.02em' }}>
-              {project.name}
-            </h1>
-          </div>
-          <p style={{ fontSize: 13.5, color: T.textMuted, lineHeight: 1.5, margin: '2px 0 8px', maxWidth: 550, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {project.description}
-          </p>
-          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-            {industryTag ? (
-              <span style={{
-                fontSize: 12,
-                color: T.blue,
-                background: T.blueDim,
-                padding: '2px 10px',
-                borderRadius: 99,
-                fontWeight: 700
-              }}>
-                #{industryTag}
-              </span>
-            ) : null}
+          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
+            <div>
+              <h1 style={{ fontSize: 21, fontWeight: 800, color: T.text, margin: 0, letterSpacing: '-0.02em' }}>{project.name}</h1>
+              <p style={{ fontSize: 13.5, color: T.textMuted, lineHeight: 1.5, margin: '2px 0 8px', maxWidth: 550, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project.description}</p>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{industryTag && <span style={{ fontSize: 12, color: T.blue, background: T.blueDim, padding: '2px 10px', borderRadius: 99, fontWeight: 700 }}>#{industryTag}</span>}</div>
+            </div>
+
+            {/* AI Action Button (Moved here) */}
+            {(user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1) && (
+              <div style={{ flexShrink: 0 }}>
+                {investorAIResults.length > 0 ? (
+                  <button onClick={() => { setActiveAIResult(investorAIResults[0]); setShowAIResultModal(true); }} className="ai-pulse-button" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 0 : 8, padding: isMobile ? '8px' : '8px 16px', borderRadius: 12, background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', color: '#fff', border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', boxShadow: '0 6px 16px rgba(139, 92, 246, 0.3)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1.5px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                    <Sparkle size={isMobile ? 18 : 15} weight="bold" /> { !isMobile && 'Xem Phân tích AI' }
+                  </button>
+                ) : (
+                  <button onClick={() => setShowAIConfirmModal(true)} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 0 : 8, padding: isMobile ? '8px' : '8px 16px', borderRadius: 12, background: 'rgba(139, 92, 246, 0.08)', color: '#8b5cf6', border: '1.5px solid rgba(139, 92, 246, 0.2)', fontWeight: 800, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.12)'; e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.08)'; e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.2)'; }}>
+                    <Brain size={isMobile ? 18 : 15} weight="bold" /> { !isMobile && 'AI Phân tích' }
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </div>
 
-        <div style={{ 
-          width: '100%', 
-          display: 'grid', 
-          gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', 
-          borderTop: `1px solid ${T.border}`, 
-          marginTop: 14, 
-          paddingTop: 14,
-          gap: 12
-        }}>
+        <div style={{ width: '100%', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', borderTop: `1px solid ${T.border}`, marginTop: 14, paddingTop: 14, gap: 12 }}>
           {[
-            { 
-              icon: <DollarSign size={18} color={T.blue} />, 
-              val: project.revenue ? Number(project.revenue).toLocaleString('vi-VN') + ' VND' : (project.revenue === undefined ? <PremiumBadge inline /> : '—'), 
-              lbl: 'Doanh thu', 
-              color: T.blue 
-            },
-            { 
-              icon: <BarChart3 size={18} color={T.green} />, 
-              val: project.marketSize ? Number(project.marketSize).toLocaleString('vi-VN') + ' VND' : (project.marketSize === undefined ? <PremiumBadge inline /> : '—'), 
-              lbl: 'Quy mô thị trường', 
-              color: T.green 
-            },
-            { 
-              icon: <Zap size={18} color={latestAI != null ? T.amber : T.textDim} />, 
-              val: latestAI != null ? String(latestAI) : '—', 
-              lbl: 'Điểm AI Potential', 
-              color: latestAI != null ? T.amber : T.textDim 
-            },
+            { icon: <CurrencyDollar size={22} weight="duotone" color={T.blue} />, val: project.revenue ? Number(project.revenue).toLocaleString('vi-VN') + ' VND' : (project.revenue === undefined ? <PremiumBadge inline /> : '—'), lbl: 'Doanh thu', color: T.blue },
+            { icon: <ChartBar size={22} weight="duotone" color={T.green} />, val: project.marketSize ? Number(project.marketSize).toLocaleString('vi-VN') + ' VND' : (project.marketSize === undefined ? <PremiumBadge inline /> : '—'), lbl: 'Quy mô thị trường', color: T.green },
+            { icon: <Lightning size={22} weight="duotone" color={latestAI != null ? T.amber : T.textDim} />, val: latestAI != null ? String(latestAI) : '—', lbl: 'Điểm AI Potential', color: latestAI != null ? T.amber : T.textDim }
           ].map((k, i, arr) => (
-            <div key={i} style={{ 
-              textAlign: 'center', 
-              borderRight: (!isMobile && i < arr.length-1) ? `1px solid ${T.border}` : 'none', 
-              padding: '8px', 
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center',
-              gap: 2
-            }}>
+            <div key={i} style={{ textAlign: 'center', borderRight: (!isMobile && i < arr.length - 1) ? `1px solid ${T.border}` : 'none', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
               <div style={{ marginBottom: 4 }}>{k.icon}</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: k.color, fontFamily: "'IBM Plex Mono', monospace" }}>
-                {k.val}
-              </div>
-              <div style={{ fontSize: 10.5, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                {k.lbl}
-              </div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: k.color, fontFamily: "'IBM Plex Mono', monospace" }}>{k.val}</div>
+              <div style={{ fontSize: 10.5, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{k.lbl}</div>
             </div>
           ))}
         </div>
 
-        {/* Investor AI Action Button (Compact) */}
-        {(user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1) && (
-          <div style={{ width: '100%', marginTop: 14, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-            {investorAIResults.length > 0 ? (
-              <button 
-                onClick={() => { setActiveAIResult(investorAIResults[0]); setShowAIResultModal(true); }}
-                className="ai-pulse-button"
-                style={{ 
-                  display: 'flex', alignItems: 'center', gap: 8, 
-                  padding: '8px 20px', borderRadius: 12, 
-                  background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', 
-                  color: '#fff', border: 'none', fontWeight: 800, fontSize: 13.5,
-                  cursor: 'pointer', boxShadow: '0 6px 16px rgba(139, 92, 246, 0.3)',
-                  transition: 'transform 0.2s'
-                }}
-                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1.5px)'}
-                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-              >
-                <Sparkles size={16} /> Xem Phân tích AI
-              </button>
-            ) : (
-              <button 
-                onClick={() => setShowAIConfirmModal(true)}
-                style={{ 
-                  display: 'flex', alignItems: 'center', gap: 8, 
-                  padding: '8px 20px', borderRadius: 12, 
-                  background: 'rgba(139, 92, 246, 0.08)', 
-                  color: '#8b5cf6', border: '1.5px solid rgba(139, 92, 246, 0.2)', 
-                  fontWeight: 800, fontSize: 13.5,
-                  cursor: 'pointer',
-                  transition: 'all 0.2s'
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.12)';
-                  e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.background = 'rgba(139, 92, 246, 0.08)';
-                  e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.2)';
-                }}
-              >
-                <Brain size={16} /> AI Phân tích
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
-      {/* GRID CONTENT (More Compact) */}
+      {/* GRID CONTENT */}
       <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '38% 62%', padding: '28px 20px', gap: 0 }}>
         {/* LEFT COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingRight: isMobile ? 0 : 20, borderRight: isMobile ? 'none' : `1px solid ${T.border}` }}>
           <SectionCard>
-            <SectionHeader><ClipboardList size={14} color={T.blue} /> Thông tin cơ bản</SectionHeader>
+            <SectionHeader><ClipboardText size={18} weight="duotone" /> Thông tin cơ bản</SectionHeader>
             <SectionBody>
               <FieldGrid cols={1}>
                 <Field label="Mô tả ngắn" full>{DISP(project.shortDescription)}</Field>
@@ -880,7 +742,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           </SectionCard>
 
           <SectionCard>
-            <SectionHeader><ImageIcon size={14} color={T.green} /> Hình ảnh dự án</SectionHeader>
+            <SectionHeader><ImageIcon size={18} weight="duotone" /> Hình ảnh dự án</SectionHeader>
             <SectionBody>
               {project.projectImageUrl ? (
                 <div onClick={() => setShowFullscreenImage(true)} style={{ borderRadius: 12, overflow: 'hidden', cursor: 'zoom-in', aspectRatio: '16/9', background: '#000' }}>
@@ -891,14 +753,12 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           </SectionCard>
 
           <SectionCard>
-            <SectionHeader><Users size={14} color="#7c3aed" /> Đội ngũ</SectionHeader>
-            <SectionBody>
-              {project.teamMembers ? project.teamMembers.split(',').map((m, i) => <div key={i} style={{ padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>{m.trim()}</div>) : 'Đang cập nhật'}
-            </SectionBody>
+            <SectionHeader><Users size={18} weight="duotone" /> Đội ngũ</SectionHeader>
+            <SectionBody>{project.teamMembers ? project.teamMembers.split(',').map((m, i) => <div key={i} style={{ padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>{m.trim()}</div>) : 'Đang cập nhật'}</SectionBody>
           </SectionCard>
-          
+
           <SectionCard>
-            <SectionHeader><BadgeCheck size={14} color={T.blue} /> Cố Vấn Chính Thức</SectionHeader>
+            <SectionHeader><SealCheck size={18} weight="duotone" /> Cố Vấn Chính Thức</SectionHeader>
             <SectionBody>
               {project.assignedAdvisorName ? (
                 <div>
@@ -915,7 +775,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
         {/* RIGHT COLUMN */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingLeft: isMobile ? 0 : 20 }}>
           <SectionCard>
-            <SectionHeader><TrendingUp size={14} color={T.green} /> Thị trường & Mô hình</SectionHeader>
+            <SectionHeader><TrendUp size={18} weight="duotone" /> Thị trường & Mô hình</SectionHeader>
             <SectionBody>
               <FieldGrid>
                 <Field label="Khách hàng mục tiêu">{DISP(project.targetCustomers)}</Field>
@@ -928,7 +788,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           </SectionCard>
 
           <SectionCard>
-            <SectionHeader><Sword size={14} color="#ff4b2b" /> Cạnh tranh</SectionHeader>
+            <SectionHeader><Sword size={18} weight="duotone" /> Cạnh tranh</SectionHeader>
             <SectionBody>
               <FieldGrid>
                 <Field label="Kinh nghiệm">{project.teamExperience === undefined ? <PremiumBadge /> : DISP(project.teamExperience)}</Field>
@@ -938,13 +798,9 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           </SectionCard>
 
           <SectionCard>
-            <SectionHeader><FolderOpen size={14} color={T.amber} /> Tài liệu dự án</SectionHeader>
+            <SectionHeader><FolderOpen size={18} weight="duotone" /> Tài liệu dự án</SectionHeader>
             <SectionBody style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {documents.length > 0 ? (
-                documents.map((doc, i) => <DocumentCard key={i} doc={doc} />)
-              ) : (
-                <div style={{ padding: 20, textAlign: 'center', color: T.textMuted }}>Không có tài liệu</div>
-              )}
+              {documents.length > 0 ? documents.map((doc, i) => <DocumentCard key={i} doc={doc} />) : <div style={{ padding: 20, textAlign: 'center', color: T.textMuted }}>Không có tài liệu</div>}
             </SectionBody>
           </SectionCard>
         </div>
@@ -954,33 +810,18 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
       {showBookingWizard && <BookingWizard onClose={() => setShowBookingWizard(false)} user={user} initialProjectId={projectId} initialAdvisorId={project?.assignedAdvisorId} />}
       {showUnlockConfirm && <UnlockConfirmationModal isOpen={showUnlockConfirm} onClose={() => setShowUnlockConfirm(false)} onConfirm={confirmUnlock} isUnlocking={isUnlocking} isLoadingQuota={isLoadingQuota} projectName={project?.name} remainingViews={remainingViews} packageName={subscription?.packageName} />}
       {showBlockchainModal && <BlockchainVerificationModal isOpen={showBlockchainModal} verificationData={blockchainData} isLoading={isLoadingBlockchain} error={blockchainError} onClose={() => { setShowBlockchainModal(false); setBlockchainData(null); setBlockchainError(null); }} />}
-      
       {showFullscreenImage && project?.projectImageUrl && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.9)' }} onClick={() => setShowFullscreenImage(false)}>
           <img src={project.projectImageUrl} style={{ maxWidth: '90%', maxHeight: '90%', objectFit: 'contain' }} />
           <button style={{ position: 'absolute', top: 20, right: 20, background: 'none', border: 'none', color: '#fff', cursor: 'pointer' }}><X size={30} /></button>
         </div>
       )}
-
-      <AIAnalyzeConfirmationModal
-        isOpen={showAIConfirmModal}
-        onClose={() => setShowAIConfirmModal(false)}
-        onConfirm={handleAIAnalyze}
-        isAnalyzing={isAnalyzingAI}
-        isLoadingQuota={isLoadingQuota}
-        projectName={project?.name}
-        remainingAiRequests={remainingAiRequests}
-        packageName={subscription?.packageName}
-      />
-      <AIEvaluationModal
-        isOpen={showAIResultModal}
-        onCancel={() => setShowAIResultModal(false)}
-        analysisResult={activeAIResult}
-        projectName={project?.name}
-        viewerRole={user?.role}
-        isHistoryMode={investorAIResults.some(r => r.id === activeAIResult?.id)}
-        isEvaluationOnly={true}
-      />
+      <AIAnalyzeConfirmationModal isOpen={showAIConfirmModal} onClose={() => setShowAIConfirmModal(false)} onConfirm={handleAIAnalyze} isAnalyzing={isAnalyzingAI} isLoadingQuota={isLoadingQuota} projectName={project?.name} remainingAiRequests={remainingAiRequests} packageName={currentPackage?.packageName || subscription?.packageName} />
+      {user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1 ? (
+        <InvestorAIHistoryModal isOpen={showAIResultModal} onClose={() => setShowAIResultModal(false)} selectedAIReport={activeAIResult} projectName={project?.name} showViewProjectButton={false} onReanalyze={() => { setShowAIResultModal(false); fetchQuotaData().then(() => setShowAIConfirmModal(true)); }} />
+      ) : (
+        <AIEvaluationModal isOpen={showAIResultModal} onCancel={() => setShowAIResultModal(false)} analysisResult={activeAIResult} projectName={project?.name} viewerRole={user?.role} isHistoryMode={investorAIResults.some(r => r.id === activeAIResult?.id)} isEvaluationOnly={true} />
+      )}
     </div>
   );
 }

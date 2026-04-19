@@ -28,7 +28,8 @@ function FeedHeader({
   searchPlaceholder = "Tìm kiếm dự án...",
   onOpenChat,
   customAction = null,
-  showNotification = false
+  showNotification = false,
+  onNotificationNavigate
 }) {
   return (
     <div className={styles.container}>
@@ -69,7 +70,12 @@ function FeedHeader({
                 </button>
               )}
               {customAction}
-              {user && (onOpenChat || showNotification) && <NotificationCenter onOpenChat={onOpenChat} />}
+              {user && (onOpenChat || showNotification) && (
+                <NotificationCenter
+                  onOpenChat={onOpenChat}
+                  onNavigate={onNotificationNavigate}
+                />
+              )}
             </div>
           </div>
         </div>
@@ -92,4 +98,4 @@ function FeedHeader({
   );
 }
 
-export default FeedHeader;
+export default React.memo(FeedHeader);
