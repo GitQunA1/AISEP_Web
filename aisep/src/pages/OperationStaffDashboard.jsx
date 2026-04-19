@@ -27,6 +27,8 @@ import blockchainVerificationService from '../services/blockchainVerificationSer
 import AccountProfileTab from '../components/common/AccountProfileTab';
 import StartupApprovalCard from '../components/staff/StartupApprovalCard';
 import StartupDetailModal from '../components/staff/StartupDetailModal';
+import NewsPRSection from '../components/common/NewsPRSection';
+
 
 const T = {
     bg: 'var(--pd-bg)',

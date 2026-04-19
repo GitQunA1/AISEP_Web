@@ -20,11 +20,7 @@ export function ThemeProvider({ children }) {
 
   // Apply theme to document
   const applyTheme = (themeName) => {
-    if (themeName === 'dark') {
-      document.documentElement.setAttribute('data-theme', 'dark');
-    } else {
-      document.documentElement.removeAttribute('data-theme');
-    }
+    document.documentElement.setAttribute('data-theme', themeName);
   };
 
   // Toggle between light and dark
