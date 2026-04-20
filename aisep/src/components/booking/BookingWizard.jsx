@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Check, AlertCircle, Loader, Calendar, Clock, User, Briefcase, CreditCard, Sparkles } from 'lucide-react';
+import { X, CaretLeft, CaretRight, Check, WarningCircle, CircleNotch, Calendar, Clock, User, Briefcase, CreditCard, Sparkle, Info, ShieldCheck, Gavel, Crown, CurrencyCircleDollar } from '@phosphor-icons/react';
+import subscriptionService from '../../services/subscriptionService';
 import bookingService from '../../services/bookingService';
 import advisorAvailabilityService from '../../services/advisorAvailabilityService';
 import advisorService from '../../services/advisorService';
@@ -50,6 +51,22 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
   const [createdBooking, setCreatedBooking] = useState(null);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
+  // Free Booking State
+  const [subscription, setSubscription] = useState(null);
+  const [useFreeBooking, setUseFreeBooking] = useState(false);
+  const [isComplaintRebook, setIsComplaintRebook] = useState(false);
+  const [sourceBookingStatus, setSourceBookingStatus] = useState(null);
+  
+  // Toast State
+  const [toast, setToast] = useState({ visible: false, message: '' });
+
+  const showToast = useCallback((message) => {
+    setToast({ visible: true, message });
+    setTimeout(() => {
+      setToast(prev => ({ ...prev, visible: false }));
+    }, 4000);
+  }, []);
+
   // Auto-advance if initial data is provided
   useEffect(() => {
     // If we have an initial project OR a source booking, we want to skip step 0
@@ -58,12 +75,16 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
     }
   }, [initialProjectId, sourceBookingId, selectedProject, step]);
 
-  // Fetch project context if initial data or sourceBookingId is provided
+  // Fetch project context AND subscription context
   useEffect(() => {
-    if ((initialProjectId || sourceBookingId) && !selectedProject) {
+    const fetchData = async () => {
       setIsInitializing(true);
-      const fetchContext = async () => {
-        try {
+      try {
+        // Fetch subscription
+        const sub = await subscriptionService.getMySubscription();
+        setSubscription(sub);
+
+        if (initialProjectId || sourceBookingId) {
           if (sourceBookingId) {
             const booking = await bookingService.getBookingById(sourceBookingId);
             if (booking) {
@@ -71,27 +92,28 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
                 projectId: booking.projectId || booking.project?.projectId,
                 projectName: booking.projectName || booking.project?.projectName
               });
+              setSourceBookingStatus(booking.status);
+              // Automaticaly detect if this is a free re-booking due to complaint
+              // Status 4 is ComplaintAccepted
+              if (booking.status === 4 || booking.status === "ComplaintAccepted") {
+                setIsComplaintRebook(true);
+              }
             }
           } else if (initialProjectId) {
-            // If just initialProjectId is provided, we can either fetch it or just use the ID
-            // but for UI labels, we need the name. We'll find it from the options if step 0 loads.
-            // However, skipping step 0 requires the name now.
             const allProjects = await bookingService.getProjectOptions();
             const found = allProjects.find(p => p.projectId === initialProjectId);
             if (found) {
               setSelectedProject(found);
             }
           }
-        } catch (e) {
-          console.error("Failed to fetch wizard initialization context", e);
-        } finally {
-          setIsInitializing(false);
         }
-      };
-      fetchContext();
-    } else {
-      setIsInitializing(false);
-    }
+      } catch (e) {
+        console.error("Failed to fetch wizard initialization context", e);
+      } finally {
+        setIsInitializing(false);
+      }
+    };
+    fetchData();
   }, [sourceBookingId, initialProjectId]);
 
   // ── Load Projects ──────────────────────────────────────────────────────
@@ -283,11 +305,18 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
   }, [slots]);
 
   const handleSlotToggle = (slotId) => {
-    setSelectedSlotIds(prev => {
-      const next = prev.includes(slotId) ? prev.filter(id => id !== slotId) : [...prev, slotId];
-      validateSlots(next);
-      return next;
-    });
+    const isRemoving = selectedSlotIds.includes(slotId);
+    const nextIds = isRemoving 
+      ? selectedSlotIds.filter(id => id !== slotId) 
+      : [...selectedSlotIds, slotId];
+
+    // Trigger toast if user has quota but exceeds 3-hour limit
+    if (!isRemoving && nextIds.length === 4 && subscription?.remainingFreeBookings > 0) {
+      showToast("Gói Premium chỉ hỗ trợ đặt lịch miễn phí tối đa 3 giờ / lần.");
+    }
+
+    setSelectedSlotIds(nextIds);
+    validateSlots(nextIds);
   };
 
   // ── Submit ─────────────────────────────────────────────────────────────
@@ -303,6 +332,7 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
         AdvisorAvailabilitySlotIds: selectedSlotIds,
         Note: note.trim() || null,
         ...(sourceBookingId ? { SourceBookingId: sourceBookingId } : {}),
+        IsFreeBooking: useFreeBooking || isComplaintRebook
       };
       const result = await bookingService.createBooking(payload);
       setCreatedBooking(result?.data || result);
@@ -413,8 +443,8 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
                     </div>
 
                     <span style={{ color: 'var(--text-secondary)' }}>Tổng thanh toán:</span>
-                    <strong style={{ color: '#60a5fa', fontSize: '15px' }}>
-                      {bPrice === 0 ? 'Miễn phí ✨' : formatPrice(bPrice)}
+                    <strong style={{ color: '#60a5fa', fontSize: '15px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {bPrice === 0 ? <><Sparkle size={14} weight="fill" color="#eab308" /> Miễn phí</> : formatPrice(bPrice)}
                     </strong>
                   </div>
                 </div>
@@ -488,7 +518,7 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
         <div className={styles.body}>
           {isInitializing ? (
             <div className={styles.loadingState} style={{ flex: 1, justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
-              <Loader size={32} className={styles.spin} />
+              <CircleNotch size={32} className={styles.spin} weight="bold" />
               <p style={{ fontWeight: 600, color: 'var(--text-secondary)' }}>Đang khởi tạo lịch tư vấn...</p>
             </div>
           ) : (
@@ -501,13 +531,13 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
               <p className={styles.stepHint}>Chọn dự án bạn muốn tư vấn</p>
               {projectsLoading && (
                 <div className={styles.loadingState}>
-                  <Loader size={24} className={styles.spin} />
+                  <CircleNotch size={24} className={styles.spin} weight="bold" />
                   <span>Đang tải dự án...</span>
                 </div>
               )}
               {projectsError && (
                 <div className={styles.errorBanner}>
-                  <AlertCircle size={16} />
+                  <WarningCircle size={16} />
                   <span>{projectsError}</span>
                 </div>
               )}
@@ -547,13 +577,13 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
               </p>
               {advisorsLoading && (
                 <div className={styles.loadingState}>
-                  <Loader size={24} className={styles.spin} />
+                  <CircleNotch size={24} className={styles.spin} weight="bold" />
                   <span>Đang tải cố vấn...</span>
                 </div>
               )}
               {advisorsError && (
                 <div className={styles.errorBanner}>
-                  <AlertCircle size={16} />
+                  <WarningCircle size={16} />
                   <span>{advisorsError}</span>
                 </div>
               )}
@@ -561,7 +591,7 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
               {/* Thông báo chưa được phân công nhưng vẫn cho phép đặt lịch với advisor đã chọn */}
               {!advisorsLoading && !advisorsError && projectAdvisorsCount === 0 && !sourceBookingId && (
                 <div className={styles.infoBanner} style={{ marginBottom: 16 }}>
-                  <AlertCircle size={16} />
+                  <WarningCircle size={16} />
                   <span>Dự án này chưa được quản trị viên phân công cố vấn chính thức.</span>
                 </div>
               )}
@@ -585,7 +615,7 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
                       onClick={() => setSelectedAdvisor(opt)}
                     >
                       <div className={styles.advisorAvatar}>
-                        {advisorsLoading ? <Loader size={18} /> : (opt.advisorName || 'A').charAt(0).toUpperCase()}
+                        {advisorsLoading ? <CircleNotch size={18} className={styles.spin} weight="bold" /> : (opt.advisorName || 'A').charAt(0).toUpperCase()}
                       </div>
                       <div className={styles.advisorCardInfo}>
                         <span className={styles.advisorName}>{opt.advisorName}</span>
@@ -601,7 +631,8 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
                         )}
                         {detail.hourlyRate && (
                           <span className={styles.advisorRate}>
-                            💵 {Number(detail.hourlyRate).toLocaleString('vi-VN')} VNĐ/giờ
+                            <CurrencyCircleDollar size={16} weight="bold" style={{ verticalAlign: 'middle', marginRight: 4 }} /> 
+                            {Number(detail.hourlyRate).toLocaleString('vi-VN')} VNĐ/giờ
                           </span>
                         )}
                       </div>
@@ -621,20 +652,25 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
               <p className={styles.stepHint}>
                 Chọn các khung giờ <strong>liên tiếp nhau</strong> (đặt trước ít nhất 12 giờ)
               </p>
+              {subscription?.remainingFreeBookings > 0 && selectedSlotIds.length > 3 && (
+                <div style={{ display: 'none' }}>
+                  {/* Hidden logical block, now handled by Toast */}
+                </div>
+              )}
               {slotValidationError && (
                 <div className={styles.errorBanner}>
-                  <AlertCircle size={16} />
+                  <WarningCircle size={16} />
                   <span>{slotValidationError}</span>
                 </div>
               )}
               {slotsLoading ? (
                 <div className={styles.loadingState}>
-                  <Loader size={24} className={styles.spin} />
+                  <CircleNotch size={24} className={styles.spin} weight="bold" />
                   <span>Đang tải khung giờ...</span>
                 </div>
               ) : slotsError ? (
                 <div className={styles.errorBanner}>
-                  <AlertCircle size={16} />
+                  <WarningCircle size={16} />
                   <span>{slotsError}</span>
                 </div>
               ) : slots.length === 0 ? (
@@ -643,11 +679,13 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
                   <p>Cố vấn hiện chưa có khung giờ rảnh nào.</p>
                 </div>
               ) : (
-                <SlotPicker
-                  slots={slots}
-                  selectedSlotIds={selectedSlotIds}
-                  onToggle={handleSlotToggle}
-                />
+                <>
+                  <SlotPicker
+                    slots={slots}
+                    selectedSlotIds={selectedSlotIds}
+                    onToggle={handleSlotToggle}
+                  />
+                </>
               )}
             </div>
           )}
@@ -709,23 +747,64 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
                 {/* Pricing Row */}
                 <div className={styles.summaryRow}>
                   <CreditCard size={16} className={styles.summaryIcon} />
-                  <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div>
-                      <div className={styles.summaryLabel}>Tổng thanh toán</div>
-                      {!isFreeBooking && adv.hourlyRate && (
-                        <div className={styles.summaryMeta}>
-                          {Number(adv.hourlyRate).toLocaleString('vi-VN')} VNĐ/giờ × {selectedSlots.length} giờ
-                        </div>
-                      )}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div className={styles.summaryLabel}>Phí tư vấn</div>
+                        {!isFreeBooking && !isComplaintRebook && adv.hourlyRate && (
+                          <div className={styles.summaryMeta}>
+                            {Number(adv.hourlyRate).toLocaleString('vi-VN')} VNĐ/giờ × {selectedSlots.length} giờ
+                          </div>
+                        )}
+                      </div>
+                      <span style={{ color: (isFreeBooking || useFreeBooking || isComplaintRebook) ? '#22c55e' : '#60a5fa', fontWeight: 800, fontSize: 16, display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {(isFreeBooking || useFreeBooking || isComplaintRebook) ? (
+                          <><Sparkle size={16} weight="fill" color="#eab308" /> Miễn phí</>
+                        ) : (
+                          formatPrice(estimatedPrice)
+                        )}
+                      </span>
                     </div>
-                    {isFreeBooking ? (
-                      <span style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#22c55e', fontWeight: 700, fontSize: 15 }}>
-                        <Sparkles size={15} /> Miễn phí
-                      </span>
-                    ) : (
-                      <span style={{ color: '#60a5fa', fontWeight: 800, fontSize: 16 }}>
-                        {formatPrice(estimatedPrice)}
-                      </span>
+
+                    {/* Description for Complaint Re-booking */}
+                    {isComplaintRebook && (
+                      <div className={styles.freeBenefitCard} style={{ marginTop: 12, border: '1px solid #17bf6333', background: '#17bf6308' }}>
+                         <ShieldCheck size={18} weight="fill" color="#17bf63" />
+                         <div className={styles.freeBenefitText}>
+                            <strong>Hệ thống hỗ trợ:</strong> Đây là lượt đặt lịch lại miễn phí do khiếu nại trước đó của bạn đã được chấp nhận.
+                         </div>
+                      </div>
+                    )}
+
+                    {/* Toggle and Description for Subscription-based Free Booking */}
+                    {!isComplaintRebook && !isFreeBooking && subscription && (
+                      <div className={styles.freeBenefitWrapper} style={{ marginTop: 12 }}>
+                        {subscription.remainingFreeBookings > 0 && selectedSlotIds.length <= 3 ? (
+                          <div className={styles.freeBenefitCard}>
+                            <Crown size={18} weight="fill" color="#eab308" />
+                            <div className={styles.freeBenefitText} style={{ flex: 1 }}>
+                              <strong>Gói Premium:</strong> Bạn đang có {subscription.remainingFreeBookings} lượt đặt lịch miễn phí.
+                            </div>
+                            <label className={styles.toggleSwitch}>
+                                <input 
+                                  type="checkbox" 
+                                  checked={useFreeBooking} 
+                                  onChange={(e) => setUseFreeBooking(e.target.checked)} 
+                                />
+                                <span className={styles.toggleSlider}></span>
+                            </label>
+                          </div>
+                        ) : (
+                          <div className={styles.freeBenefitInfo}>
+                            <Info size={16} />
+                            <span>
+                              {subscription.remainingFreeBookings <= 0 
+                                ? "Bạn đã hết lượt đặt lịch miễn phí trong tháng này." 
+                                : "Lượt đặt lịch miễn phí chỉ áp dụng cho các buổi tư vấn từ 3 giờ trở xuống."}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>
@@ -743,7 +822,7 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
 
               {submitError && (
                 <div className={styles.errorBanner}>
-                  <AlertCircle size={16} />
+                  <WarningCircle size={16} />
                   <span>{submitError}</span>
                 </div>
               )}
@@ -768,11 +847,19 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
           )}
         </div>
 
+        {/* Micro-Toast Feedback */}
+        <div className={`${styles.toastContainer} ${toast.visible ? styles.toastVisible : ''}`}>
+          <div className={`${styles.toastContent} ${styles.toastWarning}`}>
+            <WarningCircle size={18} weight="bold" color="#eab308" />
+            {toast.message}
+          </div>
+        </div>
+
         {/* Footer */}
         <div className={styles.footer}>
           {step > 0 && (
             <button className={styles.secondaryBtn} onClick={goBack} disabled={isSubmitting}>
-              <ChevronLeft size={16} />
+              <CaretLeft size={16} />
               Quay lại
             </button>
           )}
@@ -784,7 +871,7 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
               disabled={!canGoNext()}
             >
               Tiếp theo
-              <ChevronRight size={16} />
+              <CaretRight size={16} />
             </button>
           ) : (
             <button
@@ -794,7 +881,7 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
             >
               {isSubmitting ? (
                 <>
-                  <Loader size={16} className={styles.spin} />
+                  <CircleNotch size={16} className={styles.spin} weight="bold" />
                   Đang gửi...
                 </>
               ) : (

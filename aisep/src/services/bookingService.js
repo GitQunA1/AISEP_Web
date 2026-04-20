@@ -6,7 +6,7 @@ const bookingService = {
   /**
    * Tạo booking mới
    * POST /api/Booking
-   * @param {{ AdvisorId: number, ProjectId: number, AdvisorAvailabilitySlotIds: number[], SourceBookingId?: number, Note?: string }} data
+   * @param {{ AdvisorId: number, ProjectId: number, AdvisorAvailabilitySlotIds: number[], SourceBookingId?: number, Note?: string, IsFreeBooking?: boolean }} data
    */
   createBooking: async (data) => {
     const response = await apiClient.post(API_URL, data);

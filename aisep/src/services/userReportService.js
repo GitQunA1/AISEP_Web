@@ -35,9 +35,12 @@ const userReportService = {
    * Đánh dấu báo cáo là hợp lệ (Staff/Admin).
    * PATCH /api/UserReports/{id}/resolve-valid
    * @param {number} reportId
+   * @param {string} note - (Optional) Ghi chú xử lý
    */
-  resolveValid: async (reportId) => {
-    const response = await apiClient.patch(`/api/UserReports/${reportId}/resolve-valid`);
+  resolveValid: async (reportId, note = "") => {
+    const response = await apiClient.patch(`/api/UserReports/${reportId}/resolve-valid`, {
+      resolutionNote: note
+    });
     return response?.data ?? response;
   },
 
@@ -45,9 +48,29 @@ const userReportService = {
    * Đánh dấu báo cáo là sai lệch (Staff/Admin).
    * PATCH /api/UserReports/{id}/resolve-false
    * @param {number} reportId
+   * @param {string} note - (Optional) Ghi chú xử lý
    */
-  resolveFalse: async (reportId) => {
-    const response = await apiClient.patch(`/api/UserReports/${reportId}/resolve-false`);
+  resolveFalse: async (reportId, note = "") => {
+    const response = await apiClient.patch(`/api/UserReports/${reportId}/resolve-false`, {
+      resolutionNote: note
+    });
+    return response?.data ?? response;
+  },
+  /**
+   * Lấy danh sách báo cáo do bản thân tạo (Reporter).
+   * GET /api/UserReports/me/reporter
+   */
+  getMyReportsAsReporter: async () => {
+    const response = await apiClient.get('/api/UserReports/me/reporter');
+    return response?.data ?? response;
+  },
+
+  /**
+   * Lấy danh sách báo cáo cáo buộc bản thân (Reported).
+   * GET /api/UserReports/me/reported
+   */
+  getMyReportsAsReported: async () => {
+    const response = await apiClient.get('/api/UserReports/me/reported');
     return response?.data ?? response;
   },
 };

@@ -1,8 +1,8 @@
 import React, { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  X, AlertCircle, ShieldAlert, Send, Loader, Camera, Video, Image as ImageIcon
-} from 'lucide-react';
+  X, WarningCircle, ShieldWarning, PaperPlaneTilt, CircleNotch, Camera, Video, Image as ImageIcon
+} from '@phosphor-icons/react';
 import userReportService from '../../services/userReportService';
 import styles from './UserReportModal.module.css';
 
@@ -21,7 +21,7 @@ export default function UserReportModal({ bookingId, targetUserId, targetUserNam
   const [error, setError] = useState('');
   
   const [form, setForm] = useState({
-    category: 'PaymentDispute',
+    category: 'PaymentIssue',
     description: '',
     videoEvidenceUrl: '',
   });
@@ -29,12 +29,13 @@ export default function UserReportModal({ bookingId, targetUserId, targetUserNam
   const fileInputRef = useRef(null);
 
   const categories = [
-    { value: 'PaymentDispute', label: 'Tranh chấp thanh toán / báo cáo tư vấn' },
-    { value: 'UnprofessionalBehavior', label: 'Hành vi thiếu chuyên nghiệp' },
-    { value: 'Harassment', label: 'Quấy rối' },
-    { value: 'Scam', label: 'Dấu hiệu lừa đảo' },
-    { value: 'Impersonation', label: 'Mạo danh' },
-    { value: 'InappropriateContent', label: 'Nội dung không phù hợp' },
+    { value: 'PaymentIssue', label: 'Vấn đề về thanh toán / Phí tư vấn' },
+    { value: 'ServiceQuality', label: 'Chất lượng dịch vụ không đạt yêu cầu' },
+    { value: 'NoShow', label: 'Cố vấn không xuất hiện (No-show)' },
+    { value: 'LateOrShortSession', label: 'Bắt đầu muộn / Kết thúc sớm' },
+    { value: 'UnprofessionalConduct', label: 'Hành vi thiếu chuyên nghiệp' },
+    { value: 'ScopeNotMet', label: 'Không đúng nội dung cam kết' },
+    { value: 'InappropriateContent', label: 'Nội dung không phù hợp / Quấy rối' },
     { value: 'Other', label: 'Lý do khác' },
   ];
 
@@ -88,7 +89,7 @@ export default function UserReportModal({ bookingId, targetUserId, targetUserNam
         <div className={styles.header}>
           <div className={styles.headerLeft}>
             <div className={styles.headerIcon}>
-              <ShieldAlert size={20} />
+              <ShieldWarning size={20} />
             </div>
             <div>
               <h2 className={styles.title}>Gửi Khiếu Nại / Báo Cáo</h2>
@@ -105,7 +106,7 @@ export default function UserReportModal({ bookingId, targetUserId, targetUserNam
         <div className={styles.body}>
           {phase === 'loading' && (
             <div className={styles.centered}>
-              <Loader size={32} className={styles.spinning} />
+              <CircleNotch size={32} className={styles.spinning} weight="bold" />
               <p className={styles.mutedText}>Đang gửi báo cáo của bạn...</p>
             </div>
           )}
@@ -113,7 +114,7 @@ export default function UserReportModal({ bookingId, targetUserId, targetUserNam
           {phase === 'success' && (
             <div className={styles.centered}>
               <div style={{ color: '#17bf63', marginBottom: '16px' }}>
-                <ShieldAlert size={56} />
+                <ShieldWarning size={56} />
               </div>
               <h3 className={styles.successTitle}>Khiếu nại đã được gửi thành công</h3>
               <p className={styles.mutedText}>
@@ -201,7 +202,7 @@ export default function UserReportModal({ bookingId, targetUserId, targetUserNam
 
               {error && (
                 <div className={styles.errorRow}>
-                  <AlertCircle size={16} />
+                  <WarningCircle size={16} />
                   <span>{error}</span>
                 </div>
               )}
@@ -213,7 +214,7 @@ export default function UserReportModal({ bookingId, targetUserId, targetUserNam
           <div className={styles.footerRow}>
             <button className={styles.secondaryBtn} onClick={onClose}>Hủy</button>
             <button className={styles.primaryBtn} onClick={handleSubmit}>
-              <Send size={16} /> Gửi báo cáo
+              <PaperPlaneTilt size={16} /> Gửi báo cáo
             </button>
           </div>
         )}

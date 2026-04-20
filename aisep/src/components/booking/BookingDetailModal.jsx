@@ -1,21 +1,26 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, Clock, User, Briefcase, CreditCard, ChevronRight, MessageSquare, RefreshCcw, AlertCircle, FileText } from 'lucide-react';
+import { X, Calendar, Clock, User, Briefcase, CreditCard, CaretRight, ChatCircleText, ArrowsClockwise, WarningCircle, FileText, Sparkle, ShieldCheck, Gavel, Info, MagnifyingGlass } from '@phosphor-icons/react';
+import userReportService from '../../services/userReportService';
 import styles from './BookingDetailModal.module.css';
 
 const STATUS_CONFIG = {
   0: { label: 'Chờ xác nhận', badgeClass: styles.badgePending },
-  Pending: { label: 'Chờ xác nhận', badgeClass: styles.badgePending },
+  'Pending': { label: 'Chờ xác nhận', badgeClass: styles.badgePending },
   1: { label: 'Chờ thanh toán', badgeClass: styles.badgeConfirmed },
-  ApprovedAwaitingPayment: { label: 'Chờ thanh toán', badgeClass: styles.badgeConfirmed },
+  'ApprovedAwaitingPayment': { label: 'Chờ thanh toán', badgeClass: styles.badgeConfirmed },
   2: { label: 'Đã xác nhận', badgeClass: styles.badgeConfirmed },
-  Confirmed: { label: 'Đã xác nhận', badgeClass: styles.badgeConfirmed },
+  'Confirmed': { label: 'Đã xác nhận', badgeClass: styles.badgeConfirmed },
   3: { label: 'Hoàn thành', badgeClass: styles.badgeCompleted },
-  Completed: { label: 'Hoàn thành', badgeClass: styles.badgeCompleted },
-  4: { label: 'Đã hủy', badgeClass: styles.badgeCancelled },
-  Cancel: { label: 'Đã hủy', badgeClass: styles.badgeCancelled },
-  5: { label: 'Không phản hồi', badgeClass: styles.badgeCancelled },
-  NoResponse: { label: 'Không phản hồi', badgeClass: styles.badgeCancelled },
+  'Completed': { label: 'Hoàn thành', badgeClass: styles.badgeCompleted },
+  4: { label: 'Khiếu nại chấp nhận', badgeClass: styles.badgeCompleted },
+  'ComplaintAccepted': { label: 'Khiếu nại chấp nhận', badgeClass: styles.badgeCompleted },
+  5: { label: 'Khiếu nại từ chối', badgeClass: styles.badgeCancelled },
+  'ComplaintRejected': { label: 'Khiếu nại từ chối', badgeClass: styles.badgeCancelled },
+  6: { label: 'Đã hủy', badgeClass: styles.badgeCancelled },
+  'Cancel': { label: 'Đã hủy', badgeClass: styles.badgeCancelled },
+  7: { label: 'Không phản hồi', badgeClass: styles.badgeCancelled },
+  'NoResponse': { label: 'Không phản hồi', badgeClass: styles.badgeCancelled },
 };
 
 // Helper for literal UTC time display
@@ -27,6 +32,38 @@ const formatTimeUTC = (dateStr) => {
 };
 
 export default function BookingDetailModal({ booking, onClose, onAction, userRole = 'Startup' }) {
+  const [existingReport, setExistingReport] = useState(null);
+  const [loadingReport, setLoadingReport] = useState(false);
+
+  useEffect(() => {
+    const checkExistingReport = async () => {
+      if (!booking || !booking.id || !['Startup', 'Investor'].includes(userRole)) return;
+      
+      setLoadingReport(true);
+      try {
+          const reports = await userReportService.getMyReportsAsReporter();
+          // Filter to find the report for this specific booking
+          const reportsList = Array.isArray(reports) ? reports : (reports?.items || []);
+          const report = reportsList.find(r => 
+            String(r.bookingId) === String(booking.id || booking.bookingId)
+          );
+          
+          if (report && (report.userReportId || report.id)) {
+              setExistingReport(report);
+          } else {
+              setExistingReport(null);
+          }
+      } catch (error) {
+          console.error('Error checking existing report:', error);
+          setExistingReport(null);
+      } finally {
+          setLoadingReport(false);
+      }
+    };
+
+    checkExistingReport();
+  }, [booking, userRole]);
+
   if (!booking) return null;
 
   const statusInfo = STATUS_CONFIG[booking.status] || { label: String(booking.status), badgeClass: styles.badgeConfirmed };
@@ -34,10 +71,17 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
   const formattedDate = startTime.toLocaleDateString('vi-VN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
   const timeRange = `${formatTimeUTC(booking.startTime)} – ${formatTimeUTC(booking.endTime)}`;
 
-  const price = booking.price || booking.estimatedPrice || 0;
+  const isFreeRebook = booking.isFreeRebookFromComplaint || booking.IsFreeRebookFromComplaint;
+  const isPremiumFree = booking.usedPremiumFreeQuota || booking.UsedPremiumFreeQuota;
+  const isFree = isFreeRebook || isPremiumFree;
+
+  // Detailed logic: Startups see 0 if free. Staff/Advisors always see the nominal amounts + free status badge
+  const showAsFreeToUser = isFree && ['Startup', 'Investor'].includes(userRole);
+
+  const price = showAsFreeToUser ? 0 : (booking.price || booking.estimatedPrice || 0);
   const commissionPercent = booking.systemCommissionPercent || booking.commissionSnapshot || 0;
-  const commissionAmount = booking.systemCommissionAmount || (price * commissionPercent / 100);
-  const netIncome = price - commissionAmount;
+  const commissionAmount = showAsFreeToUser ? 0 : (price * commissionPercent / 100);
+  const netIncome = showAsFreeToUser ? 0 : (price - commissionAmount);
 
   const formatPrice = (p) => new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(p);
 
@@ -118,9 +162,24 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
             }}>
               <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '600' }}>Tổng chi phí tư vấn</span>
-                  <span style={{ fontSize: '16px', color: 'var(--text-primary)', fontWeight: '800' }}>{formatPrice(price)}</span>
+                  <span style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '600' }}>Chi phí tư vấn</span>
+                  <span style={{ fontSize: '16px', color: 'var(--text-primary)', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    {price === 0 ? <><Sparkle size={16} weight="fill" color="#eab308" /> Miễn phí</> : formatPrice(price)}
+                  </span>
                 </div>
+
+                {(isFreeRebook) && (
+                  <div style={{ padding: '8px 12px', background: 'rgba(23, 191, 99, 0.05)', borderRadius: '8px', border: '1px solid rgba(23, 191, 99, 0.1)', display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                    <ShieldCheck size={16} weight="fill" color="#17bf63" />
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Đặt lịch lại miễn phí (Từ khiếu nại trước đó)</span>
+                  </div>
+                )}
+                {(isPremiumFree) && (
+                  <div style={{ padding: '8px 12px', background: 'rgba(234, 179, 8, 0.05)', borderRadius: '8px', border: '1px solid rgba(234, 179, 8, 0.1)', display: 'flex', gap: '8px', alignItems: 'center', marginTop: '4px' }}>
+                    <Gavel size={16} weight="fill" color="#eab308" />
+                    <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Booking miễn phí (Từ gói đăng ký Premium)</span>
+                  </div>
+                )}
 
                 {['Advisor', 'Staff'].includes(userRole) && price > 0 && (
                   <>
@@ -148,7 +207,7 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
                   gap: '12px',
                   alignItems: 'center'
                 }}>
-                  <AlertCircle size={16} color="#1d9bf0" style={{ flexShrink: 0 }} />
+                  <Info size={16} color="#1d9bf0" style={{ flexShrink: 0 }} />
                   <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: '1.4' }}>
                     Mức hoa hồng này là cuối cùng và sẽ được áp dụng xuyên suốt quá trình đơn hàng này được thực hiện.
                   </span>
@@ -178,24 +237,34 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
               <CreditCard size={16} /> Thanh toán phí
             </button>
           )}
-          {(booking.status === 2 || booking.status === 'Confirmed') && (
+          {(booking.status === 2 || booking.status === 'Confirmed') && userRole !== 'Staff' && (
             <button className={styles.primaryBtn} onClick={() => { onAction('chat', booking); onClose(); }}>
-              <MessageSquare size={16} /> Vào phòng chat
+              <ChatCircleText size={16} /> Vào phòng chat
             </button>
           )}
           {userRole === 'Startup' && [4, 5, 'Cancel', 'NoResponse'].includes(booking.status) && (
             <button className={styles.primaryBtn} onClick={() => { onAction('rebook', booking); onClose(); }}>
-              <ChevronRight size={16} /> Tìm cố vấn thay thế
+              <ArrowsClockwise size={16} /> Tìm cố vấn thay thế
             </button>
           )}
 
           {['Startup', 'Investor'].includes(userRole) && [2, 'Confirmed'].includes(booking.status) && (
-            <button
-              className={`${styles.secondaryBtn} ${styles.dangerBtn}`}
-              onClick={() => { onAction('complain', booking); onClose(); }}
-            >
-              <AlertCircle size={16} /> Khiếu nại
-            </button>
+            existingReport ? (
+              <button
+                className={`${styles.secondaryBtn}`}
+                onClick={() => { onAction('viewComplaint', existingReport); onClose(); }}
+                style={{ backgroundColor: 'rgba(29, 155, 240, 0.05)', color: 'var(--primary-blue)', border: '1px solid rgba(29, 155, 240, 0.2)' }}
+              >
+                <MagnifyingGlass size={16} /> Xem khiếu nại
+              </button>
+            ) : (
+                <button
+                  className={`${styles.secondaryBtn} ${styles.dangerBtn}`}
+                  onClick={() => { onAction('complain', booking); onClose(); }}
+                >
+                  <WarningCircle size={16} /> Khiếu nại
+                </button>
+            )
           )}
 
           {/* View Project Button - Available for all roles if projectId exists */}

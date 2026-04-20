@@ -28,6 +28,7 @@ import AccountProfileTab from '../components/common/AccountProfileTab';
 import StartupApprovalCard from '../components/staff/StartupApprovalCard';
 import StartupDetailModal from '../components/staff/StartupDetailModal';
 import NewsPRSection from '../components/common/NewsPRSection';
+import BookingDetailModal from '../components/booking/BookingDetailModal';
 
 
 const T = {
@@ -361,12 +362,16 @@ const InvestorKanbanCard = ({ investor, status, onDetail, onApprove, onReject, p
 /**
  * UserReportCard - Redesigned report item with Twitter/X aesthetic
  */
-const UserReportCard = ({ report, onResolve, isProcessing }) => {
+const UserReportCard = ({ report, onResolve, onViewBooking, isProcessing, isLoadingBooking }) => {
     const getStatusConfig = (status) => {
         switch (status) {
             case 'Pending': return { label: 'Đang chờ', class: local.glassPending, tint: local.rpPending, icon: Clock };
-            case 'Resolved': return { label: 'Hợp lệ', class: local.glassValid, tint: local.rpValid, icon: CheckCircle };
-            case 'Dismissed': return { label: 'Sai lệch', class: local.glassFalse, tint: local.rpFalse, icon: XCircle };
+            case 'Resolved':
+            case 'Valid':
+                return { label: 'Hợp lệ', class: local.glassValid, tint: local.rpValid, icon: CheckCircle };
+            case 'Dismissed':
+            case 'False':
+                return { label: 'Sai lệch', class: local.glassFalse, tint: local.rpFalse, icon: XCircle };
             default: return { label: status, class: '', tint: '', icon: AlertCircle };
         }
     };
@@ -393,6 +398,31 @@ const UserReportCard = ({ report, onResolve, isProcessing }) => {
                 <div className={local.reportDescription}>
                     {report.description}
                 </div>
+
+                {/* Resolution Note Section */}
+                {report.status !== 'Pending' && report.resolutionNote && (
+                    <div style={{
+                        marginTop: '16px',
+                        padding: '12px 16px',
+                        backgroundColor: 'rgba(29, 155, 240, 0.05)',
+                        borderRadius: '12px',
+                        borderLeft: '4px solid var(--primary-blue)',
+                        fontSize: '14px'
+                    }}>
+                        <div style={{ fontWeight: 800, fontSize: '11px', textTransform: 'uppercase', color: 'var(--primary-blue)', marginBottom: '4px' }}>
+                            Ghi chú xử lý
+                        </div>
+                        <div style={{ color: 'var(--text-primary)', fontStyle: 'italic' }}>
+                            "{report.resolutionNote}"
+                        </div>
+                        {report.resolvedAt && (
+                            <div style={{ fontSize: '11px', color: 'var(--text-muted)', marginTop: '8px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                <Calendar size={10} /> {new Date(report.resolvedAt).toLocaleString('vi-VN')}
+                                {report.resolvedBy && ` • Bởi ${report.resolvedBy}`}
+                            </div>
+                        )}
+                    </div>
+                )}
             </div>
 
             {(images.length > 0 || report.videoEvidenceUrl) && (
@@ -420,12 +450,22 @@ const UserReportCard = ({ report, onResolve, isProcessing }) => {
                 <div className={local.reportMetaGroup}>
                     <div className={local.reportMetaItem} title={`Người báo cáo ID: ${report.reporterId}`}>
                         <User size={14} className={`${local.reportMetaIcon} ${local.reporter}`} />
-                        <span className={local.reportMetaValue}>#{report.reporterId}</span>
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <span className={local.reportMetaValue}>#{report.reporterId}</span>
+                            {report.reporterName && <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)' }}>{report.reporterName}</span>}
+                        </div>
                     </div>
                     {report.reportedUserId && (
                         <div className={local.reportMetaItem} title={`Đối tượng ID: ${report.reportedUserId}`}>
                             <Shield size={14} className={`${local.reportMetaIcon} ${local.target}`} />
-                            <span className={local.reportMetaValue}>#{report.reportedUserId}</span>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span className={local.reportMetaValue}>#{report.reportedUserId}</span>
+                                {(report.targetUserName || report.reportedUserName) && (
+                                    <span style={{ fontSize: '11px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                                        {report.targetUserName || report.reportedUserName}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     )}
                     <div className={local.reportMetaItem}>
@@ -434,6 +474,26 @@ const UserReportCard = ({ report, onResolve, isProcessing }) => {
                             {report.createdAt ? new Date(report.createdAt).toLocaleDateString('vi-VN') : 'N/A'}
                         </span>
                     </div>
+
+                    {/* View Booking Button */}
+                    {report.bookingId && (
+                        <button
+                            onClick={() => onViewBooking(report.bookingId)}
+                            className={local.resolveChip}
+                            disabled={isLoadingBooking}
+                            style={{
+                                background: 'rgba(29, 155, 240, 0.1)',
+                                color: 'var(--primary-blue)',
+                                border: '1px solid rgba(29, 155, 240, 0.2)',
+                                marginLeft: 'auto',
+                                opacity: isLoadingBooking ? 0.7 : 1,
+                                cursor: isLoadingBooking ? 'not-allowed' : 'pointer'
+                            }}
+                        >
+                            {isLoadingBooking ? <Loader2 size={14} className="animate-spin" /> : <ArrowRight size={14} />}
+                            Xem Booking
+                        </button>
+                    )}
                 </div>
 
                 {report.status === 'Pending' && (
@@ -460,6 +520,8 @@ const UserReportCard = ({ report, onResolve, isProcessing }) => {
         </div>
     );
 };
+
+
 
 /**
  * KanbanSkeleton - Shimmering loading placeholder
@@ -558,7 +620,6 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [commissionSearchTerm, setCommissionSearchTerm] = useState('');
     const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
     const [advisorSearchTerm, setAdvisorSearchTerm] = useState('');
-    const [reportFilter, setReportFilter] = useState('Pending'); // 'All', 'Pending', 'Resolved', 'Dismissed'
 
     // Blockchain verification state
     const [isLoadingBlockchain, setIsLoadingBlockchain] = useState(false);
@@ -596,6 +657,12 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [userReports, setUserReports] = useState([]);
     const [isLoadingUserReports, setIsLoadingUserReports] = useState(false);
     const [userReportsError, setUserReportsError] = useState(null);
+    const [reportFilter, setReportFilter] = useState('All'); // 'All', 'Pending', 'Resolved', 'Dismissed'
+    const [showReportResolveModal, setShowReportResolveModal] = useState(false);
+    const [selectedReportForResolve, setSelectedReportForResolve] = useState(null);
+    const [isResolveValid, setIsResolveValid] = useState(true);
+    const [reportResolveNote, setReportResolveNote] = useState('');
+    const [fetchingBookingId, setFetchingBookingId] = useState(null);
 
     // Filtered User Reports
     const filteredUserReports = React.useMemo(() => {
@@ -813,6 +880,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     };
 
     const handleViewBookingDetails = async (bookingId) => {
+        setFetchingBookingId(bookingId);
         setShowBookingModal(true);
         setIsLoadingBookingDetail(true);
         try {
@@ -835,8 +903,10 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             setShowModal(true);
         } finally {
             setIsLoadingBookingDetail(false);
+            setFetchingBookingId(null);
         }
     };
+
 
     const fetchPendingProjects = async () => {
         setIsLoadingProjects(true);
@@ -1319,7 +1389,13 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             const response = await userReportService.getAllReports();
             // Some API endpoints return { data: [...] } or { items: [...] }
             const reports = response?.data || response?.items || (Array.isArray(response) ? response : []);
-            setUserReports(reports);
+            
+            // Sort by createdAt descending (newest first)
+            const sortedReports = [...reports].sort((a, b) => {
+                return new Date(b.createdAt) - new Date(a.createdAt);
+            });
+            
+            setUserReports(sortedReports);
         } catch (error) {
             console.error('Error fetching user reports:', error);
             setUserReportsError('Không thể tải danh sách báo cáo vi phạm.');
@@ -1493,14 +1569,14 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         }
     };
 
-    const handleResolveReport = async (reportId, isValid) => {
+    const handleResolveReport = async (reportId, isValid, note = "") => {
         if (processingProjectId === reportId) return;
         setProcessingProjectId(reportId);
         try {
             if (isValid) {
-                await userReportService.resolveValid(reportId);
+                await userReportService.resolveValid(reportId, note);
             } else {
-                await userReportService.resolveFalse(reportId);
+                await userReportService.resolveFalse(reportId, note);
             }
             setModalType('success');
             setModalMessage(isValid ? '✓ Đã xác nhận báo cáo hợp lệ!' : '✓ Đã xác nhận báo cáo sai lệch!');
@@ -1515,6 +1591,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             setProcessingProjectId(null);
         }
     };
+
 
     /**
      * fetchAllData - Aggregates data from all specific fetch functions
@@ -2731,9 +2808,17 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                             <div key={report.userReportId} id={`report-card-${report.userReportId}`}>
                                                 <UserReportCard
                                                     report={report}
-                                                    onResolve={handleResolveReport}
+                                                    onResolve={(id, isValid) => {
+                                                        setSelectedReportForResolve(report);
+                                                        setIsResolveValid(isValid);
+                                                        setReportResolveNote('');
+                                                        setShowReportResolveModal(true);
+                                                    }}
+                                                    onViewBooking={handleViewBookingDetails}
                                                     isProcessing={processingProjectId === report.userReportId}
+                                                    isLoadingBooking={fetchingBookingId === report.bookingId}
                                                 />
+
                                             </div>
                                         ))}
                                     </div>
@@ -3447,188 +3532,34 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
             {/* Booking Detail Modal */}
             {showBookingModal && selectedBooking && (
-                <div
-                    className={styles.modalOverlay}
-                    onClick={(e) => e.target === e.currentTarget && setShowBookingModal(false)}
-                >
-                    <div className={styles.modalContent} style={{ maxWidth: '800px', width: '95%' }}>
-                        {/* Modal Header (Unique & Standardized) */}
-                        <div className={local.staffModalHeader}>
-                            <div className={local.staffModalTitleGrp}>
-                                <h2 className={local.staffModalTitleText}>
-                                    Booking #{selectedBooking.id}
-                                </h2>
-                                <span
-                                    className={`${local.bookingBadge} ${selectedBooking.status === 'Pending' ? local.bookingBadgePending :
-                                        (selectedBooking.status === 'Confirmed' || selectedBooking.status === 2) ? local.bookingBadgeConfirmed :
-                                            (selectedBooking.status === 'Completed' || selectedBooking.status === 3) ? local.bookingBadgeCompleted :
-                                                (selectedBooking.status === 'ApprovedAwaitingPayment' || selectedBooking.status === 1) ? local.bookingBadgePending :
-                                                    local.bookingBadgeCancelled
-                                        }`}
-                                    style={{ marginTop: '0', width: 'fit-content' }}
-                                >
-                                    {selectedBooking.status === 'Pending' ? 'Chờ xác nhận' :
-                                        (selectedBooking.status === 'Confirmed' || selectedBooking.status === 2) ? 'Đã xác nhận' :
-                                            (selectedBooking.status === 'Completed' || selectedBooking.status === 3) ? 'Hoàn thành' :
-                                                (selectedBooking.status === 'ApprovedAwaitingPayment' || selectedBooking.status === 1) ? 'Chờ thanh toán' : 'Đã hủy'}
-                                </span>
-                            </div>
-                            <button
-                                onClick={() => setShowBookingModal(false)}
-                                className={local.staffModalCloseBtn}
-                            >
-                                <X size={24} />
-                            </button>
-                        </div>
-
-                        {/* Modal Body */}
-                        <div style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-                            {isLoadingBookingDetail ? (
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', color: 'var(--text-secondary)', padding: '60px 0' }}>
-                                    <Loader2 size={24} className={styles.spinner} />
-                                    <span>Đang tải thông tin chi tiết...</span>
-                                </div>
-                            ) : (
-                                <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                                    {/* 1. Thông tin nhân sự */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                        <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>1. Thông tin nhân sự</h4>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-                                            <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700' }}>Cố vấn chuyên môn</div>
-                                                <div style={{
-                                                    fontSize: '16px', fontWeight: '800', marginBottom: '4px',
-                                                    color: (selectedBooking.status === 'Pending' || selectedBooking.status === 0) ? '#ff7a00' :
-                                                        (selectedBooking.status === 'Confirmed' || selectedBooking.status === 2) ? '#1d9bf0' :
-                                                            (selectedBooking.status === 'Completed' || selectedBooking.status === 3) ? '#10b981' :
-                                                                (selectedBooking.status === 'ApprovedAwaitingPayment' || selectedBooking.status === 1) ? '#f59e0b' : '#f4212e'
-                                                }}>
-                                                    {selectedBooking.advisorName}
-                                                </div>
-                                            </div>
-                                            <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
-                                                <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700' }}>
-                                                    {selectedBooking.customerRole === 'Investor' ? 'Nhà đầu tư / Khách hàng' : 'Startup / Khách hàng'}
-                                                </div>
-                                                <div style={{
-                                                    fontSize: '16px', fontWeight: '800', marginBottom: '4px',
-                                                    color: (selectedBooking.status === 'Pending' || selectedBooking.status === 0) ? '#ff7a00' :
-                                                        (selectedBooking.status === 'Confirmed' || selectedBooking.status === 2) ? '#1d9bf0' :
-                                                            (selectedBooking.status === 'Completed' || selectedBooking.status === 3) ? '#10b981' :
-                                                                (selectedBooking.status === 'ApprovedAwaitingPayment' || selectedBooking.status === 1) ? '#f59e0b' : '#f4212e'
-                                                }}>
-                                                    {selectedBooking.customerName}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* 2. Thời gian tư vấn */}
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                        <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>2. Thời gian tư vấn</h4>
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px' }}>
-                                            <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-blue)' }}>
-                                                    <Calendar size={20} />
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Bắt đầu</div>
-                                                    <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                                        {new Date(selectedBooking.startTime).toLocaleDateString('vi-VN')}
-                                                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '400', marginLeft: '8px' }}>
-                                                            {new Date(selectedBooking.startTime).getUTCHours().toString().padStart(2, '0')}:{new Date(selectedBooking.startTime).getUTCMinutes().toString().padStart(2, '0')}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                            <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', display: 'flex', alignItems: 'center', gap: '16px' }}>
-                                                <div style={{ width: '40px', height: '40px', borderRadius: '10px', backgroundColor: 'var(--bg-hover)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-blue)' }}>
-                                                    <Clock size={20} />
-                                                </div>
-                                                <div>
-                                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '700' }}>Kết thúc</div>
-                                                    <div style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                                        {new Date(selectedBooking.endTime).toLocaleDateString('vi-VN')}
-                                                        <span style={{ fontSize: '13px', color: 'var(--text-secondary)', fontWeight: '400', marginLeft: '8px' }}>
-                                                            {new Date(selectedBooking.endTime).getUTCHours().toString().padStart(2, '0')}:{new Date(selectedBooking.endTime).getUTCMinutes().toString().padStart(2, '0')}
-                                                        </span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)', borderLeft: '4px solid var(--primary-blue)', marginTop: '8px' }}>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '8px', textTransform: 'uppercase', fontWeight: '700' }}>Ghi chú</div>
-                                            <div style={{ fontSize: '14px', color: 'var(--text-primary)', fontStyle: 'italic', lineHeight: '1.5' }}>
-                                                {selectedBooking.note && selectedBooking.note.trim() ? `"${selectedBooking.note}"` : "Không có ghi chú"}
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                                        <h4 style={{ color: 'var(--primary-blue)', fontSize: '15px', fontWeight: '800', marginBottom: '4px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>3. Chi phí</h4>
-                                        <div style={{
-                                            background: 'var(--bg-secondary)',
-                                            borderRadius: '16px',
-                                            border: '1px solid var(--border-color)',
-                                            overflow: 'hidden'
-                                        }}>
-                                            <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '600' }}>Tổng chi phí tư vấn</span>
-                                                    <span style={{ fontSize: '16px', color: 'var(--text-primary)', fontWeight: '800' }}>
-                                                        {Number(selectedBooking.price).toLocaleString('vi-VN')} ₫
-                                                    </span>
-                                                </div>
-
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '14px', color: 'var(--text-secondary)', fontWeight: '600' }}>
-                                                        Hoa hồng hệ thống ({selectedBooking.systemCommissionPercent || selectedBooking.commissionSnapshot || 0}%)
-                                                    </span>
-                                                    <span style={{ fontSize: '16px', color: '#ef4444', fontWeight: '700' }}>
-                                                        - {Number(selectedBooking.systemCommissionAmount || (selectedBooking.price * (selectedBooking.systemCommissionPercent || selectedBooking.commissionSnapshot || 0) / 100)).toLocaleString('vi-VN')} ₫
-                                                    </span>
-                                                </div>
-
-                                                <div style={{ height: '1px', background: 'var(--border-color)', margin: '4px 0' }} />
-
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <span style={{ fontSize: '15px', color: '#10b981', fontWeight: '900' }}>Advisor thực nhận (Net)</span>
-                                                    <span style={{ fontSize: '24px', color: '#10b981', fontWeight: '950' }}>
-                                                        {Number(selectedBooking.price - (selectedBooking.systemCommissionAmount || (selectedBooking.price * (selectedBooking.systemCommissionPercent || selectedBooking.commissionSnapshot || 0) / 100))).toLocaleString('vi-VN')} ₫
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div style={{
-                                                backgroundColor: 'rgba(29, 155, 240, 0.05)',
-                                                borderTop: '1px solid var(--border-color)',
-                                                padding: '12px 20px',
-                                                display: 'flex',
-                                                gap: '12px',
-                                                alignItems: 'center'
-                                            }}>
-                                                <AlertCircle size={16} color="#1d9bf0" style={{ flexShrink: 0 }} />
-                                                <span style={{ fontSize: '12px', color: 'var(--text-secondary)', fontStyle: 'italic', lineHeight: '1.4' }}>
-                                                    Mức hoa hồng này là cuối cùng và sẽ được áp dụng xuyên suốt quá trình đơn hàng này được thực hiện.
-                                                </span>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Modal Footer */}
-                        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', gap: '12px', backgroundColor: 'var(--bg-secondary)' }}>
-                            <button
-                                onClick={() => setShowBookingModal(false)}
-                                className={styles.secondaryBtn}
-                            >
-                                Đóng
-                            </button>
-                        </div>
-                    </div>
-                </div>
+                <BookingDetailModal
+                    booking={selectedBooking}
+                    onClose={() => setShowBookingModal(false)}
+                    userRole="Staff"
+                    onAction={async (type, b) => {
+                        if (type === 'viewProject') {
+                            const pId = b.projectId || b.ProjectId;
+                            if (pId) {
+                                try {
+                                    const res = await projectSubmissionService.getProjectById(pId);
+                                    if (res && (res.success || res.data)) {
+                                        openDetailModal(res.data || res);
+                                    } else {
+                                        // Fallback to local search if direct fetch fails or returns weird
+                                        const localMatch = [...pendingProjects, ...approvedProjects, ...rejectedProjects]
+                                            .find(p => p.projectId === pId);
+                                        openDetailModal(localMatch || { projectId: pId });
+                                    }
+                                } catch (err) {
+                                    console.error("Error fetching project for modal:", err);
+                                    const localMatch = [...pendingProjects, ...approvedProjects, ...rejectedProjects]
+                                        .find(p => p.projectId === pId);
+                                    openDetailModal(localMatch || { projectId: pId });
+                                }
+                            }
+                        }
+                    }}
+                />
             )}
 
             {showHistoryView && selectedHistoryResult && (
@@ -3777,8 +3708,99 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     projectName={detailProject.projectName}
                 />
             )}
+
+            {/* User Report Resolution Modal */}
+            {showReportResolveModal && selectedReportForResolve && (
+                <div className={styles.modalOverlay} onClick={(e) => e.target === e.currentTarget && setShowReportResolveModal(false)}>
+                    <div className={styles.modalContent} style={{ maxWidth: '480px', width: '92%', height: 'auto', maxHeight: '90vh', borderRadius: '24px', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                        <div className={local.staffModalHeader} style={{ padding: '20px 24px' }}>
+                            <div className={local.staffModalTitleGrp}>
+                                {isResolveValid ? <CheckCircle size={20} color="#10b981" /> : <XCircle size={20} color="#ef4444" />}
+                                <h2 className={local.staffModalTitleText}>
+                                    {isResolveValid ? 'Xác nhận báo cáo Hợp lệ' : 'Xác nhận báo cáo Sai lệch'}
+                                </h2>
+                            </div>
+                            <button onClick={() => setShowReportResolveModal(false)} className={local.staffModalCloseBtn}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div style={{ padding: '24px' }}>
+                            <div style={{
+                                padding: '16px',
+                                backgroundColor: 'var(--bg-secondary)',
+                                borderRadius: '16px',
+                                border: '1px solid var(--border-color)',
+                                marginBottom: '20px'
+                            }}>
+                                <div style={{ fontSize: '11px', fontWeight: 800, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '4px' }}>
+                                    Nội dung báo cáo
+                                </div>
+                                <div style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: 1.5 }}>
+                                    {selectedReportForResolve.description}
+                                </div>
+                            </div>
+
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '8px' }}>
+                                Ghi chú xử lý (Tùy chọn)
+                            </label>
+                            <textarea
+                                value={reportResolveNote}
+                                onChange={(e) => setReportResolveNote(e.target.value)}
+                                placeholder={isResolveValid ? "Lý do báo cáo này hợp lệ..." : "Giải thích tại sao báo cáo này không chính xác..."}
+                                style={{
+                                    width: '100%',
+                                    minHeight: '120px',
+                                    padding: '16px',
+                                    backgroundColor: 'var(--bg-primary)',
+                                    border: '1.5px solid var(--border-color)',
+                                    borderRadius: '16px',
+                                    color: 'var(--text-primary)',
+                                    fontSize: '14px',
+                                    fontFamily: 'inherit',
+                                    resize: 'none',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                            <p style={{ fontSize: '12px', color: 'var(--text-muted)', marginTop: '12px', lineHeight: 1.4 }}>
+                                * Hành động này sẽ {isResolveValid ? 'chốt báo cáo là hơp lệ' : 'hủy bỏ báo cáo'} và lưu lại lịch sử giải quyết của hệ thống.
+                            </p>
+                        </div>
+
+                        <div style={{ padding: '20px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                            <button
+                                onClick={() => setShowReportResolveModal(false)}
+                                className={styles.secondaryBtn}
+                                style={{ padding: '10px 20px', borderRadius: '12px' }}
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={() => {
+                                    handleResolveReport(selectedReportForResolve.userReportId, isResolveValid, reportResolveNote);
+                                    setShowReportResolveModal(false);
+                                }}
+                                className={isResolveValid ? styles.primaryBtn : styles.dangerBtn}
+                                style={{
+                                    padding: '10px 24px',
+                                    borderRadius: '12px',
+                                    backgroundColor: isResolveValid ? '#10b981' : '#ef4444',
+                                    borderColor: isResolveValid ? '#10b981' : '#ef4444',
+                                    color: '#ffffff',
+                                    fontWeight: '800',
+                                    fontSize: '14px'
+                                }}
+                                disabled={processingProjectId === selectedReportForResolve.userReportId}
+                            >
+                                {processingProjectId === selectedReportForResolve.userReportId ? <Loader2 size={16} className="animate-spin" /> : 'Xác nhận'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
+
 
 export default OperationStaffDashboard;
