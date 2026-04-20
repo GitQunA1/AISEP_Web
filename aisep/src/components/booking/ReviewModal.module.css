@@ -1,0 +1,271 @@
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: var(--overlay-bg-dark, rgba(0, 0, 0, 0.7));
+    backdrop-filter: blur(8px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    padding: 20px;
+    animation: fadeIn 0.3s ease;
+}
+
+.modal {
+    background: var(--bg-primary);
+    width: 100%;
+    max-width: 480px;
+    border-radius: 20px;
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    position: relative;
+    animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.header {
+    padding: 24px 24px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.headerIcon {
+    width: 48px;
+    height: 48px;
+    background: rgba(255, 173, 31, 0.1);
+    color: #ffad1f;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 16px;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin: 0 0 4px 0;
+    letter-spacing: -0.02em;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.closeBtn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 8px;
+    border-radius: 50%;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.closeBtn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.body {
+    padding: 0 24px 24px;
+}
+
+/* Advisor Preview */
+.advisorPreview {
+    background: var(--bg-secondary);
+    padding: 12px 16px;
+    border-radius: 12px;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border: 1.5px solid var(--border-color);
+}
+
+.advisorAvatar {
+    width: 40px;
+    height: 40px;
+    background: var(--primary-blue);
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 16px;
+}
+
+.advisorName {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--text-primary);
+}
+
+.advisorRole {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* Rating Area */
+.ratingLabel {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.starRow {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.starBtn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-secondary);
+    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), color 0.2s;
+    margin: 0;
+    padding: 0;
+}
+
+.starBtn:hover {
+    transform: scale(1.2);
+}
+
+.starBtnInner {
+    color: #ffad1f;
+}
+
+.starActive {
+    color: #ffad1f;
+}
+
+/* Comment Area */
+.commentField {
+    margin-top: 16px;
+}
+
+.label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.textarea {
+    width: 100%;
+    background: var(--bg-secondary);
+    border: 1.5px solid var(--border-color);
+    border-radius: 12px;
+    padding: 12px;
+    color: var(--text-primary);
+    font-family: inherit;
+    font-size: 14px;
+    resize: none;
+    transition: all 0.2s;
+}
+
+.textarea:focus {
+    outline: none;
+    border-color: var(--primary-blue);
+    background: var(--bg-primary);
+    box-shadow: 0 0 0 4px rgba(29, 155, 240, 0.1);
+}
+
+/* Actions */
+.footer {
+    padding: 0 24px 24px;
+    display: flex;
+    gap: 12px;
+}
+
+.primaryBtn {
+    flex: 1;
+    background: var(--pd-blue, #1d9bf0);
+    color: #fff;
+    border: none;
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.primaryBtn:hover:not(:disabled) {
+    background: #1a8cd8;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(29, 155, 240, 0.3);
+}
+
+.primaryBtn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.secondaryBtn {
+    flex: 1;
+    background: transparent;
+    color: var(--pd-text-muted);
+    border: 1.5px solid var(--pd-border);
+    padding: 12px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.secondaryBtn:hover:not(:disabled) {
+    background: rgba(0, 0, 0, 0.02);
+    border-color: var(--pd-text-muted);
+    color: var(--pd-text);
+}
+
+.spinning {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Dark mode overrides (mostly handled by variables, but some tweaks) */
+:global(.dark-mode) .modal {
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+:global(.dark-mode) .advisorPreview {
+    background: rgba(255, 255, 255, 0.03);
+}

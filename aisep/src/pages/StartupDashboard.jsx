@@ -1907,7 +1907,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
             )}
 
             {activeSection !== 'pr_news' && (
-                <div className={`${styles.content} ${styles.scrollableSection}`}>
+                <div className={`${activeSection.startsWith('project_') ? styles.contentFull : styles.content} ${styles.scrollableSection}`}>
 
                     {/* Startup Profile Form (Section View) */}
                     {activeSection === 'complete-info' && (

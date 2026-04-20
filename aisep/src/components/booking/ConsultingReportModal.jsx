@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import {
-  X, FileText, CheckCircle, AlertCircle, Clock, RotateCcw, Send, Loader
-} from 'lucide-react';
+  X, FileText, CheckCircle, WarningCircle, Clock, ArrowsClockwise, PaperPlaneTilt, CircleNotch
+} from '@phosphor-icons/react';
 import consultingReportService from '../../services/consultingReportService';
 import styles from './ConsultingReportModal.module.css';
 
@@ -115,7 +115,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
     try {
       await consultingReportService.approveReport(report.consultingReportId);
       setPhase('success');
-      onDone?.();
+      onDone?.({ type: 'approve', bookingId });
     } catch (e) {
       setActionError(e?.message || 'Không thể chấp nhận báo cáo.');
     } finally {
@@ -131,7 +131,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
     try {
       await consultingReportService.requestRevision(report.consultingReportId, revisionReason.trim());
       onClose();
-      onDone?.();
+      onDone?.({ type: 'revision', bookingId });
     } catch (e) {
       setActionError(e?.message || 'Không thể gửi yêu cầu sửa đổi.');
     } finally {
@@ -182,7 +182,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
           {/* Loading */}
           {phase === 'loading' && (
             <div className={styles.centered}>
-              <Loader size={32} className={styles.spinning} />
+              <CircleNotch size={32} className={styles.spinning} weight="bold" />
               <p className={styles.mutedText}>Đang tải nội dung báo cáo...</p>
             </div>
           )}
@@ -190,7 +190,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
           {/* Error */}
           {phase === 'error' && (
             <div className={styles.centered}>
-              <AlertCircle size={40} color="#f4212e" />
+              <WarningCircle size={40} color="#f4212e" />
               <p className={styles.mutedText} style={{ color: '#f4212e', fontWeight: 600 }}>{loadError}</p>
               <button className={styles.secondaryBtn} onClick={onClose} style={{ marginTop: '12px' }}>Đóng cửa sổ</button>
             </div>
@@ -218,7 +218,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
                 <div className={styles.revisionAlert}>
                   <div className={styles.raHeader}>
                     <div className={styles.raTitle}>
-                      <RotateCcw size={18} />
+                      <ArrowsClockwise size={18} />
                       <span>Yêu cầu sửa đổi báo cáo</span>
                     </div>
                     <span className={styles.raCount}>Lần {report.revisionCount}</span>
@@ -287,7 +287,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
               </div>
               {formError && (
                 <div className={styles.errorRow}>
-                  <AlertCircle size={16} /><span>{formError}</span>
+                  <WarningCircle size={16} /><span>{formError}</span>
                 </div>
               )}
             </div>
@@ -311,7 +311,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
                     </span>
                     {report.revisionCount > 0 && (
                       <span className={styles.revisionBadge}>
-                        <RotateCcw size={14} /> Có {report.revisionCount} lần yêu cầu sửa đổi
+                        <ArrowsClockwise size={14} /> Có {report.revisionCount} lần yêu cầu sửa đổi
                       </span>
                     )}
                   </div>
@@ -354,7 +354,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
                     {report.revisionRequestReason && (
                       <div className={`${styles.detailItem} ${styles.fullWidth}`}>
                         <div className={styles.escalationNotice}>
-                          <AlertCircle size={20} />
+                          <WarningCircle size={20} />
                           <div>
                             <p style={{ margin: 0, fontWeight: '700' }}>Yêu cầu sửa đổi (Startup)</p>
                             <p style={{ margin: '4px 0 0', opacity: 0.85 }}>{report.revisionRequestReason}</p>
@@ -377,7 +377,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
                   {/* Status Indicator for EscalatedToStaff */}
                   {report.status === 'EscalatedToStaff' && (
                     <div className={styles.escalationNote}>
-                      <AlertCircle size={20} />
+                      <WarningCircle size={20} />
                       {isAdvisor ? (
                         <span>
                           Do khách hàng đã yêu cầu sửa đổi quá 3 lần, báo cáo đã được chuyển sang trạng thái xử lý khiếu nại. 
@@ -402,7 +402,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
           <div className={styles.footerRow}>
             <button className={styles.secondaryBtn} onClick={onClose} disabled={submitting}>Hủy bỏ</button>
             <button className={styles.primaryBtn} onClick={handleSubmit} disabled={submitting}>
-              {submitting ? <Loader size={16} className={styles.spinning} /> : <Send size={16} />}
+              {submitting ? <CircleNotch size={16} className={styles.spinning} weight="bold" /> : <PaperPlaneTilt size={16} />}
               {submitting ? 'Đang gửi...' : 'Gửi báo cáo'}
             </button>
           </div>
@@ -425,7 +425,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
             
             {actionError && (
               <div className={styles.errorRow}>
-                <AlertCircle size={16} /><span>{actionError}</span>
+                <WarningCircle size={16} /><span>{actionError}</span>
               </div>
             )}
 
@@ -433,10 +433,10 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
               {!showRevisionInput ? (
                 <>
                   <button className={styles.secondaryBtn} onClick={() => setShowRevisionInput(true)} disabled={actionLoading}>
-                    <RotateCcw size={16} /> Yêu cầu sửa lại
+                    <ArrowsClockwise size={16} /> Yêu cầu sửa lại
                   </button>
                   <button className={styles.approveBtn} onClick={handleApprove} disabled={actionLoading}>
-                    {actionLoading ? <Loader size={16} className={styles.spinning} /> : <CheckCircle size={16} />}
+                    {actionLoading ? <CircleNotch size={16} className={styles.spinning} weight="bold" /> : <CheckCircle size={16} />}
                     Chấp nhận báo cáo
                   </button>
                 </>
@@ -446,7 +446,7 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
                     Hủy bỏ
                   </button>
                   <button className={styles.revisionSubmitBtn} onClick={handleRevision} disabled={actionLoading}>
-                    {actionLoading ? <Loader size={16} className={styles.spinning} /> : <Send size={16} />}
+                    {actionLoading ? <CircleNotch size={16} className={styles.spinning} weight="bold" /> : <PaperPlaneTilt size={16} />}
                     Gửi yêu cầu
                   </button>
                 </>

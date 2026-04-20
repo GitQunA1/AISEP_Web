@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { X, CheckCircle, AlertCircle, RefreshCw, QrCode, Clock } from 'lucide-react';
+import { X, CheckCircle, WarningCircle, ArrowsClockwise, QrCode, Clock, CircleNotch } from '@phosphor-icons/react';
 import paymentService from '../../services/paymentService';
 import styles from './PaymentModal.module.css';
 
@@ -103,7 +103,7 @@ export default function PaymentModal({ bookingId, price, advisorName, slotCount,
           {/* Loading */}
           {phase === 'loading' && (
             <div className={styles.centeredState}>
-              <div className={styles.spinner} />
+              <CircleNotch size={32} className={styles.spinner} weight="bold" />
               <p className={styles.statusText}>Đang tạo mã thanh toán...</p>
             </div>
           )}
@@ -168,13 +168,13 @@ export default function PaymentModal({ bookingId, price, advisorName, slotCount,
           {phase === 'failed' && (
             <div className={styles.centeredState}>
               <div className={styles.failedIcon}>
-                <AlertCircle size={56} />
+                <WarningCircle size={56} />
               </div>
               <h3 className={styles.failedTitle}>Thanh toán thất bại</h3>
               <p className={styles.failedText}>Giao dịch không thể hoàn thành. Vui lòng thử lại.</p>
               <div className={styles.actionRow}>
                 <button className={styles.retryBtn} onClick={handleRetry} disabled={isRetrying}>
-                  <RefreshCw size={16} className={isRetrying ? styles.spinning : ''} />
+                  <ArrowsClockwise size={16} className={isRetrying ? styles.spinning : ''} />
                   {isRetrying ? 'Đang tạo lại...' : 'Thử lại'}
                 </button>
                 <button className={styles.cancelBtn} onClick={onClose}>Hủy</button>
@@ -186,13 +186,13 @@ export default function PaymentModal({ bookingId, price, advisorName, slotCount,
           {phase === 'error' && (
             <div className={styles.centeredState}>
               <div className={styles.failedIcon}>
-                <AlertCircle size={56} />
+                <WarningCircle size={56} />
               </div>
               <h3 className={styles.failedTitle}>Lỗi kết nối</h3>
               <p className={styles.failedText}>{errorMsg}</p>
               <div className={styles.actionRow}>
                 <button className={styles.retryBtn} onClick={handleRetry} disabled={isRetrying}>
-                  <RefreshCw size={16} className={isRetrying ? styles.spinning : ''} />
+                  <ArrowsClockwise size={16} className={isRetrying ? styles.spinning : ''} />
                   {isRetrying ? 'Đang thử lại...' : 'Thử lại'}
                 </button>
                 <button className={styles.cancelBtn} onClick={onClose}>Hủy</button>

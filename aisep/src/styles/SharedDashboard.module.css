@@ -435,6 +435,14 @@
     min-height: 0;
 }
 
+.contentFull {
+    padding: 0;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
 /* Cards & Sections */
 .section {
     display: flex;
@@ -4230,3 +4238,112 @@
     padding-bottom: 24px;
     min-height: 0;
 }
+
+/* More Actions Dropdown */
+.moreMenuContainer {
+    position: relative;
+    display: inline-block;
+}
+
+.moreMenuBtn {
+    background: transparent;
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.moreMenuBtn:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+    border-color: var(--text-muted);
+}
+
+.moreDropdown {
+    position: absolute;
+    bottom: calc(100% + 4px);
+    right: 0;
+    min-width: 160px;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.15);
+    z-index: 1000;
+    padding: 6px;
+    animation: fadeInScale 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    backdrop-filter: blur(8px);
+}
+
+.moreMenuItem {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    font-size: 13px;
+    font-weight: 600;
+    text-align: left;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.moreMenuItem:hover {
+    background: var(--bg-hover);
+    color: var(--text-primary);
+}
+
+.moreMenuItemDanger {
+    color: #f4212e;
+}
+
+.moreMenuItemDanger:hover {
+    background: rgba(244, 33, 46, 0.1);
+    color: #f4212e;
+}
+
+@keyframes fadeInScale {
+    from { opacity: 0; transform: scale(0.95) translateY(4px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+/* Ensure the parent action row has enough space and proper alignment */
+.xActions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.xPillBadge {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: rgba(23, 191, 99, 0.08);
+    color: #17bf63;
+    border: 1.5px solid rgba(23, 191, 99, 0.15);
+    border-radius: 99px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.xPillBadge:hover {
+    background: rgba(23, 191, 99, 0.12);
+    border-color: rgba(23, 191, 99, 0.3);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(23, 191, 99, 0.05);
+}

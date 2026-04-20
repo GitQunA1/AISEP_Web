@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, AlertCircle, Clock, Calendar, Users, Briefcase, Loader2 } from 'lucide-react';
+import { X, WarningCircle, Clock, Calendar, Users, Briefcase, CircleNotch } from '@phosphor-icons/react';
 import { createPortal } from 'react-dom';
 import styles from './BookingRejectionModal.module.css';
 
@@ -66,7 +66,7 @@ export default function BookingRejectionModal({ booking, onSubmit, onCancel, sub
                 {/* Header */}
                 <div className={styles.modalHeader}>
                     <div className={styles.headerIcon} style={{ background: 'rgba(244, 33, 46, 0.1)', color: '#f4212e' }}>
-                        <AlertCircle size={24} />
+                        <WarningCircle size={24} />
                     </div>
                     <h2 className={styles.headerTitle}>Từ chối booking</h2>
                     <p className={styles.headerSubtitle}>
@@ -133,7 +133,7 @@ export default function BookingRejectionModal({ booking, onSubmit, onCancel, sub
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
                             {(error || submitError) && (
                                 <div className={styles.errorText}>
-                                    <AlertCircle size={14} />
+                                    <WarningCircle size={14} />
                                     {error || submitError}
                                 </div>
                             )}
@@ -145,7 +145,7 @@ export default function BookingRejectionModal({ booking, onSubmit, onCancel, sub
 
                     {/* Info Box */}
                     <div className={styles.infoBox}>
-                        <AlertCircle size={16} />
+                        <WarningCircle size={16} />
                         <div>
                             <strong>Lưu ý:</strong>
                             <ul style={{ margin: '4px 0 0', paddingLeft: '16px', fontSize: '13px' }}>
@@ -168,7 +168,7 @@ export default function BookingRejectionModal({ booking, onSubmit, onCancel, sub
                     >
                         {isLoading ? (
                             <span className={styles.loadingContainer}>
-                                <Loader2 className={styles.spinner} size={16} />
+                                <CircleNotch className={styles.spinner} size={16} weight="bold" />
                                 Đang xử lý...
                             </span>
                         ) : (
