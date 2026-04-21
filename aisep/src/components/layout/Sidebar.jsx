@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle, Loader, Shield, History, ChevronUp, ChevronDown, DollarSign, CreditCard, Newspaper, Landmark } from 'lucide-react';
+import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle, Loader, Shield, Settings, History, ChevronUp, ChevronDown, DollarSign, CreditCard, Newspaper, Landmark } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
@@ -42,6 +42,17 @@ function Sidebar({
     const roleStr = user?.role?.toString().toLowerCase() || '';
     const roleNum = user?.role !== undefined ? Number(user.role) : -1;
     const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
+    const isAdmin = roleStr === 'admin' || roleNum === 4;
+
+    if (isAdmin) {
+      const adminItems = [
+        { icon: Users, label: 'AdminUsers', displayLabel: 'Quản lý người dùng', href: '#', showWhenLoggedIn: true },
+        { icon: Users, label: 'AdminStaff', displayLabel: 'Quản lý Staff', href: '#', showWhenLoggedIn: true },
+        { icon: DollarSign, label: 'AdminTransactions', displayLabel: 'Giao dịch', href: '#', showWhenLoggedIn: true },
+        { icon: User, label: 'AccountProfile', displayLabel: 'Hồ sơ người dùng', href: '#', showWhenLoggedIn: true },
+      ];
+      return adminItems;
+    }
 
     if (isStaff) {
       const staffItems = [
@@ -145,8 +156,10 @@ function Sidebar({
         onShowDashboard('investments');
       } else if (roleStr === 'operationstaff' || roleStr === 'staff' || roleNum === 3) {
         onShowDashboard('statistics');
+      } else if (roleStr === 'admin' || roleNum === 4) {
+        onShowDashboard('users');
       } else {
-        onShowDashboard('overview');
+        onShowDashboard('users');
       }
     }
     if (label === 'Projects' && onShowDashboard) {
@@ -198,6 +211,16 @@ function Sidebar({
 
     if (label === 'AccountProfile' && onShowDashboard) {
       onShowDashboard('account_profile');
+    }
+
+    if (label === 'AdminUsers' && onShowDashboard) {
+      onShowDashboard('users');
+    }
+    if (label === 'AdminStaff' && onShowDashboard) {
+      onShowDashboard('staff');
+    }
+    if (label === 'AdminTransactions' && onShowDashboard) {
+      onShowDashboard('transactions');
     }
 
     // Navigate to home when clicking Home
@@ -333,6 +356,9 @@ function Sidebar({
                       if (activeView === 'dashboard_package_management') return 'PackageManagement';
                       if (activeView === 'dashboard_subscription_history') return 'SubscriptionHistory';
                       if (activeView === 'dashboard_investor_approval') return 'InvestorApproval';
+                      if (activeView === 'dashboard_users') return 'AdminUsers';
+                      if (activeView === 'dashboard_staff') return 'AdminStaff';
+                      if (activeView === 'dashboard_transactions') return 'AdminTransactions';
                       if (activeView === 'dashboard_account_profile') return 'AccountProfile';
                       if (activeView === 'profile') return 'Profile';
                       if (activeView === 'advisors') return 'Advisors';
