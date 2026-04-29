@@ -902,6 +902,7 @@ function MainLayout({
                   <StartupProfileBanner
                     status={startupProfile?.status}
                     approvalStatus={startupProfile?.approvalStatus}
+                    reason={startupProfile?.rejectionReason}
                     onRedirect={() => onShowDashboard('complete-info')}
                   />
                 </div>
@@ -912,6 +913,7 @@ function MainLayout({
                   <AdvisorProfileBanner
                     status={advisorProfileStatus}
                     approvalStatus={advisorProfile?.approvalStatus}
+                    reason={advisorProfile?.rejectionReason}
                     onRedirect={() => onShowDashboard('profile')}
                   />
                 </div>

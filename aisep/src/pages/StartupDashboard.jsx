@@ -1980,6 +1980,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                     <StartupProfileBanner
                         status={startupProfile?.status}
                         approvalStatus={startupProfile?.approvalStatus}
+                        reason={startupProfile?.rejectionReason}
                         onRedirect={activeSection === 'complete-info' ? null : () => setActiveSection('complete-info')}
                     />
                 </div>

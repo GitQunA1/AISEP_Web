@@ -6,7 +6,7 @@ import styles from './StartupProfileBanner.module.css';
  * StartupProfileBanner - A persistent, non-intrusive header notification
  * for the Startup Dashboard when the profile is missing.
  */
-const StartupProfileBanner = ({ onRedirect, status, approvalStatus }) => {
+const StartupProfileBanner = ({ onRedirect, status, approvalStatus, reason }) => {
   // Normalize status to string and uppercase for robust comparison
   // Check both status and approvalStatus fields as returned by different backend endpoints
   const currentStatus = (status !== undefined && status !== null) ? status : approvalStatus;
@@ -32,10 +32,10 @@ const StartupProfileBanner = ({ onRedirect, status, approvalStatus }) => {
             </h4>
             <p className={styles.description}>
               {isPending 
-                ? 'Thông tin của bạn đang được đội ngũ AISEP kiểm tra. Bạn vẫn có thể cập nhật thông tin nếu cần thiết.' 
+                ? 'Thông tin của bạn đang được đội ngũ AISEP kiểm tra. Bạn vẫn có thể cập nhật thông tin nếu cần thiết trong quá trình chờ đợi.' 
                 : isRejected
-                  ? 'Vui lòng kiểm tra lý do và cập nhật lại thông tin để được phê duyệt lại.'
-                  : 'Hoàn thiện hồ sơ để có thể đăng dự án, thu hút nhà đầu tư và sử dụng đầy đủ tính năng của AISEP.'}
+                  ? `Lý do: ${reason || 'Hồ sơ không đáp ứng đủ tiêu chuẩn hoặc thiếu thông tin minh chứng'}. Vui lòng kiểm tra lại thông tin và cập nhật để được phê duyệt lại.`
+                  : 'Hoàn thiện hồ sơ để có thể đăng dự án, thu hút nhà đầu tư và sử dụng đầy đủ các tính năng nâng cao của hệ thống AISEP.'}
             </p>
           </div>
         </div>

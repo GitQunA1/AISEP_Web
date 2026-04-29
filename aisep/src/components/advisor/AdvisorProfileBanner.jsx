@@ -6,7 +6,7 @@ import styles from './AdvisorProfileBanner.module.css';
  * AdvisorProfileBanner - A persistent, non-intrusive header notification
  * for the Advisor Dashboard when the profile is missing, pending, or rejected.
  */
-const AdvisorProfileBanner = ({ onRedirect, status, approvalStatus, isCompact }) => {
+const AdvisorProfileBanner = ({ onRedirect, status, approvalStatus, reason }) => {
   // Normalize status - Advisors use 'status' or 'approvalStatus' depending on the endpoint
   const currentStatus = (status !== undefined && status !== null) ? status : approvalStatus;
   
@@ -23,7 +23,7 @@ const AdvisorProfileBanner = ({ onRedirect, status, approvalStatus, isCompact })
   if (!isPending && !isRejected && !isMissing) return null;
 
   return (
-    <div className={`${styles.bannerContainer} ${isPending ? styles.pending : ''} ${isRejected ? styles.rejected : ''} ${isCompact ? styles.compact : ''}`}>
+    <div className={`${styles.bannerContainer} ${isPending ? styles.pending : ''} ${isRejected ? styles.rejected : ''}`}>
       <div className={styles.bannerContent}>
         <div className={styles.leftSection}>
           <div className={styles.iconCircle}>
@@ -39,10 +39,10 @@ const AdvisorProfileBanner = ({ onRedirect, status, approvalStatus, isCompact })
             </h4>
             <p className={styles.description}>
               {isPending 
-                ? 'Thông tin của bạn đang được đội ngũ Staff kiểm tra. Bạn sẽ nhận được thông báo khi hồ sơ được phê duyệt.' 
+                ? 'Thông tin chuyên môn của bạn đang được đội ngũ Staff kiểm tra. Quá trình này thường mất 1-2 ngày làm việc.' 
                 : isRejected
-                  ? 'Hồ sơ của bạn không đáp ứng đủ tiêu chuẩn hoặc thiếu thông tin. Vui lòng cập nhật lại.'
-                  : 'Hãy khởi tạo hồ sơ để có thể đăng ký lịch rảnh và bắt đầu nhận các yêu cầu tư vấn từ Startup.'}
+                  ? `Lý do: ${reason || 'Hồ sơ chưa đạt yêu cầu chuyên môn hoặc thiếu thông tin minh chứng'}. Vui lòng cập nhật lại thông tin để được phê duyệt.`
+                  : 'Hãy hoàn thiện hồ sơ để có thể thiết lập lịch rảnh, kết nối với Startup và bắt đầu hành trình cố vấn tại AISEP.'}
             </p>
           </div>
         </div>

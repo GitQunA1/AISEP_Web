@@ -394,6 +394,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                     <AdvisorProfileBanner
                         status={profile?.status}
                         approvalStatus={profile?.approvalStatus}
+                        reason={profile?.rejectionReason}
                     />
                 </div>
             ) : null}
