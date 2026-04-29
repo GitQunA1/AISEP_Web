@@ -145,6 +145,9 @@ export default function AdminDashboard({ user, initialSection = 'users' }) {
         if (activeSection === 'users') {
             fetchUsers(1);
         }
+        if (activeSection === 'staff') {
+            fetchUsers(1);
+        }
     }, [activeSection]);
 
     // Sync activeSection with initialSection prop when it changes
@@ -286,251 +289,332 @@ export default function AdminDashboard({ user, initialSection = 'users' }) {
         );
     };
 
-    const renderStaffSection = () => (
-        <div className={styles.card}>
-            <div style={{ marginBottom: '24px' }}>
-                <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
-                    Tạo Staff Vận Hành
-                </h3>
-                
-                {staffSuccess && (
-                    <div style={{ padding: '12px 16px', marginBottom: '16px', backgroundColor: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: '6px', color: '#065f46', fontWeight: 600, fontSize: '14px' }}>
-                        ✓ {staffSuccess}
-                    </div>
-                )}
+    const renderStaffSection = () => {
+        const staffList = users.filter(u => u.role === 'Staff');
+        
+        return (
+        <div>
+            <div className={styles.card}>
+                <div style={{ marginBottom: '24px' }}>
+                    <h3 style={{ margin: '0 0 16px 0', fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                        Tạo Staff Vận Hành
+                    </h3>
+                    
+                    {staffSuccess && (
+                        <div style={{ padding: '12px 16px', marginBottom: '16px', backgroundColor: '#d1fae5', border: '1px solid #6ee7b7', borderRadius: '6px', color: '#065f46', fontWeight: 600, fontSize: '14px' }}>
+                            ✓ {staffSuccess}
+                        </div>
+                    )}
 
-                {staffError && (
-                    <div style={{ padding: '12px 16px', marginBottom: '16px', backgroundColor: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', fontWeight: 600, fontSize: '14px' }}>
-                        ✕ {staffError}
-                    </div>
-                )}
+                    {staffError && (
+                        <div style={{ padding: '12px 16px', marginBottom: '16px', backgroundColor: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '6px', color: '#991b1b', fontWeight: 600, fontSize: '14px' }}>
+                            ✕ {staffError}
+                        </div>
+                    )}
 
-                <form onSubmit={handleCreateStaff} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    {/* Username */}
-                    <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                            Username *
-                        </label>
-                        <input
-                            type="text"
-                            value={staffFormData.userName}
-                            onChange={(e) => setStaffFormData({ ...staffFormData, userName: e.target.value })}
-                            placeholder="Nhập username"
-                            style={{
-                                width: '100%',
-                                padding: '10px 12px',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '6px',
-                                fontSize: '14px',
-                                backgroundColor: 'var(--bg-primary)',
-                                color: 'var(--text-primary)',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                    </div>
-
-                    {/* Full Name */}
-                    <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                            Họ và Tên
-                        </label>
-                        <input
-                            type="text"
-                            value={staffFormData.fullName}
-                            onChange={(e) => setStaffFormData({ ...staffFormData, fullName: e.target.value })}
-                            placeholder="Nhập họ và tên"
-                            style={{
-                                width: '100%',
-                                padding: '10px 12px',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '6px',
-                                fontSize: '14px',
-                                backgroundColor: 'var(--bg-primary)',
-                                color: 'var(--text-primary)',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                    </div>
-
-                    {/* Email */}
-                    <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                            Email *
-                        </label>
-                        <input
-                            type="email"
-                            value={staffFormData.email}
-                            onChange={(e) => setStaffFormData({ ...staffFormData, email: e.target.value })}
-                            placeholder="Nhập email"
-                            style={{
-                                width: '100%',
-                                padding: '10px 12px',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '6px',
-                                fontSize: '14px',
-                                backgroundColor: 'var(--bg-primary)',
-                                color: 'var(--text-primary)',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                    </div>
-
-                    {/* Phone Number */}
-                    <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                            Số điện thoại
-                        </label>
-                        <input
-                            type="tel"
-                            value={staffFormData.phoneNumber}
-                            onChange={(e) => setStaffFormData({ ...staffFormData, phoneNumber: e.target.value })}
-                            placeholder="Nhập số điện thoại"
-                            style={{
-                                width: '100%',
-                                padding: '10px 12px',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '6px',
-                                fontSize: '14px',
-                                backgroundColor: 'var(--bg-primary)',
-                                color: 'var(--text-primary)',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                    </div>
-
-                    {/* Password */}
-                    <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                            Mật khẩu *
-                        </label>
-                        <input
-                            type="password"
-                            value={staffFormData.password}
-                            onChange={(e) => setStaffFormData({ ...staffFormData, password: e.target.value })}
-                            placeholder="Nhập mật khẩu"
-                            style={{
-                                width: '100%',
-                                padding: '10px 12px',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '6px',
-                                fontSize: '14px',
-                                backgroundColor: 'var(--bg-primary)',
-                                color: 'var(--text-primary)',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                    </div>
-
-                    {/* Confirm Password */}
-                    <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                            Xác nhận mật khẩu *
-                        </label>
-                        <input
-                            type="password"
-                            value={staffFormData.confirmPassword}
-                            onChange={(e) => setStaffFormData({ ...staffFormData, confirmPassword: e.target.value })}
-                            placeholder="Nhập lại mật khẩu"
-                            style={{
-                                width: '100%',
-                                padding: '10px 12px',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '6px',
-                                fontSize: '14px',
-                                backgroundColor: 'var(--bg-primary)',
-                                color: 'var(--text-primary)',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                    </div>
-
-                    {/* Date of Birth */}
-                    <div>
-                        <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
-                            Ngày sinh
-                        </label>
-                        <input
-                            type="date"
-                            value={staffFormData.dateOfBirth}
-                            onChange={(e) => setStaffFormData({ ...staffFormData, dateOfBirth: e.target.value })}
-                            style={{
-                                width: '100%',
-                                padding: '10px 12px',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '6px',
-                                fontSize: '14px',
-                                backgroundColor: 'var(--bg-primary)',
-                                color: 'var(--text-primary)',
-                                boxSizing: 'border-box'
-                            }}
-                        />
-                    </div>
-
-                    {/* Premium & Status */}
-                    <div style={{ display: 'flex', gap: '12px' }}>
-                        <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                    <form onSubmit={handleCreateStaff} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                        {/* Username */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                                Username *
+                            </label>
                             <input
-                                type="checkbox"
-                                checked={staffFormData.isPremium}
-                                onChange={(e) => setStaffFormData({ ...staffFormData, isPremium: e.target.checked })}
-                                style={{ cursor: 'pointer' }}
+                                type="text"
+                                value={staffFormData.userName}
+                                onChange={(e) => setStaffFormData({ ...staffFormData, userName: e.target.value })}
+                                placeholder="Nhập username"
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    backgroundColor: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)',
+                                    boxSizing: 'border-box'
+                                }}
                             />
-                            Premium
-                        </label>
-                    </div>
+                        </div>
 
-                    {/* Submit Button */}
-                    <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '12px', marginTop: '12px' }}>
-                        <button
-                            type="submit"
-                            disabled={isSubmittingStaff}
-                            style={{
-                                flex: 1,
-                                padding: '12px 20px',
-                                backgroundColor: isSubmittingStaff ? '#9ca3af' : 'var(--primary-blue)',
-                                color: 'white',
-                                border: 'none',
-                                borderRadius: '6px',
-                                fontWeight: 700,
-                                fontSize: '14px',
-                                cursor: isSubmittingStaff ? 'not-allowed' : 'pointer',
-                                transition: 'background-color 0.2s'
-                            }}
-                        >
-                            {isSubmittingStaff ? '⏳ Đang tạo...' : '➕ Tạo Staff'}
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => setStaffFormData({
-                                userName: '',
-                                fullName: '',
-                                email: '',
-                                phoneNumber: '',
-                                password: '',
-                                confirmPassword: '',
-                                status: 'Active',
-                                isPremium: false,
-                                dateOfBirth: ''
-                            })}
-                            style={{
-                                padding: '12px 20px',
-                                backgroundColor: 'var(--bg-secondary)',
-                                color: 'var(--text-secondary)',
-                                border: '1px solid var(--border-color)',
-                                borderRadius: '6px',
-                                fontWeight: 700,
-                                fontSize: '14px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s'
-                            }}
-                        >
-                            ↻ Làm mới
-                        </button>
+                        {/* Full Name */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                                Họ và Tên
+                            </label>
+                            <input
+                                type="text"
+                                value={staffFormData.fullName}
+                                onChange={(e) => setStaffFormData({ ...staffFormData, fullName: e.target.value })}
+                                placeholder="Nhập họ và tên"
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    backgroundColor: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        {/* Email */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                                Email *
+                            </label>
+                            <input
+                                type="email"
+                                value={staffFormData.email}
+                                onChange={(e) => setStaffFormData({ ...staffFormData, email: e.target.value })}
+                                placeholder="Nhập email"
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    backgroundColor: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        {/* Phone Number */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                                Số điện thoại
+                            </label>
+                            <input
+                                type="tel"
+                                value={staffFormData.phoneNumber}
+                                onChange={(e) => setStaffFormData({ ...staffFormData, phoneNumber: e.target.value })}
+                                placeholder="Nhập số điện thoại"
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    backgroundColor: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        {/* Password */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                                Mật khẩu *
+                            </label>
+                            <input
+                                type="password"
+                                value={staffFormData.password}
+                                onChange={(e) => setStaffFormData({ ...staffFormData, password: e.target.value })}
+                                placeholder="Nhập mật khẩu"
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    backgroundColor: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        {/* Confirm Password */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                                Xác nhận mật khẩu *
+                            </label>
+                            <input
+                                type="password"
+                                value={staffFormData.confirmPassword}
+                                onChange={(e) => setStaffFormData({ ...staffFormData, confirmPassword: e.target.value })}
+                                placeholder="Nhập lại mật khẩu"
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    backgroundColor: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        {/* Date of Birth */}
+                        <div>
+                            <label style={{ display: 'block', fontSize: '13px', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '6px' }}>
+                                Ngày sinh
+                            </label>
+                            <input
+                                type="date"
+                                value={staffFormData.dateOfBirth}
+                                onChange={(e) => setStaffFormData({ ...staffFormData, dateOfBirth: e.target.value })}
+                                style={{
+                                    width: '100%',
+                                    padding: '10px 12px',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    fontSize: '14px',
+                                    backgroundColor: 'var(--bg-primary)',
+                                    color: 'var(--text-primary)',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                        </div>
+
+                        {/* Premium & Status */}
+                        <div style={{ display: 'flex', gap: '12px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '14px', fontWeight: 600, color: 'var(--text-secondary)' }}>
+                                <input
+                                    type="checkbox"
+                                    checked={staffFormData.isPremium}
+                                    onChange={(e) => setStaffFormData({ ...staffFormData, isPremium: e.target.checked })}
+                                    style={{ cursor: 'pointer' }}
+                                />
+                                Premium
+                            </label>
+                        </div>
+
+                        {/* Submit Button */}
+                        <div style={{ gridColumn: '1 / -1', display: 'flex', gap: '12px', marginTop: '12px' }}>
+                            <button
+                                type="submit"
+                                disabled={isSubmittingStaff}
+                                style={{
+                                    flex: 1,
+                                    padding: '12px 20px',
+                                    backgroundColor: isSubmittingStaff ? '#9ca3af' : 'var(--primary-blue)',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '6px',
+                                    fontWeight: 700,
+                                    fontSize: '14px',
+                                    cursor: isSubmittingStaff ? 'not-allowed' : 'pointer',
+                                    transition: 'background-color 0.2s'
+                                }}
+                            >
+                                {isSubmittingStaff ? '⏳ Đang tạo...' : '➕ Tạo Staff'}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setStaffFormData({
+                                    userName: '',
+                                    fullName: '',
+                                    email: '',
+                                    phoneNumber: '',
+                                    password: '',
+                                    confirmPassword: '',
+                                    status: 'Active',
+                                    isPremium: false,
+                                    dateOfBirth: ''
+                                })}
+                                style={{
+                                    padding: '12px 20px',
+                                    backgroundColor: 'var(--bg-secondary)',
+                                    color: 'var(--text-secondary)',
+                                    border: '1px solid var(--border-color)',
+                                    borderRadius: '6px',
+                                    fontWeight: 700,
+                                    fontSize: '14px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s'
+                                }}
+                            >
+                                ↻ Làm mới
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            {/* Existing Staff List */}
+            <div className={styles.card} style={{ marginTop: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid var(--border-color)' }}>
+                    <div>
+                        <p className={styles.subtitle} style={{ margin: '0 0 4px 0', fontSize: '13px' }}>
+                            Danh sách staff
+                        </p>
+                        <p style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>
+                            {staffList.length} staff
+                        </p>
                     </div>
-                </form>
+                    <button className={styles.secondaryBtn} onClick={() => fetchUsers(1)} disabled={isLoadingUsers}>
+                        ↻ Làm mới
+                    </button>
+                </div>
+
+                {isLoadingUsers ? (
+                    <div className={styles.loadingState}>
+                        <Loader2 size={24} className={styles.spinner} />
+                        <span>Đang tải staff...</span>
+                    </div>
+                ) : staffList.length === 0 ? (
+                    <div className={styles.emptyState}>
+                        <p style={{ margin: 0, color: 'var(--text-secondary)', fontSize: '15px' }}>Không có staff nào</p>
+                    </div>
+                ) : (
+                    <div className={styles.tableWrapper} style={{ borderRadius: '8px', overflow: 'hidden' }}>
+                        <table className={styles.docsTable} style={{ tableLayout: 'fixed' }}>
+                            <thead>
+                                <tr style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                                    <th style={{ padding: '14px 12px', fontWeight: 700, fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', width: '10%' }}>ID</th>
+                                    <th style={{ padding: '14px 12px', fontWeight: 700, fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', width: '20%' }}>Username</th>
+                                    <th style={{ padding: '14px 12px', fontWeight: 700, fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', width: '25%' }}>Họ và Tên</th>
+                                    <th style={{ padding: '14px 12px', fontWeight: 700, fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', width: '25%' }}>Email</th>
+                                    <th style={{ padding: '14px 12px', fontWeight: 700, fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px', width: '20%' }}>Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {staffList.map((staff, idx) => {
+                                    const statusLower = String(staff.status || '').toLowerCase();
+                                    let statusColor = '#f59e0b';
+                                    let statusBg = '#fef3c7';
+                                    if (statusLower === 'active') {
+                                        statusColor = '#10b981';
+                                        statusBg = '#d1fae5';
+                                    }
+
+                                    return (
+                                        <tr key={staff.userId} style={{ borderBottom: '1px solid var(--border-color)', backgroundColor: idx % 2 === 0 ? 'transparent' : 'var(--bg-secondary)' }}>
+                                            <td style={{ padding: '14px 12px', fontWeight: 700, color: 'var(--primary-blue)', fontSize: '13px' }}>
+                                                #{staff.userId}
+                                            </td>
+                                            <td style={{ padding: '14px 12px', fontWeight: 600, fontSize: '13px', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {staff.userName || 'N/A'}
+                                            </td>
+                                            <td style={{ padding: '14px 12px', fontSize: '13px', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {staff.fullName || 'N/A'}
+                                            </td>
+                                            <td style={{ padding: '14px 12px', fontSize: '12px', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {staff.email || 'N/A'}
+                                            </td>
+                                            <td style={{ padding: '14px 12px' }}>
+                                                <span style={{ display: 'inline-block', padding: '5px 10px', borderRadius: '6px', fontSize: '12px', fontWeight: 600, backgroundColor: statusBg, color: statusColor }}>
+                                                    {staff.status || 'Unknown'}
+                                                </span>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
             </div>
         </div>
-    );
+        );
+    };
 
     const renderTransactionsSection = () => (
         <div className={styles.card}>

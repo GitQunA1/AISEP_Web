@@ -96,6 +96,7 @@ function Sidebar({
         baseItems.find(i => i.label === 'Home'),
         baseItems.find(i => i.label === 'Dashboard'),
         { icon: Calendar, label: 'Bookings', displayLabel: 'Lịch Tư Vấn', href: '#', showWhenLoggedIn: true },
+        { icon: User, label: 'InvestorProfile', displayLabel: 'Hồ sơ nhà đầu tư', href: '#', showWhenLoggedIn: true },
         baseItems.find(i => i.label === 'PRNews'),
         baseItems.find(i => i.label === 'Advisors'),
         baseItems.find(i => i.label === 'Investors'),
@@ -103,7 +104,19 @@ function Sidebar({
       ];
     }
 
-    // Startup and other roles — add AccountProfile to base items
+    if (roleStr === 'startup' || roleNum === 0) {
+      return [
+        baseItems.find(i => i.label === 'Home'),
+        baseItems.find(i => i.label === 'Dashboard'),
+        { icon: Rocket, label: 'StartupProfile', displayLabel: 'Hồ sơ Startup', href: '#', showWhenLoggedIn: true },
+        baseItems.find(i => i.label === 'PRNews'),
+        baseItems.find(i => i.label === 'Advisors'),
+        baseItems.find(i => i.label === 'Investors'),
+        { icon: User, label: 'AccountProfile', displayLabel: 'Hồ sơ người dùng', href: '#', showWhenLoggedIn: true },
+      ];
+    }
+
+    // Default and other roles
     return [
       ...baseItems,
       { icon: User, label: 'AccountProfile', displayLabel: 'Hồ sơ người dùng', href: '#', showWhenLoggedIn: true },
@@ -156,10 +169,12 @@ function Sidebar({
         onShowDashboard('investments');
       } else if (roleStr === 'operationstaff' || roleStr === 'staff' || roleNum === 3) {
         onShowDashboard('statistics');
+      } else if (roleStr === 'advisor' || roleNum === 2) {
+        onShowDashboard('overview');
       } else if (roleStr === 'admin' || roleNum === 4) {
         onShowDashboard('users');
       } else {
-        onShowDashboard('users');
+        onShowDashboard('overview');
       }
     }
     if (label === 'Projects' && onShowDashboard) {
@@ -211,6 +226,12 @@ function Sidebar({
 
     if (label === 'AccountProfile' && onShowDashboard) {
       onShowDashboard('account_profile');
+    }
+    if (label === 'InvestorProfile' && onShowDashboard) {
+      onShowDashboard('preferences');
+    }
+    if (label === 'StartupProfile' && onShowDashboard) {
+      onShowDashboard('complete-info');
     }
 
     if (label === 'AdminUsers' && onShowDashboard) {
@@ -356,6 +377,8 @@ function Sidebar({
                       if (activeView === 'dashboard_package_management') return 'PackageManagement';
                       if (activeView === 'dashboard_subscription_history') return 'SubscriptionHistory';
                       if (activeView === 'dashboard_investor_approval') return 'InvestorApproval';
+                      if (activeView === 'dashboard_preferences') return 'InvestorProfile';
+                      if (activeView === 'complete-info' || activeView === 'dashboard_complete-info') return 'StartupProfile';
                       if (activeView === 'dashboard_users') return 'AdminUsers';
                       if (activeView === 'dashboard_staff') return 'AdminStaff';
                       if (activeView === 'dashboard_transactions') return 'AdminTransactions';
