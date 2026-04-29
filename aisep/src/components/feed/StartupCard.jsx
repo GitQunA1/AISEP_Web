@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  DotsThree, 
-  CurrencyDollar, 
-  ChartBar, 
-  Sword, 
-  Star, 
-  Briefcase, 
-  LockSimple, 
-  Heart, 
-  ChatCircleText, 
-  Checks, 
-  WarningCircle, 
-  HeartBreak, 
+import {
+  DotsThree,
+  CurrencyDollar,
+  ChartBar,
+  Sword,
+  Star,
+  Briefcase,
+  LockSimple,
+  Heart,
+  ChatCircleText,
+  Checks,
+  WarningCircle,
+  HeartBreak,
   TrendUp,
   CaretRight
 } from '@phosphor-icons/react';
@@ -26,7 +26,7 @@ import dealsService from '../../services/dealsService';
  * StartupCard Component - "Visual Priority (Concept C)"
  * Clean, full-width data density
  */
-function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), investors = [], onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false, isInvestorApproved = false, myStartupProfileId = null }) {
+function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, sentConnectionIds, investedProjectIds = new Set(), investors = [], onInvestmentSuccess, onViewProfile, onViewProject, index = 0, isReturning = false, isInvestorApproved = false, onRestrictedAction, myStartupProfileId = null }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
   const [toast, setToast] = useState({ visible: false, message: '', type: 'success' });
@@ -34,14 +34,14 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
   const [hasRequested, setHasRequested] = useState(false);
   const [showInvestmentModal, setShowInvestmentModal] = useState(false);
   const [investmentStatus, setInvestmentStatus] = useState(null); // New: track investment status
-  
+
   // Check if user is investor
   // Backend returns role as string: "Investor", "Startup", "Advisor", "Staff", "Admin"
   // OR as number: 1=Investor, 0=Startup, 2=Advisor, 3=Staff, 4=Admin
   const isInvestor = user && (
-    user.role === 'investor' || 
-    user.role === 'Investor' || 
-    user.role === 1 || 
+    user.role === 'investor' ||
+    user.role === 'Investor' ||
+    user.role === 1 ||
     String(user.role) === '1'
   );
 
@@ -135,7 +135,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
     fetchInvestmentStatus();
   }, [isInvestor, startup.id, startup.organizationName]);
   */
-  
+
   // Listen for deal_created event to refresh investment status
   // DISABLED: Part of the investment status fetch that was causing spam
   /*
@@ -170,7 +170,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
     }
   }, [isInvestor, startup.id, startup.organizationName]);
   */
-  
+
   // Handle interest button click - toggle follow/unfollow
   const showToast = (message, type = 'success') => {
     setToast({ visible: true, message, type });
@@ -182,7 +182,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
   const handleInterestClick = async (e) => {
     e.stopPropagation();
     if (!user) return;
-    
+
     setIsLoading(true);
     try {
       if (isInterested) {
@@ -229,11 +229,11 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
 
   const mainTag = (startup.tags && startup.tags.length > 0) ? startup.tags[0] : (startup.industry || '');
   const stageStyles = getStageColor(startup.stage);
-  
+
   // Priority: mapped startupName > organization > company > project-owner-name fallback
   // The 'startup' object passed from MainLayout should have either startupName or the original fields
   const startupNameDisp = startup.startupName || startup.organizationName || startup.companyName || 'Startup';
-  
+
   // Robust ID extraction for navigation
   const sid = startup.startupId || startup.userId || startup.id;
 
@@ -242,7 +242,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
   const isBypassRole = roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 3 || roleNum === 2;
 
   const isUnlocked = isBypassRole || startup.isUnlockedByCurrentUser || (myStartupProfileId && startup.startupId === myStartupProfileId);
-  
+
   const PremiumLock = () => {
     if (isBypassRole) return <div style={{ fontSize: '15px' }}>—</div>;
     if (isUnlocked) {
@@ -276,11 +276,11 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
   };
 
   return (
-    <article 
+    <article
       key={startup.id}
-      className={styles.card} 
-      onClick={() => onViewProject && onViewProject(startup.id)} 
-      style={{ 
+      className={styles.card}
+      onClick={() => onViewProject && onViewProject(startup.id)}
+      style={{
         cursor: onViewProject ? 'pointer' : 'default',
         '--index': index,
         ...(isReturning ? { animation: 'none', opacity: 1, transform: 'none' } : {})
@@ -288,15 +288,15 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
     >
       {/* 1. Header Row */}
       <div className={styles.cardHeader}>
-        <div 
+        <div
           className={`${styles.avatarCircle} ${onViewProfile ? styles.clickable : ''}`}
           style={{ background: !(startup.logoUrl || startup.logo) ? getAvatarGradient(mainTag) : '#fff' }}
           onClick={(e) => { e.stopPropagation(); onViewProfile && onViewProfile(sid); }}
         >
           {startup.logoUrl || startup.logo ? (
-            <img 
-              src={startup.logoUrl || startup.logo} 
-              alt={startupNameDisp} 
+            <img
+              src={startup.logoUrl || startup.logo}
+              alt={startupNameDisp}
               className={styles.avatarImg}
               onError={(e) => {
                 e.target.style.display = 'none';
@@ -308,10 +308,10 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
             startupNameDisp.charAt(0).toUpperCase()
           )}
         </div>
-        
+
         <div className={styles.headerInfo}>
           <div className={styles.nameRow}>
-            <span 
+            <span
               className={`${styles.name} ${onViewProfile ? styles.clickableName : ''}`}
               onClick={(e) => { e.stopPropagation(); onViewProfile && onViewProfile(sid); }}
             >
@@ -328,18 +328,18 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
                 startup.score === undefined || startup.score === null
                   ? 'updating'
                   : startup.score >= 80
-                  ? 'score-good'
-                  : startup.score >= 50
-                  ? 'score-medium'
-                  : 'score-poor'
+                    ? 'score-good'
+                    : startup.score >= 50
+                      ? 'score-medium'
+                      : 'score-poor'
               }
               size="sm"
             />
-            
+
             {/* Stage Pill */}
             {startup.stage && (
-              <span 
-                className={styles.stagePill} 
+              <span
+                className={styles.stagePill}
                 style={{ background: stageStyles.bg, color: stageStyles.color }}
               >
                 {startup.stage}
@@ -352,7 +352,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
             ))}
           </div>
         </div>
-        
+
         <div className={styles.menuIconWrapper}>
           <DotsThree size={18} weight="bold" />
         </div>
@@ -384,7 +384,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
 
               {/* Investor Pill */}
               {investors && investors.length > 0 && (
-                <div 
+                <div
                   className={`${styles.proofPill} ${styles.investorPill} ${styles.clickablePill}`}
                   onClick={(e) => {
                     e.stopPropagation();
@@ -396,7 +396,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
                 >
                   <Briefcase size={14} weight="fill" />
                   <span className={styles.statText} style={{ marginRight: '4px' }}>Được đầu tư bởi</span>
-                  
+
                   <div className={styles.avatarStack}>
                     {investors.slice(0, 3).map((investor, idx) => (
                       <div
@@ -431,8 +431,8 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
         {/* Project Image Thumbnail */}
         {startup.imageUrl && (
           <div className={styles.imageWrapper}>
-            <img 
-              src={startup.imageUrl} 
+            <img
+              src={startup.imageUrl}
               alt={startup.name}
               loading="lazy"
             />
@@ -482,7 +482,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
           <div className={styles.detailRow}>
             <span className={styles.detailLabel}>Mô hình KD</span>
             <span className={styles.detailValue}>
-               {startup.businessModel !== undefined ? startup.businessModel : <PremiumLockText />}
+              {startup.businessModel !== undefined ? startup.businessModel : <PremiumLockText />}
             </span>
           </div>
         )}
@@ -542,7 +542,7 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
               onClick={(e) => {
                 e.stopPropagation();
                 if (!isInvestorApproved) {
-                  showToast('Vui lòng hoàn tất/phê duyệt hồ sơ nhà đầu tư.', 'error');
+                  onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để yêu cầu kết nối và xem thông tin chi tiết của dự án.');
                   return;
                 }
                 if (!hasRequested) setShowRequestModal(true);
@@ -593,9 +593,9 @@ function StartupCard({ startup, isPaidUser = false, user, followedProjectIds, se
                 onClick={(e) => {
                   e.stopPropagation();
                   if (!isInvestorApproved) {
-                  showToast('Vui lòng hoàn tất/phê duyệt hồ sơ nhà đầu tư.', 'error');
-                  return;
-                }
+                    onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để gửi yêu cầu đầu tư vào dự án.');
+                    return;
+                  }
                   setShowInvestmentModal(true);
                 }}
                 className={`${styles.pillButton} ${styles.btnInvest} ${!isInvestorApproved ? styles.btnDisabled : ''}`}

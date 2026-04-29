@@ -18,7 +18,7 @@ const STEPS = ['Chọn Dự Án', 'Chọn Cố Vấn', 'Chọn Khung Giờ', 'X�
  *   initialAdvisorId   – (optional) pre-select advisor, skip step 2
  *   sourceBookingId    – (optional) dùng khi rebooking từ NoResponse/Cancel
  */
-export default function BookingWizard({ onClose, user, initialAdvisorId = null, initialProjectId = null, sourceBookingId = null }) {
+export default function BookingWizard({ onClose, user, isApproved = true, initialAdvisorId = null, initialProjectId = null, sourceBookingId = null }) {
   const [step, setStep] = useState((initialProjectId || sourceBookingId) ? 1 : 0);
   const [isInitializing, setIsInitializing] = useState(!!(initialProjectId || sourceBookingId));
 
@@ -213,11 +213,21 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
               const full = await advisorService.getAdvisorById(opt.advisorId);
               detailMap[opt.advisorId] = full;
             } catch {
-              detailMap[opt.advisorId] = { userName: opt.advisorName };
+              detailMap[opt.advisorId] = { userName: opt.advisorName, status: 'Unknown' };
             }
           })
         );
         setAdvisorDetails(detailMap);
+
+        // Filter options to only include Approved advisors (BR-21 safety)
+        const approvedOptions = finalOptions.filter(opt => {
+          const detail = detailMap[opt.advisorId];
+          if (!detail) return false;
+          const status = detail.status || detail.approvalStatus;
+          return status === 'Approved' || status === 1;
+        });
+        setAdvisorOptions(approvedOptions);
+        setProjectAdvisorsCount(approvedOptions.length);
       } catch (e) {
         setAdvisorsError(e.message || 'Không thể tải danh sách cố vấn.');
       } finally {
@@ -234,10 +244,18 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
       setAdvisorsLoading(true);
       try {
         const full = await advisorService.getAdvisorById(initialAdvisorId);
-        const opt = { advisorId: initialAdvisorId, advisorName: full?.userName || full?.name || '' };
-        setAdvisorOptions([opt]);
-        setAdvisorDetails({ [initialAdvisorId]: full });
-        setSelectedAdvisor(opt);
+        const status = full?.status || full?.approvalStatus;
+        const isApproved = status === 'Approved' || status === 1;
+
+        if (isApproved) {
+          const opt = { advisorId: initialAdvisorId, advisorName: full?.userName || full?.name || '' };
+          setAdvisorOptions([opt]);
+          setAdvisorDetails({ [initialAdvisorId]: full });
+          setSelectedAdvisor(opt);
+        } else {
+          console.warn('[BookingWizard] Pre-selected advisor is not approved');
+          setAdvisorOptions([]);
+        }
       } catch {
         /* ignore */
       } finally {
@@ -387,6 +405,39 @@ export default function BookingWizard({ onClose, user, initialAdvisorId = null, 
     setShowPaymentModal(false);
     onClose();
   }, [onClose]);
+
+  // ── Restricted Access Screen ──────────────────────────────────────────
+  if (!isApproved) {
+    return (
+      <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
+        <div className={styles.modal} style={{ maxWidth: '440px' }}>
+          <div className={styles.header}>
+            <div className={styles.headerLeft}>
+              <h2 className={styles.headerTitle}>Hành động bị hạn chế</h2>
+            </div>
+            <button className={styles.closeBtn} onClick={onClose}>
+              <X size={22} />
+            </button>
+          </div>
+          <div className={styles.body} style={{ padding: '32px 24px', textAlign: 'center' }}>
+            <div style={{ width: '64px', height: '64px', borderRadius: '20px', background: 'rgba(245, 158, 11, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px' }}>
+              <ShieldCheck size={32} weight="fill" color="#f59e0b" />
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: 800, marginBottom: '12px', color: 'var(--text-primary)' }}>Yêu cầu phê duyệt hồ sơ</h3>
+            <p style={{ color: 'var(--text-secondary)', lineHeight: 1.6, fontSize: '15px' }}>
+              Bạn cần được phê duyệt hồ sơ để thực hiện đặt lịch tư vấn. 
+              Vui lòng hoàn thiện hồ sơ và đợi đội ngũ AISEP xác nhận.
+            </p>
+          </div>
+          <div className={styles.footer}>
+            <button className={styles.primaryBtn} onClick={onClose} style={{ width: '100%' }}>
+              Tôi đã hiểu
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // ── Success Screen ─────────────────────────────────────────────────────
   if (isSuccess) {

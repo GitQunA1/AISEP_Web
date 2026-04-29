@@ -54,7 +54,7 @@ const FILTER_OPTIONS = [
     { id: 'Complaint', label: 'Khiếu nại' }
 ];
 
-export default function StartupBookings({ user, targetId, onViewProject, initialFilterStatus, onFilterStatusChange, banner }) {
+export default function StartupBookings({ user, targetId, onViewProject, initialFilterStatus, onFilterStatusChange, banner, isApproved, onRestrictedAction }) {
     const [bookings, setBookings] = useState([]);
     const [userReports, setUserReports] = useState([]);
     const [userReviews, setUserReviews] = useState([]);
@@ -122,6 +122,10 @@ export default function StartupBookings({ user, targetId, onViewProject, initial
     }, [targetId, bookings, hasAttemptedDeepLink]);
 
     const handleOpenChat = async (booking) => {
+        if (!isApproved) {
+            onRestrictedAction?.('Chat với cố vấn');
+            return;
+        }
         setChatLoading(prev => ({ ...prev, [booking.id]: true }));
         try {
             const result = await chatService.createOrGetBookingChat(booking.id);
@@ -141,6 +145,10 @@ export default function StartupBookings({ user, targetId, onViewProject, initial
     };
 
     const handleRebook = (booking) => {
+        if (!isApproved) {
+            onRestrictedAction?.('Đặt lịch tư vấn');
+            return;
+        }
         setRebookData({
             projectId: booking.projectId,
             advisorId: booking.advisorId,
@@ -150,6 +158,10 @@ export default function StartupBookings({ user, targetId, onViewProject, initial
     };
 
     const handleRebookReplacement = (booking) => {
+        if (!isApproved) {
+            onRestrictedAction?.('Đặt lịch tư vấn');
+            return;
+        }
         setRebookData({
             projectId: booking.projectId || booking.project?.projectId,
             advisorId: null,
@@ -158,13 +170,40 @@ export default function StartupBookings({ user, targetId, onViewProject, initial
         setShowBookingWizard(true);
     };
 
+    const handleRate = (booking) => {
+        if (!isApproved) {
+            onRestrictedAction?.('Đánh giá buổi tư vấn');
+            return;
+        }
+        setRateBooking(booking);
+    };
+
     const handleDetailAction = (action, booking) => {
-        if (action === 'pay') setPaymentBooking(booking);
+        if (action === 'pay') {
+            if (!isApproved) {
+                onRestrictedAction?.('Thanh toán buổi tư vấn');
+                return;
+            }
+            setPaymentBooking(booking);
+        }
         if (action === 'chat') handleOpenChat(booking);
         if (action === 'rebook') handleRebookReplacement(booking);
-        if (action === 'complain') setComplainBooking(booking);
+        if (action === 'complain') {
+            if (!isApproved) {
+                onRestrictedAction?.('Khiếu nại buổi tư vấn');
+                return;
+            }
+            setComplainBooking(booking);
+        }
+        if (action === 'review') handleRate(booking);
         if (action === 'viewComplaint') setViewReport(booking); // Here booking is actually the report object
-        if (action === 'report') setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Startup' });
+        if (action === 'report') {
+            if (!isApproved) {
+                onRestrictedAction?.('Phản hồi/Báo cáo buổi tư vấn');
+                return;
+            }
+            setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Startup' });
+        }
         if (action === 'viewProject' && onViewProject) onViewProject(booking.projectId);
     };
 
@@ -442,6 +481,8 @@ export default function StartupBookings({ user, targetId, onViewProject, initial
                         userRole={reportModal.userRole} 
                         advisorName={reportModal.advisorName} 
                         onClose={() => setReportModal(null)} 
+                        isApproved={isApproved}
+                        onRestrictedAction={onRestrictedAction}
                         onDone={(ev) => { 
                             setReportModal(null); 
                             loadBookings(true); 
@@ -449,7 +490,7 @@ export default function StartupBookings({ user, targetId, onViewProject, initial
                             // Automatically trigger rating if approved
                             if (ev?.type === 'approve') {
                                 const b = bookings.find(x => String(x.id || x.bookingId) === String(ev.bookingId));
-                                if (b) setRateBooking(b);
+                                if (b) handleRate(b);
                             }
                         }} 
                     />
@@ -487,6 +528,8 @@ export default function StartupBookings({ user, targetId, onViewProject, initial
                         initialAdvisorId={rebookData.advisorId}
                         sourceBookingId={rebookData.sourceBookingId}
                         user={user}
+                        isApproved={isApproved}
+                        onRestrictedAction={onRestrictedAction}
                         onClose={() => setShowBookingWizard(false)}
                         onSuccess={() => { setShowBookingWizard(false); loadBookings(); }}
                     />

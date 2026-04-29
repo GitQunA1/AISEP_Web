@@ -58,6 +58,24 @@ const adminService = {
   updateFormValidationRule: async (id, payload = {}) => {
     const response = await apiClient.put(`/api/form-validation-rules/${id}`, payload);
     return response;
+  },
+
+  /**
+   * Publish new system terms
+   * POST /api/admin/terms
+   * @param {object} payload - { contentHtml, version }
+   */
+  publishTerms: async (payload) => {
+    return await apiClient.post('/api/admin/terms', payload);
+  },
+
+  /**
+   * Get system terms history
+   * GET /api/admin/terms/history
+   * @param {object} params - page/pageSize/filters/sorts
+   */
+  getTermsHistory: async (params = {}) => {
+    return await apiClient.get('/api/admin/terms/history', { params });
   }
 };
 

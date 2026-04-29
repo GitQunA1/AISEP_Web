@@ -14,7 +14,7 @@ import AuthRequirementScreen from '../common/AuthRequirementScreen';
  * AdvisorDetailView - Enhanced profile view for an Advisor
  * Mirrors the structure of StartupDetail and InvestorDetail
  */
-const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
+const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin, isApproved, onRestrictedAction }) => {
   const [activeTab, setActiveTab] = useState('overview');
 
   // Modal state
@@ -31,6 +31,12 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
 
   const handleOpenBooking = () => {
     if (!canBook) return;
+    
+    if (!isApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ để thực hiện Đặt lịch tư vấn.');
+      return;
+    }
+    
     setShowBookingWizard(true);
   };
 
@@ -62,7 +68,7 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
   const handle = `@${advisor.userName?.toLowerCase().replace(/\s/g, '') || 'advisor'}`;
   const displayName = advisor.userName || advisor.name || 'A';
   const initial = String(displayName).charAt(0).toUpperCase() || 'A';
-  const isApproved = advisor.approvalStatus === 'Approved';
+  const isAdvisorVerified = advisor.approvalStatus === 'Approved' || advisor.approvalStatus === 1;
 
   // Formatting currency/numbers
   const formatSalary = (val) => {
@@ -124,7 +130,7 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
         {/* Name, handle, verified badge */}
         <div className={styles.nameRow}>
           <h1 className={styles.name}>{advisor.userName}</h1>
-          {isApproved && (
+          {isAdvisorVerified && (
             <span className={styles.verifiedChip}>
               <CheckCircle size={14} weight="fill" /> Đã xác minh
             </span>
@@ -304,6 +310,8 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin }) => {
         <BookingWizard
           user={user}
           initialAdvisorId={advisor.advisorId}
+          isApproved={isApproved}
+          onRestrictedAction={onRestrictedAction}
           onClose={() => setShowBookingWizard(false)}
         />
       )}

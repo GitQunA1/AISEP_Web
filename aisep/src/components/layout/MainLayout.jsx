@@ -32,6 +32,7 @@ import subscriptionService from '../../services/subscriptionService';
 import ProfileRequiredModal from '../startup/ProfileRequiredModal';
 import startupProfileService from '../../services/startupProfileService';
 import SuccessModal from '../common/SuccessModal';
+import RestrictedActionModal from '../common/RestrictedActionModal.jsx';
 import StartupProfileBanner from '../startup/StartupProfileBanner';
 import AdvisorProfileBanner from '../advisor/AdvisorProfileBanner';
 
@@ -78,6 +79,14 @@ function MainLayout({
   const [isReturning, setIsReturning] = useState(false);
   const [activeChatSession, setActiveChatSession] = useState(null);
   const [myStartupProfileId, setMyStartupProfileId] = useState(null);
+  const [investorProfileStatus, setInvestorProfileStatus] = useState(null); // 'Pending', 'Approved', 'Rejected', 'Missing' or null
+  const [investorProfile, setInvestorProfile] = useState(null);
+  const [startupProfileStatus, setStartupProfileStatus] = useState(null); // 'Pending', 'Approved', 'Rejected', 'Missing'
+  const [startupProfile, setStartupProfile] = useState(null);
+  const [advisorProfileStatus, setAdvisorProfileStatus] = useState(null);
+  const [advisorProfile, setAdvisorProfile] = useState(null);
+  const [showRestrictedModal, setShowRestrictedModal] = useState(false);
+  const [restrictedActionMessage, setRestrictedActionMessage] = useState('');
 
   const mainContentRef = useRef(null);
   const homeScrollPos = useRef(0);
@@ -88,6 +97,24 @@ function MainLayout({
     advisor: null,
     activeView: activeView
   });
+
+  const isInvestorApproved = investorProfileStatus === 'Approved' || investorProfileStatus === 1 || investorProfile?.status === 'Approved' || investorProfile?.status === 1 || investorProfile?.approvalStatus === 'Approved' || investorProfile?.approvalStatus === 1;
+  const isStartupApproved = startupProfileStatus === 'Approved' || startupProfileStatus === 1 || startupProfile?.status === 'Approved' || startupProfile?.status === 1 || startupProfile?.approvalStatus === 'Approved' || startupProfile?.approvalStatus === 1;
+  const isAdvisorApproved = advisorProfileStatus === 'Approved' || advisorProfileStatus === 1 || advisorProfile?.status === 'Approved' || advisorProfile?.status === 1 || advisorProfile?.approvalStatus === 'Approved' || advisorProfile?.approvalStatus === 1;
+  
+  const isApproved = (() => {
+    const roleStr = user?.role?.toString().toLowerCase() || '';
+    const roleNum = Number(user?.role);
+    if (roleStr === 'startup' || roleNum === 0) return isStartupApproved;
+    if (roleStr === 'investor' || roleNum === 1) return isInvestorApproved;
+    if (roleStr === 'advisor' || roleNum === 2) return isAdvisorApproved;
+    return false;
+  })();
+
+  const showRestrictedActionModal = (message) => {
+    setRestrictedActionMessage(message);
+    setShowRestrictedModal(true);
+  };
 
   // Scroll Management: Persistence & Scroll-to-Top
   useEffect(() => {
@@ -204,12 +231,6 @@ function MainLayout({
   const [sentConnectionIds, setSentConnectionIds] = useState(new Set()); // Cache for connection status
   const [investedProjectIds, setInvestedProjectIds] = useState(new Set()); // Cache for already invested projects
   const [investorsByProject, setInvestorsByProject] = useState(new Map()); // Map: projectId -> array of investor objects (Contract_Signed only)
-  const [investorProfileStatus, setInvestorProfileStatus] = useState(null); // 'Pending', 'Approved', 'Rejected', 'Missing' or null
-  const [investorProfile, setInvestorProfile] = useState(null);
-  const [startupProfileStatus, setStartupProfileStatus] = useState(null); // 'Pending', 'Approved', 'Rejected', 'Missing'
-  const [startupProfile, setStartupProfile] = useState(null);
-  const [advisorProfileStatus, setAdvisorProfileStatus] = useState(null);
-  const [advisorProfile, setAdvisorProfile] = useState(null);
 
   // Refetch invested projects (called after successful investment)
   const refetchInvestedProjects = useCallback(async () => {
@@ -761,6 +782,8 @@ function MainLayout({
               advisor={selectedAdvisor}
               onBack={() => setSelectedAdvisor(null)}
               onShowLogin={onShowLogin}
+              isApproved={isApproved}
+              onRestrictedAction={showRestrictedActionModal}
             />
           ) : (
             <AdvisorsPage
@@ -770,6 +793,8 @@ function MainLayout({
               investorProfileStatus={investorProfileStatus}
               investorProfileReason={investorProfile?.rejectionReason}
               onUpdateProfile={() => onShowDashboard('preferences')}
+              isApproved={isApproved}
+              onRestrictedAction={showRestrictedActionModal}
               onSelectAdvisor={(advisor) => {
                 // Save scroll position
                 const isMobile = window.innerWidth < 1024;
@@ -858,7 +883,9 @@ function MainLayout({
             user={user}
             isPaidUser={isPaidUser}
             onShowLogin={onShowLogin}
-            isInvestorApproved={investorProfileStatus === 'Approved'}
+            isInvestorApproved={isInvestorApproved}
+            isStartupApproved={isStartupApproved}
+            onRestrictedAction={showRestrictedActionModal}
             isFullView={(() => {
               const roleStr = user?.role?.toString().toLowerCase() || '';
               const roleNum = Number(user?.role);
@@ -949,7 +976,8 @@ function MainLayout({
                       investedProjectIds={investedProjectIds}
                       investors={investorsByProject.get(startup.id) || []}
                       onInvestmentSuccess={refetchInvestedProjects}
-                      isInvestorApproved={investorProfileStatus === 'Approved'}
+                      isInvestorApproved={isInvestorApproved}
+                      onRestrictedAction={showRestrictedActionModal}
                       myStartupProfileId={myStartupProfileId}
                       isReturning={isReturning}
                       onViewProfile={(id, type = 'startup') => {
@@ -1026,6 +1054,16 @@ function MainLayout({
             onShowDashboard?.();
           }}
           user={user}
+          isApproved={isStartupApproved}
+          onRestrictedAction={showRestrictedActionModal}
+        />
+      )}
+
+      {showRestrictedModal && (
+        <RestrictedActionModal
+          isOpen={showRestrictedModal}
+          onClose={() => setShowRestrictedModal(false)}
+          message={restrictedActionMessage}
         />
       )}
 

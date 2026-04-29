@@ -27,6 +27,7 @@ import AdvisorWalletSection from '../components/advisor/AdvisorWalletSection';
 import AccountProfileTab from '../components/common/AccountProfileTab';
 import BookingRejectionModal from '../components/booking/BookingRejectionModal';
 import UserReportStatusModal from '../components/booking/UserReportStatusModal';
+import RestrictedActionModal from '../components/common/RestrictedActionModal';
 
 
 /**
@@ -36,6 +37,15 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
     const [activeSection, setActiveSection] = useState(initialSection);
     const [advisorProfile, setAdvisorProfile] = useState(null);
     const [activeChatSession, setActiveChatSession] = useState(null);
+    const [showRestrictedModal, setShowRestrictedModal] = useState(false);
+    const [restrictedActionMessage, setRestrictedActionMessage] = useState('');
+
+    const isApproved = advisorProfile?.status === 'Approved' || advisorProfile?.approvalStatus === 'Approved' || advisorProfile?.status === 1 || advisorProfile?.approvalStatus === 1;
+
+    const showRestrictedActionModal = (message) => {
+        setRestrictedActionMessage(message);
+        setShowRestrictedModal(true);
+    };
 
     const handleOpenChat = (sessionId) => {
         console.log('[AdvisorDashboard] Opening chat session:', sessionId);
@@ -140,6 +150,16 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
 
     const advisorId = advisorProfile?.advisorId;
 
+    // ── Actions Guards ──────────────────────────────────────────────────────
+    const checkAccess = (actionName) => {
+        if (!isApproved) {
+            showRestrictedActionModal(`Bạn cần được phê duyệt hồ sơ Cố vấn để thực hiện hành động: ${actionName}. Vui lòng kiểm tra trạng thái hồ sơ của bạn.`);
+            return false;
+        }
+        return true;
+    };
+
+
     // ── Stats từ real data ─────────────────────────────────────────────────
 
     const loadAvailabilities = useCallback(async () => {
@@ -226,7 +246,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
         'payouts': "Lịch sử giao dịch và yêu cầu rút tiền.",
         'reports': "Xem lại các báo cáo sau mỗi buổi tư vấn.",
         'discovery': "Tìm kiếm và kết nối với các dự án startup tiềm năng.",
-        'news': "Cập nhật tin tức mới nhất từ nền tảng.",
+        'pr_news': "Cập nhật tin tức mới nhất từ nền tảng.",
         'investors': "Danh sách các nhà đầu tư trên hệ thống."
     };
 
@@ -296,19 +316,9 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                     <DiscoveryHub 
                         user={user} 
                         onNotificationNavigate={handleNavigate}
-                        banner={showBanner ? (
-                            <AdvisorProfileBanner
-                                status={advisorProfile?.status}
-                                approvalStatus={advisorProfile?.approvalStatus}
-                                onRedirect={() => handleNavigate('profile')}
-                            />
-                        ) : null}
-                    />
-                )}
-                {activeSection === 'news' && (
-                    <PRHubPage 
-                        user={user} 
-                        onNotificationNavigate={handleNavigate}
+                        onSelectStartup={(id) => handleNavigate(`project_${id}`)}
+                        isInvestorApproved={isApproved}
+                        onRestrictedAction={showRestrictedActionModal}
                         banner={showBanner ? (
                             <AdvisorProfileBanner
                                 status={advisorProfile?.status}
@@ -323,6 +333,8 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                         user={user} 
                         role="investor" 
                         onNotificationNavigate={handleNavigate}
+                        isApproved={isApproved}
+                        onRestrictedAction={showRestrictedActionModal}
                         startupBanner={showBanner ? (
                             <AdvisorProfileBanner
                                 status={advisorProfile?.status}
@@ -332,6 +344,20 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                         ) : null}
                     />
                 )}
+                {activeSection === 'pr_news' && (
+                    <NewsPRSection 
+                        user={user} 
+                        onNotificationNavigate={handleNavigate}
+                        startupBanner={showBanner ? (
+                            <AdvisorProfileBanner
+                                status={advisorProfile?.status}
+                                approvalStatus={advisorProfile?.approvalStatus}
+                                onRedirect={() => handleNavigate('profile')}
+                            />
+                        ) : null}
+                    />
+                )}
+
                 {activeSection === 'profile' && (
                     <AdvisorProfilePage 
                         user={user} 
@@ -369,6 +395,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                         />
                     )
                 )}
+
                 {activeSection === 'approve_bookings' && (
                     !advisorProfile ? (
                         <div className={styles.emptyState} style={{ padding: '40px' }}>
@@ -376,9 +403,19 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                             <p>Bạn cần hoàn tất hồ sơ trước khi xét duyệt các yêu cầu.</p>
                         </div>
                     ) : (
-                        <BookingApprovalSection bookings={incomingBookings} targetId={targetId} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} onNavigate={handleNavigate} />
+                        <BookingApprovalSection 
+                            bookings={incomingBookings.filter(b => b.status === 0 || b.status === 'Pending')} 
+                            targetId={targetId} 
+                            loading={bookingsLoading} 
+                            onRefresh={loadIncomingBookings} 
+                            user={user} 
+                            onNavigate={handleNavigate}
+                            isApproved={isApproved}
+                            onRestrictedAction={showRestrictedActionModal}
+                        />
                     )
                 )}
+
                 {activeSection === 'bookings' && (
                     !advisorProfile ? (
                         <div className={styles.emptyState} style={{ padding: '40px' }}>
@@ -386,9 +423,21 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                             <p>Bạn cần hoàn tất hồ sơ trước khi xem danh sách Booking.</p>
                         </div>
                     ) : (
-                        <IncomingBookingsSection bookings={incomingBookings} targetId={targetId} loading={bookingsLoading} onRefresh={loadIncomingBookings} user={user} activeSection={activeSection} onNavigate={handleNavigate} />
+                        <IncomingBookingsSection 
+                            bookings={incomingBookings} 
+                            userReports={userReportsReported}
+                            targetId={targetId} 
+                            loading={bookingsLoading} 
+                            onRefresh={loadIncomingBookings} 
+                            user={user} 
+                            activeSection={activeSection} 
+                            onNavigate={handleNavigate}
+                            isApproved={isApproved}
+                            onRestrictedAction={showRestrictedActionModal}
+                        />
                     )
                 )}
+
                 {activeSection === 'availability' && (
                     !advisorProfile ? (
                         <div className={styles.emptyState} style={{ padding: '40px' }}>
@@ -396,34 +445,15 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                             <p>Bạn cần hoàn tất hồ sơ trước khi quản lý lịch rảnh.</p>
                         </div>
                     ) : (
-                        <AvailabilitySection availabilities={availabilities} loading={availabilitiesLoading} onRefresh={loadAvailabilities} />
+                        <AvailabilitySection 
+                            availabilities={availabilities} 
+                            loading={availabilitiesLoading} 
+                            onRefresh={loadAvailabilities}
+                            isApproved={isApproved}
+                            checkAccess={checkAccess}
+                        />
                     )
                 )}
-                {activeSection === 'reports' && (
-                    !advisorProfile ? (
-                        <div className={styles.emptyState} style={{ padding: '40px' }}>
-                            <AlertCircle size={40} />
-                            <p>Bạn cần hoàn tất hồ sơ trước khi xem báo cáo tư vấn.</p>
-                        </div>
-                    ) : (
-                        <ReportsSection />
-                    )
-                )}
-
-                {activeSection === 'pr_news' && (
-                    <NewsPRSection 
-                        user={user} 
-                        onNotificationNavigate={onNotificationNavigate} 
-                        startupBanner={showBanner ? (
-                            <AdvisorProfileBanner
-                                status={advisorProfile?.status}
-                                approvalStatus={advisorProfile?.approvalStatus}
-                                onRedirect={() => handleNavigate('profile')}
-                            />
-                        ) : null}
-                    />
-                )}
-
 
                 {activeSection === 'payouts' && (
                     !advisorProfile ? (
@@ -432,18 +462,49 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                             <p>Bạn cần hoàn tất hồ sơ trước khi quản lý thanh toán.</p>
                         </div>
                     ) : (
-                        <AdvisorPayoutSection user={user} />
+                        <AdvisorPayoutSection 
+                            user={user} 
+                            isApproved={isApproved}
+                            onRestrictedAction={showRestrictedActionModal}
+                        />
                     )
                 )}
+
                 {activeSection === 'wallet' && (
                     <AdvisorWalletSection user={user} />
                 )}
+
+                {activeSection === 'profile' && (
+                    <AccountProfileTab 
+                        user={user} 
+                        onLogout={onLogout} 
+                        banner={
+                            <AdvisorProfileBanner
+                                status={advisorProfile?.status}
+                                approvalStatus={advisorProfile?.approvalStatus}
+                                onRedirect={() => handleNavigate('profile')}
+                            />
+                        }
+                    />
+                )}
+
+                {activeSection === 'discovery' && (
+                    <DiscoveryHub 
+                        user={user} 
+                        onSelectStartup={(id) => handleNavigate(`project_${id}`)} 
+                        isInvestorApproved={isApproved}
+                        onRestrictedAction={showRestrictedActionModal}
+                    />
+                )}
+
                 {activeSection.startsWith('project_') && (
                     <ProjectDetailView
                         projectId={activeSection.split('_')[1]}
                         onBack={() => handleNavigate('bookings')}
                         user={user}
                         isFullView={true}
+                        isInvestorApproved={isApproved}
+                        onRestrictedAction={showRestrictedActionModal}
                     />
                 )}
                 {activeChatSession && (
@@ -454,6 +515,14 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                     />
                 )}
             </div>
+
+            {showRestrictedModal && (
+                <RestrictedActionModal
+                    isOpen={showRestrictedModal}
+                    onClose={() => setShowRestrictedModal(false)}
+                    message={restrictedActionMessage}
+                />
+            )}
         </div>
     );
 }
@@ -1025,6 +1094,10 @@ function IncomingBookingsSection({ bookings, userReports = [], targetId, loading
     });
 
     const handleApprove = async (bookingId) => {
+        if (!isApproved) {
+            onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Cố vấn để chấp nhận yêu cầu tư vấn.');
+            return;
+        }
         setActionLoading(prev => ({ ...prev, [bookingId]: 'approve' }));
         try {
             await bookingService.approveBooking(bookingId);
@@ -1037,6 +1110,10 @@ function IncomingBookingsSection({ bookings, userReports = [], targetId, loading
     };
 
     const handleRejectClick = (booking) => {
+        if (!isApproved) {
+            onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Cố vấn để từ chối yêu cầu tư vấn.');
+            return;
+        }
         setRejectingBooking(booking);
         setShowRejectionModal(true);
     };
@@ -1228,6 +1305,8 @@ function IncomingBookingsSection({ bookings, userReports = [], targetId, loading
                     advisorName={reportModal.advisorName}
                     onClose={() => setReportModal(null)}
                     onDone={() => { setReportModal(null); onRefresh(); }}
+                    isApproved={isApproved}
+                    onRestrictedAction={onRestrictedAction}
                 />
             )}
 
@@ -1323,6 +1402,7 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
     };
 
     const handleOpenAddSlot = () => {
+        if (!checkAccess('Thêm lịch rảnh')) return;
         setModalDate(selectedDate);
         setModalMonth(new Date(currentMonth));
         setShowAddSlotModal(true);
@@ -1369,6 +1449,7 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
 
     const handleDelete = async (slotId, isBooked) => {
         if (isBooked) return;
+        if (!checkAccess('Xóa lịch rảnh')) return;
         setDeletingId(slotId);
         setDeleteError(null);
         try {

@@ -2,19 +2,24 @@ import React, { useState } from 'react';
 import { Eye, EyeOff, Loader, ChevronLeft } from 'lucide-react';
 import styles from './RegistrationUnique.module.css';
 import authService from '../../services/authService';
+import TermsModal from '../common/TermsModal';
+import { ShieldCheck } from 'lucide-react';
 
 /**
  * StartupRegisterForm - Simplified credential collection
  * Only collects: Full Name, Email, Password
  */
-function StartupRegisterForm({ onBack, onComplete }) {
+function StartupRegisterForm({ onBack, onComplete, termsData, onFetchTerms }) {
   const [formData, setFormData] = useState({
     fullName: '',
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
+    isTermsAccepted: false,
   });
+
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
@@ -80,6 +85,8 @@ function StartupRegisterForm({ onBack, onComplete }) {
         fullName: formData.fullName,
         username: formData.username,
         role: 0, // UserRole.Startup = 0
+        isTermsAccepted: formData.isTermsAccepted,
+        termsVersion: termsData?.version || 'v1.0'
       });
 
       // apiClient interceptor returns the ApiResponse wrapper: { success, message, data }
@@ -101,7 +108,8 @@ function StartupRegisterForm({ onBack, onComplete }) {
     formData.username.trim() &&
     formData.email.trim() &&
     formData.password.length >= 8 &&
-    formData.password === formData.confirmPassword;
+    formData.password === formData.confirmPassword &&
+    formData.isTermsAccepted;
 
   return (
     <div className={styles.reg_formCard}>
@@ -256,6 +264,34 @@ function StartupRegisterForm({ onBack, onComplete }) {
               {errors.confirmPassword && <p className={styles.reg_errorText}>{errors.confirmPassword}</p>}
             </div>
 
+            {/* Terms and Conditions */}
+            <div className={styles.reg_formGroup} style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                <input
+                  id="isTermsAccepted"
+                  name="isTermsAccepted"
+                  type="checkbox"
+                  checked={formData.isTermsAccepted}
+                  onChange={(e) => setFormData(prev => ({ ...prev, isTermsAccepted: e.target.checked }))}
+                  style={{ marginTop: '4px', cursor: 'pointer' }}
+                  disabled={isLoading}
+                />
+                <label htmlFor="isTermsAccepted" className={styles.reg_label} style={{ fontSize: '14px', cursor: 'pointer' }}>
+                  Tôi đồng ý với <button 
+                    type="button" 
+                    onClick={() => {
+                      onFetchTerms && onFetchTerms();
+                      setShowTermsModal(true);
+                    }}
+                    style={{ background: 'none', border: 'none', color: 'var(--primary-blue)', padding: 0, font: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Điều khoản sử dụng
+                  </button>
+                  <span className={styles.reg_required}> *</span>
+                </label>
+              </div>
+            </div>
+
             {/* Submit Error */}
             {errors.submit && (
               <div className={styles.reg_submitError}>
@@ -286,6 +322,15 @@ function StartupRegisterForm({ onBack, onComplete }) {
           )}
         </button>
       </div>
+
+      <TermsModal 
+        isOpen={showTermsModal} 
+        onClose={() => setShowTermsModal(false)}
+        termsContent={termsData?.content}
+        termsVersion={termsData?.version}
+        error={termsData?.error}
+        isLoading={termsData?.isLoading}
+      />
     </div>
   );
 }

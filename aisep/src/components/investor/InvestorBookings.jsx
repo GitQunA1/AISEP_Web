@@ -45,7 +45,7 @@ const formatTimeUTC = (dateStr) => {
            d.getUTCMinutes().toString().padStart(2, '0');
 };
 
-export default function InvestorBookings({ user, targetId, onViewProject, initialFilterStatus, onFilterStatusChange, onUpdateProfile }) {
+export default function InvestorBookings({ user, targetId, onViewProject, initialFilterStatus, onFilterStatusChange, onUpdateProfile, isApproved, onRestrictedAction }) {
     const [bookings, setBookings] = useState([]);
     const [userReports, setUserReports] = useState([]);
     const [userReviews, setUserReviews] = useState([]);
@@ -151,6 +151,10 @@ export default function InvestorBookings({ user, targetId, onViewProject, initia
     }, [user?.userId]);
 
     const handleOpenChat = async (booking) => {
+        if (!isApproved) {
+            onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để sử dụng tính năng Chat.');
+            return;
+        }
         setChatLoading(prev => ({ ...prev, [booking.id]: true }));
         try {
             const result = await chatService.createOrGetBookingChat(booking.id);
@@ -170,6 +174,10 @@ export default function InvestorBookings({ user, targetId, onViewProject, initia
     };
 
     const handleRebook = (booking) => {
+        if (!isApproved) {
+            onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để thực hiện Đặt lịch lại.');
+            return;
+        }
         setRebookData({
             projectId: booking.projectId,
             advisorId: booking.advisorId,
@@ -179,6 +187,10 @@ export default function InvestorBookings({ user, targetId, onViewProject, initia
     };
 
     const handleRebookReplacement = (booking) => {
+        if (!isApproved) {
+            onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để thực hiện Đặt lịch lại.');
+            return;
+        }
         setRebookData({
             projectId: booking.projectId || booking.project?.projectId,
             advisorId: null,
@@ -188,12 +200,30 @@ export default function InvestorBookings({ user, targetId, onViewProject, initia
     };
 
     const handleDetailAction = (action, booking) => {
-        if (action === 'pay') setPaymentBooking(booking);
+        if (action === 'pay') {
+            if (!isApproved) {
+                onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để thực hiện Thanh toán.');
+                return;
+            }
+            setPaymentBooking(booking);
+        }
         if (action === 'chat') handleOpenChat(booking);
         if (action === 'rebook') handleRebookReplacement(booking);
-        if (action === 'complain') setComplainBooking(booking);
+        if (action === 'complain') {
+            if (!isApproved) {
+                onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để gửi Khiếu nại.');
+                return;
+            }
+            setComplainBooking(booking);
+        }
         if (action === 'viewComplaint') setViewReport(booking); // Booking here is the report object
-        if (action === 'report') setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Investor' });
+        if (action === 'report') {
+            if (!isApproved) {
+                onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để thực hiện báo cáo.');
+                return;
+            }
+            setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Investor' });
+        }
         if (action === 'viewProject' && onViewProject) onViewProject(booking.projectId);
     };
 
@@ -390,7 +420,13 @@ export default function InvestorBookings({ user, targetId, onViewProject, initia
                                             </button>
 
                                             {(booking.status === 1 || booking.status === 'ApprovedAwaitingPayment') && (
-                                                <button className={`${styles.xActionButton} ${styles.xActionSuccess}`} onClick={() => setPaymentBooking(booking)}>
+                                                <button className={`${styles.xActionButton} ${styles.xActionSuccess}`} onClick={() => {
+                                                    if (!isApproved) {
+                                                        onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để thực hiện Thanh toán.');
+                                                        return;
+                                                    }
+                                                    setPaymentBooking(booking);
+                                                }}>
                                                     <CreditCard size={14} /> Thanh toán
                                                 </button>
                                             )}
@@ -410,7 +446,13 @@ export default function InvestorBookings({ user, targetId, onViewProject, initia
                                             )}
 
                                             {(booking.status === 2 || booking.status === 'Confirmed' || booking.status === 3 || booking.status === 'Completed') && (
-                                                <button className={styles.xActionButton} onClick={() => setReportModal({ bookingId: (booking.id || booking.bookingId), advisorName: booking.advisorName, userRole: 'Investor' })}>
+                                                <button className={styles.xActionButton} onClick={() => {
+                                                    if (!isApproved) {
+                                                        onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để thực hiện báo cáo.');
+                                                        return;
+                                                    }
+                                                    setReportModal({ bookingId: (booking.id || booking.bookingId), advisorName: booking.advisorName, userRole: 'Investor' });
+                                                }}>
                                                     <FileText size={14} /> Báo cáo
                                                 </button>
                                             )}
@@ -432,7 +474,13 @@ export default function InvestorBookings({ user, targetId, onViewProject, initia
                                                     return (
                                                         <button 
                                                             className={`${styles.xActionButton} ${styles.xActionDanger}`} 
-                                                            onClick={() => setComplainBooking(booking)} 
+                                                            onClick={() => {
+                                                                if (!isApproved) {
+                                                                    onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để gửi Khiếu nại.');
+                                                                    return;
+                                                                }
+                                                                setComplainBooking(booking);
+                                                            }} 
                                                             style={{ color: '#f4212e' }}
                                                         >
                                                             <WarningCircle size={14} /> Khiếu nại
@@ -449,7 +497,13 @@ export default function InvestorBookings({ user, targetId, onViewProject, initia
                                                         return (
                                                             <button 
                                                                 className={`${styles.xActionButton} ${styles.xActionSuccess}`} 
-                                                                onClick={() => setRateBooking(booking)}
+                                                                onClick={() => {
+                                                                    if (!isApproved) {
+                                                                        onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để thực hiện Đánh giá.');
+                                                                        return;
+                                                                    }
+                                                                    setRateBooking(booking);
+                                                                }}
                                                                 style={{ background: 'rgba(23, 191, 99, 0.05)', color: '#17bf63', borderColor: 'rgba(23, 191, 99, 0.2)' }}
                                                             >
                                                                 <Star size={14} weight="fill" /> Đánh giá
@@ -469,7 +523,13 @@ export default function InvestorBookings({ user, targetId, onViewProject, initia
                                             )}
 
                                             {[4, 6, 7, 'ComplaintAccepted', 'Cancel', 'NoResponse'].includes(booking.status) && (
-                                                <button className={`${styles.xActionButton} ${styles.xActionPrimary}`} onClick={() => handleRebookReplacement(booking)}>
+                                                <button className={`${styles.xActionButton} ${styles.xActionPrimary}`} onClick={() => {
+                                                    if (!isApproved) {
+                                                        onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để thực hiện Đặt lại.');
+                                                        return;
+                                                    }
+                                                    handleRebookReplacement(booking);
+                                                }}>
                                                     <ArrowsClockwise size={14} /> Đặt lại
                                                 </button>
                                             )}
@@ -488,6 +548,8 @@ export default function InvestorBookings({ user, targetId, onViewProject, initia
                         userRole={reportModal.userRole}
                         advisorName={reportModal.advisorName}
                         onClose={() => setReportModal(null)}
+                        isApproved={isApproved}
+                        onRestrictedAction={onRestrictedAction}
                         onDone={(ev) => { 
                             setReportModal(null); 
                             loadBookings(true); 
@@ -547,6 +609,8 @@ export default function InvestorBookings({ user, targetId, onViewProject, initia
                         initialAdvisorId={rebookData.advisorId}
                         sourceBookingId={rebookData.sourceBookingId}
                         user={user}
+                        isApproved={isApproved}
+                        onRestrictedAction={onRestrictedAction}
                         onClose={() => setShowBookingWizard(false)}
                         onSuccess={() => {
                             setShowBookingWizard(false);

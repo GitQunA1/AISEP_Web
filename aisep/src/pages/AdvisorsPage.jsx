@@ -10,7 +10,7 @@ import InvestorStatusBanner from '../components/common/InvestorStatusBanner';
 import Avatar from '../components/common/Avatar';
 import styles from './AdvisorsPage.module.css';
 
-export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin, investorProfileStatus, investorProfileReason, onUpdateProfile, onNotificationNavigate, startupBanner }) {
+export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin, investorProfileStatus, investorProfileReason, onUpdateProfile, onNotificationNavigate, startupBanner, isApproved, onRestrictedAction }) {
     const [advisors, setAdvisors] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
@@ -81,13 +81,20 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin, inves
 
         const matchesRating = (advisor.rating || 0) >= filters.minRating;
         const matchesRate = (advisor.hourlyRate || 0) <= filters.maxRate;
+        const isApprovedAdvisor = advisor.approvalStatus === 'Approved' || advisor.approvalStatus === 1;
 
-        return matchesSearch && matchesExpertise && matchesLocation && matchesRating && matchesRate;
+        return matchesSearch && matchesExpertise && matchesLocation && matchesRating && matchesRate && isApprovedAdvisor;
     });
 
     const handleOpenBookingWizard = (advisor) => {
         if (!user) { onShowLogin?.(); return; }
         if (!canBook) return;
+        
+        if (!isApproved) {
+            onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ để thực hiện Đặt lịch tư vấn.');
+            return;
+        }
+
         setWizardInitialAdvisorId(advisor.advisorId);
         setShowBookingWizard(true);
     };
@@ -272,6 +279,8 @@ export default function AdvisorsPage({ user, onSelectAdvisor, onShowLogin, inves
                 <BookingWizard
                     user={user}
                     initialAdvisorId={wizardInitialAdvisorId}
+                    isApproved={isApproved}
+                    onRestrictedAction={onRestrictedAction}
                     onClose={() => {
                         setShowBookingWizard(false);
                         setWizardInitialAdvisorId(null);

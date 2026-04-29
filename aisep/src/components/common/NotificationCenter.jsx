@@ -14,6 +14,7 @@ const NotificationCenter = ({ onOpenChat, onNavigate }) => {
   const [loadingIds, setLoadingIds] = useState(new Set());
   const [errorIds, setErrorIds] = useState(new Set());
   const signalRSubscribed = useRef(false);
+  const containerRef = useRef(null);
 
   // Load notifications on mount and setup SignalR
   useEffect(() => {
@@ -38,6 +39,28 @@ const NotificationCenter = ({ onOpenChat, onNavigate }) => {
       signalRSubscribed.current = false;
     };
   }, []);
+
+  // Handle click outside to close
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (containerRef.current && !containerRef.current.contains(event.target)) {
+        if (isOpen && !isClosing) {
+          setIsClosing(true);
+          setTimeout(() => {
+            setIsOpen(false);
+            setIsClosing(false);
+          }, 250);
+        }
+      }
+    };
+
+    if (isOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isOpen, isClosing]);
 
   // Safety net: if unread-count endpoint returns a wrong shape,
   // derive count from loaded notifications so badge still shows.
@@ -236,7 +259,7 @@ const NotificationCenter = ({ onOpenChat, onNavigate }) => {
   };
 
   return (
-    <div className={styles.notificationCenter}>
+    <div className={styles.notificationCenter} ref={containerRef}>
       <button
         className={styles.bellButton}
         onClick={togglePanel}

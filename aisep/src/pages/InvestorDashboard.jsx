@@ -15,12 +15,14 @@ import notificationService from '../services/notificationService';
 import AIEvaluationService from '../services/AIEvaluationService';
 import projectSubmissionService from '../services/projectSubmissionService';
 import SuccessModal from '../components/common/SuccessModal';
+import RestrictedActionModal from '../components/common/RestrictedActionModal';
 import InvestorStatusBanner from '../components/common/InvestorStatusBanner';
 import apiDebug from '../utils/apiDebug';
 import { apiClient } from '../services/apiClient';
 import enumService from '../services/enumService';
 import investorService from '../services/investorService';
 import validationService from '../services/validationService';
+import optionService from '../services/optionService';
 import blockchainOwnershipService from '../services/blockchainOwnershipService';
 import BlockchainOwnershipModal from '../components/common/BlockchainOwnershipModal';
 import AccountProfileTab from '../components/common/AccountProfileTab';
@@ -146,6 +148,24 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const [showAIReportModal, setShowAIReportModal] = useState(false);
     const [selectedAIReport, setSelectedAIReport] = useState(null);
 
+    const [showRestrictedModal, setShowRestrictedModal] = useState(false);
+    const [restrictedActionMessage, setRestrictedActionMessage] = useState('');
+
+    const isApproved = investorProfile?.status === 'Approved' || investorProfile?.approvalStatus === 'Approved' || investorProfile?.status === 1 || investorProfile?.approvalStatus === 1;
+
+    const showRestrictedActionModal = (message) => {
+        setRestrictedActionMessage(message);
+        setShowRestrictedModal(true);
+    };
+
+    const checkAccess = (actionName) => {
+        if (!isApproved) {
+            showRestrictedActionModal(`Bạn cần được phê duyệt hồ sơ Nhà đầu tư để thực hiện hành động: ${actionName}.`);
+            return false;
+        }
+        return true;
+    };
+
     // --- Deep Linking Enforcement ---
     React.useEffect(() => {
         if (!targetId || hasAttemptedDeepLink) return;
@@ -222,31 +242,8 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const [subscription, setSubscription] = useState(null);
     const [currentPackage, setCurrentPackage] = useState(null);
 
-    // Industry mapping for Vietnamese labels
-    const INDUSTRY_MAP = {
-        'Fintech': 'Fintech',
-        'Edtech': 'Edtech',
-        'Healthtech': 'Công nghệ Y tế',
-        'Agritech': 'Nông nghiệp công nghệ cao',
-        'E_Commerce': 'Thương mại điện tử',
-        'Logistics': 'Logistics & Vận tải',
-        'Proptech': 'Bất động sản công nghệ',
-        'Cleantech': 'Công nghệ Sạch',
-        'SaaS': 'Phần mềm (SaaS)',
-        'AI_BigData': 'AI & Big Data',
-        'Web3_Crypto': 'Web3 & Crypto',
-        'Food_Beverage': 'Thực phẩm & Đồ uống',
-        'Manufacturing': 'Sản xuất',
-        'Media_Entertainment': 'Truyền thông & Giải trí',
-        'Other': 'Khác'
-    };
-
-    const stageOptions = [
-        { value: 'Idea', label: 'Ý tưởng' },
-        { value: 'MVP', label: 'MVP' },
-        { value: 'Growth', label: 'Phát triển' }
-    ];
-
+    const [availableStages, setAvailableStages] = useState([]);
+    
     // Mapping helpers for API strings <-> UI integers
     const RISK_TOLERANCE_MAP = {
         'Low': 0, 'Medium': 1, 'High': 2,
@@ -392,19 +389,24 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             try {
                 console.log('[InvestorDashboard] Starting fetch of all data (First load:', isFirstLoad.current, ')');
 
-                const [followingRes, connectRes, dealsRes, profileRes, aiReportsRes, allProjectsRes, industriesRes, notificationsRes] = await Promise.all([
+                const [followingRes, connectRes, dealsRes, profileRes, aiReportsRes, allProjectsRes, industriesRes, stagesRes, notificationsRes] = await Promise.all([
                     followerService.getMyFollowing().catch(err => null),
                     connectionService.getMyConnectionRequests().catch(err => null),
                     dealsService.getInvestorDeals({ pageSize: 100 }).catch(err => null),
                     investorService.getMyProfile().catch(err => null),
                     AIEvaluationService.getAllInvestorAnalyses({ pageSize: 100 }).catch(err => null),
                     projectSubmissionService.getAllProjects().catch(err => null),
-                    enumService.getEnumOptions('Industry').catch(err => []),
+                    optionService.getIndustries().catch(err => []),
+                    optionService.getStages().catch(err => []),
                     notificationService.getNotifications({ pageSize: 100 }).catch(err => null)
                 ]);
 
                 if (industriesRes && industriesRes.length > 0) {
                     setAvailableIndustries(industriesRes);
+                }
+                
+                if (stagesRes && stagesRes.length > 0) {
+                    setAvailableStages(stagesRes);
                 }
 
                 // Fetch Validation Rules
@@ -733,6 +735,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
     const handleSignContract = async () => {
         if (!contractDealData) return;
+        if (!checkAccess('Ký kết hợp đồng')) return;
 
         console.log('[InvestorDashboard] handleSignContract called');
         console.log('[InvestorDashboard] Current signFormData:', signFormData);
@@ -917,6 +920,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         walletAddress: 'walletAddress',
         investmentAmount: 'investmentAmount',
         investmentRegion: 'investmentRegion',
+        investmentTaste: 'investmentTaste',
         previousInvestments: 'previousInvestments',
         riskTolerance: 'riskTolerance',
         focusIndustry: 'industryOptionIds',
@@ -1170,6 +1174,8 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     // Handle re-analyze click from AI modal
     const handleReanalyzeClick = () => {
         if (!selectedAIReport) return;
+        if (!checkAccess('Tái phân tích AI')) return;
+        
         setPendingReanalyzeProjectId(selectedAIReport.projectId);
         fetchQuotaData().then(() => {
             setShowAIReportModal(false);
@@ -1947,6 +1953,8 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                             targetId={targetId} 
                             onViewProject={onViewProject}
                             onUpdateProfile={() => setActiveSection('preferences')}
+                            isApproved={isApproved}
+                            onRestrictedAction={showRestrictedActionModal}
                         />
                     </div>
                 )}
@@ -2242,22 +2250,47 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                 <Mail size={14} />
                                                 <span>{user?.email || 'Không có email'}</span>
                                             </div>
-                                            <div
-                                                style={{
-                                                    display: 'inline-flex',
-                                                    alignItems: 'center',
-                                                    gap: '6px',
-                                                    padding: '6px 10px',
-                                                    borderRadius: '999px',
-                                                    fontSize: '12px',
-                                                    fontWeight: '700',
-                                                    backgroundColor: investorProfile?.status === 'Approved' ? 'rgba(16,185,129,0.14)' : 'rgba(245,158,11,0.14)',
-                                                    color: investorProfile?.status === 'Approved' ? '#10b981' : '#f59e0b'
-                                                }}
-                                            >
-                                                <CheckCircle size={12} />
-                                                {investorProfile?.status || 'Pending'}
-                                            </div>
+                                            {investorProfile ? (
+                                                <div
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        padding: '6px 10px',
+                                                        borderRadius: '999px',
+                                                        fontSize: '12px',
+                                                        fontWeight: '700',
+                                                        backgroundColor: investorProfile.status === 'Approved' ? 'rgba(16,185,129,0.14)' : 
+                                                                         investorProfile.status === 'Rejected' ? 'rgba(239, 68, 68, 0.14)' : 
+                                                                         'rgba(245,158,11,0.14)',
+                                                        color: investorProfile.status === 'Approved' ? '#10b981' : 
+                                                               investorProfile.status === 'Rejected' ? '#ef4444' : 
+                                                               '#f59e0b'
+                                                    }}
+                                                >
+                                                    <CheckCircle size={12} />
+                                                    {investorProfile.status === 'Approved' ? 'Đã phê duyệt' : 
+                                                     investorProfile.status === 'Rejected' ? 'Bị từ chối' : 
+                                                     'Đang chờ duyệt'}
+                                                </div>
+                                            ) : (
+                                                <div
+                                                    style={{
+                                                        display: 'inline-flex',
+                                                        alignItems: 'center',
+                                                        gap: '6px',
+                                                        padding: '6px 10px',
+                                                        borderRadius: '999px',
+                                                        fontSize: '12px',
+                                                        fontWeight: '700',
+                                                        backgroundColor: 'rgba(100, 116, 139, 0.14)',
+                                                        color: '#64748b'
+                                                    }}
+                                                >
+                                                    <AlertCircle size={12} />
+                                                    Chưa tạo hồ sơ
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div>
@@ -2441,11 +2474,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                     preferredStage: parseInt(e.target.value)
                                                 });
                                             }}
-                                            options={[
-                                                { label: 'Ý tưởng (Idea)', value: 0 },
-                                                { label: 'Sản phẩm khả thi (MVP)', value: 1 },
-                                                { label: 'Tăng trưởng (Growth)', value: 2 }
-                                            ]}
+                                            options={availableStages.map(opt => ({
+                                                label: opt.label,
+                                                value: opt.value
+                                            }))}
                                         />
                                     </div>
 

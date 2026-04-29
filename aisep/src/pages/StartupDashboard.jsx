@@ -39,6 +39,7 @@ import SubscriptionManagement from '../components/subscription/SubscriptionManag
 import subscriptionService from '../services/subscriptionService';
 import paymentService from '../services/paymentService';
 import AIAnalyzeConfirmationModal from '../components/common/AIAnalyzeConfirmationModal';
+import RestrictedActionModal from '../components/common/RestrictedActionModal';
 
 
 /**
@@ -84,6 +85,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     // Refs for scroll tracking
     const tabsRef = React.useRef(null);
     const [indicatorStyle, setIndicatorStyle] = React.useState({ transform: 'translateX(0)', width: '0px' });
+    const [showRestrictedModal, setShowRestrictedModal] = React.useState(false);
+    const [restrictedActionMessage, setRestrictedActionMessage] = React.useState('');
+
+
 
     /**
      * getSectionHeader - Dynamically returns the header title and subtitle based on activeSection
@@ -238,6 +243,8 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     const [targetProjectIdForAI, setTargetProjectIdForAI] = React.useState(null);
     const [isLoadingSubscription, setIsLoadingSubscription] = React.useState(false);
 
+
+
     // Chat Widget States
     const [activeChatConnectionId, setActiveChatConnectionId] = React.useState(null);
     const [activeChatSession, setActiveChatSession] = React.useState(null);
@@ -248,6 +255,13 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     const [documentToDelete, setDocumentToDelete] = React.useState(null);
     const [blockedFiles, setBlockedFiles] = React.useState([]); // Session-based blacklist for verified docs
     const hiddenFileInput = React.useRef(null);
+
+    const isApproved = startupProfile?.status === 'Approved' || startupProfile?.status === 1 || startupProfile?.approvalStatus === 'Approved' || startupProfile?.approvalStatus === 1;
+
+    const showRestrictedActionModal = (actionName = 'hành động này') => {
+        setRestrictedActionMessage(`Bạn cần được phê duyệt hồ sơ Startup để thực hiện hành động: ${actionName}. Vui lòng hoàn tất hồ sơ và đợi đội ngũ AISEP xác nhận.`);
+        setShowRestrictedModal(true);
+    };
 
     // --- Deep Linking Enforcement ---
     React.useEffect(() => {
@@ -735,6 +749,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     }, [activeSection]);
 
     const handleApproveConnectionRequest = async (requestId) => {
+        if (!isApproved) {
+            showRestrictedActionModal('chấp nhận yêu cầu kết nối');
+            return;
+        }
         setIsRespondingToRequest(requestId);
         try {
             const response = await connectionService.respondToConnection(requestId, true);
@@ -756,6 +774,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     };
 
     const handleRejectConnectionRequest = async (requestId) => {
+        if (!isApproved) {
+            showRestrictedActionModal('từ chối yêu cầu kết nối');
+            return;
+        }
         setIsRespondingToRequest(requestId);
         try {
             const response = await connectionService.respondToConnection(requestId, false);
@@ -830,6 +852,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     }, [activeSection]);
 
     const handleApproveDeal = async (dealId) => {
+        if (!isApproved) {
+            showRestrictedActionModal('chấp nhận đầu tư');
+            return;
+        }
         setIsRespondingToDeal(dealId);
         try {
             console.log('[StartupDashboard] Approving deal:', dealId);
@@ -852,6 +878,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     };
 
     const handleRejectDeal = async (dealId) => {
+        if (!isApproved) {
+            showRestrictedActionModal('từ chối đầu tư');
+            return;
+        }
         setIsRespondingToDeal(dealId);
         try {
             console.log('[StartupDashboard] Rejecting deal:', dealId);
@@ -985,6 +1015,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
 
     const handleSignContract = async () => {
         if (!contractDealData) return;
+        if (!isApproved) {
+            showRestrictedActionModal('ký kết hợp đồng');
+            return;
+        }
 
         console.log('[StartupDashboard] handleSignContract called');
         console.log('[StartupDashboard] Current signFormData:', signFormData);
@@ -1076,6 +1110,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     };
 
     const handleSignContractAsStartup = async () => {
+        if (!isApproved) {
+            showRestrictedActionModal('ký kết hợp đồng');
+            return;
+        }
         if (!contractDealData) return;
 
         console.log('[StartupDashboard] handleSignContractAsStartup called');
@@ -1177,6 +1215,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
 
     const handleRejectContractAsStartup = async () => {
         if (!contractDealData?.dealId) return;
+        if (!isApproved) {
+            showRestrictedActionModal('từ chối hợp đồng');
+            return;
+        }
 
         const normalizedReason = rejectContractReason.trim();
         if (!normalizedReason) {
@@ -1546,6 +1588,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
 
     // BR-10: Trigger AI Evaluation
     const handleAIEvaluation = async (projectData) => {
+        if (!isApproved) {
+            showRestrictedActionModal('đánh giá AI');
+            return;
+        }
         setIsEvaluatingAI(true);
         try {
             // The AI Evaluation flow
@@ -1638,6 +1684,11 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
 
     // BR-15: Submit Project for Staff Review (WITHOUT AI - Direct submission)
     const handleSubmitProject = async (projectId) => {
+        if (!isApproved) {
+            showRestrictedActionModal('nộp dự án');
+            return;
+        }
+
         if (!projectId) {
             console.error('[SUBMIT] Invalid projectId:', projectId);
             setSuccessMessage('Lỗi: Không tìm thấy ID dự án');
@@ -1738,6 +1789,11 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
 
     // PREMIUM FEATURE: Run AI Evaluation separately
     const handleRunAIEvaluation = (projectId) => {
+        if (!isApproved) {
+            showRestrictedActionModal('phân tích AI');
+            return;
+        }
+
         if (!projectId) {
             console.error('[AI] Invalid projectId:', projectId);
             setSuccessMessage('Lỗi: Không tìm thấy ID dự án');
@@ -1752,6 +1808,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     };
 
     const handleConfirmAIAnalyze = async () => {
+        if (!isApproved) {
+            showRestrictedActionModal('phân tích AI');
+            return;
+        }
         const validId = parseInt(targetProjectIdForAI) || targetProjectIdForAI;
         console.log('[AI] Running AI Evaluation for projectId:', validId);
 
@@ -1924,6 +1984,13 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                     });
                                 }}
                                 onNotificationNavigate={onNotificationNavigate}
+                                onShowProjectForm={() => {
+                                    if (!isApproved) {
+                                        showRestrictedActionModal('đăng dự án mới');
+                                        return;
+                                    }
+                                    setShowProjectForm(true);
+                                }}
                             />
                         );
                     })()}
@@ -1975,7 +2042,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
             )}
 
             {(!startupProfile || (String(startupProfile.status || startupProfile.approvalStatus || '').toUpperCase() !== 'APPROVED')) && 
-             !activeSection.startsWith('project_') && (
+             !activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
                 <div style={{ padding: '0', marginBottom: '0', width: '100%' }}>
                     <StartupProfileBanner
                         status={startupProfile?.status}
@@ -2456,6 +2523,8 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                             onViewProject={(pid) => setActiveSection('project_' + pid)}
                             initialFilterStatus={lastBookingFilter}
                             onFilterStatusChange={setLastBookingFilter}
+                            isApproved={isApproved}
+                            onRestrictedAction={showRestrictedActionModal}
                         />
                     )}
 
@@ -2472,6 +2541,8 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                             onBack={() => setActiveSection('bookings')}
                             user={user}
                             isFullView={true}
+                            isStartupApproved={isApproved}
+                            onRestrictedAction={showRestrictedActionModal}
                         />
                     )}
 
@@ -3178,6 +3249,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                                             className={`${styles.primaryBtn} ${styles.advisorBookingBtn} ${styles.desktopOnly} `}
                                                             style={{ margin: 0, padding: '8px 16px', fontSize: '12px', fontWeight: 700 }}
                                                             onClick={() => {
+                                                                if (!isApproved) {
+                                                                    showRestrictedActionModal('Bạn cần được phê duyệt hồ sơ Startup để đặt lịch tư vấn với Cố vấn.');
+                                                                    return;
+                                                                }
                                                                 setBookingInitialAdvisorId(detailProjectAdvisors[0].advisorId);
                                                                 setShowBookingWizard(true);
                                                             }}
@@ -3211,6 +3286,10 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                                         <button
                                                             className={`${styles.primaryBtn} ${styles.advisorBookingBtn}`}
                                                             onClick={() => {
+                                                                if (!isApproved) {
+                                                                    showRestrictedActionModal('Bạn cần được phê duyệt hồ sơ Startup để đặt lịch tư vấn với Cố vấn.');
+                                                                    return;
+                                                                }
                                                                 setBookingInitialAdvisorId(detailProjectAdvisors[0].advisorId);
                                                                 setShowBookingWizard(true);
                                                             }}
@@ -4214,9 +4293,11 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
             {showBookingWizard && (
                 <BookingWizard
                     user={user}
+                    isApproved={isApproved}
                     initialProjectId={detailProject?.projectId || detailProject?.id}
                     initialAdvisorId={bookingInitialAdvisorId}
                     onClose={() => setShowBookingWizard(false)}
+                    onRestrictedAction={showRestrictedActionModal}
                 />
             )}
 
@@ -4233,6 +4314,22 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                         });
                     }}
                     onNotificationNavigate={onNotificationNavigate}
+                    startupBanner={(!startupProfile || (String(startupProfile.status || startupProfile.approvalStatus || '').toUpperCase() !== 'APPROVED')) ? (
+                        <StartupProfileBanner
+                            status={startupProfile?.status}
+                            approvalStatus={startupProfile?.approvalStatus}
+                            rejectionReason={startupProfile?.rejectionReason}
+                            onRedirect={() => setActiveSection('complete-info')}
+                        />
+                    ) : null}
+                />
+            )}
+
+            {showRestrictedModal && (
+                <RestrictedActionModal
+                    isOpen={showRestrictedModal}
+                    onClose={() => setShowRestrictedModal(false)}
+                    message={restrictedActionMessage}
                 />
             )}
         </div>

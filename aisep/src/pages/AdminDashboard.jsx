@@ -1,8 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Users, Database, ChevronRight, Loader2, ShieldCheck, Save } from 'lucide-react';
+import { Users, Database, ChevronRight, Loader2, ShieldCheck, Save, Plus } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import DashboardSection from '../components/common/DashboardSection';
 import adminService from '../services/adminService';
+import TermsManagement from '../components/admin/TermsManagement';
 import AccountProfileTab from '../components/common/AccountProfileTab';
 
 const ADMIN_SECTIONS = [
@@ -10,6 +11,7 @@ const ADMIN_SECTIONS = [
     { id: 'staff', label: 'Quản lý Staff', icon: Users, description: 'Tạo và quản lý tài khoản staff vận hành.' },
     { id: 'transactions', label: 'Giao dịch', icon: Database, description: 'Theo dõi giao dịch thanh toán toàn hệ thống.' },
     { id: 'validation_rules', label: 'Rule validate động', icon: ShieldCheck, description: 'Cấu hình validate theo từng formKey.' },
+    { id: 'terms', label: 'Quản lý Điều khoản', icon: ShieldCheck, description: 'Cập nhật và quản lý lịch sử điều khoản hệ thống.' },
     { id: 'account_profile', label: 'Hồ sơ người dùng', icon: Users, description: 'Quản lý thông tin cá nhân và mật khẩu.' },
 ];
 
@@ -20,6 +22,7 @@ export default function AdminDashboard({ user, initialSection = 'users' }) {
     const [transactionsMeta, setTransactionsMeta] = useState({ page: 1, pageSize: 1000, totalCount: 0, totalPages: 1 });
     const [isLoadingTransactions, setIsLoadingTransactions] = useState(false);
     const [transactionError, setTransactionError] = useState('');
+    const termsRef = React.useRef(null);
     
     const [users, setUsers] = useState([]);
     const [usersMeta, setUsersMeta] = useState({ page: 1, pageSize: 1000, totalCount: 0, totalPages: 1 });
@@ -896,14 +899,32 @@ export default function AdminDashboard({ user, initialSection = 'users' }) {
         </div>
     );
 
+    const renderTermsSection = () => (
+        <TermsManagement ref={termsRef} canEdit={true} hideHeader={true} />
+    );
+
     return (
         <div className={styles.container}>
             <div className={styles.content}>
                 <DashboardSection
                     title={currentSection.label}
-                    topBarExtra={null}
+                    topBarExtra={activeSection === 'terms' ? (
+                        <button 
+                            className={styles.primaryBtn} 
+                            onClick={() => termsRef.current?.openModal()}
+                            style={{ minWidth: '120px' }}
+                        >
+                            <Plus size={18} /> Thêm mới
+                        </button>
+                    ) : null}
                 >
-                    {activeSection === 'transactions' ? renderTransactionsSection() : activeSection === 'users' ? renderUsersSection() : activeSection === 'staff' ? renderStaffSection() : activeSection === 'validation_rules' ? renderValidationRulesSection() : activeSection === 'account_profile' ? renderAccountProfileSection() : renderUsersSection()}
+                    {activeSection === 'transactions' ? renderTransactionsSection() : 
+                     activeSection === 'users' ? renderUsersSection() : 
+                     activeSection === 'staff' ? renderStaffSection() : 
+                     activeSection === 'validation_rules' ? renderValidationRulesSection() : 
+                     activeSection === 'terms' ? renderTermsSection() :
+                     activeSection === 'account_profile' ? renderAccountProfileSection() : 
+                     renderUsersSection()}
                 </DashboardSection>
             </div>
         </div>

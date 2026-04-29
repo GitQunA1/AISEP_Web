@@ -15,7 +15,7 @@
 @media (min-width: 768px) {
     .reg_formCard {
         width: 100%;
-        max-width: 640px;
+        max-width: 500px;
         height: auto;
         /* Fit content */
         margin: 0 auto;
@@ -47,8 +47,8 @@
 
 @media (min-width: 768px) {
     .reg_cardHeader {
-        padding: 24px 32px 0 32px;
-        margin-bottom: 24px;
+        padding: 20px 32px 0 32px;
+        margin-bottom: 16px;
     }
 }
 
@@ -69,7 +69,7 @@
 
 @media (min-width: 768px) {
     .reg_cardBody {
-        padding: 0 32px 32px 32px;
+        padding: 0 32px 24px 32px;
         scrollbar-width: thin;
         scrollbar-color: var(--border-color) transparent;
     }
@@ -105,7 +105,7 @@
 @media (min-width: 768px) {
     .reg_cardFooter {
         flex-shrink: 0;
-        padding: 20px 32px 24px 32px;
+        padding: 16px 32px 20px 32px;
         border-top: 1px solid var(--border-color);
     }
 }
@@ -168,7 +168,7 @@
 .reg_stepContainer {
     display: flex;
     flex-direction: column;
-    gap: 20px;
+    gap: 12px;
 }
 
 .reg_formGroup {
@@ -189,7 +189,7 @@
 
 .reg_input {
     width: 100%;
-    padding: 12px 16px;
+    padding: 10px 16px;
     font-size: 1rem;
     font-family: inherit;
     background-color: var(--bg-secondary);
@@ -225,7 +225,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    height: 52px;
+    height: 48px;
     border: none;
     border-radius: 9999px;
     background-color: var(--primary-blue);
@@ -251,7 +251,7 @@
     align-items: center;
     justify-content: center;
     gap: 8px;
-    height: 52px;
+    height: 48px;
     border: 1px solid #cfd9de;
     border-radius: 9999px;
     background-color: transparent;

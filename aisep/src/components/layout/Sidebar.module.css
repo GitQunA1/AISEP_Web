@@ -40,7 +40,6 @@
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
-  overflow: hidden;
 }
 
 .logo {
@@ -51,7 +50,6 @@
   font-weight: 800;
   color: var(--text-primary);
   min-width: 0;
-  overflow: hidden;
 }
 
 /* Close Button (Hidden on Desktop) */
@@ -574,10 +572,9 @@
   }
 
   /* Show Close Button */
+  /* Hide Close Button (Requested by USER) */
   .closeBtn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: none !important;
   }
 
   .sidebarHeader {
@@ -633,11 +630,76 @@
 
   .sidebarHeader {
     margin-bottom: 24px;
-    padding: 0 10px;
+    padding: 10px;
   }
 }
 
 /* Theme Toggle - Removed duplicate to avoid margin conflicts */
+
+/* --- LEGAL SECTION --- */
+.legalSection {
+  padding: 0 24px 20px;
+  display: none; /* Hidden on full desktop where RightPanel has it */
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legalLink {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.2s ease;
+  width: fit-content;
+}
+
+.legalLink:hover {
+  color: var(--primary-blue);
+  text-decoration: underline;
+}
+
+.copyright {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
+/* Tablet Icon-Only Sidebar: Hide legal fully to save space */
+@media (max-width: 1439px) and (min-width: 1024px) {
+  /* ... exists ... */
+  .legalSection {
+    display: none;
+  }
+}
+
+/* Specific Tablet Phase where RightPanel is hidden: Show legal in Sidebar */
+@media (max-width: 1280px) and (min-width: 1024px) {
+  .legalSection {
+    display: flex;
+    padding: 12px 0 0 0;
+    align-items: center;
+    border-top: 1px solid var(--border-color);
+    margin-top: 8px;
+  }
+  
+  .legalLink, .copyright {
+    font-size: 10px;
+    text-align: center;
+  }
+}
+
+/* Mobile Side Drawer: Show legal at the bottom */
+@media (max-width: 1023px) {
+  /* ... exists ... */
+  .legalSection {
+    display: flex;
+    padding: 16px 12px 10px;
+    border-top: 1px solid var(--border-color);
+  }
+}
 
 @keyframes bounce {
 

@@ -1,21 +1,24 @@
 import React, { useState } from 'react';
-import { Eye, EyeOff, Loader, ChevronLeft } from 'lucide-react';
+import { Eye, EyeOff, Loader, ChevronLeft, ShieldCheck } from 'lucide-react';
 import styles from './RegistrationUnique.module.css';
 import authService from '../../services/authService';
+import TermsModal from '../common/TermsModal';
 
 /**
  * OperationStaffRegisterForm - Simplified credential collection
  * Only collects: Full Name, Email, Password
  */
-function OperationStaffRegisterForm({ onBack, onComplete }) {
+function OperationStaffRegisterForm({ onBack, onComplete, termsData, onFetchTerms }) {
   const [formData, setFormData] = useState({
     fullName: '',
     username: '',
     email: '',
     password: '',
     confirmPassword: '',
+    isTermsAccepted: false,
   });
 
+  const [showTermsModal, setShowTermsModal] = useState(false);
   const [errors, setErrors] = useState({});
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -62,6 +65,8 @@ function OperationStaffRegisterForm({ onBack, onComplete }) {
         fullName: formData.fullName,
         username: formData.username,
         role: 3, // UserRole.Staff = 3
+        isTermsAccepted: formData.isTermsAccepted,
+        termsVersion: termsData?.version || 'v1.0'
       });
 
       if (response.success) {
@@ -82,7 +87,8 @@ function OperationStaffRegisterForm({ onBack, onComplete }) {
     formData.username.trim() &&
     formData.email.trim() &&
     formData.password.length >= 8 &&
-    formData.password === formData.confirmPassword;
+    formData.password === formData.confirmPassword &&
+    formData.isTermsAccepted;
 
   return (
     <div className={styles.reg_formCard}>
@@ -102,89 +108,28 @@ function OperationStaffRegisterForm({ onBack, onComplete }) {
 
           <form onSubmit={handleSubmit} className={styles.reg_Form}>
             <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
-              <label htmlFor="fullName" className={styles.reg_label}>
-                Họ và tên <span className={styles.reg_required}>*</span>
-              </label>
-              <input
-                id="fullName"
-                name="fullName"
-                type="text"
-                value={formData.fullName}
-                onChange={handleInputChange}
-                className={`${styles.reg_input} ${errors.fullName ? styles.reg_inputError : ''}`}
-                placeholder="Nhập họ và tên của bạn"
-                disabled={isLoading}
-              />
+              <label htmlFor="fullName" className={styles.reg_label}>Họ và tên <span className={styles.reg_required}>*</span></label>
+              <input id="fullName" name="fullName" type="text" value={formData.fullName} onChange={handleInputChange} className={`${styles.reg_input} ${errors.fullName ? styles.reg_inputError : ''}`} placeholder="Nhập họ và tên của bạn" disabled={isLoading} />
               {errors.fullName && <p className={styles.reg_errorText}>{errors.fullName}</p>}
             </div>
 
             <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
-              <label htmlFor="username" className={styles.reg_label}>
-                Tên đăng nhập (Username) <span className={styles.reg_required}>*</span>
-              </label>
-              <input
-                id="username"
-                name="username"
-                type="text"
-                value={formData.username}
-                onChange={handleInputChange}
-                className={`${styles.reg_input} ${errors.username ? styles.reg_inputError : ''}`}
-                placeholder="Nhập tên đăng nhập của bạn"
-                disabled={isLoading}
-              />
+              <label htmlFor="username" className={styles.reg_label}>Tên đăng nhập (Username) <span className={styles.reg_required}>*</span></label>
+              <input id="username" name="username" type="text" value={formData.username} onChange={handleInputChange} className={`${styles.reg_input} ${errors.username ? styles.reg_inputError : ''}`} placeholder="Nhập tên đăng nhập của bạn" disabled={isLoading} />
               {errors.username && <p className={styles.reg_errorText}>{errors.username}</p>}
             </div>
 
             <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
-              <label htmlFor="email" className={styles.reg_label}>
-                Địa chỉ Email <span className={styles.reg_required}>*</span>
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                className={`${styles.reg_input} ${errors.email ? styles.reg_inputError : ''}`}
-                placeholder="you@example.com"
-                disabled={isLoading}
-              />
+              <label htmlFor="email" className={styles.reg_label}>Địa chỉ Email <span className={styles.reg_required}>*</span></label>
+              <input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} className={`${styles.reg_input} ${errors.email ? styles.reg_inputError : ''}`} placeholder="you@example.com" disabled={isLoading} />
               {errors.email && <p className={styles.reg_errorText}>{errors.email}</p>}
             </div>
 
             <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
-              <label htmlFor="password" className={styles.reg_label}>
-                Mật khẩu <span className={styles.reg_required}>*</span>
-              </label>
+              <label htmlFor="password" className={styles.reg_label}>Mật khẩu <span className={styles.reg_required}>*</span></label>
               <div style={{ position: 'relative' }}>
-                <input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
-                  onChange={handleInputChange}
-                  className={`${styles.reg_input} ${errors.password ? styles.reg_inputError : ''}`}
-                  placeholder="Tối thiểu 8 ký tự"
-                  disabled={isLoading}
-                  style={{ paddingRight: '48px' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    padding: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                >
+                <input id="password" name="password" type={showPassword ? 'text' : 'password'} value={formData.password} onChange={handleInputChange} className={`${styles.reg_input} ${errors.password ? styles.reg_inputError : ''}`} placeholder="Tối thiểu 8 ký tự" disabled={isLoading} style={{ paddingRight: '48px' }} />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center' }}>
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
@@ -192,42 +137,42 @@ function OperationStaffRegisterForm({ onBack, onComplete }) {
             </div>
 
             <div className={styles.reg_formGroup} style={{ marginBottom: '16px' }}>
-              <label htmlFor="confirmPassword" className={styles.reg_label}>
-                Xác nhận mật khẩu <span className={styles.reg_required}>*</span>
-              </label>
+              <label htmlFor="confirmPassword" className={styles.reg_label}>Xác nhận mật khẩu <span className={styles.reg_required}>*</span></label>
               <div style={{ position: 'relative' }}>
-                <input
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  className={`${styles.reg_input} ${errors.confirmPassword ? styles.reg_inputError : ''}`}
-                  placeholder="Nhập lại mật khẩu"
-                  disabled={isLoading}
-                  style={{ paddingRight: '48px' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={{
-                    position: 'absolute',
-                    right: '12px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    background: 'none',
-                    border: 'none',
-                    color: 'var(--text-secondary)',
-                    cursor: 'pointer',
-                    padding: '8px',
-                    display: 'flex',
-                    alignItems: 'center',
-                  }}
-                >
+                <input id="confirmPassword" name="confirmPassword" type={showConfirmPassword ? 'text' : 'password'} value={formData.confirmPassword} onChange={handleInputChange} className={`${styles.reg_input} ${errors.confirmPassword ? styles.reg_inputError : ''}`} placeholder="Nhập lại mật khẩu" disabled={isLoading} style={{ paddingRight: '48px' }} />
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '8px', display: 'flex', alignItems: 'center' }}>
                   {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
               {errors.confirmPassword && <p className={styles.reg_errorText}>{errors.confirmPassword}</p>}
+            </div>
+
+            {/* Terms and Conditions */}
+            <div className={styles.reg_formGroup} style={{ marginBottom: '24px' }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                <input
+                  id="isTermsAccepted"
+                  name="isTermsAccepted"
+                  type="checkbox"
+                  checked={formData.isTermsAccepted}
+                  onChange={(e) => setFormData(prev => ({ ...prev, isTermsAccepted: e.target.checked }))}
+                  style={{ marginTop: '4px', cursor: 'pointer' }}
+                  disabled={isLoading}
+                />
+                <label htmlFor="isTermsAccepted" className={styles.reg_label} style={{ fontSize: '14px', cursor: 'pointer' }}>
+                  Tôi đồng ý với <button 
+                    type="button" 
+                    onClick={() => {
+                      onFetchTerms && onFetchTerms();
+                      setShowTermsModal(true);
+                    }}
+                    style={{ background: 'none', border: 'none', color: 'var(--primary-blue)', padding: 0, font: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+                  >
+                    Điều khoản sử dụng
+                  </button>
+                  <span className={styles.reg_required}> *</span>
+                </label>
+              </div>
             </div>
 
             {/* Submit Error */}
@@ -259,6 +204,15 @@ function OperationStaffRegisterForm({ onBack, onComplete }) {
           )}
         </button>
       </div>
+
+      <TermsModal 
+        isOpen={showTermsModal} 
+        onClose={() => setShowTermsModal(false)}
+        termsContent={termsData?.content}
+        termsVersion={termsData?.version}
+        error={termsData?.error}
+        isLoading={termsData?.isLoading}
+      />
     </div>
   );
 }

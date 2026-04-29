@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-    User, Mail, MapPin, Globe, Award, Briefcase, 
-    DollarSign, Camera, FileText, CheckCircle, AlertCircle, 
+import {
+    User, Mail, MapPin, Globe, Award, Briefcase,
+    DollarSign, Camera, FileText, CheckCircle, AlertCircle,
     Loader, Trash2, Plus, X, ChevronRight, Save, Eye
 } from 'lucide-react';
 import styles from './AdvisorProfilePage.module.css';
@@ -12,6 +12,7 @@ import SuccessModal from '../components/common/SuccessModal';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 import validationService from '../services/validationService';
 import enumService from '../services/enumService';
+import optionService from '../services/optionService';
 import AdvisorProfileBanner from '../components/advisor/AdvisorProfileBanner';
 
 export default function AdvisorProfilePage({ user, onBack, banner, onNotificationNavigate }) {
@@ -53,7 +54,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
 
     const fileInputRef = useRef(null);
     const certInputRef = useRef(null);
-    
+
     // Section refs for scroll sync
     const sectionInfoRef = useRef(null);
     const sectionExpertiseRef = useRef(null);
@@ -86,7 +87,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
         const ruleKey = fieldMapping[fieldKey]?.toLowerCase() || fieldKey.toLowerCase();
         const maxLength = validationRules?.[ruleKey]?.maxLength;
         if (!maxLength) return null;
-        
+
         const count = (value || '').length;
         const isOver = count > maxLength;
         return (
@@ -104,7 +105,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
         const constraints = [];
         if (rule.minLength) constraints.push(`Tối thiểu ${rule.minLength} ký tự`);
         if (rule.regex && rule.regex.includes('03|05|07|08|09')) constraints.push('Định dạng số điện thoại Việt Nam');
-        
+
         if (constraints.length === 0) return null;
 
         return (
@@ -168,16 +169,16 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
         try {
             const data = await advisorService.getMyProfile().catch(() => null);
             const formKey = data ? 'advisor.update' : 'advisor.create';
-            
+
             const [rules, industriesData] = await Promise.all([
                 validationService.getFormRules(formKey),
-                enumService.getEnumOptions('Industry').catch(() => [])
+                optionService.getIndustries()
             ]);
-            
+
             if (!rules || Object.keys(rules).length === 0) {
-              throw new Error(`Không tìm thấy cấu hình xác thực cho ${formKey}.`);
+                throw new Error(`Không tìm thấy cấu hình xác thực cho ${formKey}.`);
             }
-            
+
             setValidationRules(rules);
             setAvailableIndustries(industriesData);
 
@@ -197,8 +198,8 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                 }
                 if (data.certifications) {
                     const filename = data.certifications.split('/').pop();
-                    setPreviews(prev => ({ 
-                        ...prev, 
+                    setPreviews(prev => ({
+                        ...prev,
                         certificationName: filename || 'Chứng chỉ hiện tại',
                         certificationUrl: data.certifications
                     }));
@@ -220,7 +221,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
         } else {
             setFormData(prev => ({ ...prev, [name]: value }));
         }
-        
+
         // Live checking if validationRules present
         if (validationRules) {
             const mappedName = fieldMapping[name]?.toLowerCase();
@@ -236,16 +237,16 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
             const industries = prev.industries.includes(ind)
                 ? prev.industries.filter(i => i !== ind)
                 : [...prev.industries, ind];
-            
+
             // Validate industries immediately
             if (validationRules?.industryoptionids) {
                 const errorMsg = validationService.validateField(
-                    industries.length > 0 ? industries.join(',') : '', 
+                    industries.length > 0 ? industries.join(',') : '',
                     validationRules.industryoptionids
                 );
                 setFieldErrors(errors => ({ ...errors, industryOptionIds: errorMsg }));
             }
-            
+
             return { ...prev, industries };
         });
     };
@@ -255,7 +256,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
         if (!file) return;
 
         setFiles(prev => ({ ...prev, [type]: file }));
-        
+
         if (type === 'profileImage') {
             const reader = new FileReader();
             reader.onloadend = () => {
@@ -269,22 +270,22 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        
+
         if (!validationRules) return;
 
         const validationData = {
             ...formData,
             industryOptionIds: formData.industries.length > 0 ? formData.industries.join(',') : ''
         };
-        
+
         const { isValid, errors: validationErrs } = validationService.validateForm(
             validationData,
             validationRules,
             fieldMapping
         );
-        
+
         const newErrors = { ...validationErrs };
-        
+
         if (validationRules.profileImageFile) {
             const fileErr = validationService.validateFile(files.profileImage, validationRules.profileImageFile);
             if (fileErr) newErrors.profileImageFile = fileErr;
@@ -292,7 +293,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                 newErrors.profileImageFile = 'Vui lòng tải lên ảnh đại diện';
             }
         }
-        
+
         if (validationRules.certificationFile) {
             const fileErr = validationService.validateFile(files.certification, validationRules.certificationFile);
             if (fileErr) newErrors.certificationFile = fileErr;
@@ -300,13 +301,13 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                 newErrors.certificationFile = 'Vui lòng tải lên chứng chỉ';
             }
         }
-        
+
         if (Object.keys(newErrors).length > 0) {
             setFieldErrors(newErrors);
             setError('Vui lòng kiểm tra lại thông tin và cung cấp đủ giấy tờ.');
             return;
         }
-        
+
         setFieldErrors({});
         setShowConfirmModal(true);
     };
@@ -321,7 +322,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
             const submitData = new FormData();
             submitData.append('Bio', formData.bio);
             submitData.append('Expertise', formData.expertise);
-            
+
             // Append multiple industries
             formData.industries.forEach(ind => {
                 submitData.append('Industries', ind);
@@ -376,7 +377,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
 
     return (
         <div className={styles.pageContainer}>
-            <FeedHeader 
+            <FeedHeader
                 title="Hồ sơ chuyên gia"
                 subtitle="Quản lý thông tin cá nhân và chuyên môn để kết nối với startup."
                 showFilter={false}
@@ -412,17 +413,17 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                                         <User size={40} />
                                     </div>
                                 )}
-                                <button 
-                                    type="button" 
+                                <button
+                                    type="button"
                                     className={styles.uploadBtn}
                                     onClick={() => fileInputRef.current?.click()}
                                 >
                                     <Camera size={16} />
                                 </button>
-                                <input 
+                                <input
                                     ref={fileInputRef}
-                                    type="file" 
-                                    hidden 
+                                    type="file"
+                                    hidden
                                     accept="image/*"
                                     onChange={(e) => {
                                         handleFileChange(e, 'profileImage');
@@ -437,7 +438,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                         </div>
 
                         <div className={styles.menuItems}>
-                            <div 
+                            <div
                                 className={`${styles.menuItem} ${activeMenu === 'info' ? styles.menuActive : ''}`}
                                 onClick={() => scrollToSection('info')}
                             >
@@ -445,7 +446,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                                 <span>Thông tin chung</span>
                                 <ChevronRight size={16} className={styles.chevron} />
                             </div>
-                            <div 
+                            <div
                                 className={`${styles.menuItem} ${activeMenu === 'expertise' ? styles.menuActive : ''}`}
                                 onClick={() => scrollToSection('expertise')}
                             >
@@ -453,7 +454,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                                 <span>Kinh nghiệm & Kỹ năng</span>
                                 <ChevronRight size={16} className={styles.chevron} />
                             </div>
-                            <div 
+                            <div
                                 className={`${styles.menuItem} ${activeMenu === 'experience' ? styles.menuActive : ''}`}
                                 onClick={() => scrollToSection('experience')}
                             >
@@ -480,11 +481,11 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                                     {renderLabel('Vị trí / Địa điểm hiện tại', 'location')}
                                     <div className={styles.inputWrapper}>
                                         <MapPin size={16} className={styles.inputIcon} />
-                                        <input 
+                                        <input
                                             name="location"
                                             value={formData.location}
                                             onChange={handleInputChange}
-                                            placeholder="VD: Hà Nội, Việt Nam" 
+                                            placeholder="VD: Hà Nội, Việt Nam"
                                         />
                                     </div>
                                     {renderFieldConstraints('location')}
@@ -494,11 +495,11 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                                     {renderLabel('Ngôn ngữ', 'languagesSpoken')}
                                     <div className={styles.inputWrapper}>
                                         <Globe size={16} className={styles.inputIcon} />
-                                        <input 
+                                        <input
                                             name="languagesSpoken"
                                             value={formData.languagesSpoken}
                                             onChange={handleInputChange}
-                                            placeholder="VD: Tiếng Việt, Tiếng Anh" 
+                                            placeholder="VD: Tiếng Việt, Tiếng Anh"
                                         />
                                     </div>
                                     {renderFieldConstraints('languagesSpoken')}
@@ -508,11 +509,11 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
 
                             <div className={styles.formGroup}>
                                 {renderLabel('Giới thiệu bản thân', 'bio')}
-                                <textarea 
+                                <textarea
                                     name="bio"
                                     value={formData.bio}
                                     onChange={handleInputChange}
-                                    rows={4} 
+                                    rows={4}
                                     placeholder="Chia sẻ về hành trình chuyên môn và đam mê hỗ trợ startup của bạn..."
                                 />
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -535,11 +536,11 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                                     {renderLabel('Kỹ năng chuyên sâu', 'expertise')}
                                     <div className={styles.inputWrapper}>
                                         <Briefcase size={16} className={styles.inputIcon} />
-                                        <input 
+                                        <input
                                             name="expertise"
                                             value={formData.expertise}
                                             onChange={handleInputChange}
-                                            placeholder="VD: Gọi vốn, Growth Hacking, Quản trị rủi ro..." 
+                                            placeholder="VD: Gọi vốn, Growth Hacking, Quản trị rủi ro..."
                                         />
                                     </div>
                                     {renderFieldConstraints('expertise')}
@@ -549,12 +550,12 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                                     {renderLabel('Phí tư vấn theo giờ (VNĐ)', 'hourlyRate')}
                                     <div className={styles.inputWrapper}>
                                         <span className={styles.currencyIcon}>₫</span>
-                                        <input 
+                                        <input
                                             type="number"
                                             name="hourlyRate"
                                             value={formData.hourlyRate === 0 ? '' : formData.hourlyRate}
                                             onChange={handleInputChange}
-                                            placeholder="500,000" 
+                                            placeholder="500,000"
                                         />
                                     </div>
                                     {renderFieldConstraints('hourlyRate')}
@@ -590,11 +591,11 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                         <div className={styles.cardBody}>
                             <div className={styles.formGroup}>
                                 {renderLabel('Quá trình làm việc & Kinh nghiệm', 'previousExperience')}
-                                <textarea 
+                                <textarea
                                     name="previousExperience"
                                     value={formData.previousExperience}
                                     onChange={handleInputChange}
-                                    rows={4} 
+                                    rows={4}
                                     placeholder="Liệt kê các vị trí quan trọng hoặc dự án thành công..."
                                 />
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -606,7 +607,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
 
                             <div className={styles.formGroup}>
                                 {renderLabel('Chứng chỉ chuyên môn', 'certificationFile')}
-                                <div 
+                                <div
                                     className={styles.fileDropZone}
                                     onClick={() => certInputRef.current?.click()}
                                 >
@@ -630,20 +631,20 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                                             <Eye size={16} />
                                         </button>
                                     )}
-                                    </div>
-                                    <input 
-                                        ref={certInputRef}
-                                        type="file" 
-                                        hidden 
-                                        onChange={(e) => {
-                                            handleFileChange(e, 'certification');
-                                            setFieldErrors(prev => ({ ...prev, certificationFile: null }));
-                                        }}
-                                    />
                                 </div>
-                                {fieldErrors.certificationFile && <span style={{ color: 'red', fontSize: '12px', display: 'block', marginTop: '4px' }}>{fieldErrors.certificationFile}</span>}
+                                <input
+                                    ref={certInputRef}
+                                    type="file"
+                                    hidden
+                                    onChange={(e) => {
+                                        handleFileChange(e, 'certification');
+                                        setFieldErrors(prev => ({ ...prev, certificationFile: null }));
+                                    }}
+                                />
                             </div>
+                            {fieldErrors.certificationFile && <span style={{ color: 'red', fontSize: '12px', display: 'block', marginTop: '4px' }}>{fieldErrors.certificationFile}</span>}
                         </div>
+                    </div>
 
                     {/* Action Bar */}
                     <div className={styles.actionBar}>
@@ -651,8 +652,8 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                             <div className={styles.errorBanner}>
                                 <AlertCircle size={16} />
                                 <span>{error}</span>
-                                <button 
-                                    type="button" 
+                                <button
+                                    type="button"
                                     className={styles.dismissBtn}
                                     onClick={() => setError(null)}
                                 >
@@ -661,15 +662,15 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                             </div>
                         )}
                         <div className={styles.actionButtons}>
-                            <button 
-                                type="button" 
+                            <button
+                                type="button"
                                 className={styles.cancelBtn}
                                 onClick={() => loadProfile()} // Reset
                             >
                                 Hủy thay đổi
                             </button>
-                            <button 
-                                type="submit" 
+                            <button
+                                type="submit"
                                 className={styles.saveBtn}
                                 disabled={isSaving}
                             >
@@ -682,10 +683,10 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
             </form>
 
             {showSuccessModal && (
-                <SuccessModal 
+                <SuccessModal
                     title={profile?.advisorId ? "Cập nhật thành công!" : "Khởi tạo thành công!"}
-                    message={profile?.advisorId 
-                        ? "Hồ sơ chuyên gia của bạn đã được cập nhật thành công." 
+                    message={profile?.advisorId
+                        ? "Hồ sơ chuyên gia của bạn đã được cập nhật thành công."
                         : "Chúc mừng! Bạn đã hoàn tất hồ sơ chuyên gia và có thể bắt đầu nhận lịch hẹn tư vấn."
                     }
                     onClose={() => setShowSuccessModal(false)}
@@ -700,11 +701,10 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
             <ConfirmationModal
                 isOpen={showConfirmModal}
                 title={profile?.advisorId ? "Cập nhật hồ sơ" : "Tạo mới hồ sơ"}
-                message={`Sau khi gửi thông tin, đội ngũ AISEP sẽ cần từ 2–4 ngày để xét duyệt hồ sơ của bạn.\n\n${
-                    profile?.advisorId
+                message={`Sau khi gửi thông tin, đội ngũ AISEP sẽ cần từ 2–4 ngày để xét duyệt hồ sơ của bạn.\n\n${profile?.advisorId
                         ? "• Ví thu nhập sẽ tạm thời bị đóng băng cho đến khi quá trình xét duyệt hoàn tất."
                         : "• Ví thu nhập sẽ được kích hoạt sau khi thông tin được xác nhận thành công."
-                }`}
+                    }`}
                 type="info"
                 primaryBtnText="Tiếp tục gửi"
                 secondaryBtnText="Hủy"
