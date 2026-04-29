@@ -197,13 +197,13 @@ function getStageLabel(stage) {
   if (stage === null || stage === undefined) return 'Không xác định';
   const normalizedStage = DEVELOPMENT_STAGE_MAPPING[stage];
   if (normalizedStage) return DEVELOPMENT_STAGE_LABELS[normalizedStage];
-  
+
   // Fallback for unexpected string values
   if (typeof stage === 'string') {
     if (stage.toLowerCase() === 'idea') return 'Ý tưởng';
     if (stage.toLowerCase() === 'growth') return 'Tăng trưởng';
   }
-  
+
   return stage.toString();
 }
 

@@ -12,21 +12,30 @@ import styles from '../../styles/SharedDashboard.module.css';
 const DashboardSection = ({ title, topBarExtra, filterBar, banner, children }) => {
     return (
         <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0 }}>
-            {/* Header / Top Bar */}
-            <div className={styles.cardHeader} style={{
+            <div style={{
                 background: 'var(--bg-secondary)',
-                borderRadius: '12px',
-                padding: '16px 20px',
+                borderRadius: '16px',
+                padding: '0 16px',
                 border: '1px solid var(--border-color)',
                 marginBottom: '20px',
                 display: 'flex',
                 justifyContent: 'space-between',
                 alignItems: 'center',
-                flexWrap: 'wrap',
-                gap: '16px'
+                height: '64px',
+                boxSizing: 'border-box'
             }}>
-                <h3 className={styles.cardTitle} style={{ marginBottom: 0 }}>{title}</h3>
-                {topBarExtra}
+                <div style={{ 
+                    margin: 0, 
+                    fontSize: '18px', 
+                    fontWeight: '800',
+                    color: 'var(--text-primary)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    height: '100%'
+                }}>{title}</div>
+                <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
+                    {topBarExtra}
+                </div>
             </div>
 
             {/* Filter Bar */}

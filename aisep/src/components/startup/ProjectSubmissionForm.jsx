@@ -6,6 +6,7 @@ import { getStageNumericValue } from '../../constants/ProjectStatus';
 import CustomSelect from '../common/CustomSelect';
 import SuccessModal from '../common/SuccessModal';
 import validationService from '../../services/validationService';
+import optionService from '../../services/optionService';
 import enumService from '../../services/enumService';
 
 /**
@@ -39,7 +40,7 @@ const getIndustryNumericValue = (industry, industries = []) => {
  * ProjectSubmissionForm - Form for submitting new startup projects
  * Improved with professional styling and theme support.
  */
-export default function ProjectSubmissionForm({ onClose, onSuccess, user, initialData = null }) {
+export default function ProjectSubmissionForm({ onClose, onSuccess, user, initialData = null, isApproved = false, onRestrictedAction }) {
   const isEdit = !!initialData;
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 3;
@@ -80,8 +81,8 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
       const formKey = isEdit ? 'project.update' : 'project.create';
       const [rules, indOptions, stageOptions] = await Promise.all([
         validationService.getFormRules(formKey),
-        enumService.getEnumOptions('Industry'),
-        enumService.getEnumOptions('DevelopmentStage')
+        optionService.getIndustries(),
+        optionService.getStages()
       ]);
 
       if (!rules || Object.keys(rules).length === 0) {
@@ -89,8 +90,8 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
       }
 
       setValidationRules(rules);
-      setIndustries(indOptions);
-      setStages(stageOptions);
+      setIndustries(indOptions.filter(i => i.isActive));
+      setStages(stageOptions.filter(s => s.isActive));
 
       // Pre-populate data if editing, now that we have the options
       if (initialData) {
@@ -193,14 +194,9 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
-    const fieldKey = name.toLowerCase();
-    // Dynamic validation as user inputs
-    if (validationRules && validationRules[fieldKey]) {
-      const error = validateField(name, value);
-      setErrors(prev => ({ ...prev, [name]: error }));
-    } else if (errors[name]) {
-      setErrors(prev => ({ ...prev, [name]: '' }));
-    }
+    // Perform real-time validation on every change
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
   };
 
   /**
@@ -208,35 +204,23 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
    */
   const validateField = (name, value) => {
     const fieldKey = name.toLowerCase();
-    if (!validationRules || !validationRules[fieldKey]) return '';
+    const ruleKey = (fieldKey === 'industry' ? 'industryoptionids' : 
+                    (fieldKey === 'developmentstage' ? 'stageoptionid' : fieldKey));
+                    
+    if (!validationRules || !validationRules[ruleKey]) return '';
+    const rule = validationRules[ruleKey];
+
+    // Determine if the field is required based on stage (StageOptionIds logic)
+    let isRequired = rule.required;
+    const currentStage = formData.developmentStage;
     
-    const rule = validationRules[fieldKey];
-    const val = String(value || '').trim();
-
-    // Required check
-    if (rule.required && !val) {
-      return rule.requiredMessage || `${rule.label || name} là bắt buộc`;
+    if (currentStage && rule.stageOptionIds && rule.stageOptionIds.length > 0) {
+      const stageId = Number(currentStage);
+      const isStageInList = rule.stageOptionIds.some(id => Number(id) === stageId);
+      isRequired = isStageInList ? rule.required : !rule.required;
     }
 
-    // Min length check
-    if (rule.minLength && val.length < rule.minLength) {
-      return rule.minLengthMessage || `${rule.label || name} phải có ít nhất ${rule.minLength} ký tự`;
-    }
-
-    // Max length check
-    if (rule.maxLength && val.length > rule.maxLength) {
-      return rule.maxLengthMessage || `${rule.label || name} không được vượt quá ${rule.maxLength} ký tự`;
-    }
-
-    // Regex check
-    if (rule.regex && val) {
-      const regex = new RegExp(rule.regex);
-      if (!regex.test(val)) {
-        return rule.regexMessage || `${rule.label || name} không hợp lệ`;
-      }
-    }
-
-    return '';
+    return validationService.validateField(value, { ...rule, required: isRequired });
   };
 
   const handleImageChange = (e) => {
@@ -367,6 +351,11 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     setSubmitError('');
 
     if (!validateStep()) return;
+
+    if (!isEdit && !isApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Startup để tạo dự án mới.');
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -531,21 +520,31 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
           }}>
             {/* Helper to render label with char count */}
             {(() => {
-              const renderFieldHeader = (name, label, isRequired) => {
+              const renderFieldHeader = (name, label) => {
                 const fieldKey = (name || '').toLowerCase();
                 // Map frontend names to potential backend names from DTO
-                const rule = validationRules?.[fieldKey] || 
-                             (fieldKey === 'industry' ? validationRules?.['industryoptionids'] : null) ||
-                             (fieldKey === 'developmentstage' ? validationRules?.['stageoptionid'] : null);
+                const ruleKey = (fieldKey === 'industry' ? 'industryoptionids' : 
+                                (fieldKey === 'developmentstage' ? 'stageoptionid' : fieldKey));
+                
+                const rule = validationRules?.[ruleKey];
                              
                 const currentLength = String(formData[name] || '').length;
                 const maxLength = rule?.maxLength;
                 const isOverLimit = maxLength && currentLength > maxLength;
 
+                // Determine dynamic required status
+                let isRequired = rule?.required;
+                const currentStage = formData.developmentStage;
+                if (currentStage && rule?.stageOptionIds && rule.stageOptionIds.length > 0) {
+                  const stageId = Number(currentStage);
+                  const isStageInList = rule.stageOptionIds.some(id => Number(id) === stageId);
+                  isRequired = isStageInList ? rule.required : !rule.required;
+                }
+
                 return (
                   <div className={styles.label}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {label} {(isRequired || rule?.required) && <span className={styles.required}>*</span>}
+                      {label} {isRequired && <span className={styles.required}>*</span>}
                     </span>
                     {maxLength ? (
                       <span className={`${styles.charCount} ${isOverLimit ? styles.charCountError : ''}`} style={{ backgroundColor: isOverLimit ? 'rgba(244, 33, 46, 0.15)' : 'var(--bg-secondary)' }}>
@@ -581,18 +580,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                   );
                 }
 
-                // Show regex hint if it exists and current value doesn't match
-                if (rule.regex && currentVal.length > 0) {
-                  const regex = new RegExp(rule.regex);
-                  if (!regex.test(currentVal)) {
-                    return (
-                      <div className={styles.validationHint}>
-                        <AlertCircle size={12} />
-                        <span>{rule.regexMessage || 'Định dạng không hợp lệ'}</span>
-                      </div>
-                    );
-                  }
-                }
+                // Show regex hint - REMOVED to avoid duplication with main error message
                 
                 return null;
               };
@@ -619,7 +607,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                   {currentStep === 1 && (
                     <>
                       <div className={styles.formGroup}>
-                        {renderFieldHeader('projectName', 'Tên Dự Án', true)}
+                        {renderFieldHeader('projectName', 'Tên Dự Án')}
                         <input
                           type="text"
                           name="projectName"
@@ -738,7 +726,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                       </div>
 
                       <div className={styles.formGroup}>
-                        {renderFieldHeader('shortDescription', 'Mô Tả Ngắn', true)}
+                        {renderFieldHeader('shortDescription', 'Mô Tả Ngắn')}
                         <textarea
                           name="shortDescription"
                           value={formData.shortDescription}
@@ -780,7 +768,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                       </div>
 
                       <div className={styles.formGroup}>
-                        {renderFieldHeader('problemStatement', 'Vấn Đề Cần Giải Quyết', true)}
+                        {renderFieldHeader('problemStatement', 'Vấn Đề Cần Giải Quyết')}
                         <textarea
                           name="problemStatement"
                           value={formData.problemStatement}
@@ -799,7 +787,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                   {currentStep === 2 && (
                     <>
                       <div className={styles.formGroup}>
-                        {renderFieldHeader('solutionDescription', 'Mô Tả Giải Pháp', true)}
+                        {renderFieldHeader('solutionDescription', 'Mô Tả Giải Pháp')}
                         <textarea
                           name="solutionDescription"
                           value={formData.solutionDescription}
@@ -813,7 +801,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                       </div>
 
                       <div className={styles.formGroup}>
-                        {renderFieldHeader('targetCustomers', 'Khách Hàng Mục Tiêu', true)}
+                        {renderFieldHeader('targetCustomers', 'Khách Hàng Mục Tiêu')}
                         <textarea
                           name="targetCustomers"
                           value={formData.targetCustomers}
@@ -827,7 +815,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                       </div>
 
                       <div className={styles.formGroup}>
-                        {renderFieldHeader('uniqueValueProposition', 'Giá Trị Độc Đáo (UVP)', !isIdea)}
+                        {renderFieldHeader('uniqueValueProposition', 'Giá Trị Độc Đáo (UVP)')}
                         <textarea
                           name="uniqueValueProposition"
                           value={formData.uniqueValueProposition}
@@ -843,7 +831,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                       {!isIdea && (
                         <div className={styles.row}>
                           <div className={styles.formGroup}>
-                            {renderFieldHeader('marketSize', 'Quy mô thị trường (VND)', isGrowth)}
+                            {renderFieldHeader('marketSize', 'Quy mô thị trường (VND)')}
                             <input
                               type="number"
                               name="marketSize"
@@ -855,7 +843,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                             {errors.marketSize && <span className={styles.errorText}>{errors.marketSize}</span>}
                           </div>
                           <div className={styles.formGroup}>
-                            {renderFieldHeader('revenue', 'Doanh thu hiện thực (VND)', isGrowth)}
+                            {renderFieldHeader('revenue', 'Doanh thu hiện thực (VND)')}
                             <input
                               type="number"
                               name="revenue"
@@ -870,7 +858,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                       )}
 
                       <div className={styles.formGroup}>
-                        {renderFieldHeader('businessModel', 'Mô Hình Kinh Doanh', !isIdea)}
+                        {renderFieldHeader('businessModel', 'Mô Hình Kinh Doanh')}
                         <textarea
                           name="businessModel"
                           value={formData.businessModel}
@@ -889,7 +877,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                   {currentStep === 3 && (
                     <>
                       <div className={styles.formGroup}>
-                        {renderFieldHeader('competitors', 'Đối thủ cạnh tranh', !isIdea)}
+                        {renderFieldHeader('competitors', 'Đối thủ cạnh tranh')}
                         <textarea
                           name="competitors"
                           value={formData.competitors}
@@ -948,7 +936,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                       </div>
 
                       <div className={styles.formGroup}>
-                        {renderFieldHeader('keySkills', 'Kỹ năng cốt lõi', !isIdea)}
+                        {renderFieldHeader('keySkills', 'Kỹ năng cốt lõi')}
                         <input
                           type="text"
                           name="keySkills"
@@ -963,7 +951,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                       </div>
 
                       <div className={styles.formGroup}>
-                        {renderFieldHeader('teamExperience', 'Kinh nghiệm đội ngũ', isGrowth)}
+                        {renderFieldHeader('teamExperience', 'Kinh nghiệm đội ngũ')}
                         <textarea
                           name="teamExperience"
                           value={formData.teamExperience}

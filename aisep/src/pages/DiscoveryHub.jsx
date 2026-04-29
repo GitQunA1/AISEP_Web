@@ -1,17 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  MagnifyingGlass, 
-  MapPin, 
-  RocketLaunch, 
-  Funnel, 
-  TrendUp, 
-  CheckCircle, 
-  Target, 
-  Buildings, 
-  Newspaper, 
-  Calendar, 
-  User, 
-  ArrowSquareOut 
+import {
+    MagnifyingGlass,
+    MapPin,
+    RocketLaunch,
+    Funnel,
+    TrendUp,
+    CheckCircle,
+    Target,
+    Buildings,
+    Newspaper,
+    Calendar,
+    User,
+    ArrowSquareOut
 } from '@phosphor-icons/react';
 import FeedHeader from '../components/feed/FeedHeader';
 import InvestmentModal from '../components/common/InvestmentModal';
@@ -29,7 +29,7 @@ import styles from './DiscoveryHub.module.css';
  * StartupDiscovery - Explore and discover startup companies
  * Featuring search, industry filtering, and premium startup cards.
  */
-const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner }) => {
+const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner, isInvestorApproved = false, onRestrictedAction }) => {
     const [startups, setStartups] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -46,7 +46,7 @@ const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner })
 
     const isInvestor = user && (user.role === 'Investor' || user.role === 1);
     const isStartup = user && (user.role === 'Startup' || user.role === 2);
-    
+
     useEffect(() => {
         const fetchMyStartup = async () => {
             if (isStartup) {
@@ -84,7 +84,7 @@ const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner })
 
             const raw = projectsRes?.data?.items || projectsRes?.items || [];
             const approved = filterProjectsForPublicDiscovery(raw);
-            
+
             const items = approved.map(p => {
                 const sid = p.startupId || p.StartupId || p.userId || p.UserId;
                 const info = startupMap[sid];
@@ -102,7 +102,7 @@ const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner })
             });
 
             setStartups(items);
-            
+
             if (isInvestor) {
                 fetchInvestmentStatusNow(items);
             }
@@ -126,7 +126,7 @@ const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner })
         try {
             const dealsRes = await dealsService.getInvestorDeals();
             const deals = dealsRes?.data?.items || [];
-            
+
             const combinedMap = {};
             deals.forEach(deal => {
                 const dealInfo = {
@@ -136,11 +136,11 @@ const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner })
                     projectName: deal.projectName,
                     startupName: deal.startupName
                 };
-                
+
                 if (deal.projectId) combinedMap[deal.projectId] = dealInfo;
                 if (deal.projectId) combinedMap[deal.projectId.toString()] = dealInfo;
             });
-            
+
             setInvestmentStatusMap(combinedMap);
         } catch (error) {
             console.error('[DiscoveryHub] Failed to fetch investment status:', error);
@@ -160,8 +160,8 @@ const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner })
                 const response = await prService.getPRs();
                 let prList = response?.data?.items || response?.data || response?.items || response || [];
                 if (!Array.isArray(prList)) prList = [];
-                
-                const sortedPRs = prList.sort((a, b) => 
+
+                const sortedPRs = prList.sort((a, b) =>
                     new Date(b.publishedAt) - new Date(a.publishedAt)
                 );
                 setPRs(sortedPRs);
@@ -200,7 +200,7 @@ const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner })
                                     currentUserId: user?.userId,
                                     sentTime: new Date().toISOString()
                                 });
-                            }} 
+                            }}
                                 onNavigate={onNotificationNavigate}
                             />
                         )}
@@ -271,7 +271,9 @@ const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner })
                                     followedProjectIds={new Set()}
                                     sentConnectionIds={new Set()}
                                     investedProjectIds={new Set()}
-                                    investors={[]} 
+                                    investors={[]}
+                                    isInvestorApproved={isInvestorApproved}
+                                    onRestrictedAction={onRestrictedAction}
                                 />
                             ))}
                         </div>

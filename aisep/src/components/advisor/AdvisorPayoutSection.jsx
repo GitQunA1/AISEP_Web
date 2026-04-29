@@ -12,7 +12,7 @@ import BankSelect from '../common/BankSelect';
 import SuccessModal from '../common/SuccessModal';
 import ErrorModal from '../common/ErrorModal';
 
-export default function AdvisorPayoutSection({ user }) {
+export default function AdvisorPayoutSection({ user, isApproved, onRestrictedAction }) {
   const [activeTab, setActiveTab] = useState('account'); // 'account' or 'history'
   const [bankAccount, setBankAccount] = useState(null);
   const [payouts, setPayouts] = useState([]);
@@ -84,6 +84,10 @@ export default function AdvisorPayoutSection({ user }) {
 
   const handleSaveBank = async (e) => {
     e.preventDefault();
+    if (!isApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Cố vấn để cập nhật thông tin tài khoản ngân hàng.');
+      return;
+    }
     setSaving(true);
     try {
       if (bankAccount) {
@@ -116,6 +120,10 @@ export default function AdvisorPayoutSection({ user }) {
 
   const handleRequestRetry = async (payoutId) => {
     setRetryNoteError('');
+    if (!isApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Cố vấn để yêu cầu chuyển lại khoản thanh toán.');
+      return;
+    }
     if (!retryNote.trim()) {
       setRetryNoteError('Vui lòng mô tả cách bạn đã xử lý sự cố trước khi yêu cầu chuyển lại.');
       return;

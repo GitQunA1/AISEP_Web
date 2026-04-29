@@ -268,7 +268,7 @@ const DocumentCard = ({ doc }) => (
 );
 
 /* ─── Main Component ─────────────────────────────────────── */
-export default function ProjectDetailView({ projectId, onBack, user, isPaidUser = false, onShowLogin, isFullView, isInvestorApproved = false, onUnlock }) {
+export default function ProjectDetailView({ projectId, onBack, user, isPaidUser = false, onShowLogin, isFullView, isInvestorApproved = false, isStartupApproved = false, onUnlock, onRestrictedAction }) {
   const [project, setProject] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [aiHistory, setAiHistory] = useState([]);
@@ -382,6 +382,10 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
 
   const handleAIAnalyze = async () => {
     if (!projectId) return;
+    if (!isInvestorApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để sử dụng tính năng Phân tích AI.');
+      return;
+    }
     setIsAnalyzingAI(true);
     try {
       const res = await AIEvaluationService.analyzeProjectByInvestorAPI(projectId);
@@ -496,6 +500,10 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
 
   const handleUnlockClick = (e) => {
     if (e) e.stopPropagation();
+    if (!isInvestorApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để mở khóa thông tin chi tiết của dự án.');
+      return;
+    }
     if (!effectiveIsPaidUser) return;
     fetchQuotaData();
     setShowUnlockConfirm(true);
@@ -531,6 +539,21 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
 
   const handleBlockchainVerification = async () => {
     if (isLoadingBlockchain || !projectId) return;
+    
+    // Check if the user is a Startup or Investor - they need approval
+    const roleStr = user?.role?.toString().toLowerCase() || '';
+    const roleNum = Number(user?.role);
+    const isStartup = roleStr === 'startup' || roleNum === 0;
+    const isInvestor = roleStr === 'investor' || roleNum === 1;
+
+    if (isInvestor && !isInvestorApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để thực hiện xác thực Blockchain.');
+      return;
+    }
+    
+    // For startup, it's slightly different, but usually they are viewing their OWN project or they are approved
+    // If they aren't approved, they might be blocked from even viewing this, but let's be safe
+    
     setIsLoadingBlockchain(true);
     setBlockchainError(null);
     try {
@@ -771,7 +794,22 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
                 <div>
                   <div style={{ fontWeight: 700 }}>{project.assignedAdvisorName}</div>
                   {(user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1) && (
-                    <button onClick={() => setShowBookingWizard(true)} style={{ marginTop: 10, padding: '8px 16px', borderRadius: 8, background: T.blue, color: '#fff', border: 'none', cursor: 'pointer' }}>Đặt lịch tư vấn</button>
+                    <button onClick={() => {
+                      if (!isInvestorApproved) {
+                        onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để đặt lịch tư vấn với Cố vấn.');
+                        return;
+                      }
+                      setShowBookingWizard(true);
+                    }} style={{ marginTop: 10, padding: '8px 16px', borderRadius: 8, background: T.blue, color: '#fff', border: 'none', cursor: 'pointer' }}>Đặt lịch tư vấn</button>
+                  )}
+                  {(user?.role?.toString().toLowerCase() === 'startup' || Number(user?.role) === 0) && (
+                    <button onClick={() => {
+                      if (!isStartupApproved) {
+                        onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Startup để đặt lịch tư vấn với Cố vấn.');
+                        return;
+                      }
+                      setShowBookingWizard(true);
+                    }} style={{ marginTop: 10, padding: '8px 16px', borderRadius: 8, background: T.blue, color: '#fff', border: 'none', cursor: 'pointer' }}>Đặt lịch tư vấn</button>
                   )}
                 </div>
               ) : 'Đang phân công cố vấn'}
@@ -814,7 +852,21 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
       </div>
 
       {/* MODALS */}
-      {showBookingWizard && <BookingWizard onClose={() => setShowBookingWizard(false)} user={user} initialProjectId={projectId} initialAdvisorId={project?.assignedAdvisorId} />}
+      {showBookingWizard && (
+        <BookingWizard 
+          onClose={() => setShowBookingWizard(false)} 
+          user={user} 
+          isApproved={(() => {
+            const roleStr = user?.role?.toString().toLowerCase() || '';
+            const roleNum = Number(user?.role);
+            if (roleStr === 'startup' || roleNum === 0) return isStartupApproved;
+            if (roleStr === 'investor' || roleNum === 1) return isInvestorApproved;
+            return true;
+          })()}
+          initialProjectId={projectId} 
+          initialAdvisorId={project?.assignedAdvisorId} 
+        />
+      )}
       {showUnlockConfirm && <UnlockConfirmationModal isOpen={showUnlockConfirm} onClose={() => setShowUnlockConfirm(false)} onConfirm={confirmUnlock} isUnlocking={isUnlocking} isLoadingQuota={isLoadingQuota} projectName={project?.name} remainingViews={remainingViews} packageName={subscription?.packageName} />}
       {showBlockchainModal && <BlockchainVerificationModal isOpen={showBlockchainModal} verificationData={blockchainData} isLoading={isLoadingBlockchain} error={blockchainError} onClose={() => { setShowBlockchainModal(false); setBlockchainData(null); setBlockchainError(null); }} />}
       {showFullscreenImage && project?.projectImageUrl && (

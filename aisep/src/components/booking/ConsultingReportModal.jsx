@@ -19,7 +19,7 @@ const MAX_REVISIONS = 3;
  *   onClose     {fn}
  *   onDone      {fn}       - Callback sau khi approve/submit thành công
  */
-export default function ConsultingReportModal({ bookingId, userRole, advisorName, onClose, onDone }) {
+export default function ConsultingReportModal({ bookingId, userRole, advisorName, onClose, onDone, isApproved, onRestrictedAction }) {
   const isAdvisor = userRole === 'Advisor';
   const isStaff = userRole === 'Staff';
 
@@ -87,6 +87,10 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
 
   // ------ Advisor Submit ------
   const handleSubmit = async () => {
+    if (isAdvisor && !isApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Cố vấn để nộp báo cáo tư vấn.');
+      return;
+    }
     setFormError('');
     if (!form.meetingTitle.trim()) { setFormError('Vui lòng nhập tiêu đề buổi tư vấn.'); return; }
     setSubmitting(true);
@@ -113,6 +117,10 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
 
   // ------ Startup Approve ------
   const handleApprove = async () => {
+    if (!isAdvisor && !isStaff && !isApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Startup để chấp nhận báo cáo.');
+      return;
+    }
     setActionLoading(true);
     setActionError('');
     try {
@@ -128,6 +136,10 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
 
   // ------ Startup Request Revision ------
   const handleRevision = async () => {
+    if (!isAdvisor && !isStaff && !isApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Startup để yêu cầu sửa đổi báo cáo.');
+      return;
+    }
     if (!revisionReason.trim()) { setActionError('Vui lòng nhập lý do yêu cầu sửa đổi.'); return; }
     setActionLoading(true);
     setActionError('');
@@ -451,7 +463,13 @@ export default function ConsultingReportModal({ bookingId, userRole, advisorName
                       <ArrowsClockwise size={16} /> Yêu cầu sửa lại
                     </button>
                   ) : (
-                    <button className={styles.complaintBtn} onClick={() => setShowComplaintModal(true)} disabled={actionLoading}>
+                    <button className={styles.complaintBtn} onClick={() => {
+                      if (!isAdvisor && !isStaff && !isApproved) {
+                        onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Startup để khiếu nại báo cáo.');
+                        return;
+                      }
+                      setShowComplaintModal(true);
+                    }} disabled={actionLoading}>
                       <WarningCircle size={16} /> Khiếu nại báo cáo
                     </button>
                   )}

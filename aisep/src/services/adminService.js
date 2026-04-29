@@ -34,6 +34,48 @@ const adminService = {
   createStaff: async (staffData = {}) => {
     const response = await apiClient.post('/api/admin/create-staff', staffData);
     return response;
+  },
+
+  /**
+   * Get dynamic form validation rules by formKey
+   * GET /api/form-validation-rules/{formKey}
+   * @param {string} formKey
+   * @param {object} params - filters/sorts/page/pageSize
+   * @returns {Promise<any>}
+   */
+  getFormValidationRules: async (formKey, params = {}) => {
+    const response = await apiClient.get(`/api/form-validation-rules/${formKey}`, { params });
+    return response;
+  },
+
+  /**
+   * Update a dynamic validation rule by rule id
+   * PUT /api/form-validation-rules/{id}
+   * @param {number|string} id
+   * @param {object} payload
+   * @returns {Promise<any>}
+   */
+  updateFormValidationRule: async (id, payload = {}) => {
+    const response = await apiClient.put(`/api/form-validation-rules/${id}`, payload);
+    return response;
+  },
+
+  /**
+   * Publish new system terms
+   * POST /api/admin/terms
+   * @param {object} payload - { contentHtml, version }
+   */
+  publishTerms: async (payload) => {
+    return await apiClient.post('/api/admin/terms', payload);
+  },
+
+  /**
+   * Get system terms history
+   * GET /api/admin/terms/history
+   * @param {object} params - page/pageSize/filters/sorts
+   */
+  getTermsHistory: async (params = {}) => {
+    return await apiClient.get('/api/admin/terms/history', { params });
   }
 };
 

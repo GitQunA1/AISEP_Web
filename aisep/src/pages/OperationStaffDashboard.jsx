@@ -21,6 +21,7 @@ import PackageManagement from '../components/staff/PackageManagement';
 import GlobalSubscriptionHistory from '../components/staff/GlobalSubscriptionHistory';
 import PayoutManagement from '../components/staff/PayoutManagement';
 import CommissionManagement from '../components/staff/CommissionManagement';
+import TermsManagement from '../components/admin/TermsManagement';
 import EmptyState from '../components/common/EmptyState';
 import BlockchainVerificationModal from '../components/common/BlockchainVerificationModal';
 import blockchainVerificationService from '../services/blockchainVerificationService';
@@ -165,7 +166,7 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
 const BookingKanbanCard = ({ booking, status, onDetail, isHighlighted }) => {
     // map status from 'pend', 'conf', 'comp'
     let statusLabel = 'Chờ xác nhận';
-    let localStatus = 'pend'; 
+    let localStatus = 'pend';
 
     if (status === 'Pending' || status === 0 || status === 'pend') {
         statusLabel = 'Chờ xác nhận';
@@ -424,7 +425,7 @@ const UserReportCard = ({ report, onResolve, onViewBooking, isProcessing, isLoad
                     <p style={{ margin: 0, fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.5' }}>
                         {report.description}
                     </p>
-                    
+
                     {/* Resolution Note if resolved */}
                     {report.status !== 'Pending' && report.resolutionNote && (
                         <div style={{
@@ -454,9 +455,9 @@ const UserReportCard = ({ report, onResolve, onViewBooking, isProcessing, isLoad
             </div>
 
             {/* Footer: Meta & Actions */}
-            <div style={{ 
-                marginTop: '12px', 
-                paddingTop: '12px', 
+            <div style={{
+                marginTop: '12px',
+                paddingTop: '12px',
                 borderTop: '1px solid var(--border-color)',
                 display: 'flex',
                 justifyContent: 'space-between',
@@ -483,8 +484,8 @@ const UserReportCard = ({ report, onResolve, onViewBooking, isProcessing, isLoad
                             onClick={() => onViewBooking(report.bookingId)}
                             className={local.resolveChip}
                             disabled={isLoadingBooking}
-                            style={{ 
-                                padding: '6px 12px', 
+                            style={{
+                                padding: '6px 12px',
                                 border: '1px solid var(--primary-blue)',
                                 color: 'var(--primary-blue)',
                                 gap: '4px'
@@ -563,7 +564,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
     const [activeSection, setActiveSection] = useState(initialSection);
     const [activePRTab, setActivePRTab] = useState('posting'); // 'posting' or 'news'
-    
+
     // Deep LINK State
     const [hasAttemptedDeepLink, setHasAttemptedDeepLink] = useState(false);
 
@@ -590,14 +591,14 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [selectedStartupForDetail, setSelectedStartupForDetail] = useState(null);
     const [showStartupDetailModal, setShowStartupDetailModal] = useState(false);
     const [activeMobileStartupTab, setActiveMobileStartupTab] = useState('pend'); // 'all', 'pend', 'appr', 'rej'
-    
+
     // Core Modal & UI States
     const [showModal, setShowModal] = useState(false);
     const [modalType, setModalType] = useState('success');
     const [modalMessage, setModalMessage] = useState('');
     const [showRejectionModal, setShowRejectionModal] = useState(false);
     const [selectedProject, setSelectedProject] = useState(null);
-    
+
     // Project Detail Modal state
     const [showDetailModal, setShowDetailModal] = useState(false);
     const [detailProject, setDetailProject] = useState(null);
@@ -621,6 +622,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [commissionSearchTerm, setCommissionSearchTerm] = useState('');
     const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
     const [advisorSearchTerm, setAdvisorSearchTerm] = useState('');
+    const [termsSearchTerm, setTermsSearchTerm] = useState('');
 
     // Blockchain verification state
     const [isLoadingBlockchain, setIsLoadingBlockchain] = useState(false);
@@ -633,6 +635,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         else if (activeSection === 'bookings') setBookingSearchTerm(val);
         else if (activeSection === 'commission') setCommissionSearchTerm(val);
         else if (activeSection === 'advisor_approval') setAdvisorSearchTerm(val);
+        else if (activeSection === 'terms') setTermsSearchTerm(val);
         else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
     };
 
@@ -771,6 +774,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             case 'investor_approval': return "Phê duyệt Nhà đầu tư";
             case 'analytics': return "Phân tích dữ liệu";
             case 'activity': return "Giám sát hoạt động";
+            case 'terms': return "Quản lý Điều khoản";
             case 'account_profile': return "Hồ sơ người dùng";
             default: return "Bảng điều khiển Nhân viên";
 
@@ -791,6 +795,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             case 'investor_approval': return "Xem xét hồ sơ và phê duyệt tư cách nhà đầu tư trên hệ thống.";
             case 'analytics': return "Biểu đồ phân tích chuyên sâu về dữ liệu hệ thống.";
             case 'activity': return "Nhật ký hoạt động và giám sát thời gian thực.";
+            case 'terms': return "Xem lịch sử và phiên bản hiện tại của điều khoản hệ thống.";
             case 'account_profile': return "Quản lý thông tin cá nhân và mật khẩu.";
             default: return "Quản lý nền tảng và các yêu cầu phê duyệt.";
 
@@ -814,13 +819,13 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const overdueBookingsList = filterBookings(allBookings.filter(b => b.status === 'ConsultingReportOverdue' || b.status === 3));
     const complaintBookingsList = filterBookings(allBookings.filter(b => {
         const hasReport = userReports.some(r => String(r.bookingId) === String(b.id));
-        return hasReport || 
-               b.status === 'ComplaintPending' || 
-               b.status === 'ComplaintAccepted' || 
-               b.status === 'ComplaintRejected' || 
-               b.status === 4 || 
-               b.status === 6 || 
-               b.status === 7;
+        return hasReport ||
+            b.status === 'ComplaintPending' ||
+            b.status === 'ComplaintAccepted' ||
+            b.status === 'ComplaintRejected' ||
+            b.status === 4 ||
+            b.status === 6 ||
+            b.status === 7;
     }));
     const completedBookingsList = filterBookings(allBookings.filter(b => b.status === 'Completed' || b.status === 5));
     const cancelledBookingsList = filterBookings(allBookings.filter(b => {
@@ -991,12 +996,12 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         try {
             const response = await startupProfileService.getAllStartups();
             const items = Array.isArray(response) ? response : (response?.data?.items || response?.items || []);
-            
+
             // Map statuses correctly
             const pend = items.filter(s => (s.status || s.approvalStatus) === 'Pending' || (s.status || s.approvalStatus) === 'Unverified');
             const appr = items.filter(s => (s.status || s.approvalStatus) === 'Approved');
             const rej = items.filter(s => (s.status || s.approvalStatus) === 'Rejected');
-            
+
             // Sort by latest created/updated
             const sortByDate = (list) => [...list].sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
 
@@ -1155,14 +1160,14 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         setProcessingAction('approve');
         try {
             const response = await startupProfileService.approveStartup(id);
-            
+
             // Update local state for immediate UI response
             const startupToMove = pendingStartups.find(s => s.id === id);
             if (startupToMove) {
                 setApprovedStartups([{ ...startupToMove, status: 'Approved' }, ...approvedStartups]);
                 setPendingStartups(pendingStartups.filter(s => s.id !== id));
             }
-            
+
             setShowStartupDetailModal(false);
             setModalType('success');
             setModalMessage('✓ Startup đã được phê duyệt thành công!');
@@ -1193,13 +1198,13 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         setProcessingAction('reject');
         try {
             await startupProfileService.rejectStartup(id, reason);
-            
+
             const startupToMove = pendingStartups.find(s => s.id === id);
             if (startupToMove) {
                 setRejectedStartups([{ ...startupToMove, status: 'Rejected' }, ...rejectedStartups]);
                 setPendingStartups(pendingStartups.filter(s => s.id !== id));
             }
-            
+
             setShowStartupDetailModal(false);
             setModalType('success');
             setModalMessage('✓ Startup đã bị từ chối!');
@@ -1214,7 +1219,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             setProcessingAction(null);
         }
     };
-    
+
     const openStartupDetail = (startup) => {
         setSelectedStartupForDetail(startup);
         setShowStartupDetailModal(true);
@@ -1422,12 +1427,12 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             const response = await userReportService.getAllReports();
             // Some API endpoints return { data: [...] } or { items: [...] }
             const reports = response?.data || response?.items || (Array.isArray(response) ? response : []);
-            
+
             // Sort by createdAt descending (newest first)
             const sortedReports = [...reports].sort((a, b) => {
                 return new Date(b.createdAt) - new Date(a.createdAt);
             });
-            
+
             setUserReports(sortedReports);
         } catch (error) {
             console.error('Error fetching user reports:', error);
@@ -1753,7 +1758,8 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 (activeSection === 'pr_management' ? prSearchTerm :
                                     (activeSection === 'pr_news' ? prNewsSearchTerm :
                                         (activeSection === 'advisor_approval' ? advisorSearchTerm :
-                                            (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : '')))))
+                                            (activeSection === 'terms' ? termsSearchTerm :
+                                                (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : ''))))))
                     }
                     onSearchChange={(val) => {
                         if (activeSection === 'project_management') setSearchTerm(val);
@@ -1761,6 +1767,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                         else if (activeSection === 'pr_management') setPrSearchTerm(val);
                         else if (activeSection === 'pr_news') setPrNewsSearchTerm(val);
                         else if (activeSection === 'advisor_approval') setAdvisorSearchTerm(val);
+                        else if (activeSection === 'terms') setTermsSearchTerm(val);
                         else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
                     }}
                     searchPlaceholder={
@@ -1768,7 +1775,8 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                             (activeSection === 'bookings' ? "Tìm kiếm booking..." :
                                 (activeSection === 'pr_management' ? "Tìm kiếm dự án đã ký..." :
                                     (activeSection === 'pr_news' ? "Tìm kiếm bài PR..." :
-                                        (activeSection === 'advisor_approval' ? "Tìm kiếm cố vấn..." : "Tìm kiếm..."))))
+                                        (activeSection === 'advisor_approval' ? "Tìm kiếm cố vấn..." : 
+                                            (activeSection === 'terms' ? "Tìm kiếm phiên bản hoặc ngày..." : "Tìm kiếm...")))))
                     }
                     showNotification={true}
                     onNotificationNavigate={onNotificationNavigate}
@@ -2903,11 +2911,17 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                         </div>
                     )}
 
+                    {activeSection === 'terms' && (
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>
+                            <TermsManagement canEdit={false} hideHeader={true} searchTerm={termsSearchTerm} />
+                        </div>
+                    )}
+
                 </div>
             )}
 
             {/* Startup Detail Modal */}
-            <StartupDetailModal 
+            <StartupDetailModal
                 isOpen={showStartupDetailModal}
                 onClose={() => setShowStartupDetailModal(false)}
                 startup={selectedStartupForDetail}

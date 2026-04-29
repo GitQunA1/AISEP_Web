@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import RegisterLayout from '../components/auth/RegisterLayout';
 import StartupRegisterForm from '../components/auth/StartupRegisterForm';
 import InvestorRegisterForm from '../components/auth/InvestorRegisterForm';
 import AdvisorRegisterForm from '../components/auth/AdvisorRegisterForm';
 import OperationStaffRegisterForm from '../components/auth/OperationStaffRegisterForm';
 import RegistrationSuccess from '../components/auth/RegistrationSuccess';
+import termsService from '../services/termsService';
 
 /**
  * RegisterPage Component
@@ -14,6 +15,37 @@ import RegistrationSuccess from '../components/auth/RegistrationSuccess';
 function RegisterPage({ selectedRole, onBack, onComplete }) {
   const [registrationComplete, setRegistrationComplete] = useState(false);
   const [registrationData, setRegistrationData] = useState(null);
+  const [termsData, setTermsData] = useState({ version: '', content: '', error: null, isLoading: false });
+
+  const fetchTerms = async () => {
+    if (termsData.content) return; // Already fetched
+    
+    setTermsData(prev => ({ ...prev, isLoading: true, error: null }));
+    try {
+      const response = await termsService.getActiveTerms();
+      const data = response?.data || response;
+      if (data) {
+        setTermsData({
+          version: data.version || 'v1.0',
+          content: data.contentHtml || '',
+          error: null,
+          isLoading: false
+        });
+      }
+    } catch (err) {
+      console.error('Failed to fetch terms:', err);
+      setTermsData({
+        version: '',
+        content: '',
+        error: err,
+        isLoading: false
+      });
+    }
+  };
+
+  useEffect(() => {
+    // We no longer fetch terms automatically on load
+  }, []);
 
   const roleMap = {
     startup: {
@@ -76,7 +108,12 @@ function RegisterPage({ selectedRole, onBack, onComplete }) {
   // Otherwise show the registration form wrapped in layout
   return (
     <RegisterLayout onBack={onBack} title={roleConfig.title}>
-      <FormComponent onBack={onBack} onComplete={handleFormComplete} />
+      <FormComponent 
+        onBack={onBack} 
+        onComplete={handleFormComplete} 
+        termsData={termsData} 
+        onFetchTerms={fetchTerms}
+      />
     </RegisterLayout>
   );
 }

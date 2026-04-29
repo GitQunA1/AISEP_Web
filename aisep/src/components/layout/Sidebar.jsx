@@ -4,6 +4,8 @@ import styles from './Sidebar.module.css';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
 import SubscriptionPillCard from '../subscription/SubscriptionPillCard';
+import termsService from '../../services/termsService';
+import TermsModal from '../common/TermsModal';
 
 /**
  * Sidebar Component
@@ -30,6 +32,29 @@ function Sidebar({
   const { theme, toggleTheme } = useTheme();
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // Terms Modal State for Mobile/Tablet Sidebar
+  const [isTermsOpen, setIsTermsOpen] = useState(false);
+  const [termsData, setTermsData] = useState(null);
+  const [isTermsLoading, setIsTermsLoading] = useState(false);
+  const [termsError, setTermsError] = useState(null);
+
+  const handleOpenTerms = async (e) => {
+    e.preventDefault();
+    setIsTermsOpen(true);
+    setIsTermsLoading(true);
+    setTermsError(null);
+    try {
+      const response = await termsService.getActiveTerms();
+      const actualData = response?.data || response;
+      setTermsData(actualData);
+    } catch (err) {
+      console.error('Failed to fetch terms for sidebar:', err);
+      setTermsError(err.message || 'Không thể tải điều khoản sử dụng.');
+    } finally {
+      setIsTermsLoading(false);
+    }
+  };
+
   const navItems = React.useMemo(() => {
     const baseItems = [
       { icon: Compass, label: 'Home', displayLabel: 'Khám phá dự án', href: '#' },
@@ -49,6 +74,8 @@ function Sidebar({
         { icon: Users, label: 'AdminUsers', displayLabel: 'Quản lý người dùng', href: '#', showWhenLoggedIn: true },
         { icon: Users, label: 'AdminStaff', displayLabel: 'Quản lý Staff', href: '#', showWhenLoggedIn: true },
         { icon: DollarSign, label: 'AdminTransactions', displayLabel: 'Giao dịch', href: '#', showWhenLoggedIn: true },
+        { icon: Settings, label: 'AdminValidationRules', displayLabel: 'Rule validate động', href: '#', showWhenLoggedIn: true },
+        { icon: ShieldCheck, label: 'AdminTerms', displayLabel: 'Quản lý Điều khoản', href: '#', showWhenLoggedIn: true },
         { icon: User, label: 'AccountProfile', displayLabel: 'Hồ sơ người dùng', href: '#', showWhenLoggedIn: true },
       ];
       return adminItems;
@@ -68,6 +95,7 @@ function Sidebar({
         { icon: ShieldCheck, label: 'InvestorApproval', displayLabel: 'Phê duyệt nhà đầu tư', href: '#', showWhenLoggedIn: true },
         { icon: Shield, label: 'PackageManagement', displayLabel: 'Quản lý gói', href: '#', showWhenLoggedIn: true },
         { icon: History, label: 'SubscriptionHistory', displayLabel: 'Lịch sử đăng ký gói', href: '#', showWhenLoggedIn: true },
+        { icon: ShieldCheck, label: 'Terms', displayLabel: 'Quản lý Điều khoản', href: '#', showWhenLoggedIn: true },
         { icon: User, label: 'AccountProfile', displayLabel: 'Hồ sơ người dùng', href: '#', showWhenLoggedIn: true },
       ];
       const otherItems = baseItems.filter(item => item.label !== 'Dashboard' && item.label !== 'Home');
@@ -223,6 +251,9 @@ function Sidebar({
     if (label === 'PRNews' && onShowDashboard) {
       onShowDashboard('pr_news');
     }
+    if (label === 'Terms' && onShowDashboard) {
+      onShowDashboard('terms');
+    }
 
     if (label === 'AccountProfile' && onShowDashboard) {
       onShowDashboard('account_profile');
@@ -242,6 +273,12 @@ function Sidebar({
     }
     if (label === 'AdminTransactions' && onShowDashboard) {
       onShowDashboard('transactions');
+    }
+    if (label === 'AdminValidationRules' && onShowDashboard) {
+      onShowDashboard('validation_rules');
+    }
+    if (label === 'AdminTerms' && onShowDashboard) {
+      onShowDashboard('terms');
     }
 
     // Navigate to home when clicking Home
@@ -382,7 +419,14 @@ function Sidebar({
                       if (activeView === 'dashboard_users') return 'AdminUsers';
                       if (activeView === 'dashboard_staff') return 'AdminStaff';
                       if (activeView === 'dashboard_transactions') return 'AdminTransactions';
+                      if (activeView === 'dashboard_validation_rules') return 'AdminValidationRules';
                       if (activeView === 'dashboard_account_profile') return 'AccountProfile';
+                      if (activeView === 'dashboard_terms') {
+                        const roleStr = user?.role?.toString().toLowerCase() || '';
+                        const roleNum = Number(user?.role);
+                        if (roleStr === 'admin' || roleNum === 4) return 'AdminTerms';
+                        return 'Terms';
+                      }
                       if (activeView === 'profile') return 'Profile';
                       if (activeView === 'advisors') return 'Advisors';
                       if (activeView === 'investors') return 'Investors';
@@ -479,8 +523,27 @@ function Sidebar({
               </div>
             )}
           </div>
+
+          {/* Legal Footer - Only visible when RightPanel is hidden (Mobile/Tablet) */}
+          <div className={styles.legalSection}>
+            <button className={styles.legalLink} onClick={handleOpenTerms} disabled={isTermsLoading}>
+              {isTermsLoading ? <Loader size={12} className={styles.spin} /> : 'Điều khoản & Điều kiện'}
+            </button>
+            <span className={styles.copyright}>
+              © {new Date().getFullYear()} AISEP. Bảo lưu mọi quyền.
+            </span>
+          </div>
         </div>
       </aside>
+
+      <TermsModal 
+        isOpen={isTermsOpen}
+        onClose={() => setIsTermsOpen(false)}
+        termsContent={termsData?.contentHtml || termsData?.content}
+        termsVersion={termsData?.version}
+        error={termsError}
+        isLoading={isTermsLoading}
+      />
     </>
   );
 }

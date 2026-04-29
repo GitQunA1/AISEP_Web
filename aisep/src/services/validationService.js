@@ -27,6 +27,7 @@ export const validationService = {
           const key = (rule.fieldKey || '').toLowerCase();
           rulesMap[key] = {
             required: rule.isRequired,
+            stageOptionIds: rule.stageOptionIds || [],
             minLength: rule.minLength,
             maxLength: rule.maxLength,
             regex: rule.customRegexPattern || rule.regexPattern,
@@ -56,15 +57,29 @@ export const validationService = {
    * Validate a single field value against its rule
    * @param {any} value - The value to validate
    * @param {Object} rule - The rule object from getFormRules
+   * @param {string|number} developmentStage - The currently selected stage ID
    * @returns {string|null} Error message if invalid, null if valid
    */
-  validateField: (value, rule) => {
+  validateField: (value, rule, developmentStage = null) => {
     if (!rule) return null;
     
     const val = String(value || '').trim();
 
+    // Determine if the field is required based on stage
+    let isRequired = rule.required;
+    if (developmentStage !== null && developmentStage !== undefined && rule.stageOptionIds && rule.stageOptionIds.length > 0) {
+      const stageId = Number(developmentStage);
+      const isStageInList = rule.stageOptionIds.some(id => Number(id) === stageId);
+      
+      if (isStageInList) {
+        isRequired = rule.required; // Follow isRequired
+      } else {
+        isRequired = !rule.required; // Follow inverse of isRequired
+      }
+    }
+
     // Required check
-    if (rule.required && !val) {
+    if (isRequired && !val) {
       return rule.requiredMessage || `${rule.label || 'Trường này'} là bắt buộc`;
     }
 
@@ -97,14 +112,38 @@ export const validationService = {
     }
 
     // Regex check
-    if (rule.regex) {
+    if (rule.regex && typeof rule.regex === 'string' && rule.regex.trim() !== '' && rule.regex !== 'null') {
       try {
-        const regex = new RegExp(rule.regex, 'u');
+        let pattern = rule.regex;
+        // Strip forward slashes if present
+        if (pattern.startsWith('/') && pattern.endsWith('/')) {
+          pattern = pattern.substring(1, pattern.length - 1);
+        }
+        
+        // Ensure Unicode property escapes like \p{L} work correctly
+        const regex = new RegExp(pattern, 'u');
         if (!regex.test(val)) {
-          return rule.regexMessage || 'Định dạng không hợp lệ';
+          // Attempt to identify specific invalid characters
+          let invalidChars = '';
+          try {
+            // If it's a character set regex like ^[...]*, we can find what's NOT in the set
+            if (pattern.startsWith('^[') && pattern.endsWith(']*$')) {
+              const inner = pattern.substring(2, pattern.length - 3);
+              const forbiddenRegex = new RegExp(`[^${inner}]`, 'gu');
+              const matches = val.match(forbiddenRegex);
+              if (matches) {
+                invalidChars = Array.from(new Set(matches)).join(', ');
+              }
+            }
+          } catch (err) { /* ignore fallback to generic message */ }
+
+          const baseMessage = rule.regexMessage || 'Định dạng không hợp lệ';
+          return invalidChars ? `${baseMessage}. Ký tự không hợp lệ: ${invalidChars}` : baseMessage;
         }
       } catch(e) {
-          console.error("Invalid regex in validation rule", e);
+          console.error("Invalid regex pattern from backend:", rule.regex, e);
+          // If regex is invalid/unsupported, don't block the user
+          return null;
       }
     }
 
@@ -118,7 +157,7 @@ export const validationService = {
    * @param {Object} fieldMapping - Map of formData keys to rule keys
    * @returns {Object} { isValid: boolean, errors: Object }
    */
-  validateForm: (formData, rules, fieldMapping) => {
+  validateForm: (formData, rules, fieldMapping, developmentStage = null) => {
     const errors = {};
     if (!rules) return { isValid: true, errors };
 
@@ -127,7 +166,7 @@ export const validationService = {
       const rule = rules[ruleKey];
       
       if (rule) {
-        const error = validationService.validateField(formData[formKey], rule);
+        const error = validationService.validateField(formData[formKey], rule, developmentStage);
         if (error) {
           errors[formKey] = error;
         }

@@ -1,0 +1,607 @@
+.container {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow-x: hidden;
+  position: relative;
+}
+
+/* Background mesh gradients for premium feel */
+.container::before {
+  content: '';
+  position: absolute;
+  top: -10%;
+  right: -10%;
+  width: 60%;
+  height: 60%;
+  background: radial-gradient(circle, rgba(29, 155, 240, 0.15) 0%, transparent 70%);
+  filter: blur(80px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+.container::after {
+  content: '';
+  position: absolute;
+  bottom: 10%;
+  left: -5%;
+  width: 50%;
+  height: 50%;
+  background: radial-gradient(circle, rgba(29, 155, 240, 0.1) 0%, transparent 70%);
+  filter: blur(100px);
+  z-index: 0;
+  pointer-events: none;
+}
+
+/* Header */
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 5%;
+  z-index: 1000;
+  backdrop-filter: blur(12px);
+  background: rgba(var(--bg-primary-rgb), 0.75);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.logoArea {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+}
+
+.logoIcon {
+  color: #1d9bf0;
+  filter: drop-shadow(0 0 8px rgba(29, 155, 240, 0.5));
+}
+
+.logoText {
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #1d9bf0; /* Blue for the entire text */
+}
+
+.navActions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(20px);
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.navActionsVisible {
+  opacity: 1;
+  pointer-events: all;
+  transform: translateX(0);
+}
+
+.loginBtn {
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  padding: 10px 24px;
+  border-radius: 99px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.loginBtn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.4);
+}
+
+.registerBtn {
+  background: #1d9bf0;
+  color: white;
+  border: none;
+  padding: 10px 28px;
+  border-radius: 99px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(29, 155, 240, 0.3);
+}
+
+.registerBtn:hover {
+  background: #1a8cd8;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(29, 155, 240, 0.4);
+}
+
+/* Hero Section */
+.hero {
+  padding: 180px 5% 180px;
+  text-align: center;
+  position: relative;
+  z-index: 1;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.heroBadge {
+  display: inline-block;
+  padding: 8px 16px;
+  background: rgba(29, 155, 240, 0.1);
+  color: #1d9bf0;
+  border-radius: 99px;
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(29, 155, 240, 0.2);
+}
+
+.heroTitle {
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  font-weight: 900;
+  line-height: 1.1;
+  margin-bottom: 24px;
+  letter-spacing: -2px;
+  max-width: 1000px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.gradientText {
+  background: linear-gradient(135deg, var(--text-primary) 30%, #1d9bf0 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline;
+}
+
+.heroSubtitle {
+  font-size: 1.2rem;
+  color: var(--text-secondary);
+  max-width: 800px;
+  margin: 0 auto 48px;
+  line-height: 1.6;
+}
+
+.heroCta {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.primaryCta {
+  background: #1d9bf0;
+  color: white;
+  border: none;
+  padding: 16px 32px;
+  min-width: 180px;
+  border-radius: 99px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(29, 155, 240, 0.3);
+}
+
+.primaryCta:hover {
+  background: #1a8cd8;
+  transform: scale(1.05);
+  box-shadow: 0 6px 20px rgba(29, 155, 240, 0.4);
+}
+
+.secondaryCta:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.secondaryHeroBtn {
+  background: transparent;
+  color: #1d9bf0;
+  border: 1px solid #1d9bf0;
+  padding: 16px 32px;
+  min-width: 180px;
+  border-radius: 99px;
+  font-size: 1.1rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.secondaryHeroBtn:hover {
+  background: rgba(29, 155, 240, 0.05);
+  transform: translateY(-2px);
+}
+
+/* Stats Section */
+.stats {
+  padding: 120px 5% 80px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.statsContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 40px;
+}
+
+.statItem {
+  text-align: center;
+}
+
+.statNumber {
+  display: block;
+  font-size: 3rem;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.statLabel {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Role Cards Section */
+.roles {
+  padding: 120px 5%;
+}
+
+.sectionHeader {
+  text-align: center;
+  margin-bottom: 80px;
+}
+
+.sectionTitle {
+  font-size: 2.5rem;
+  font-weight: 800;
+  margin-bottom: 16px;
+}
+
+.sectionSubtitle {
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.roleGrid {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 30px;
+}
+
+.roleCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  padding: 48px;
+  border-radius: 32px;
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  position: relative;
+  overflow: hidden;
+  height: 520px; /* Standardized height */
+  display: flex;
+  flex-direction: column;
+}
+
+.roleCard:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(29, 155, 240, 0.3);
+}
+
+.roleIcon {
+  width: 64px;
+  height: 64px;
+  background: rgba(29, 155, 240, 0.1);
+  color: #1d9bf0;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 32px;
+}
+
+.roleName {
+  font-size: 1.75rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  height: 42px; /* Standard height for 1 line of text */
+  display: flex;
+  align-items: center;
+}
+
+.roleDesc {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 32px;
+  height: 80px; /* Standard height for ~3 lines of description */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.roleFeature {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+}
+
+.check {
+  color: #1d9bf0;
+}
+
+.roleFeatures {
+  margin-top: auto; /* Push to bottom if needed, but heights should align it anyway */
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Projects Grid */
+.featuredProjects {
+  padding: 120px 5%;
+  background: var(--bg-primary);
+}
+
+.projectGrid {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 24px;
+}
+
+.projectCard {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 24px;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  height: 480px; /* Standardized card height */
+}
+
+.projectCard:hover {
+  border-color: #1d9bf0;
+  transform: scale(1.02);
+}
+
+.projectImage {
+  width: 100%;
+  height: 200px; /* Fixed image height */
+  flex-shrink: 0;
+  background: #202327;
+  overflow: hidden;
+}
+
+.projectImage img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.projectContent {
+  padding: 24px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.projectHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  height: 48px; /* Fixed header height for name/score */
+}
+
+.projectName {
+  font-size: 1.15rem;
+  font-weight: 700;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.projectScore {
+  background: rgba(29, 155, 240, 0.1);
+  color: #1d9bf0;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-left: 12px;
+  white-space: nowrap;
+}
+
+.projectDesc {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 20px;
+  height: 66px; /* Fixed height for exactly 3 lines */
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.projectFooter {
+  display: flex;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-top: auto; /* Push footer to the very bottom */
+}
+
+/* Footer */
+.footer {
+  padding: 100px 5% 50px;
+  text-align: center;
+  background: var(--bg-primary);
+  border-top: 1px solid var(--border-color);
+}
+
+.footerContent {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.footerLogo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-bottom: 32px;
+}
+
+.footerLinks {
+  display: flex;
+  justify-content: center;
+  gap: 40px;
+  margin-bottom: 48px;
+}
+
+.footerLink {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: color 0.2s ease;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: inherit;
+}
+
+.footerLink:hover {
+  color: #1d9bf0;
+}
+
+.copyright {
+  color: var(--text-secondary);
+  opacity: 0.6;
+  font-size: 0.9rem;
+}
+
+/* Reveal Animations */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.revealActive {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.hero > * {
+  opacity: 0;
+  animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.heroBadge {
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+
+/* Style logic moved to top for consolidation */
+
+.primaryCta::after {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.2) 0%, transparent 70%);
+  transform: scale(0);
+  transition: transform 0.6s ease-out;
+  pointer-events: none;
+}
+
+.primaryCta:hover::after {
+  transform: scale(1);
+}
+
+.roleCard:hover .roleIcon {
+  transform: scale(1.1);
+  background: rgba(29, 155, 240, 0.2);
+}
+
+.projectCard:hover .projectImage img {
+  transform: scale(1.1);
+}
+
+.projectImage img {
+  transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.heroTitle { animation-delay: 0.1s; }
+.heroSubtitle { animation-delay: 0.2s; }
+.heroCta { animation-delay: 0.3s; }
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .hero { padding-top: 140px; padding-bottom: 100px; }
+  .heroTitle { font-size: 2.2rem; letter-spacing: -1px; }
+  .heroSubtitle { font-size: 0.95rem; margin-bottom: 32px; }
+  .roleGrid { grid-template-columns: 1fr; }
+  .heroCta { 
+    display: flex;
+    flex-direction: row; /* Keep side-by-side */
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap; /* Fallback for very small screens */
+  }
+  .primaryCta, .secondaryHeroBtn { 
+    padding: 12px 20px; 
+    font-size: 0.95rem; 
+    min-width: 140px; /* Smaller min-width for mobile */
+    width: auto; /* Don't force 100% */
+  }
+  .navActions { display: none; }
+}

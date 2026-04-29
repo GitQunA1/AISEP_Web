@@ -4,6 +4,7 @@ import styles from './StartupProfileForm.module.css';
 import startupProfileService from '../../services/startupProfileService';
 import validationService from '../../services/validationService';
 import enumService from '../../services/enumService';
+import optionService from '../../services/optionService';
 import CustomSelect from '../common/CustomSelect';
 
 /**
@@ -44,13 +45,13 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
         const formKey = initialData ? 'startup.update' : 'startup.create';
         const [rules, indOptions] = await Promise.all([
           validationService.getFormRules(formKey),
-          enumService.getEnumOptions('Industry')
+          optionService.getIndustries()
         ]);
-        
+
         if (!rules || Object.keys(rules).length === 0) {
           throw new Error(`Không tìm thấy cấu hình xác thực cho ${formKey}.`);
         }
-        
+
         setValidationRules(rules);
         setIndustries(indOptions);
 
@@ -64,10 +65,10 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
             if (typeof industryField === 'object') {
               const id = industryField.id || industryField.value || industryField.industryId;
               if (id && options.some(opt => String(opt.value) === String(id))) return String(id);
-              
+
               const name = industryField.name || industryField.label;
               if (name) {
-                const found = options.find(i => 
+                const found = options.find(i =>
                   i.label.toLowerCase() === name.toLowerCase() ||
                   i.label.replace('_', ' ').toLowerCase() === name.toLowerCase()
                 );
@@ -81,7 +82,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
               if (options.some(i => String(i.value) === String(numeric))) return String(numeric);
             }
 
-            const foundByLabel = options.find(i => 
+            const foundByLabel = options.find(i =>
               i.label.toLowerCase() === String(industryField).toLowerCase() ||
               i.label.replace('_', ' ').toLowerCase() === String(industryField).toLowerCase()
             );
@@ -110,19 +111,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
     fetchConfig();
   }, [initialData]);
 
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-    
-    // Real-time validation
-    const error = validateField(name, value);
-    setErrors(prev => ({ ...prev, [name]: error }));
-  };
-
-  const validateForm = () => {
-    if (!validationRules) return true;
-    
-    // Create a mapping from state keys to validation rule field keys
+  // Field mapping for validation
   const fieldMapping = {
     companyName: 'companyName',
     founder: 'founder',
@@ -141,28 +130,40 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
     if (!ruleKey || !validationRules[ruleKey]) return null;
     return validationService.validateField(value, validationRules[ruleKey]);
   };
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+    
+    // Real-time validation on every keystroke
+    const error = validateField(name, value);
+    setErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  const validateForm = () => {
+    if (!validationRules) return true;
     
     const { isValid, errors: validationErrors } = validationService.validateForm(
       formData,
       validationRules,
       fieldMapping
     );
-    
+
     // Also validate files
     if (logoFile) {
-        const logoRule = validationRules?.logofile;
-        const logoError = validationService.validateFile(logoFile, logoRule);
-        if (logoError) validationErrors.logoFile = logoError;
+      const logoRule = validationRules?.logofile;
+      const logoError = validationService.validateFile(logoFile, logoRule);
+      if (logoError) validationErrors.logoFile = logoError;
     } else if (validationRules?.logofile?.required && !formData.logoUrl) {
-        validationErrors.logoFile = 'Vui lòng tải lên logo công ty';
+      validationErrors.logoFile = 'Vui lòng tải lên logo công ty';
     }
 
     if (licenseFile) {
-        const licenseRule = validationRules?.businesslicensefile;
-        const licenseError = validationService.validateFile(licenseFile, licenseRule);
-        if (licenseError) validationErrors.businessLicenseFile = licenseError;
+      const licenseRule = validationRules?.businesslicensefile;
+      const licenseError = validationService.validateFile(licenseFile, licenseRule);
+      if (licenseError) validationErrors.businessLicenseFile = licenseError;
     } else if (validationRules?.businesslicensefile?.required && !formData.businessLicenseUrl) {
-        validationErrors.businessLicenseFile = 'Vui lòng tải lên giấy phép kinh doanh';
+      validationErrors.businessLicenseFile = 'Vui lòng tải lên giấy phép kinh doanh';
     }
 
     setErrors(validationErrors);
@@ -188,7 +189,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
       dataPayload.append('CountryCity', formData.countryCity);
       dataPayload.append('Website', formData.website);
       if (formData.industry && formData.industry !== '0' && formData.industry !== 0) {
-          dataPayload.append('IndustryOptionIds', formData.industry);
+        dataPayload.append('IndustryOptionIds', formData.industry);
       }
 
       // Append files with keys matching backend IFormFile properties
@@ -248,8 +249,8 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
           <AlertCircle size={48} style={{ margin: '0 auto 16px' }} />
           <h3 style={{ marginBottom: '8px', color: '#1e293b' }}>Không thể tải biểu mẫu</h3>
           <p style={{ marginBottom: '24px', color: '#64748b' }}>{configError}</p>
-          <button 
-            onClick={() => window.location.reload()} 
+          <button
+            onClick={() => window.location.reload()}
             style={{ padding: '8px 24px', backgroundColor: '#1e293b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
           >
             Thử lại
@@ -299,10 +300,10 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   placeholder="Tên chính thức của công ty"
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '4px' }}>
                 <span className={styles.errorText}>{errors.companyName || ''}</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                    {formData.companyName?.length || 0}/{validationRules?.companyname?.maxLength || 255}
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                  {formData.companyName?.length || 0}/{validationRules?.companyname?.maxLength || 255}
                 </span>
               </div>
             </div>
@@ -322,10 +323,10 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   placeholder="Tên người sáng lập"
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '4px' }}>
                 <span className={styles.errorText}>{errors.founder || ''}</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                    {formData.founder?.length || 0}/{validationRules?.founder?.maxLength || 255}
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                  {formData.founder?.length || 0}/{validationRules?.founder?.maxLength || 255}
                 </span>
               </div>
             </div>
@@ -345,10 +346,10 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   placeholder="Ví dụ: contact@startup.com"
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '4px' }}>
                 <span className={styles.errorText}>{errors.email || ''}</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                    {formData.email?.length || 0}/{validationRules?.email?.maxLength || 100}
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                  {formData.email?.length || 0}/{validationRules?.email?.maxLength || 100}
                 </span>
               </div>
             </div>
@@ -383,7 +384,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
                 <span className={styles.errorText}>{errors.phoneNumber || ''}</span>
                 <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                    {formData.phoneNumber?.length || 0}/{validationRules?.phonenumber?.maxLength || 20}
+                  {formData.phoneNumber?.length || 0}/{validationRules?.phonenumber?.maxLength || 20}
                 </span>
               </div>
             </div>
@@ -403,10 +404,10 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   placeholder="Tỉnh/Thành phố"
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '4px' }}>
                 <span className={styles.errorText}>{errors.countryCity || ''}</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                    {formData.countryCity?.length || 0}/{validationRules?.countrycity?.maxLength || 255}
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                  {formData.countryCity?.length || 0}/{validationRules?.countrycity?.maxLength || 255}
                 </span>
               </div>
             </div>
@@ -426,10 +427,10 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   placeholder="https://example.com"
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '4px' }}>
                 <span className={styles.errorText}>{errors.website || ''}</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                    {formData.website?.length || 0}/{validationRules?.website?.maxLength || 500}
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                  {formData.website?.length || 0}/{validationRules?.website?.maxLength || 500}
                 </span>
               </div>
             </div>
@@ -484,12 +485,12 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   id="logoUpload"
                   accept="image/png, image/jpeg, image/jpg, image/webp"
                   onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (!file) return;
-                      const rule = validationRules?.logofile;
-                      const error = validationService.validateFile(file, rule);
-                      setErrors(prev => ({ ...prev, logoFile: error }));
-                      if (!error) setLogoFile(file);
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const rule = validationRules?.logofile;
+                    const error = validationService.validateFile(file, rule);
+                    setErrors(prev => ({ ...prev, logoFile: error }));
+                    if (!error) setLogoFile(file);
                   }}
                   className={styles.hiddenInput}
                 />
@@ -515,11 +516,11 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   ) : (
                     <div className={styles.uploadPlaceholder}>
                       <div className={styles.uploadInfo}>
-                  <p className={styles.uploadMainText}>Logo công ty</p>
-                  <p className={styles.uploadSubText} style={{ color: errors.logoFile ? '#f4212e' : 'var(--text-secondary)' }}>
-                    {errors.logoFile || `JPG, PNG, WEBP (Tối đa ${validationRules?.logofile?.maxFileSize ? (validationRules.logofile.maxFileSize / (1024 * 1024)).toFixed(0) : '5'}MB)`}
-                  </p>
-                </div>
+                        <p className={styles.uploadMainText}>Logo công ty</p>
+                        <p className={styles.uploadSubText} style={{ color: errors.logoFile ? '#f4212e' : 'var(--text-secondary)' }}>
+                          {errors.logoFile || `JPG, PNG, WEBP (Tối đa ${validationRules?.logofile?.maxFileSize ? (validationRules.logofile.maxFileSize / (1024 * 1024)).toFixed(0) : '5'}MB)`}
+                        </p>
+                      </div>
                     </div>
                   )}
                 </label>
@@ -545,12 +546,12 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   id="licenseUpload"
                   accept="image/png, image/jpeg, image/jpg, application/pdf"
                   onChange={(e) => {
-                      const file = e.target.files[0];
-                      if (!file) return;
-                      const rule = validationRules?.businesslicensefile;
-                      const error = validationService.validateFile(file, rule);
-                      setErrors(prev => ({ ...prev, businessLicenseFile: error }));
-                      if (!error) setLicenseFile(file);
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const rule = validationRules?.businesslicensefile;
+                    const error = validationService.validateFile(file, rule);
+                    setErrors(prev => ({ ...prev, businessLicenseFile: error }));
+                    if (!error) setLicenseFile(file);
                   }}
                   className={styles.hiddenInput}
                 />
@@ -586,7 +587,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                       <div className={styles.uploadText}>
                         <span className={styles.uploadLink}>Tải Giấy phép</span>
                         <div style={{ fontSize: '10px', color: errors.businessLicenseFile ? '#f4212e' : 'var(--text-secondary)', marginTop: '4px' }}>
-                            {errors.businessLicenseFile || `Tối đa ${validationRules?.businesslicensefile?.maxFileSize ? (validationRules.businesslicensefile.maxFileSize / (1024 * 1024)).toFixed(0) : '10'}MB`}
+                          {errors.businessLicenseFile || `Tối đa ${validationRules?.businesslicensefile?.maxFileSize ? (validationRules.businesslicensefile.maxFileSize / (1024 * 1024)).toFixed(0) : '10'}MB`}
                         </div>
                       </div>
                     </div>

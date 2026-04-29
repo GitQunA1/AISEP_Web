@@ -4,6 +4,7 @@ import styles from './RightPanel.module.css';
 import Badge from '../common/Badge';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import AIEvaluationService from '../../services/AIEvaluationService';
+import SidebarFooter from './SidebarFooter';
 
 const AVATAR_COLORS = [
   { bg: '#1d4ed8', text: '#ffffff' },
@@ -153,6 +154,9 @@ function RightPanel({
           )}
         </div>
       </div>
+
+      {/* ── SIDEBAR FOOTER ── */}
+      <SidebarFooter user={user} />
     </aside>
   );
 }

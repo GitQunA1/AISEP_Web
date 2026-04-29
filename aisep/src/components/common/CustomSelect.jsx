@@ -110,18 +110,24 @@ export default function CustomSelect({
         transformOrigin: coords.isUpward ? 'bottom center' : 'top center'
       }}
     >
-      {options.map((opt) => (
-        <div 
-          key={opt.value}
-          className={`${styles.option} ${String(opt.value) === String(value) ? styles.selected : ''}`}
-          onClick={() => handleSelect(opt)}
-        >
-          <span>{opt.label}</span>
-          {String(opt.value) === String(value) && (
-            <Check size={16} strokeWidth={2.5} />
-          )}
+      {options.length > 0 ? (
+        options.map((opt) => (
+          <div 
+            key={opt.value}
+            className={`${styles.option} ${String(opt.value) === String(value) ? styles.selected : ''}`}
+            onClick={() => handleSelect(opt)}
+          >
+            <span>{opt.label}</span>
+            {String(opt.value) === String(value) && (
+              <Check size={16} strokeWidth={2.5} />
+            )}
+          </div>
+        ))
+      ) : (
+        <div style={{ padding: '16px', textAlign: 'center', color: 'var(--text-secondary)', fontSize: '14px' }}>
+          Không có tùy chọn nào
         </div>
-      ))}
+      )}
     </div>
   );
 

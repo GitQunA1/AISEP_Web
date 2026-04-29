@@ -19,6 +19,8 @@ export const authService = {
       password: data.password,
       confirmPassword: data.confirmPassword,
       role: data.role ?? 0, // UserRole enum: 0=Startup, 1=Investor, 2=Advisor, 3=Staff, 4=Admin
+      isTermsAccepted: data.isTermsAccepted || true,
+      termsVersion: data.termsVersion || 'v1.0'
     };
 
     const response = await apiClient.post('/api/Auth/register', payload);
