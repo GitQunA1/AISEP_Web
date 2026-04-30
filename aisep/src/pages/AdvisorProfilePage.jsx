@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
     User, Mail, MapPin, Globe, Award, Briefcase,
     DollarSign, Camera, FileText, CheckCircle, AlertCircle,
-    Loader, Trash2, Plus, X, ChevronRight, Save, Eye
+    Loader, Trash2, Plus, X, ChevronRight, Save, Eye, Lock
 } from 'lucide-react';
 import styles from './AdvisorProfilePage.module.css';
 import advisorService from '../services/advisorService';
@@ -14,6 +14,22 @@ import validationService from '../services/validationService';
 import enumService from '../services/enumService';
 import optionService from '../services/optionService';
 import AdvisorProfileBanner from '../components/advisor/AdvisorProfileBanner';
+import { useProfile } from '../context/ProfileContext';
+
+/**
+ * Mapping of backend field keys to Vietnamese labels for advisor profile localization.
+ */
+const FIELD_LABEL_MAP = {
+    'bio': 'Giới thiệu bản thân',
+    'expertise': 'Chuyên môn',
+    'previousexperience': 'Kinh nghiệm làm việc',
+    'industryoptionids': 'Lĩnh vực tư vấn',
+    'languagesspoken': 'Ngôn ngữ',
+    'location': 'Địa điểm',
+    'hourlyrate': 'Phí tư vấn theo giờ (VND)',
+    'profileimagefile': 'Ảnh đại diện',
+    'certificationfile': 'Chứng chỉ & Bằng cấp'
+};
 
 export default function AdvisorProfilePage({ user, onBack, banner, onNotificationNavigate }) {
     const [isLoading, setIsLoading] = useState(true);
@@ -24,6 +40,10 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
     const [activeMenu, setActiveMenu] = useState('info'); // 'info', 'expertise', 'experience'
     const [showSuccessModal, setShowSuccessModal] = useState(false);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
+    const [showPendingModal, setShowPendingModal] = useState(false);
+
+    // Use global profile status from context — available immediately without waiting for loadProfile()
+    const { advisorProfile: ctxAdvisorProfile, advisorProfileStatus, refreshProfile } = useProfile();
 
     const [validationRules, setValidationRules] = useState(null);
     const [availableIndustries, setAvailableIndustries] = useState([]);
@@ -75,9 +95,13 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
     const renderLabel = (label, fieldKey) => {
         const ruleKey = fieldMapping[fieldKey]?.toLowerCase() || fieldKey.toLowerCase();
         const rule = validationRules?.[ruleKey];
+
+        // Priority: 1. rule.displayName (from BE), 2. Local Map (Vietnamese), 3. hardcoded label, 4. rule.fieldKey
+        const ruleLabel = rule?.displayName || FIELD_LABEL_MAP[ruleKey] || label || rule?.fieldKey;
+
         return (
             <label>
-                {label}
+                {ruleLabel}
                 {rule?.required && <span className={styles.requiredAsterisk}> *</span>}
             </label>
         );
@@ -104,7 +128,12 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
 
         const constraints = [];
         if (rule.minLength) constraints.push(`Tối thiểu ${rule.minLength} ký tự`);
-        if (rule.regex && rule.regex.includes('03|05|07|08|09')) constraints.push('Định dạng số điện thoại Việt Nam');
+
+        // Show file constraints if applicable
+        if (rule.maxFileSize) {
+            const mbSize = (rule.maxFileSize / (1024 * 1024)).toFixed(0);
+            constraints.push(`Tối đa ${mbSize}MB`);
+        }
 
         if (constraints.length === 0) return null;
 
@@ -175,8 +204,12 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                 optionService.getIndustries()
             ]);
 
-            if (!rules || Object.keys(rules).length === 0) {
-                throw new Error(`Không tìm thấy cấu hình xác thực cho ${formKey}.`);
+            // Inject industry count constraints (1-4 for Advisors)
+            if (rules && rules.industryoptionids) {
+                rules.industryoptionids.minCount = 1;
+                rules.industryoptionids.maxCount = 4;
+                rules.industryoptionids.minCountMessage = 'Vui lòng chọn ít nhất 1 lĩnh vực.';
+                rules.industryoptionids.maxCountMessage = 'Bạn chỉ được chọn tối đa 4 lĩnh vực.';
             }
 
             setValidationRules(rules);
@@ -184,10 +217,47 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
 
             if (data) {
                 setProfile(data);
+
+                // Normalize industries: backend may return IDs (numbers), objects, or label strings
+                const rawIndustries = Array.isArray(data.industries) ? data.industries : [];
+                const normalizedIndustries = rawIndustries
+                    .map(item => {
+                        if (typeof item === 'string') {
+                            // Already a label string — verify it matches an available option
+                            const match = industriesData.find(
+                                opt => opt.label.toLowerCase() === item.toLowerCase()
+                            );
+                            return match ? match.label : item; // Keep raw string if no match (inactive)
+                        }
+                        if (typeof item === 'number' || (typeof item === 'string' && !isNaN(Number(item)))) {
+                            // It's an ID — find the matching label
+                            const match = industriesData.find(opt => String(opt.value) === String(item));
+                            return match ? match.label : null;
+                        }
+                        if (typeof item === 'object' && item !== null) {
+                            // It's an object — try common id/name fields
+                            const id = item.id ?? item.value ?? item.industryId;
+                            const name = item.name ?? item.label ?? item.industryName;
+                            if (id) {
+                                const match = industriesData.find(opt => String(opt.value) === String(id));
+                                if (match) return match.label;
+                            }
+                            if (name) {
+                                const match = industriesData.find(
+                                    opt => opt.label.toLowerCase() === String(name).toLowerCase()
+                                );
+                                if (match) return match.label;
+                                return name;
+                            }
+                        }
+                        return null;
+                    })
+                    .filter(Boolean); // Remove nulls
+
                 setFormData({
                     bio: data.bio || '',
                     expertise: data.expertise || '',
-                    industries: Array.isArray(data.industries) ? data.industries : [],
+                    industries: normalizedIndustries,
                     previousExperience: data.previousExperience || '',
                     languagesSpoken: data.languagesSpoken || '',
                     location: data.location || '',
@@ -232,20 +302,27 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
         }
     };
 
+    const MAX_INDUSTRIES = 4;
+    const MIN_INDUSTRIES = 1;
+
     const handleIndustryToggle = (ind) => {
         setFormData(prev => {
-            const industries = prev.industries.includes(ind)
+            const isSelected = prev.industries.includes(ind);
+
+            // Silently block selecting beyond max — no error shown on block
+            if (!isSelected && prev.industries.length >= MAX_INDUSTRIES) {
+                return prev; // No state change, no error message
+            }
+
+            const industries = isSelected
                 ? prev.industries.filter(i => i !== ind)
                 : [...prev.industries, ind];
 
-            // Validate industries immediately
-            if (validationRules?.industryoptionids) {
-                const errorMsg = validationService.validateField(
-                    industries.length > 0 ? industries.join(',') : '',
-                    validationRules.industryoptionids
-                );
-                setFieldErrors(errors => ({ ...errors, industryOptionIds: errorMsg }));
-            }
+            // Only show error when user deselects back to 0
+            const errorMsg = industries.length === 0
+                ? `Vui lòng chọn ít nhất ${MIN_INDUSTRIES} lĩnh vực.`
+                : null;
+            setFieldErrors(errs => ({ ...errs, industryOptionIds: errorMsg }));
 
             return { ...prev, industries };
         });
@@ -271,34 +348,54 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        if (!validationRules) return;
-
-        const validationData = {
-            ...formData,
-            industryOptionIds: formData.industries.length > 0 ? formData.industries.join(',') : ''
-        };
-
-        const { isValid, errors: validationErrs } = validationService.validateForm(
-            validationData,
-            validationRules,
-            fieldMapping
-        );
-
-        const newErrors = { ...validationErrs };
-
-        if (validationRules.profileImageFile) {
-            const fileErr = validationService.validateFile(files.profileImage, validationRules.profileImageFile);
-            if (fileErr) newErrors.profileImageFile = fileErr;
-            else if (validationRules.profileImageFile.isRequired && !files.profileImage && !previews.profileImage) {
-                newErrors.profileImageFile = 'Vui lòng tải lên ảnh đại diện';
-            }
+        // Block update while profile is pending review
+        const currentStatus = profile?.approvalStatus ?? ctxAdvisorProfile?.approvalStatus ?? advisorProfileStatus;
+        if (currentStatus === 'Pending') {
+            setShowPendingModal(true);
+            return;
         }
 
-        if (validationRules.certificationFile) {
-            const fileErr = validationService.validateFile(files.certification, validationRules.certificationFile);
-            if (fileErr) newErrors.certificationFile = fileErr;
-            else if (validationRules.certificationFile.isRequired && !files.certification && !previews.certificationUrl) {
-                newErrors.certificationFile = 'Vui lòng tải lên chứng chỉ';
+        const newErrors = {};
+
+        // Hardcoded industry count check (independent of backend rules)
+        if (formData.industries.length < MIN_INDUSTRIES) {
+            newErrors.industryOptionIds = `Vui lòng chọn ít nhất ${MIN_INDUSTRIES} lĩnh vực.`;
+        } else if (formData.industries.length > MAX_INDUSTRIES) {
+            newErrors.industryOptionIds = `Bạn chỉ được chọn tối đa ${MAX_INDUSTRIES} lĩnh vực.`;
+        }
+
+        if (validationRules) {
+            const validationData = {
+                ...formData,
+                industryOptionIds: formData.industries
+            };
+
+            const { errors: validationErrs } = validationService.validateForm(
+                validationData,
+                validationRules,
+                fieldMapping
+            );
+            // Merge backend errors but DON'T override industry error we already set
+            Object.keys(validationErrs).forEach(key => {
+                if (key !== 'industryOptionIds') {
+                    newErrors[key] = validationErrs[key];
+                }
+            });
+
+            if (validationRules.profileImageFile) {
+                const fileErr = validationService.validateFile(files.profileImage, validationRules.profileImageFile);
+                if (fileErr) newErrors.profileImageFile = fileErr;
+                else if (validationRules.profileImageFile.isRequired && !files.profileImage && !previews.profileImage) {
+                    newErrors.profileImageFile = 'Vui lòng tải lên ảnh đại diện';
+                }
+            }
+
+            if (validationRules.certificationFile) {
+                const fileErr = validationService.validateFile(files.certification, validationRules.certificationFile);
+                if (fileErr) newErrors.certificationFile = fileErr;
+                else if (validationRules.certificationFile.isRequired && !files.certification && !previews.certificationUrl) {
+                    newErrors.certificationFile = 'Vui lòng tải lên chứng chỉ';
+                }
             }
         }
 
@@ -323,9 +420,14 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
             submitData.append('Bio', formData.bio);
             submitData.append('Expertise', formData.expertise);
 
-            // Append multiple industries
+            // Append multiple industries: use IDs for active ones, labels for legacy ones
             formData.industries.forEach(ind => {
-                submitData.append('Industries', ind);
+                const activeOption = availableIndustries.find(opt => opt.label === ind);
+                if (activeOption) {
+                    submitData.append('IndustryOptionIds', activeOption.value);
+                } else {
+                    submitData.append('Industries', ind);
+                }
             });
 
             submitData.append('PreviousExperience', formData.previousExperience);
@@ -346,7 +448,8 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                 await advisorService.createMyProfile(submitData);
             }
             setShowSuccessModal(true);
-            loadProfile(); // Refresh data
+            loadProfile(); // Refresh local form data
+            refreshProfile(); // Sync global ProfileContext status immediately
         } catch (err) {
             setError(err.message || 'Lỗi khi cập nhật hồ sơ.');
         } finally {
@@ -386,9 +489,19 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                 showNotification={true}
             />
 
+            {/* Banner: prefer the prop passed by parent, then use ProfileContext (instant),
+                falling back to local profile only if context not yet loaded */}
             {banner ? (
                 <div style={{ marginBottom: '24px' }}>
                     {banner}
+                </div>
+            ) : (advisorProfileStatus && advisorProfileStatus !== 'Approved') ? (
+                <div style={{ marginBottom: '24px' }}>
+                    <AdvisorProfileBanner
+                        status={ctxAdvisorProfile?.status ?? advisorProfileStatus}
+                        approvalStatus={ctxAdvisorProfile?.approvalStatus ?? advisorProfileStatus}
+                        reason={ctxAdvisorProfile?.rejectionReason}
+                    />
                 </div>
             ) : (!profile || (profile.approvalStatus !== 1 && profile.approvalStatus !== 'Approved')) && !isLoading ? (
                 <div style={{ marginBottom: '24px' }}>
@@ -489,6 +602,9 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                                         />
                                     </div>
                                     {renderFieldConstraints('location')}
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                        {renderCharCounter(formData.location, 'location')}
+                                    </div>
                                     {fieldErrors.location && <span style={{ color: 'red', fontSize: '12px' }}>{fieldErrors.location}</span>}
                                 </div>
                                 <div className={styles.formGroup}>
@@ -503,6 +619,9 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                                         />
                                     </div>
                                     {renderFieldConstraints('languagesSpoken')}
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                        {renderCharCounter(formData.languagesSpoken, 'languagesSpoken')}
+                                    </div>
                                     {fieldErrors.languagesSpoken && <span style={{ color: 'red', fontSize: '12px' }}>{fieldErrors.languagesSpoken}</span>}
                                 </div>
                             </div>
@@ -544,6 +663,9 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                                         />
                                     </div>
                                     {renderFieldConstraints('expertise')}
+                                    <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                                        {renderCharCounter(formData.expertise, 'expertise')}
+                                    </div>
                                     {fieldErrors.expertise && <span style={{ color: 'red', fontSize: '12px' }}>{fieldErrors.expertise}</span>}
                                 </div>
                                 <div className={styles.formGroup}>
@@ -565,18 +687,51 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
 
                             <div className={styles.formGroup}>
                                 {renderLabel('Lĩnh vực chuyên môn', 'industryOptionIds')}
+                                <div style={{ marginBottom: '8px', fontSize: '12px', color: formData.industries.length >= MAX_INDUSTRIES ? 'var(--primary-blue)' : 'var(--text-secondary)' }}>
+                                    Đã chọn {formData.industries.length}/{MAX_INDUSTRIES} lĩnh vực
+                                </div>
                                 <div className={styles.industryPills}>
-                                    {availableIndustries.map(ind => (
-                                        <button
-                                            key={ind.value}
-                                            type="button"
-                                            className={`${styles.pill} ${formData.industries.includes(ind.label) ? styles.pillActive : ''}`}
-                                            onClick={() => handleIndustryToggle(ind.label)}
-                                        >
-                                            {ind.label}
-                                            {formData.industries.includes(ind.label) ? <X size={12} /> : <Plus size={12} />}
-                                        </button>
-                                    ))}
+                                    {availableIndustries.map(ind => {
+                                        const isSelected = formData.industries.includes(ind.label);
+                                        const isMaxReached = !isSelected && formData.industries.length >= MAX_INDUSTRIES;
+                                        return (
+                                            <button
+                                                key={ind.value}
+                                                type="button"
+                                                className={`${styles.pill} ${isSelected ? styles.pillActive : ''}`}
+                                                onClick={() => handleIndustryToggle(ind.label)}
+                                                style={isMaxReached ? { opacity: 0.4, cursor: 'not-allowed' } : {}}
+                                                title={isMaxReached ? `Đã đạt tối đa ${MAX_INDUSTRIES} lĩnh vực` : ''}
+                                            >
+                                                {ind.label}
+                                                {isSelected ? <X size={12} /> : <Plus size={12} />}
+                                            </button>
+                                        );
+                                    })}
+
+                                    {/* Inactive (Legacy) Industries */}
+                                    {formData.industries
+                                        .filter(label => !availableIndustries.some(opt => opt.label === label))
+                                        .map(label => (
+                                            <div
+                                                key={`inactive-${label}`}
+                                                className={styles.pill}
+                                                style={{
+                                                    display: 'flex', alignItems: 'center', gap: '6px',
+                                                    padding: '8px 16px', borderRadius: '20px', 
+                                                    border: '1px dashed var(--primary-blue)',
+                                                    backgroundColor: 'rgba(29, 155, 240, 0.1)',
+                                                    color: 'var(--primary-blue)',
+                                                    fontSize: '13px', fontWeight: '600', 
+                                                    cursor: 'not-allowed', opacity: 0.8
+                                                }}
+                                                title="Lĩnh vực này hiện đã ngừng hỗ trợ và không thể thay đổi"
+                                            >
+                                                {label}
+                                                <Lock size={12} />
+                                            </div>
+                                        ))
+                                    }
                                 </div>
                                 {fieldErrors.industryOptionIds && <span style={{ color: 'red', fontSize: '12px', marginTop: '4px', display: 'block' }}>{fieldErrors.industryOptionIds}</span>}
                             </div>
@@ -616,7 +771,7 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                                         <p className={styles.fileName}>
                                             {previews.certificationName || 'Tải lên chứng chỉ (PDF, PNG, JPG)'}
                                         </p>
-                                        <p className={styles.fileHint}>Kích thước tối đa 5MB</p>
+                                        {renderFieldConstraints('certificationFile')}
                                     </div>
                                     {previews.certificationUrl && (
                                         <button
@@ -702,8 +857,8 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                 isOpen={showConfirmModal}
                 title={profile?.advisorId ? "Cập nhật hồ sơ" : "Tạo mới hồ sơ"}
                 message={`Sau khi gửi thông tin, đội ngũ AISEP sẽ cần từ 2–4 ngày để xét duyệt hồ sơ của bạn.\n\n${profile?.advisorId
-                        ? "• Ví thu nhập sẽ tạm thời bị đóng băng cho đến khi quá trình xét duyệt hoàn tất."
-                        : "• Ví thu nhập sẽ được kích hoạt sau khi thông tin được xác nhận thành công."
+                    ? "• Ví thu nhập sẽ tạm thời bị đóng băng cho đến khi quá trình xét duyệt hoàn tất."
+                    : "• Ví thu nhập sẽ được kích hoạt sau khi thông tin được xác nhận thành công."
                     }`}
                 type="info"
                 primaryBtnText="Tiếp tục gửi"
@@ -712,6 +867,19 @@ export default function AdvisorProfilePage({ user, onBack, banner, onNotificatio
                 onSecondaryClick={() => setShowConfirmModal(false)}
                 onClose={() => setShowConfirmModal(false)}
             />
+
+            {/* Pending Status Block Modal */}
+            {showPendingModal && (
+                <ConfirmationModal
+                    isOpen={showPendingModal}
+                    title="Hồ sơ đang chờ xét duyệt"
+                    message={"Hồ sơ của bạn hiện đang trong quá trình xét duyệt bởi đội ngũ AISEP.\n\nBạn không thể cập nhật hồ sơ cho đến khi quá trình xét duyệt hoàn tất. Vui lòng chờ phản hồi từ hệ thống."}
+                    type="warning"
+                    primaryBtnText="Tôi đã hiểu"
+                    onPrimaryClick={() => setShowPendingModal(false)}
+                    onClose={() => setShowPendingModal(false)}
+                />
+            )}
         </div>
     );
 }

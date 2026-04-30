@@ -1,25 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  CircleNotch, 
-  ArrowLeft, 
-  ClipboardText, 
-  TrendUp, 
-  Sword, 
-  FolderOpen, 
-  Users, 
-  CurrencyDollar, 
-  ChartBar, 
-  Lightning, 
-  User, 
-  LockSimple, 
-  Star, 
-  SealCheck, 
-  Calendar, 
-  ShieldCheck, 
-  Image as ImageIcon, 
-  X, 
-  ArrowsOut, 
-  Sparkle, 
+import {
+  CircleNotch,
+  ArrowLeft,
+  ClipboardText,
+  TrendUp,
+  Sword,
+  FolderOpen,
+  Users,
+  CurrencyDollar,
+  ChartBar,
+  Lightning,
+  User,
+  LockSimple,
+  Star,
+  SealCheck,
+  Calendar,
+  ShieldCheck,
+  Image as ImageIcon,
+  X,
+  ArrowsOut,
+  Sparkle,
   Brain,
   ArrowSquareOut,
   Target
@@ -268,7 +268,7 @@ const DocumentCard = ({ doc }) => (
 );
 
 /* ─── Main Component ─────────────────────────────────────── */
-export default function ProjectDetailView({ projectId, onBack, user, isPaidUser = false, onShowLogin, isFullView, isInvestorApproved = false, isStartupApproved = false, onUnlock, onRestrictedAction }) {
+export default function ProjectDetailView({ projectId, onBack, user, isPaidUser = false, onShowLogin, isFullView, isInvestorApproved = false, isStartupApproved = false, isAdvisorApproved = false, onUnlock, onRestrictedAction }) {
   const [project, setProject] = useState(null);
   const [documents, setDocuments] = useState([]);
   const [aiHistory, setAiHistory] = useState([]);
@@ -539,7 +539,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
 
   const handleBlockchainVerification = async () => {
     if (isLoadingBlockchain || !projectId) return;
-    
+
     // Check if the user is a Startup or Investor - they need approval
     const roleStr = user?.role?.toString().toLowerCase() || '';
     const roleNum = Number(user?.role);
@@ -550,10 +550,15 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
       onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để thực hiện xác thực Blockchain.');
       return;
     }
-    
+
+    if ((roleStr === 'advisor' || roleNum === 2) && !isAdvisorApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Cố vấn để thực hiện xác thực Blockchain.');
+      return;
+    }
+
     // For startup, it's slightly different, but usually they are viewing their OWN project or they are approved
     // If they aren't approved, they might be blocked from even viewing this, but let's be safe
-    
+
     setIsLoadingBlockchain(true);
     setBlockchainError(null);
     try {
@@ -586,15 +591,19 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
 
   const chip = stageChip(project.stage);
   const letter = project.name.charAt(0).toUpperCase();
-  const industryTag =
-    project?.industry ||
-    project?.industryName ||
-    project?.projectIndustry ||
-    project?.category ||
-    project?.field ||
-    project?.tags?.[0] ||
-    '';
-  const mainTag = industryTag || project.tags[0] || '';
+  const industryTags = Array.isArray(project.industries) && project.industries.length > 0
+    ? project.industries
+    : [
+        project?.industry ||
+        project?.industryName ||
+        project?.projectIndustry ||
+        project?.category ||
+        project?.field ||
+        (project.tags && project.tags[0]) ||
+        ''
+      ].filter(Boolean);
+  
+  const mainTag = industryTags[0] || '';
   const approved = ['approved', 'Approved'].includes(project.status);
   const latestAI = aiHistory.length > 0
     ? (aiHistory[0].potentialScore ?? aiHistory[0].startupScore ?? null)
@@ -608,12 +617,12 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     const roleStr = user?.role?.toString().toLowerCase() || '';
     const roleNum = Number(user?.role);
     const isBypassRole = ['staff', 'operationstaff', 'operation_staff', 'advisor'].includes(roleStr) || [3, 4, 5].includes(roleNum);
-    
+
     // Also bypass if current user is the owner of this project
     const isOwner = project?.startupId && myStartupProfile && project.startupId === myStartupProfile.id;
 
     if (isBypassRole || isOwner) return null;
-    
+
     const isBuyerRole = ['investor', 'startup'].includes(roleStr) || [0, 1, 2].includes(roleNum);
     const canUnlock = effectiveIsPaidUser && isBuyerRole;
     return (
@@ -704,11 +713,6 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           <div style={{ fontSize: 12.5, color: T.textMuted, lineHeight: 1 }}>Chi tiết dự án</div>
         </div>
         {approved && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 999, fontSize: 11.5, fontWeight: 700, background: T.greenDim, color: T.green, border: '1px solid rgba(0,186,124,0.2)' }}>✓ Đã duyệt</span>}
-        {user && (
-          <button onClick={handleBlockchainVerification} disabled={isLoadingBlockchain} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 8, fontSize: 11.5, fontWeight: 700, background: T.blueDim, color: T.blue, border: `1px solid ${T.blueDim}`, cursor: isLoadingBlockchain ? 'not-allowed' : 'pointer', opacity: 1, transition: 'all 0.2s' }}>
-            {isLoadingBlockchain ? <CircleNotch size={13} style={{ animation: 'spin 0.8s linear infinite' }} /> : <><ShieldCheck size={16} weight="duotone" /> 🔗 Xác thực</>}
-          </button>
-        )}
       </div>
 
       {/* PROFILE CARD */}
@@ -719,23 +723,71 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
             <div>
               <h1 style={{ fontSize: 21, fontWeight: 800, color: T.text, margin: 0, letterSpacing: '-0.02em' }}>{project.name}</h1>
               <p style={{ fontSize: 13.5, color: T.textMuted, lineHeight: 1.5, margin: '2px 0 8px', maxWidth: 550, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project.description}</p>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>{industryTag && <span style={{ fontSize: 12, color: T.blue, background: T.blueDim, padding: '2px 10px', borderRadius: 99, fontWeight: 700 }}>#{industryTag}</span>}</div>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                {industryTags.map((tag, idx) => (
+                  <span key={idx} style={{ fontSize: 12, color: T.blue, background: T.blueDim, padding: '2px 10px', borderRadius: 99, fontWeight: 700 }}>
+                    #{tag}
+                  </span>
+                ))}
+              </div>
             </div>
 
-            {/* AI Action Button (Moved here) */}
-            {(user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1) && (
-              <div style={{ flexShrink: 0 }}>
-                {investorAIResults.length > 0 ? (
-                  <button onClick={() => { setActiveAIResult(investorAIResults[0]); setShowAIResultModal(true); }} className="ai-pulse-button" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 0 : 8, padding: isMobile ? '8px' : '8px 16px', borderRadius: 12, background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', color: '#fff', border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', boxShadow: '0 6px 16px rgba(139, 92, 246, 0.3)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1.5px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
-                    <Sparkle size={isMobile ? 18 : 15} weight="bold" /> { !isMobile && 'Xem Phân tích AI' }
-                  </button>
-                ) : (
-                  <button onClick={() => setShowAIConfirmModal(true)} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 0 : 8, padding: isMobile ? '8px' : '8px 16px', borderRadius: 12, background: 'rgba(139, 92, 246, 0.08)', color: '#8b5cf6', border: '1.5px solid rgba(139, 92, 246, 0.2)', fontWeight: 800, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.12)'; e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.08)'; e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.2)'; }}>
-                    <Brain size={isMobile ? 18 : 15} weight="bold" /> { !isMobile && 'AI Phân tích' }
-                  </button>
-                )}
-              </div>
-            )}
+            <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'flex-end', gap: 10, flexShrink: 0 }}>
+              {/* Blockchain Verification Button */}
+              {user && (
+                <button
+                  onClick={handleBlockchainVerification}
+                  disabled={isLoadingBlockchain}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: isMobile ? 0 : 8,
+                    padding: isMobile ? '8px' : '8px 16px',
+                    borderRadius: 12,
+                    background: 'rgba(29, 155, 240, 0.08)',
+                    color: '#1d9bf0',
+                    border: '1.5px solid rgba(29, 155, 240, 0.2)',
+                    fontWeight: 800,
+                    fontSize: 13,
+                    cursor: isLoadingBlockchain ? 'not-allowed' : 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={e => {
+                    if (!isLoadingBlockchain) {
+                      e.currentTarget.style.background = 'rgba(29, 155, 240, 0.12)';
+                      e.currentTarget.style.borderColor = 'rgba(29, 155, 240, 0.4)';
+                    }
+                  }}
+                  onMouseLeave={e => {
+                    if (!isLoadingBlockchain) {
+                      e.currentTarget.style.background = 'rgba(29, 155, 240, 0.08)';
+                      e.currentTarget.style.borderColor = 'rgba(29, 155, 240, 0.2)';
+                    }
+                  }}
+                >
+                  {isLoadingBlockchain ? (
+                    <CircleNotch size={18} style={{ animation: 'spin 0.8s linear infinite' }} />
+                  ) : (
+                    <><ShieldCheck size={isMobile ? 18 : 15} weight="bold" /> {!isMobile && 'Xác thực Blockchain'}</>
+                  )}
+                </button>
+              )}
+
+              {/* AI Action Button */}
+              {(user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1) && (
+                <>
+                  {investorAIResults.length > 0 ? (
+                    <button onClick={() => { setActiveAIResult(investorAIResults[0]); setShowAIResultModal(true); }} className="ai-pulse-button" style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 0 : 8, padding: isMobile ? '8px' : '8px 16px', borderRadius: 12, background: 'linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%)', color: '#fff', border: 'none', fontWeight: 800, fontSize: 13, cursor: 'pointer', boxShadow: '0 6px 16px rgba(139, 92, 246, 0.3)', transition: 'transform 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-1.5px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                      <Sparkle size={isMobile ? 18 : 15} weight="bold" /> {!isMobile && 'Xem Phân tích AI'}
+                    </button>
+                  ) : (
+                    <button onClick={() => setShowAIConfirmModal(true)} style={{ display: 'flex', alignItems: 'center', gap: isMobile ? 0 : 8, padding: isMobile ? '8px' : '8px 16px', borderRadius: 12, background: 'rgba(139, 92, 246, 0.08)', color: '#8b5cf6', border: '1.5px solid rgba(139, 92, 246, 0.2)', fontWeight: 800, fontSize: 13, cursor: 'pointer', transition: 'all 0.2s' }} onMouseEnter={e => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.12)'; e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.4)'; }} onMouseLeave={e => { e.currentTarget.style.background = 'rgba(139, 92, 246, 0.08)'; e.currentTarget.style.borderColor = 'rgba(139, 92, 246, 0.2)'; }}>
+                      <Brain size={isMobile ? 18 : 15} weight="bold" /> {!isMobile && 'AI Phân tích'}
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
 
@@ -853,9 +905,9 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
 
       {/* MODALS */}
       {showBookingWizard && (
-        <BookingWizard 
-          onClose={() => setShowBookingWizard(false)} 
-          user={user} 
+        <BookingWizard
+          onClose={() => setShowBookingWizard(false)}
+          user={user}
           isApproved={(() => {
             const roleStr = user?.role?.toString().toLowerCase() || '';
             const roleNum = Number(user?.role);
@@ -863,8 +915,8 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
             if (roleStr === 'investor' || roleNum === 1) return isInvestorApproved;
             return true;
           })()}
-          initialProjectId={projectId} 
-          initialAdvisorId={project?.assignedAdvisorId} 
+          initialProjectId={projectId}
+          initialAdvisorId={project?.assignedAdvisorId}
         />
       )}
       {showUnlockConfirm && <UnlockConfirmationModal isOpen={showUnlockConfirm} onClose={() => setShowUnlockConfirm(false)} onConfirm={confirmUnlock} isUnlocking={isUnlocking} isLoadingQuota={isLoadingQuota} projectName={project?.name} remainingViews={remainingViews} packageName={subscription?.packageName} />}

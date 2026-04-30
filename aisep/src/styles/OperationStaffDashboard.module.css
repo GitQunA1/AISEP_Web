@@ -3477,6 +3477,11 @@ btnReject {
     background: rgba(16, 185, 129, 0.1) !important;
 }
 
+/* This class is applied to the card container, should only provide the hook for children/hover, not background itself */
+.apr {
+    border-left-color: #10b981 !important;
+}
+
 .inv_card {
     background: var(--bg-secondary);
     border: 1px solid var(--border-color);
@@ -3701,9 +3706,10 @@ btnReject {
     box-shadow: 0 0 10px rgba(245, 158, 11, 0.4);
 }
 
+.investorProCardStrip.apr,
 .investorProCardStrip.appr {
-    background: #00ba7c;
-    box-shadow: 0 0 10px rgba(0, 186, 124, 0.4);
+    background: #10b981;
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.4);
 }
 
 .investorProCardStrip.rej {
@@ -3717,9 +3723,10 @@ btnReject {
     box-shadow: 0 12px 30px rgba(245, 158, 11, 0.15);
 }
 
+.investorProCard.apr:hover,
 .investorProCard.appr:hover {
-    border-color: rgba(0, 186, 124, 0.5);
-    box-shadow: 0 12px 30px rgba(0, 186, 124, 0.15);
+    border-color: rgba(16, 185, 129, 0.5);
+    box-shadow: 0 12px 30px rgba(16, 185, 129, 0.15);
 }
 
 .investorProCard.rej:hover {

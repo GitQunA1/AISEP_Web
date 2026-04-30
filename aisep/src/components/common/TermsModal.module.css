@@ -45,6 +45,7 @@
     align-items: center;
     padding: 24px 32px;
     border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
 }
 
 .title {
@@ -161,22 +162,30 @@
     .modal {
         max-width: 100%;
         width: 100%;
-        height: 100vh;
-        max-height: 100vh;
+        height: 100%;
+        height: 100dvh; /* Use dynamic viewport height for mobile */
+        max-height: 100dvh;
         border-radius: 0;
         border: none;
+        display: flex;
+        flex-direction: column;
     }
 
     .header {
-        padding: 20px 20px;
+        padding: 16px 20px;
         background-color: var(--bg-primary);
-        position: sticky;
-        top: 0;
-        z-index: 10;
+        border-bottom: 1px solid var(--border-color);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: relative; /* Remove sticky which can be buggy in flex on mobile */
+        z-index: 20;
+        flex-shrink: 0; /* Ensure header doesn't shrink */
     }
 
     .title {
-        font-size: 18px;
+        font-size: 17px;
+        font-weight: 700;
     }
 
     .content {

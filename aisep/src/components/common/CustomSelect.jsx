@@ -9,7 +9,8 @@ export default function CustomSelect({
   options, 
   name, 
   placeholder = "Chọn giá trị...",
-  className = "" 
+  className = "",
+  disabled = false
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef(null);
@@ -134,8 +135,9 @@ export default function CustomSelect({
   return (
     <div className={`${styles.container} ${className}`} ref={containerRef}>
       <div 
-        className={`${styles.selector} ${isOpen ? styles.open : ''}`}
-        onClick={() => setIsOpen(!isOpen)}
+        className={`${styles.selector} ${isOpen ? styles.open : ''} ${disabled ? styles.disabled : ''}`}
+        onClick={() => !disabled && setIsOpen(!isOpen)}
+        style={disabled ? { opacity: 0.6, cursor: 'not-allowed' } : {}}
       >
         {selectedOption ? (
           <span className={styles.selectedLabel}>{selectedOption.label}</span>

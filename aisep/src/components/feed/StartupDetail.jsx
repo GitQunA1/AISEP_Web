@@ -127,12 +127,18 @@ export default function StartupDetail({ startupId, onBack, user, onShowLogin }) 
           </div>
           
           <div className={styles.handle}>
-            {startup.industry ? `#${startup.industry.toLowerCase().replace(/\s+/g, '')}` : 'Startup'}
+            {Array.isArray(startup.industries) && startup.industries.length > 0 
+              ? startup.industries.map(ind => `#${ind.toLowerCase().replace(/\s+/g, '')}`).join(' ')
+              : (startup.industry ? `#${startup.industry.toLowerCase().replace(/\s+/g, '')}` : 'Startup')}
           </div>
 
           <p className={styles.bio}>
             {startup.founder 
-              ? `Được sáng lập bởi ${startup.founder}. Một startup tiềm năng đang hoạt động trong lĩnh vực ${startup.industry?.toLowerCase() || 'công nghệ'}.`
+              ? `Được sáng lập bởi ${startup.founder}. Một startup tiềm năng đang hoạt động trong lĩnh vực ${
+                  Array.isArray(startup.industries) && startup.industries.length > 0
+                    ? startup.industries.join(', ').toLowerCase()
+                    : (startup.industry?.toLowerCase() || 'công nghệ')
+                }.`
               : "Thông tin giới thiệu về startup đang được cập nhật."
             }
           </p>
@@ -208,7 +214,11 @@ export default function StartupDetail({ startupId, onBack, user, onShowLogin }) 
               <div className={`${styles.iconBox} ${styles.purpleBox}`}>🏢</div>
               <div className={styles.rowContent}>
                 <div className={styles.rowTitle}>Lĩnh vực hoạt động</div>
-                <div className={styles.rowText}>{DISPLAY(startup.industry)}</div>
+                <div className={styles.rowText}>
+                  {Array.isArray(startup.industries) && startup.industries.length > 0
+                    ? startup.industries.join(', ')
+                    : DISPLAY(startup.industry)}
+                </div>
               </div>
             </div>
 

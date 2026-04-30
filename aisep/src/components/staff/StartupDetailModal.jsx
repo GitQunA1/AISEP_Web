@@ -76,7 +76,11 @@ const StartupDetailModal = ({
                             
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '12px' }}>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>
-                                    <Building size={16} color="var(--primary-blue)" /> {industry}
+                                    <Building size={16} color="var(--primary-blue)" /> 
+                                    {(() => {
+                                        const industries = startup?.industries || (startup?.industry ? [startup.industry] : []);
+                                        return industries.join(', ') || 'Lĩnh vực khác';
+                                    })()}
                                 </div>
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '14px', color: 'var(--text-secondary)' }}>
                                     <Calendar size={16} color="var(--primary-blue)" /> Đăng ký: {startup?.createdAt ? new Date(startup.createdAt).toLocaleDateString('vi-VN') : 'N/A'}

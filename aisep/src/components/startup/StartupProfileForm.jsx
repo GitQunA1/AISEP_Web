@@ -1,11 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { Check, AlertCircle, Loader2, Upload, X, FileText, Globe, User, MapPin, Briefcase, Tag, Mail, ExternalLink } from 'lucide-react';
+import { Check, AlertCircle, Loader2, Upload, X, FileText, Globe, User, MapPin, Briefcase, Tag, Mail, ExternalLink, Shield } from 'lucide-react';
 import styles from './StartupProfileForm.module.css';
 import startupProfileService from '../../services/startupProfileService';
 import validationService from '../../services/validationService';
 import enumService from '../../services/enumService';
 import optionService from '../../services/optionService';
 import CustomSelect from '../common/CustomSelect';
+
+/**
+ * Mapping of backend field keys to Vietnamese labels for startup profile localization.
+ */
+const FIELD_LABEL_MAP = {
+  'companyname': 'Tên công ty',
+  'founder': 'Người sáng lập',
+  'email': 'Email liên hệ',
+  'phonenumber': 'Số điện thoại',
+  'countrycity': 'Quốc gia & Thành phố',
+  'website': 'Website',
+  'industryoptionids': 'Lĩnh vực kinh doanh',
+  'logofile': 'Logo công ty',
+  'businesslicensefile': 'Giấy phép kinh doanh'
+};
 
 /**
  * StartupProfileForm - Form for updating startup profile information
@@ -37,79 +52,91 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
   const [configError, setConfigError] = useState('');
 
   // Fetch dynamic configuration
-  useEffect(() => {
-    const fetchConfig = async () => {
-      setIsConfigLoading(true);
-      setConfigError('');
-      try {
-        const formKey = initialData ? 'startup.update' : 'startup.create';
-        const [rules, indOptions] = await Promise.all([
-          validationService.getFormRules(formKey),
-          optionService.getIndustries()
-        ]);
+  const fetchConfig = async () => {
+    setIsConfigLoading(true);
+    setConfigError('');
+    try {
+      const formKey = initialData ? 'startup.update' : 'startup.create';
+      const [rules, indOptions] = await Promise.all([
+        validationService.getFormRules(formKey),
+        optionService.getIndustries()
+      ]);
 
-        if (!rules || Object.keys(rules).length === 0) {
-          throw new Error(`Không tìm thấy cấu hình xác thực cho ${formKey}.`);
-        }
-
-        setValidationRules(rules);
-        setIndustries(indOptions);
-
-        if (initialData) {
-          const getIndustryNumericValue = (data, options = []) => {
-            // Try to find industry data in common backend field names
-            const industryField = data.industry || (data.industries && data.industries[0]) || data.Industry || '';
-            if (!industryField) return '';
-
-            // 1. If it's an object, try to get ID or Name
-            if (typeof industryField === 'object') {
-              const id = industryField.id || industryField.value || industryField.industryId;
-              if (id && options.some(opt => String(opt.value) === String(id))) return String(id);
-
-              const name = industryField.name || industryField.label;
-              if (name) {
-                const found = options.find(i =>
-                  i.label.toLowerCase() === name.toLowerCase() ||
-                  i.label.replace('_', ' ').toLowerCase() === name.toLowerCase()
-                );
-                return found ? String(found.value) : '';
-              }
-            }
-
-            // 2. If it's a primitive (ID or Label)
-            const numeric = parseInt(industryField);
-            if (!isNaN(numeric)) {
-              if (options.some(i => String(i.value) === String(numeric))) return String(numeric);
-            }
-
-            const foundByLabel = options.find(i =>
-              i.label.toLowerCase() === String(industryField).toLowerCase() ||
-              i.label.replace('_', ' ').toLowerCase() === String(industryField).toLowerCase()
-            );
-            return foundByLabel ? String(foundByLabel.value) : '';
-          };
-
-          setFormData({
-            companyName: initialData.companyName || initialData.CompanyName || '',
-            logoUrl: initialData.logoUrl || initialData.LogoUrl || '',
-            founder: initialData.founder || initialData.Founder || '',
-            email: initialData.email || initialData.Email || '',
-            phoneNumber: initialData.phoneNumber || initialData.PhoneNumber || '',
-            countryCity: initialData.countryCity || initialData.CountryCity || '',
-            website: initialData.website || initialData.Website || '',
-            industry: getIndustryNumericValue(initialData, indOptions),
-            businessLicenseUrl: initialData.businessLicenseUrl || initialData.BusinessLicenseUrl || '',
-          });
-        }
-      } catch (err) {
-        console.error('Config loading error:', err);
-        setConfigError(err.message || 'Lỗi kết nối đến dịch vụ cấu hình.');
-      } finally {
-        setIsConfigLoading(false);
+      if (!rules || Object.keys(rules).length === 0) {
+        throw new Error(`Không tìm thấy cấu hình xác thực cho ${formKey}.`);
       }
-    };
+
+      if (rules && rules.industryoptionids) {
+        rules.industryoptionids.minCount = 1;
+        rules.industryoptionids.maxCount = 1;
+        rules.industryoptionids.minCountMessage = 'Vui lòng chọn lĩnh vực.';
+        rules.industryoptionids.maxCountMessage = 'Vui lòng chỉ chọn 1 lĩnh vực.';
+      }
+
+      setValidationRules(rules);
+      setIndustries(indOptions);
+
+      if (initialData) {
+        const getIndustryNumericValue = (data, options = []) => {
+          // Try to find industry data in common backend field names
+          const industryField = data.industry || (data.industries && data.industries[0]) || data.Industry || '';
+          if (!industryField) return '';
+
+          // 1. If it's an object, try to get ID or Name
+          if (typeof industryField === 'object') {
+            const id = industryField.id || industryField.value || industryField.industryId;
+            if (id && options.some(opt => String(opt.value) === String(id))) return String(id);
+
+            const name = industryField.name || industryField.label;
+            if (name) {
+              const found = options.find(i =>
+                i.label.toLowerCase() === name.toLowerCase() ||
+                i.label.replace('_', ' ').toLowerCase() === name.toLowerCase()
+              );
+              return found ? String(found.value) : '';
+            }
+          }
+
+          // 2. If it's a primitive (ID or Label)
+          const numeric = parseInt(industryField);
+          if (!isNaN(numeric)) {
+            if (options.some(i => String(i.value) === String(numeric))) return String(numeric);
+          }
+
+          const foundByLabel = options.find(i =>
+            i.label.toLowerCase() === String(industryField).toLowerCase() ||
+            i.label.replace('_', ' ').toLowerCase() === String(industryField).toLowerCase()
+          );
+          return foundByLabel ? String(foundByLabel.value) : String(industryField); // Keep label if no ID found
+        };
+
+        setFormData({
+          companyName: initialData.companyName || initialData.CompanyName || '',
+          logoUrl: initialData.logoUrl || initialData.LogoUrl || '',
+          founder: initialData.founder || initialData.Founder || '',
+          email: initialData.email || initialData.Email || '',
+          phoneNumber: initialData.phoneNumber || initialData.PhoneNumber || '',
+          countryCity: initialData.countryCity || initialData.CountryCity || '',
+          website: initialData.website || initialData.Website || '',
+          industry: getIndustryNumericValue(initialData, indOptions),
+          businessLicenseUrl: initialData.businessLicenseUrl || initialData.BusinessLicenseUrl || '',
+        });
+      }
+    } catch (err) {
+      console.error('Config loading error:', err);
+      setConfigError(err.message || 'Lỗi kết nối đến dịch vụ cấu hình.');
+    } finally {
+      setIsConfigLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchConfig();
   }, [initialData]);
+
+  const handleRetry = () => {
+    fetchConfig();
+  };
 
   // Field mapping for validation
   const fieldMapping = {
@@ -135,9 +162,29 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Real-time validation on every keystroke
     const error = validateField(name, value);
     setErrors(prev => ({ ...prev, [name]: error }));
+  };
+
+  /**
+   * Helper to render field label with dynamic required star and localized text
+   */
+  const renderFieldHeader = (name, label) => {
+    const fieldKey = (name || '').toLowerCase();
+    const ruleKey = fieldMapping[name]?.toLowerCase() || fieldKey;
+    const rule = validationRules?.[ruleKey];
+    const isRequired = rule?.required;
+    
+    // Priority: 1. rule.displayName (from BE), 2. Local Map (Vietnamese), 3. hardcoded label, 4. rule.fieldKey
+    const ruleLabel = rule?.displayName || FIELD_LABEL_MAP[ruleKey] || label || rule?.fieldKey;
+
+    return (
+      <label className={styles.label}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {ruleLabel} {isRequired && <span className={styles.required}>*</span>}
+        </span>
+      </label>
+    );
   };
 
   const validateForm = () => {
@@ -176,6 +223,15 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
 
     if (!validateForm()) return;
 
+    // Block update while profile is pending review
+    const statusStr = String(initialData?.status || initialData?.approvalStatus || '').toUpperCase();
+    const isPending = statusStr === 'PENDING' || initialData?.status === 0 || initialData?.approvalStatus === 0;
+    
+    if (isPending) {
+      setErrors(prev => ({ ...prev, submit: 'Hồ sơ đang chờ xét duyệt. Bạn không thể cập nhật thông tin lúc này.' }));
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       // Create FormData properly for multipart/form-data
@@ -189,7 +245,13 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
       dataPayload.append('CountryCity', formData.countryCity);
       dataPayload.append('Website', formData.website);
       if (formData.industry && formData.industry !== '0' && formData.industry !== 0) {
-        dataPayload.append('IndustryOptionIds', formData.industry);
+        const activeOption = industries.find(opt => String(opt.value) === String(formData.industry));
+        if (activeOption) {
+          dataPayload.append('IndustryOptionIds', formData.industry);
+        } else {
+          // It's a legacy/inactive industry label
+          dataPayload.append('Industries', formData.industry);
+        }
       }
 
       // Append files with keys matching backend IFormFile properties
@@ -250,7 +312,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
           <h3 style={{ marginBottom: '8px', color: '#1e293b' }}>Không thể tải biểu mẫu</h3>
           <p style={{ marginBottom: '24px', color: '#64748b' }}>{configError}</p>
           <button
-            onClick={() => window.location.reload()}
+            onClick={handleRetry}
             style={{ padding: '8px 24px', backgroundColor: '#1e293b', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer' }}
           >
             Thử lại
@@ -286,9 +348,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
 
           <div className={styles.formGrid}>
             <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Tên công ty <span className={styles.required}>*</span>
-              </label>
+              {renderFieldHeader('companyName', 'Tên công ty')}
               <div className={styles.inputWrapper}>
                 <Briefcase className={styles.fieldIcon} size={18} />
                 <input
@@ -300,18 +360,18 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   placeholder="Tên chính thức của công ty"
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', marginTop: '4px' }}>
                 <span className={styles.errorText}>{errors.companyName || ''}</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
-                  {formData.companyName?.length || 0}/{validationRules?.companyname?.maxLength || 255}
-                </span>
+                {validationRules?.companyname?.maxLength && (
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                    {formData.companyName?.length || 0}/{validationRules.companyname.maxLength}
+                  </span>
+                )}
               </div>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Người sáng lập <span className={styles.required}>*</span>
-              </label>
+              {renderFieldHeader('founder', 'Người sáng lập')}
               <div className={styles.inputWrapper}>
                 <User className={styles.fieldIcon} size={18} />
                 <input
@@ -323,18 +383,18 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   placeholder="Tên người sáng lập"
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', marginTop: '4px' }}>
                 <span className={styles.errorText}>{errors.founder || ''}</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
-                  {formData.founder?.length || 0}/{validationRules?.founder?.maxLength || 255}
-                </span>
+                {validationRules?.founder?.maxLength && (
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                    {formData.founder?.length || 0}/{validationRules.founder.maxLength}
+                  </span>
+                )}
               </div>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Email liên hệ <span className={styles.required}>*</span>
-              </label>
+              {renderFieldHeader('email', 'Email liên hệ')}
               <div className={styles.inputWrapper}>
                 <Mail className={styles.fieldIcon} size={18} />
                 <input
@@ -346,18 +406,18 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   placeholder="Ví dụ: contact@startup.com"
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', marginTop: '4px' }}>
                 <span className={styles.errorText}>{errors.email || ''}</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
-                  {formData.email?.length || 0}/{validationRules?.email?.maxLength || 100}
-                </span>
+                {validationRules?.email?.maxLength && (
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                    {formData.email?.length || 0}/{validationRules.email.maxLength}
+                  </span>
+                )}
               </div>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Số điện thoại <span className={styles.required}>*</span>
-              </label>
+              {renderFieldHeader('phoneNumber', 'Số điện thoại')}
               <div className={styles.inputWrapper}>
                 <span className={styles.fieldIcon} style={{
                   fontSize: '13px',
@@ -381,18 +441,18 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   style={{ paddingLeft: '48px' }}
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '4px' }}>
                 <span className={styles.errorText}>{errors.phoneNumber || ''}</span>
-                <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
-                  {formData.phoneNumber?.length || 0}/{validationRules?.phonenumber?.maxLength || 20}
-                </span>
+                {validationRules?.phonenumber?.maxLength && (
+                  <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>
+                    {formData.phoneNumber?.length || 0}/{validationRules.phonenumber.maxLength}
+                  </span>
+                )}
               </div>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Địa phương <span className={styles.required}>*</span>
-              </label>
+              {renderFieldHeader('countryCity', 'Địa phương')}
               <div className={styles.inputWrapper}>
                 <MapPin className={styles.fieldIcon} size={18} />
                 <input
@@ -404,18 +464,18 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   placeholder="Tỉnh/Thành phố"
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', marginTop: '4px' }}>
                 <span className={styles.errorText}>{errors.countryCity || ''}</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
-                  {formData.countryCity?.length || 0}/{validationRules?.countrycity?.maxLength || 255}
-                </span>
+                {validationRules?.countrycity?.maxLength && (
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                    {formData.countryCity?.length || 0}/{validationRules.countrycity.maxLength}
+                  </span>
+                )}
               </div>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>
-                Website <span className={styles.required}>*</span>
-              </label>
+              {renderFieldHeader('website', 'Website')}
               <div className={styles.inputWrapper}>
                 <Globe className={styles.fieldIcon} size={18} />
                 <input
@@ -427,16 +487,18 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   placeholder="https://example.com"
                 />
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginTop: '4px' }}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'flex-start', marginTop: '4px' }}>
                 <span className={styles.errorText}>{errors.website || ''}</span>
-                <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
-                  {formData.website?.length || 0}/{validationRules?.website?.maxLength || 500}
-                </span>
+                {validationRules?.website?.maxLength && (
+                  <span style={{ fontSize: '11px', color: 'var(--text-secondary)', fontWeight: '500' }}>
+                    {formData.website?.length || 0}/{validationRules.website.maxLength}
+                  </span>
+                )}
               </div>
             </div>
 
             <div className={styles.formGroup}>
-              <label className={styles.label}>Lĩnh vực</label>
+              {renderFieldHeader('industry', 'Lĩnh vực')}
               <div className={styles.inputWrapper}>
                 <Tag className={styles.fieldIcon} size={18} />
                 <CustomSelect
@@ -445,8 +507,29 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   onChange={handleInputChange}
                   options={industries}
                   placeholder="Chọn lĩnh vực..."
+                  disabled={!!(formData.industry && !industries.find(opt => String(opt.value) === String(formData.industry)))}
                 />
               </div>
+              
+              {/* Inactive Industry Warning */}
+              {formData.industry && !industries.find(opt => String(opt.value) === String(formData.industry)) && (
+                <div style={{ 
+                  marginTop: '10px', 
+                  padding: '8px 12px', 
+                  backgroundColor: 'rgba(29, 155, 240, 0.1)', 
+                  border: '1px dashed var(--primary-blue)', 
+                  borderRadius: '8px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
+                  color: 'var(--primary-blue)',
+                  fontSize: '12px',
+                  fontWeight: '600'
+                }}>
+                  <Shield size={14} />
+                  <span>Lĩnh vực hiện tại: <strong>{formData.industry}</strong> (Ngừng hỗ trợ - Không thể thay đổi)</span>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -468,7 +551,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
           <div className={styles.uploadRow}>
             {/* Logo Upload */}
             <div className={styles.formGroup}>
-              <label className={styles.label}>Logo công ty</label>
+              {renderFieldHeader('logoFile', 'Logo công ty')}
               <div
                 className={`${styles.uploadCard} ${logoFile || formData.logoUrl ? styles.hasFile : ''}`}
                 onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add(styles.dragOver); }}
@@ -529,7 +612,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
 
             {/* License Upload */}
             <div className={styles.formGroup}>
-              <label className={styles.label}>Giấy phép kinh doanh</label>
+              {renderFieldHeader('businessLicenseFile', 'Giấy phép kinh doanh')}
               <div
                 className={`${styles.uploadCard} ${licenseFile || formData.businessLicenseUrl ? styles.hasFile : ''}`}
                 onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add(styles.dragOver); }}
@@ -620,8 +703,9 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
           </button>
           <button
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || (String(initialData?.status || initialData?.approvalStatus || '').toUpperCase() === 'PENDING' || initialData?.status === 0 || initialData?.approvalStatus === 0)}
             className={styles.saveBtn}
+            title={ (String(initialData?.status || initialData?.approvalStatus || '').toUpperCase() === 'PENDING' || initialData?.status === 0 || initialData?.approvalStatus === 0) ? "Không thể cập nhật hồ sơ khi đang chờ xét duyệt" : "" }
           >
             {isSubmitting ? (
               <>

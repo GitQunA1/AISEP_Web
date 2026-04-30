@@ -1,4 +1,6 @@
 import { useState, useEffect, startTransition } from 'react';
+import { useProfile } from './context/ProfileContext';
+import RestrictedActionModal from './components/common/RestrictedActionModal';
 import './styles/global.css';
 import MainLayout from './components/layout/MainLayout';
 import DashboardLayout from './components/layout/DashboardLayout';
@@ -17,7 +19,7 @@ import LandingPage from './pages/LandingPage';
 import termsService from './services/termsService';
 import TermsEnforcementModal from './components/auth/TermsEnforcementModal';
 import TermsModal from './components/common/TermsModal';
-import startupProfileService from './services/startupProfileService';
+import startupProfileService from './services/startupProfileService'; // kept for other usages if any
 import SubscriptionManagement from './components/subscription/SubscriptionManagement';
 import AdvisorProfilePage from './pages/AdvisorProfilePage';
 import AdvisorApprovalPage from './components/advisor/AdvisorApprovalPage';
@@ -35,6 +37,9 @@ function App() {
   const [lastInvestorBookingFilter, setLastInvestorBookingFilter] = useState('all');
   const [lastDashboardSection, setLastDashboardSection] = useState('investments');
   const [dashboardTargetId, setDashboardTargetId] = useState(null);
+  const [restrictedActionMsg, setRestrictedActionMsg] = useState('');
+
+  const { initProfile, isInvestorApproved } = useProfile();
 
   // Listen for global session_expired events from apiClient
   useEffect(() => {
@@ -52,7 +57,7 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const isResetPswd = window.location.pathname.includes('/reset-password');
     const isVerifyEmail = window.location.pathname.includes('/confirm-email');
-    
+
     if (params.get('userId') && params.get('token')) {
       if (isResetPswd) {
         setCurrentView('resetPassword');
@@ -65,36 +70,39 @@ function App() {
 
     const storedUser = localStorage.getItem('aisep_user');
     const storedToken = localStorage.getItem('aisep_token');
-    
+
     if (storedUser) {
       let parsedUser = JSON.parse(storedUser);
-      
+
       // Repair logic for users who logged in before JWT decoding was added
       if (!parsedUser.userId && storedToken) {
-         try {
-           const payloadBase64 = storedToken.split('.')[1];
-           const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
-           const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
-             return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
-           }).join(''));
-           const decodedToken = JSON.parse(jsonPayload);
-           
-           parsedUser.userId = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
-           localStorage.setItem('aisep_user', JSON.stringify(parsedUser));
-         } catch (e) {
-           console.error("Token repair failed", e);
-         }
+        try {
+          const payloadBase64 = storedToken.split('.')[1];
+          const base64 = payloadBase64.replace(/-/g, '+').replace(/_/g, '/');
+          const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+            return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+          }).join(''));
+          const decodedToken = JSON.parse(jsonPayload);
+
+          parsedUser.userId = decodedToken['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'];
+          localStorage.setItem('aisep_user', JSON.stringify(parsedUser));
+        } catch (e) {
+          console.error("Token repair failed", e);
+        }
       }
 
       setUser(parsedUser);
-      
+
+      // Kick off global profile fetch immediately on restore
+      initProfile(parsedUser);
+
       const roleStr = parsedUser.role?.toString().toLowerCase() || '';
       const roleNum = Number(parsedUser.role);
       const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
       const isAdvisor = roleStr === 'advisor' || roleNum === 2;
       const isInvestor = roleStr === 'investor' || roleNum === 1;
       const isAdmin = roleStr === 'admin' || roleNum === 4;
-      
+
       if (isStaff || isAdvisor || isInvestor || isAdmin) {
         setCurrentView('dashboard');
       } else if (roleStr === 'startup' || roleNum === 0) {
@@ -103,7 +111,8 @@ function App() {
         setCurrentView('main');
       }
     } else {
-      // If no stored user, stay at main (which will render LandingPage)
+      // If no stored user, clear loading state so banners/guards work correctly
+      initProfile(null);
       setCurrentView('main');
     }
   }, []);
@@ -135,14 +144,17 @@ function App() {
     localStorage.setItem('aisep_user', JSON.stringify(userData));
     localStorage.setItem('aisep_token', accessToken);
     localStorage.setItem('aisep_refresh_token', refreshToken);
-    
+
     // Check if user needs to accept terms from login response
     if (userData.needsTermsAcceptance) {
       setNeedsTermsAcceptance(true);
     }
-    
+
     setUser(userData);
-    setIsSessionExpired(false); 
+    setIsSessionExpired(false);
+
+    // Immediately start global profile fetch + polling
+    initProfile(userData);
 
     const roleStr = userData.role?.toString().toLowerCase() || '';
     const roleNum = Number(userData.role);
@@ -155,23 +167,10 @@ function App() {
       setCurrentView('dashboard');
       return;
     }
-    
-    if (roleStr === 'startup' || roleStr === '0' || roleNum === 0) {
-      try {
-        const response = await startupProfileService.getStartupProfileByUserId(userData.userId);
-        if (!response) {
-          setCurrentView('main');
-          window.history.replaceState({}, document.title, window.location.pathname + '?setup=true');
-        } else {
-          setCurrentView('main');
-        }
-      } catch (err) {
-        console.error("Failed to check profile after login:", err);
-        setCurrentView('main');
-      }
-    } else {
-      setCurrentView('main');
-    }
+
+    // Always navigate to dashboard/main — no need to pre-check profile
+    // (ProfileContext will resolve the status in the background)
+    setCurrentView(roleStr === 'startup' || roleStr === '0' || roleNum === 0 ? 'main' : 'main');
   };
 
   const handleLogout = async () => {
@@ -183,6 +182,7 @@ function App() {
     localStorage.removeItem('aisep_user');
     localStorage.removeItem('aisep_token');
     localStorage.removeItem('aisep_refresh_token');
+    initProfile(null); // Clear global profile state & stop polling
     setUser(null);
     setCurrentView('main');
   };
@@ -249,12 +249,12 @@ function App() {
 
   const handleNotificationNavigate = (referenceType, referenceId) => {
     if (!user) return;
-    
+
     const resolution = NotificationRouter.resolve(referenceType, referenceId, user);
-    
+
     if (resolution) {
       const { section, targetId, view } = resolution;
-      
+
       if (view) {
         setCurrentView(view);
       } else {
@@ -318,78 +318,80 @@ function App() {
         >
           <>
             {currentView === 'subscription' && <SubscriptionManagement user={user} />}
-              {currentView === 'profile' && (
-                <AdvisorProfilePage 
-                  user={user} 
-                  onBack={handleShowHome} 
-                  onNotificationNavigate={handleNotificationNavigate}
-                />
-              )}
-              {currentView.startsWith('dashboard') && (
-                (() => {
-                  const roleStr = user?.role?.toString().toLowerCase() || '';
-                  const roleNum = Number(user?.role);
-                  const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
-                  const isAdmin = roleStr === 'admin' || roleNum === 4;
-                  
-                  if (roleStr === 'startup' || roleNum === 0) {
-                    const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'my-projects';
-                    return <StartupDashboard user={user} initialSection={section} targetId={dashboardTargetId} onLogout={handleLogout} />;
-                  } else if (roleStr === 'investor' || roleNum === 1) {
-                    if (currentView === 'dashboard_bookings') {
-                      return (
-                        <InvestorBookings 
-                          user={user} 
-                          targetId={dashboardTargetId}
-                          onViewProject={(pid) => {
-                            setLastDashboardSection('bookings');
-                            setCurrentView('dashboard_project_' + pid);
-                          }} 
-                          initialFilterStatus={lastInvestorBookingFilter}
-                          onFilterStatusChange={setLastInvestorBookingFilter}
-                          onUpdateProfile={() => setCurrentView('dashboard_preferences')}
-                        />
-                      );
-                    }
-                    if (currentView.startsWith('dashboard_project_')) {
-                      const pid = currentView.replace('dashboard_project_', '');
-                      return (
-                        <ProjectDetailView 
-                            projectId={pid} 
-                            onBack={() => setCurrentView(`dashboard_${lastDashboardSection}`)} 
-                            user={user} 
-                            isFullView={false} 
-                        />
-                      );
-                    }
-                    const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'investments';
+            {currentView === 'profile' && (
+              <AdvisorProfilePage
+                user={user}
+                onBack={handleShowHome}
+                onNotificationNavigate={handleNotificationNavigate}
+              />
+            )}
+            {currentView.startsWith('dashboard') && (
+              (() => {
+                const roleStr = user?.role?.toString().toLowerCase() || '';
+                const roleNum = Number(user?.role);
+                const isStaff = roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'staff' || roleNum === 3;
+                const isAdmin = roleStr === 'admin' || roleNum === 4;
+
+                if (roleStr === 'startup' || roleNum === 0) {
+                  const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'my-projects';
+                  return <StartupDashboard user={user} initialSection={section} targetId={dashboardTargetId} onLogout={handleLogout} />;
+                } else if (roleStr === 'investor' || roleNum === 1) {
+                  if (currentView === 'dashboard_bookings') {
                     return (
-                      <InvestorDashboard 
-                        user={user} 
-                        initialSection={section} 
+                      <InvestorBookings
+                        user={user}
                         targetId={dashboardTargetId}
-                        onLogout={handleLogout} 
-                        onViewProject={(pid, currentSection) => {
-                          if (currentSection) setLastDashboardSection(currentSection);
+                        onViewProject={(pid) => {
+                          setLastDashboardSection('bookings');
                           setCurrentView('dashboard_project_' + pid);
                         }}
+                        initialFilterStatus={lastInvestorBookingFilter}
+                        onFilterStatusChange={setLastInvestorBookingFilter}
+                        onUpdateProfile={() => setCurrentView('dashboard_preferences')}
+                        isApproved={isInvestorApproved}
+                        onRestrictedAction={(msg) => setRestrictedActionMsg(msg)}
                       />
                     );
-                  } else if (roleStr === 'advisor' || roleNum === 2) {
-                    const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
-                    return <AdvisorDashboard user={user} initialSection={section} targetId={dashboardTargetId} onSectionChange={handleShowDashboard} onShowProfile={handleShowProfile} onLogout={handleLogout} />;
-                  } else if (isStaff) {
-                    const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'statistics';
-                    return <OperationStaffDashboard user={user} initialSection={section} targetId={dashboardTargetId} onLogout={handleLogout} />;
-                  } else if (isAdmin) {
-                    const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'users';
-                    return <AdminDashboard user={user} initialSection={section} />;
-                  } else {
-                    return <div style={{ padding: '20px', textAlign: 'center' }}><p>Dashboard not available for your role</p></div>;
                   }
-                })()
-              )}
-            </>
+                  if (currentView.startsWith('dashboard_project_')) {
+                    const pid = currentView.replace('dashboard_project_', '');
+                    return (
+                      <ProjectDetailView
+                        projectId={pid}
+                        onBack={() => setCurrentView(`dashboard_${lastDashboardSection}`)}
+                        user={user}
+                        isFullView={false}
+                      />
+                    );
+                  }
+                  const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'investments';
+                  return (
+                    <InvestorDashboard
+                      user={user}
+                      initialSection={section}
+                      targetId={dashboardTargetId}
+                      onLogout={handleLogout}
+                      onViewProject={(pid, currentSection) => {
+                        if (currentSection) setLastDashboardSection(currentSection);
+                        setCurrentView('dashboard_project_' + pid);
+                      }}
+                    />
+                  );
+                } else if (roleStr === 'advisor' || roleNum === 2) {
+                  const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'overview';
+                  return <AdvisorDashboard user={user} initialSection={section} targetId={dashboardTargetId} onSectionChange={handleShowDashboard} onShowProfile={handleShowProfile} onLogout={handleLogout} />;
+                } else if (isStaff) {
+                  const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'statistics';
+                  return <OperationStaffDashboard user={user} initialSection={section} targetId={dashboardTargetId} onLogout={handleLogout} />;
+                } else if (isAdmin) {
+                  const section = currentView.startsWith('dashboard_') ? currentView.replace('dashboard_', '') : 'users';
+                  return <AdminDashboard user={user} initialSection={section} />;
+                } else {
+                  return <div style={{ padding: '20px', textAlign: 'center' }}><p>Dashboard not available for your role</p></div>;
+                }
+              })()
+            )}
+          </>
         </MainLayout>
       ) : currentView === 'roleSelection' ? (
         <RegisterSelection
@@ -404,12 +406,19 @@ function App() {
         />
       ) : null}
 
+      {restrictedActionMsg && (
+        <RestrictedActionModal
+          message={restrictedActionMsg}
+          onClose={() => setRestrictedActionMsg('')}
+        />
+      )}
+
       {isSessionExpired && (
         <SessionExpiredModal onLogin={handleShowLogin} />
       )}
 
       {needsTermsAcceptance && (
-        <TermsEnforcementModal 
+        <TermsEnforcementModal
           isOpen={true}
           user={user}
           termsData={activeTerms}

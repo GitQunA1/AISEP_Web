@@ -68,7 +68,10 @@ const StartupApprovalCard = ({
                         <Building size={12} style={{ marginRight: '4px' }} /> Lĩnh vực
                     </span>
                     <span className={local.investorProValue}>
-                        {industry}
+                        {(() => {
+                            const industries = startup?.industries || (startup?.industry ? [startup.industry] : []);
+                            return industries.join(', ') || 'Lĩnh vực khác';
+                        })()}
                     </span>
                 </div>
                 <div className={local.investorProRow}>

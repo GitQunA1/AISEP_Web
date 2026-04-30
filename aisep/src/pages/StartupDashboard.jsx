@@ -38,6 +38,7 @@ import subscriptionService from '../services/subscriptionService';
 import paymentService from '../services/paymentService';
 import AIAnalyzeConfirmationModal from '../components/common/AIAnalyzeConfirmationModal';
 import RestrictedActionModal from '../components/common/RestrictedActionModal';
+import { useProfile } from '../context/ProfileContext';
 
 
 /**
@@ -177,6 +178,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     const [isPublishingProject, setIsPublishingProject] = React.useState(false);
     const [blockchainProof, setBlockchainProof] = React.useState(null);
     const [isLoadingInitialData, setIsLoadingInitialData] = React.useState(true);
+    const [dashboardError, setDashboardError] = React.useState(null);
     const [showDetailModal, setShowDetailModal] = React.useState(false);
     const [detailProject, setDetailProject] = React.useState(null);
     const [project, setProject] = React.useState(null);
@@ -235,7 +237,12 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     const [blockedFiles, setBlockedFiles] = React.useState([]); // Session-based blacklist for verified docs
     const hiddenFileInput = React.useRef(null);
 
-    const isApproved = startupProfile?.status === 'Approved' || startupProfile?.status === 1 || startupProfile?.approvalStatus === 'Approved' || startupProfile?.approvalStatus === 1;
+    const { startupProfile: ctxProfile, startupProfileStatus, isStartupApproved, refreshProfile, profileLoading } = useProfile();
+    
+    // Fallback to context profile if local state not yet synced
+    const displayProfile = startupProfile || ctxProfile;
+    const isApproved = isStartupApproved;
+    const profileReady = !profileLoading;
 
     const showRestrictedActionModal = (actionName = 'hành động này') => {
         setRestrictedActionMessage(`Bạn cần được phê duyệt hồ sơ Startup để thực hiện hành động: ${actionName}. Vui lòng hoàn tất hồ sơ và đợi đội ngũ AISEP xác nhận.`);
@@ -256,7 +263,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         };
 
         console.log(`[StartupDashboard] Processing targetId: ${targetId} for activeSection: ${activeSection}`);
-        
+
         // 1. My Projects Deep Link
         if (activeSection === 'my-projects' && myProjects.length > 0) {
             const matchProject = myProjects.find(p => String(p.id || p.projectId) === String(targetId));
@@ -266,7 +273,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                 scrollAndHighlight('project');
             }
         }
-        
+
         // 2. Deals Deep Link
         else if (activeSection === 'deals' && dealsToApprove.length > 0) {
             const matchDeal = dealsToApprove.find(d => String(d.dealId) === String(targetId));
@@ -274,13 +281,13 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                 // If it's ready to sign, pop the contract modal
                 if (matchDeal.status === 'Confirmed' || matchDeal.status === 1 || matchDeal.status === 'Waiting_For_Startup_Signature' || matchDeal.status === 2) {
                     setContractDealData(matchDeal);
-                    setContractPreviewHtml(null); 
+                    setContractPreviewHtml(null);
                     setShowContractModal(true);
-                } 
+                }
                 scrollAndHighlight('deal');
             }
         }
-        
+
         // 3. Connect Requests Deep Link
         else if (activeSection === 'connection-requests' && connectionRequests.length > 0) {
             const matchReq = connectionRequests.find(r => String(r.connectionRequestId) === String(targetId));
@@ -532,83 +539,60 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         }
     };
 
-    React.useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                // Fetch profile and projects in PARALLEL (not sequential)
-                const promises = [];
+    const fetchDashboardData = async () => {
+        setIsLoadingInitialData(true);
+        setDashboardError(null);
+        try {
+            // Fetch projects in parallel with other dashboard-specific data
+            const response = await projectSubmissionService.getMyProjects();
+            
+            if (response.success && response.data) {
+                const rawProjects = Array.isArray(response.data) ? response.data : (response.data.items || []);
+                // Sort projects by CreatedAt descending (most recent first)
+                const sortedProjects = [...rawProjects].sort((a, b) => {
+                    const dateB = new Date(b.createdAt || 0);
+                    const dateA = new Date(a.createdAt || 0);
+                    if (dateB - dateA !== 0) return dateB - dateA;
+                    return (b.id || b.projectId || 0) - (a.id || a.projectId || 0);
+                });
+                setMyProjects(sortedProjects);
+                
+                if (sortedProjects.length > 0) {
+                    const loadedProject = sortedProjects[0];
+                    setProject(loadedProject);
 
-                // 1. Fetch startup profile (if user exists)
-                if (user && user.userId) {
-                    promises.push(
-                        startupProfileService.getStartupMe()
-                            .then(data => ({ key: 'profile', data }))
-                    );
+                    setProjectFormData({
+                        ...projectFormData,
+                        projectName: loadedProject.name || loadedProject.projectName || '',
+                        description: loadedProject.description || '',
+                        tagline: loadedProject.tagline || '',
+                        industry: loadedProject.industry || '',
+                        stage: loadedProject.stage || '',
+                    });
                 }
-
-                // 2. Fetch projects - run in parallel with profile
-                promises.push(
-                    projectSubmissionService.getMyProjects()
-                        .then(data => ({ key: 'projects', data }))
-                );
-
-                const results = await Promise.all(promises);
-
-                // Process results
-                for (const result of results) {
-                    if (result.key === 'profile') {
-                        const profileData = result.data;
-                        setStartupProfile(profileData);
-
-                        // Check for auto-setup flag in URL
-                        const params = new URLSearchParams(window.location.search);
-                        if (!profileData && params.get('setup') === 'true') {
-                            setActiveSection('complete-info');
-                            window.history.replaceState({}, document.title, window.location.pathname);
-                        }
-                    } else if (result.key === 'projects') {
-                        const response = result.data;
-                        if (response.success && response.data) {
-                            const rawProjects = Array.isArray(response.data) ? response.data : (response.data.items || []);
-                            // Sort projects by CreatedAt descending (most recent first)
-                            // Fallback to ID/ProjectId if createdAt is missing
-                            const sortedProjects = [...rawProjects].sort((a, b) => {
-                                const dateB = new Date(b.createdAt || b.createdAt || 0);
-                                const dateA = new Date(a.createdAt || a.createdAt || 0);
-                                if (dateB - dateA !== 0) return dateB - dateA;
-                                return (b.id || b.projectId || 0) - (a.id || a.projectId || 0);
-                            });
-                            setMyProjects(sortedProjects);
-                            setDocuments([]);
-
-                            if (sortedProjects.length > 0) {
-                                const loadedProject = sortedProjects[0];
-                                setProject(loadedProject);
-
-                                // Pre-fill form data for updates
-                                setProjectFormData({
-                                    ...projectFormData,
-                                    projectName: loadedProject.name || loadedProject.projectName || '',
-                                    description: loadedProject.description || '',
-                                    tagline: loadedProject.tagline || '',
-                                    industry: loadedProject.industry || '',
-                                    stage: loadedProject.stage || '',
-                                });
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to load dashboard data:", err);
-            } finally {
-                setIsLoadingInitialData(false);
             }
-        };
+            
+            // Sync context profile to local state if needed (for legacy code compatibility)
+            if (ctxProfile) {
+                setStartupProfile(ctxProfile);
+            }
+        } catch (err) {
+            console.error("Failed to load dashboard data:", err);
+            setDashboardError("Không thể tải dữ liệu bảng điều khiển. Vui lòng kiểm tra kết nối mạng.");
+        } finally {
+            setIsLoadingInitialData(false);
+        }
+    };
 
+    React.useEffect(() => {
         fetchDashboardData();
         fetchSubscriptionData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user]);
+    }, [user, ctxProfile]);
+
+    const handleRetryDashboard = () => {
+        fetchDashboardData();
+        fetchSubscriptionData();
+    };
 
     const fetchSubscriptionData = async () => {
         setIsLoadingSubscription(true);
@@ -1726,17 +1710,17 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                 </>
             )}
 
-            {(!startupProfile || (String(startupProfile.status || startupProfile.approvalStatus || '').toUpperCase() !== 'APPROVED')) && 
-             !activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
-                <div style={{ padding: '0', marginBottom: '0', width: '100%' }}>
-                    <StartupProfileBanner
-                        status={startupProfile?.status}
-                        approvalStatus={startupProfile?.approvalStatus}
-                        reason={startupProfile?.rejectionReason}
-                        onRedirect={activeSection === 'complete-info' ? null : () => setActiveSection('complete-info')}
-                    />
-                </div>
-            )}
+            {profileReady && startupProfileStatus && startupProfileStatus.toUpperCase() !== 'APPROVED' &&
+                !activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
+                    <div style={{ padding: '0', marginBottom: '0', width: '100%' }}>
+                        <StartupProfileBanner
+                            status={startupProfileStatus}
+                            approvalStatus={displayProfile?.approvalStatus}
+                            reason={displayProfile?.rejectionReason}
+                            onRedirect={activeSection === 'complete-info' ? null : () => setActiveSection('complete-info')}
+                        />
+                    </div>
+                )}
 
             {activeSection !== 'pr_news' && (
                 <div className={`${activeSection.startsWith('project_') ? styles.contentFull : styles.content} ${styles.scrollableSection}`}>
@@ -1749,6 +1733,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                 user={user}
                                 onSuccess={(data) => {
                                     setStartupProfile(data);
+                                    refreshProfile(); // Sync global state
                                     setSuccessMessage('Cập nhật thông tin startup thành công!');
                                     setShowSuccessModal(true);
                                 }}
@@ -1792,7 +1777,19 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                 />
                             }
                         >
-                            {isLoadingInitialData ? (
+                            {dashboardError ? (
+                                <div className={styles.card} style={{ padding: '40px', textAlign: 'center', border: '1px solid #fee2e2', backgroundColor: 'rgba(239, 68, 68, 0.05)' }}>
+                                    <AlertCircle size={48} style={{ margin: '0 auto 16px', color: '#ef4444' }} />
+                                    <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Lỗi tải dữ liệu</h3>
+                                    <p style={{ margin: '0 0 24px 0', color: 'var(--text-secondary)' }}>{dashboardError}</p>
+                                    <button 
+                                        onClick={handleRetryDashboard}
+                                        style={{ padding: '8px 24px', backgroundColor: 'var(--primary-blue)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                                    >
+                                        Thử lại
+                                    </button>
+                                </div>
+                            ) : isLoadingInitialData ? (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
                                     {[1, 2, 3, 4].map(i => (
                                         <div key={i} className={kanban.skeletonCard} style={{ height: '180px' }}><div className={kanban.shimmer}></div></div>
@@ -2214,9 +2211,9 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                     )}
 
                     {activeSection === 'account_profile' && (
-                        <AccountProfileTab 
-                            user={user} 
-                            onLogout={onLogout} 
+                        <AccountProfileTab
+                            user={user}
+                            onLogout={onLogout}
                         />
                     )}
 
@@ -2290,7 +2287,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
                                     {filteredDeals.map(deal => {
                                         const statusInfo = getDealStatusInfo(deal.status);
-                                                const isCompletedDeal = statusInfo.value === 4 || deal.isCompleted === true;
+                                        const isCompletedDeal = statusInfo.value === 4 || deal.isCompleted === true;
 
                                         return (
                                             <div
@@ -2443,6 +2440,13 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                             user={user}
                             initialData={startupProfile}
                             onSubmit={async (formData) => {
+                                // Block update while profile is pending review
+                                const currentStatus = startupProfile?.status ?? startupProfile?.approvalStatus;
+                                if (currentStatus === 'Pending') {
+                                    showRestrictedActionModal('cập nhật hồ sơ trong khi đang chờ xét duyệt. Vui lòng đợi kết quả từ đội ngũ AISEP.');
+                                    return;
+                                }
+
                                 try {
                                     // Make API request here
                                     const payload = {
@@ -2464,6 +2468,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                     }
 
                                     setStartupProfile(result);
+                                    refreshProfile(); // Sync global state
                                     setSuccessMessage('Lưu thông tin hồ sơ thành công.');
                                     setShowSuccessModal(true);
                                 } catch (error) {
@@ -3648,8 +3653,8 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
 
             {/* PR News Section — direct child of container, no styles.content padding */}
             {activeSection === 'pr_news' && (
-                <NewsPRSection 
-                    user={user} 
+                <NewsPRSection
+                    user={user}
                     onOpenChat={(chatSessionId, notification) => {
                         setActiveChatSession({
                             chatSessionId,

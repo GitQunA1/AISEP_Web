@@ -589,19 +589,48 @@
   .hero { padding-top: 140px; padding-bottom: 100px; }
   .heroTitle { font-size: 2.2rem; letter-spacing: -1px; }
   .heroSubtitle { font-size: 0.95rem; margin-bottom: 32px; }
-  .roleGrid { grid-template-columns: 1fr; }
+  .roleGrid { 
+    grid-template-columns: 1fr; 
+    gap: 20px;
+  }
+  .roleCard { 
+    height: auto; 
+    padding: 32px 24px; 
+    min-height: auto;
+  }
+  .statsContainer {
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+  }
+  .statNumber {
+    font-size: 2rem;
+  }
   .heroCta { 
     display: flex;
-    flex-direction: row; /* Keep side-by-side */
+    flex-direction: row;
     justify-content: center;
     gap: 12px;
-    flex-wrap: wrap; /* Fallback for very small screens */
+    flex-wrap: wrap;
   }
   .primaryCta, .secondaryHeroBtn { 
     padding: 12px 20px; 
     font-size: 0.95rem; 
-    min-width: 140px; /* Smaller min-width for mobile */
-    width: auto; /* Don't force 100% */
+    min-width: 140px;
+    width: auto;
   }
   .navActions { display: none; }
+  
+  .featuredProjects {
+    padding: 60px 16px;
+  }
+  
+  .projectGrid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+
+  .projectCard {
+    height: auto;
+    min-height: 420px;
+  }
 }

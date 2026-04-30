@@ -33,7 +33,30 @@ const getIndustryNumericValue = (industry, industries = []) => {
     i.label.replace(' ', '_').toLowerCase() === String(industry).toLowerCase()
   );
   
-  return found ? String(found.value) : '';
+  return found ? String(found.value) : String(industry);
+};
+
+/**
+ * Mapping of backend field keys to Vietnamese labels for localization.
+ * If a fieldKey is not found here, it will fallback to the backend-provided displayName or fieldKey.
+ */
+const FIELD_LABEL_MAP = {
+  'projectname': 'Tên dự án',
+  'shortdescription': 'Mô tả ngắn',
+  'stageoptionid': 'Giai đoạn phát triển',
+  'industryoptionids': 'Lĩnh vực',
+  'problemstatement': 'Vấn đề cần giải quyết',
+  'solutiondescription': 'Mô tả giải pháp',
+  'targetcustomers': 'Khách hàng mục tiêu',
+  'uniquevalueproposition': 'Giá trị độc đáo (UVP)',
+  'marketsize': 'Quy mô thị trường',
+  'businessmodel': 'Mô hình kinh doanh',
+  'revenue': 'Doanh thu hiện thực',
+  'competitors': 'Đối thủ cạnh tranh',
+  'teammembers': 'Thành viên đội ngũ',
+  'keyskills': 'Kỹ năng cốt lõi',
+  'teamexperience': 'Kinh nghiệm đội ngũ',
+  'projectimagefile': 'Hình ảnh dự án'
 };
 
 /**
@@ -87,6 +110,13 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
 
       if (!rules || Object.keys(rules).length === 0) {
         throw new Error(`Không tìm thấy cấu hình xác thực cho ${formKey}.`);
+      }
+
+      if (rules && rules.industryoptionids) {
+        rules.industryoptionids.minCount = 1;
+        rules.industryoptionids.maxCount = 1;
+        rules.industryoptionids.minCountMessage = 'Vui lòng chọn lĩnh vực.';
+        rules.industryoptionids.maxCountMessage = 'Vui lòng chỉ chọn 1 lĩnh vực.';
       }
 
       setValidationRules(rules);
@@ -203,24 +233,18 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
    * Validate a single field against fetched rules
    */
   const validateField = (name, value) => {
+    if (!validationRules) return '';
+
     const fieldKey = name.toLowerCase();
+    // Map frontend field names to backend rule keys
     const ruleKey = (fieldKey === 'industry' ? 'industryoptionids' : 
                     (fieldKey === 'developmentstage' ? 'stageoptionid' : fieldKey));
                     
-    if (!validationRules || !validationRules[ruleKey]) return '';
     const rule = validationRules[ruleKey];
+    if (!rule) return '';
 
-    // Determine if the field is required based on stage (StageOptionIds logic)
-    let isRequired = rule.required;
-    const currentStage = formData.developmentStage;
-    
-    if (currentStage && rule.stageOptionIds && rule.stageOptionIds.length > 0) {
-      const stageId = Number(currentStage);
-      const isStageInList = rule.stageOptionIds.some(id => Number(id) === stageId);
-      isRequired = isStageInList ? rule.required : !rule.required;
-    }
-
-    return validationService.validateField(value, { ...rule, required: isRequired });
+    // Delegate to validationService which already handles StageOptionIds logic
+    return validationService.validateField(value, rule, formData.developmentStage);
   };
 
   const handleImageChange = (e) => {
@@ -281,55 +305,24 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     if (!validationRules) return false;
     const newErrors = {};
 
-    const checkField = (name) => {
-      const error = validateField(name, formData[name]);
-      if (error) newErrors[name] = error;
+    // Group fields by step for dynamic validation
+    const stepFields = {
+      1: ['projectName', 'shortDescription', 'developmentStage', 'industry', 'problemStatement'],
+      2: ['solutionDescription', 'targetCustomers', 'uniqueValueProposition', 'marketSize', 'revenue', 'businessModel'],
+      3: ['competitors', 'keySkills', 'teamExperience']
     };
 
-    if (currentStep === 1) {
-      checkField('projectName');
-      checkField('shortDescription');
-      checkField('developmentStage');
-      checkField('industry');
-      checkField('problemStatement');
-    }
+    const currentFields = stepFields[currentStep] || [];
+    
+    currentFields.forEach(name => {
+      const error = validateField(name, formData[name]);
+      if (error) newErrors[name] = error;
+    });
 
-    if (currentStep === 2) {
-      checkField('solutionDescription');
-      checkField('targetCustomers');
-      
-      // MVP and Growth required fields based on rules (rules can define if they are required based on stage)
-      if (isMVP || isGrowth) {
-        checkField('uniqueValueProposition');
-        checkField('businessModel');
-      }
-
-      // Growth specific
-      if (isGrowth) {
-        if (!formData.revenue || parseInt(formData.revenue) <= 0) {
-          newErrors.revenue = validationRules.revenue?.requiredMessage || 'Doanh thu phải lớn hơn 0 cho giai đoạn Tăng trưởng';
-        }
-        if (!formData.marketSize || parseInt(formData.marketSize) <= 0) {
-          newErrors.marketSize = validationRules.marketSize?.requiredMessage || 'Kích thước thị trường phải lớn hơn 0 cho giai đoạn Tăng trưởng';
-        }
-      }
-    }
-
+    // Special check for team members (not a standard field in validationRules usually)
     if (currentStep === 3) {
-      // Team members - at least 1 required for all
       const hasEmptyMembers = formData.teamMembers.some(m => !m.name.trim());
       if (hasEmptyMembers) newErrors.teamMembers = 'Vui lòng nhập tên thành viên';
-
-      // MVP and Growth
-      if (isMVP || isGrowth) {
-        checkField('competitors');
-        checkField('keySkills');
-      }
-
-      // Growth specific
-      if (isGrowth) {
-        checkField('teamExperience');
-      }
     }
 
     setErrors(newErrors);
@@ -363,7 +356,6 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
         ProjectName: formData.projectName.trim(),
         ShortDescription: formData.shortDescription.trim(),
         StageOptionId: formData.developmentStage ? parseInt(formData.developmentStage) : null,
-        IndustryOptionIds: formData.industry ? [parseInt(formData.industry)] : [],
         ProblemStatement: formData.problemStatement.trim(),
         SolutionDescription: formData.solutionDescription.trim(),
         TargetCustomers: formData.targetCustomers.trim(),
@@ -380,6 +372,17 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
         TeamExperience: formData.teamExperience.trim(),
         ProjectImageFile: formData.projectImageFile,
       };
+
+      // Handle Industry properly: ID for active, Label for inactive
+      if (formData.industry) {
+        const activeOption = industries.find(opt => String(opt.value) === String(formData.industry));
+        if (activeOption) {
+          payload.IndustryOptionIds = [parseInt(formData.industry)];
+        } else {
+          // Send as label if no ID found (legacy/inactive)
+          payload.Industries = [formData.industry];
+        }
+      }
 
       // Handle documents separately if needed by projectSubmissionService
       // Note: projectSubmissionService.submitStartupInfo/updateProject uses FormData internally
@@ -532,19 +535,22 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                 const maxLength = rule?.maxLength;
                 const isOverLimit = maxLength && currentLength > maxLength;
 
-                // Determine dynamic required status
+                // Determine dynamic required status using the same logic as validationService
                 let isRequired = rule?.required;
                 const currentStage = formData.developmentStage;
-                if (currentStage && rule?.stageOptionIds && rule.stageOptionIds.length > 0) {
+                if (currentStage !== null && currentStage !== undefined && rule?.stageOptionIds && rule.stageOptionIds.length > 0) {
                   const stageId = Number(currentStage);
                   const isStageInList = rule.stageOptionIds.some(id => Number(id) === stageId);
                   isRequired = isStageInList ? rule.required : !rule.required;
                 }
 
+                // Priority: 1. rule.displayName (from BE), 2. Local Map (Vietnamese), 3. hardcoded label, 4. rule.fieldKey
+                const ruleLabel = rule?.displayName || FIELD_LABEL_MAP[ruleKey] || label || rule?.fieldKey;
+
                 return (
                   <div className={styles.label}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                      {label} {isRequired && <span className={styles.required}>*</span>}
+                      {ruleLabel} {isRequired && <span className={styles.required}>*</span>}
                     </span>
                     {maxLength ? (
                       <span className={`${styles.charCount} ${isOverLimit ? styles.charCountError : ''}`} style={{ backgroundColor: isOverLimit ? 'rgba(244, 33, 46, 0.15)' : 'var(--bg-secondary)' }}>
@@ -740,9 +746,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                       </div>
 
                       <div className={styles.formGroup}>
-                        <label className={styles.label}>
-                          <span>Giai Đoạn Phát Triển <span className={styles.required}>*</span></span>
-                        </label>
+                        {renderFieldHeader('developmentStage', 'Giai Đoạn Phát Triển')}
                         <CustomSelect
                           name="developmentStage"
                           value={String(formData.developmentStage)}
@@ -754,16 +758,34 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                       </div>
 
                       <div className={styles.formGroup}>
-                        <label className={styles.label}>
-                          <span>Lĩnh Vực <span className={styles.required}>*</span></span>
-                        </label>
+                        {renderFieldHeader('industry', 'Lĩnh Vực')}
                         <CustomSelect
                           name="industry"
                           value={String(formData.industry)}
                           onChange={handleInputChange}
                           placeholder="Chọn lĩnh vực..."
                           options={industries.map(ind => ({ label: ind.label, value: String(ind.value) }))}
+                          disabled={!!(formData.industry && !industries.find(opt => String(opt.value) === String(formData.industry)))}
                         />
+                        {/* Inactive Industry Warning */}
+                        {formData.industry && !industries.find(opt => String(opt.value) === String(formData.industry)) && (
+                          <div style={{ 
+                            marginTop: '8px', 
+                            padding: '6px 10px', 
+                            backgroundColor: 'rgba(29, 155, 240, 0.1)', 
+                            border: '1px dashed var(--primary-blue)', 
+                            borderRadius: '8px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            color: 'var(--primary-blue)',
+                            fontSize: '11px',
+                            fontWeight: '600'
+                          }}>
+                            <CheckCircle size={14} />
+                            <span>Lĩnh vực: <strong>{formData.industry}</strong> (Ngừng hỗ trợ)</span>
+                          </div>
+                        )}
                         {errors.industry && <span className={styles.errorText}>{errors.industry}</span>}
                       </div>
 
@@ -892,9 +914,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
 
                       <div className={styles.formGroup}>
                         <div className={styles.labelRow}>
-                          <label className={styles.label}>
-                            <span>Thành Viên Đội <span className={styles.required}>*</span></span>
-                          </label>
+                          {renderFieldHeader('teamMembers', 'Thành Viên Đội')}
                           <button 
                             type="button" 
                             onClick={addTeamMember}

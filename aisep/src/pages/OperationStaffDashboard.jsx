@@ -286,7 +286,7 @@ const InvestorKanbanCard = ({ investor, status, onDetail, onApprove, onReject, p
     const isAnyProcessing = !!processingId;
 
     return (
-        <div id={`investor-${investor.investorId}`} className={`${local.investorProCard} ${isHighlighted ? styles.targetHighlight : ''}`}>
+        <div id={`investor-${investor.investorId}`} className={`${local.investorProCard} ${local[status]} ${isHighlighted ? styles.targetHighlight : ''}`}>
             <div className={`${local.investorProCardStrip} ${local[status]}`}></div>
 
             <div className={local.investorProHeader}>
@@ -325,19 +325,23 @@ const InvestorKanbanCard = ({ investor, status, onDetail, onApprove, onReject, p
                     </span>
                 </div>
 
-                {investor.focusIndustry && (
-                    <div className={local.investorProRow} style={{ alignItems: 'flex-start' }}>
-                        <span className={local.investorProLabel} style={{ marginTop: '2px' }}>Lĩnh vực</span>
-                        <div className={local.investorProTags} style={{ margin: '0', flex: 1 }}>
-                            {investor.focusIndustry.split(',').slice(0, 3).map((ind, idx) => (
-                                <span key={idx} className={local.investorProTag}>{ind.trim()}</span>
-                            ))}
-                            {investor.focusIndustry.split(',').length > 3 && (
-                                <span className={local.investorProTag}>+{investor.focusIndustry.split(',').length - 3}</span>
-                            )}
+                {(() => {
+                    const industries = investor.industries || (investor.focusIndustry ? investor.focusIndustry.split(',') : []);
+                    if (industries.length === 0) return null;
+                    return (
+                        <div className={local.investorProRow} style={{ alignItems: 'flex-start' }}>
+                            <span className={local.investorProLabel} style={{ marginTop: '2px' }}>Lĩnh vực</span>
+                            <div className={local.investorProTags} style={{ margin: '0', flex: 1 }}>
+                                {industries.slice(0, 3).map((ind, idx) => (
+                                    <span key={idx} className={local.investorProTag}>{ind.trim()}</span>
+                                ))}
+                                {industries.length > 3 && (
+                                    <span className={local.investorProTag}>+{industries.length - 3}</span>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
 
             <div className={local.investorProFooter}>
@@ -618,6 +622,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [showHistoryView, setShowHistoryView] = useState(false);
     const [selectedHistoryResult, setSelectedHistoryResult] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [userReportSearchTerm, setUserReportSearchTerm] = useState('');
     const [payoutSearchTerm, setPayoutSearchTerm] = useState('');
     const [commissionSearchTerm, setCommissionSearchTerm] = useState('');
     const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
@@ -632,6 +637,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
     const handleSearchChange = (val) => {
         if (activeSection === 'project_management') setSearchTerm(val);
+        else if (activeSection === 'user_reports') setUserReportSearchTerm(val);
         else if (activeSection === 'bookings') setBookingSearchTerm(val);
         else if (activeSection === 'commission') setCommissionSearchTerm(val);
         else if (activeSection === 'advisor_approval') setAdvisorSearchTerm(val);
@@ -681,8 +687,8 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         }
 
         // Filter by search term
-        if (searchTerm && searchTerm.trim()) {
-            const lowerSearch = searchTerm.toLowerCase();
+        if (userReportSearchTerm && userReportSearchTerm.trim()) {
+            const lowerSearch = userReportSearchTerm.toLowerCase();
             list = list.filter(r =>
                 (r.category || '').toLowerCase().includes(lowerSearch) ||
                 (r.description || '').toLowerCase().includes(lowerSearch) ||
@@ -694,7 +700,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         }
 
         return list;
-    }, [userReports, searchTerm, reportFilter]);
+    }, [userReports, userReportSearchTerm, reportFilter]);
 
     // Investor Approval States
     const [pendingInvestors, setPendingInvestors] = useState([]);
@@ -1914,6 +1920,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     user={user}
                     searchTerm={(() => {
                         if (activeSection === 'project_management') return searchTerm;
+                        if (activeSection === 'user_reports') return userReportSearchTerm;
                         if (activeSection === 'bookings') return bookingSearchTerm;
                         if (activeSection === 'pr_management') return prSearchTerm;
                         if (activeSection === 'pr_news') return prNewsSearchTerm;
@@ -1925,6 +1932,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     })()}
                     onSearchChange={(val) => {
                         if (activeSection === 'project_management') setSearchTerm(val);
+                        else if (activeSection === 'user_reports') setUserReportSearchTerm(val);
                         else if (activeSection === 'bookings') setBookingSearchTerm(val);
                         else if (activeSection === 'pr_management') setPrSearchTerm(val);
                         else if (activeSection === 'pr_news') setPrNewsSearchTerm(val);
@@ -2266,7 +2274,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     {activeSection === 'project_management' && (
                         <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
                             {/* Tab Switcher - Same as Booking */}
-                            <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                            <div className={styles.tabs} style={{ padding: '0 4px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
                                 <button className={`${styles.tab} ${activeMobileTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileTab('all')}>
                                     Tất cả
                                     <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{filteredPending.length + filteredApproved.length + filteredRejected.length}</span>
@@ -2312,7 +2320,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                         }
 
                                         return (
-                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                                 {listToShow.map(project => (
                                                     <ProjectKanbanCard
                                                         key={project.projectId}
@@ -2338,7 +2346,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     {activeSection === 'investor_approval' && (
                         <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
                             {/* Tab Switcher - Same as Booking */}
-                            <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                            <div className={styles.tabs} style={{ padding: '0 4px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
                                 <button className={`${styles.tab} ${activeMobileInvTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileInvTab('all')}>
                                     Tất cả
                                     <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{pendingInvestors.length + approvedInvestors.length + rejectedInvestors.length}</span>
@@ -2384,7 +2392,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                         }
 
                                         return (
-                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                                 {listToShow.map(i => (
                                                     <InvestorKanbanCard
                                                         key={i.investorId}
@@ -2453,7 +2461,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                     }
 
                                     return (
-                                        <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                        <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                             {filteredDeals.map((deal) => {
                                                 const statusInfo = getDealStatusInfo(deal.status);
                                                 const canStaffReview = statusInfo.value === 1;
@@ -2530,7 +2538,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
                     {/* PR Management Section */}
                     {activeSection === 'pr_management' && (
-                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, margin: '-24px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                             {/* Sleek Subtab Switcher */}
                             <div className={styles.tabs} style={{ marginBottom: '0px' }}>
                                 <button
@@ -2617,7 +2625,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
                                     {/* Deals List */}
                                     {!isLoadingSignedDeals && signedDeals.length > 0 && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                             {signedDeals
                                                 .filter(deal => {
                                                     if (!prSearchTerm.trim()) return true;
@@ -2796,7 +2804,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
                                         {/* PR News List */}
                                         {!isLoadingPRNews && prNewsList.length > 0 && (
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                                 {prNewsList
                                                     .filter(pr => {
                                                         if (!prNewsSearchTerm.trim()) return true;
@@ -2877,7 +2885,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     {/* Booking Management Section */}
                     {activeSection === 'bookings' && (
                         <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
-                            <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                            <div className={styles.tabs} style={{ padding: '0 4px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
                                 <button className={`${styles.tab} ${activeMobileBookingTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileBookingTab('all')}>
                                     Tất cả
                                     <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{filterBookings(allBookings).length}</span>
@@ -2976,7 +2984,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                             }
 
                                             return (
-                                                <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                                <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                                     {activeList.map(booking => (
                                                         <BookingKanbanCard
                                                             key={booking.id}
@@ -2999,7 +3007,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     {activeSection === 'approvals' && (
                         <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
                             {/* Tab Switcher */}
-                            <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                            <div className={styles.tabs} style={{ padding: '0 4px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
                                 <button className={`${styles.tab} ${activeMobileStartupTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileStartupTab('all')}>
                                     Tất cả
                                     <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{pendingStartups.length + approvedStartups.length + rejectedStartups.length}</span>
@@ -3045,7 +3053,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                         }
 
                                         return (
-                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                                 {listToShow.map(s => (
                                                     <StartupApprovalCard
                                                         key={s.id}
@@ -3135,9 +3143,9 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 ) : filteredUserReports.length === 0 ? (
                                     <div style={{ padding: '60px' }}>
                                         <EmptyState
-                                            icon={searchTerm ? Search : Shield}
-                                            title={searchTerm ? "Không tìm thấy" : "Trống"}
-                                            message={searchTerm ? `Không tìm thấy báo cáo nào khớp với "${searchTerm}"` : "Hiện không có báo cáo vi phạm nào trong danh mục này."}
+                                            icon={userReportSearchTerm ? Search : Shield}
+                                            title={userReportSearchTerm ? "Không tìm thấy" : "Trống"}
+                                            message={userReportSearchTerm ? `Không tìm thấy báo cáo nào khớp với "${userReportSearchTerm}"` : "Hiện không có báo cáo vi phạm nào trong danh mục này."}
                                         />
                                     </div>
                                 ) : (
@@ -3967,48 +3975,160 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 <X size={20} />
                             </button>
                         </div>
-                        <div className={local.inv_modalCompactBody} style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                            <div className={local.inv_detailGrid}>
-                                <div>
-                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Tên tổ chức / Cá nhân</label>
-                                    <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.organizationName || selectedInvestor.fullName}</p>
+                        <div className={local.inv_modalCompactBody} style={{ maxHeight: '75vh', overflowY: 'auto', padding: isMobile ? '16px' : '24px' }}>
+                            <div className={local.inv_detailGrid} style={{ gap: isMobile ? '20px' : '24px' }}>
+                                {/* Profile Header Section - Optimized for Mobile */}
+                                <div style={{ 
+                                    display: 'flex', 
+                                    flexDirection: isMobile ? 'column' : 'row',
+                                    gap: isMobile ? '16px' : '20px', 
+                                    alignItems: 'center', 
+                                    padding: isMobile ? '20px 16px' : '20px', 
+                                    backgroundColor: 'var(--bg-secondary)', 
+                                    borderRadius: '20px', 
+                                    marginBottom: '8px',
+                                    textAlign: isMobile ? 'center' : 'left',
+                                    border: '1px solid var(--border-color)'
+                                }}>
+                                    <div style={{ 
+                                        width: isMobile ? '90px' : '80px', 
+                                        height: isMobile ? '90px' : '80px', 
+                                        borderRadius: '50%', 
+                                        overflow: 'hidden', 
+                                        border: '3px solid var(--primary-blue)', 
+                                        backgroundColor: 'var(--bg-primary)', 
+                                        flexShrink: 0,
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                    }}>
+                                        {selectedInvestor.profileImageUrl ? (
+                                            <img src={selectedInvestor.profileImageUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                                                <User size={isMobile ? 44 : 40} />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
+                                        <h3 style={{ 
+                                            margin: 0, 
+                                            fontSize: isMobile ? '22px' : '20px', 
+                                            fontWeight: '900', 
+                                            color: 'var(--text-primary)',
+                                            lineHeight: 1.2,
+                                            wordBreak: 'break-word'
+                                        }}>
+                                            {selectedInvestor.organizationName || selectedInvestor.fullName || 'Chưa cập nhật tên'}
+                                        </h3>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            flexDirection: isMobile ? 'column' : 'row',
+                                            alignItems: isMobile ? 'center' : 'center', 
+                                            gap: isMobile ? '4px' : '8px', 
+                                            marginTop: '8px' 
+                                        }}>
+                                            <span style={{ fontSize: '14px', color: 'var(--primary-blue)', fontWeight: '800' }}>@{selectedInvestor.userName || 'username'}</span>
+                                            {!isMobile && <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--text-muted)' }}></span>}
+                                            <span style={{ 
+                                                fontSize: '13px', 
+                                                color: 'var(--text-secondary)',
+                                                wordBreak: 'break-all',
+                                                opacity: 0.8
+                                            }}>{selectedInvestor.email}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '20px' : '24px' }}>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Email</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', fontWeight: '500' }}>{selectedInvestor.email || '-'}</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Địa chỉ ví Blockchain</label>
+                                        <p style={{ 
+                                            fontSize: '12px', 
+                                            color: 'var(--text-primary)', 
+                                            margin: 0, 
+                                            fontWeight: '600', 
+                                            fontFamily: 'monospace', 
+                                            wordBreak: 'break-all', 
+                                            backgroundColor: 'rgba(29, 155, 240, 0.05)', 
+                                            padding: '10px 12px', 
+                                            borderRadius: '10px',
+                                            border: '1px dashed rgba(29, 155, 240, 0.2)',
+                                            lineHeight: 1.4
+                                        }}>
+                                            {selectedInvestor.walletAddress || '-'}
+                                        </p>
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Khu vực đầu tư</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', fontWeight: '500' }}>{selectedInvestor.investmentRegion || '-'}</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Khu vực đầu tư</label>
+                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', margin: 0, fontWeight: '700' }}>{selectedInvestor.investmentRegion || '-'}</p>
                                     </div>
                                 </div>
-                                <div>
-                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Khẩu vị đầu tư</label>
-                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', lineHeight: 1.6 }}>{selectedInvestor.investmentTaste || '-'}</p>
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Lĩnh vực quan tâm</label>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-                                        {selectedInvestor.focusIndustry?.split(',').map((industry, id) => (
-                                            <span key={id} className={local.btag} style={{ background: 'rgba(29, 155, 240, 0.08)', color: 'var(--primary-blue)', padding: '2px 10px', borderRadius: '4px', fontSize: '11px' }}>
-                                                {industry.trim()}
+
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '20px' : '24px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Ngân sách đầu tư</label>
+                                        <p style={{ fontSize: '20px', fontWeight: '900', color: '#10b981', margin: 0 }}>
+                                            {selectedInvestor.investmentAmount ? Number(selectedInvestor.investmentAmount).toLocaleString() : '0'} ₫
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Khẩu vị rủi ro</label>
+                                        <div style={{ marginTop: '2px' }}>
+                                            <span style={{ 
+                                                fontSize: '12px', 
+                                                fontWeight: '900', 
+                                                padding: '6px 14px', 
+                                                borderRadius: '20px',
+                                                display: 'inline-flex',
+                                                backgroundColor: selectedInvestor.riskTolerance === 'High' ? 'rgba(244, 33, 46, 0.1)' : (selectedInvestor.riskTolerance === 'Medium' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)'),
+                                                color: selectedInvestor.riskTolerance === 'High' ? '#f4212e' : (selectedInvestor.riskTolerance === 'Medium' ? '#f59e0b' : '#10b981'),
+                                                textTransform: 'uppercase'
+                                            }}>
+                                                {selectedInvestor.riskTolerance || 'Chưa xác định'}
                                             </span>
-                                        )) || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                        </div>
                                     </div>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '20px' : '24px' }}>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Ngân sách đầu tư</label>
-                                        <p style={{ fontSize: '15px', fontWeight: '800', color: '#10b981', margin: '4px 0 0 0' }}>{selectedInvestor.investmentAmount ? Number(selectedInvestor.investmentAmount).toLocaleString() : 'Chưa cập nhật'} ₫</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Lĩnh vực quan tâm</label>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                            {(selectedInvestor.industries || (selectedInvestor.focusIndustry ? selectedInvestor.focusIndustry.split(',') : [])).map((industry, id) => (
+                                                <span key={id} className={local.btag} style={{ background: 'rgba(29, 155, 240, 0.1)', color: 'var(--primary-blue)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '750' }}>
+                                                    {industry.trim()}
+                                                </span>
+                                            )) || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                            {(!selectedInvestor.industries && !selectedInvestor.focusIndustry) && <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                        </div>
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Giai đoạn ưu tiên</label>
-                                        <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--primary-blue)', margin: '4px 0 0 0' }}>
-                                            {selectedInvestor.preferredStage === 'Idea' || selectedInvestor.preferredStage === 0 ? 'Ý tưởng (Idea)' : (selectedInvestor.preferredStage === 'MVP' || selectedInvestor.preferredStage === 1 ? 'MVP' : (selectedInvestor.preferredStage === 'Growth' || selectedInvestor.preferredStage === 2 ? 'Phát triển (Growth)' : '-'))}
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Giai đoạn ưu tiên</label>
+                                        <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--primary-blue)', margin: 0 }}>
+                                            {(() => {
+                                                const stage = selectedInvestor.preferredStageOptionId !== undefined ? selectedInvestor.preferredStageOptionId : selectedInvestor.preferredStage;
+                                                if (stage === 'Idea' || stage === 1 || stage === 0) return 'Ý tưởng (Idea)';
+                                                if (stage === 'MVP' || stage === 2 || stage === 1) return 'Sản phẩm khả thi (MVP)';
+                                                if (stage === 'Growth' || stage === 3 || stage === 2) return 'Tăng trưởng (Growth)';
+                                                return '-';
+                                            })()}
                                         </p>
                                     </div>
                                 </div>
+
+                                <div>
+                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '8px' }}>Khẩu vị đầu tư</label>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.6, padding: '14px', backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', border: '1px solid var(--border-color)', minHeight: '60px' }}>
+                                        {selectedInvestor.investmentTaste || 'Không có mô tả chi tiết về khẩu vị đầu tư.'}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '8px' }}>Kinh nghiệm đầu tư trước đây</label>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.6, padding: '14px', backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', border: '1px solid var(--border-color)', minHeight: '60px' }}>
+                                        {selectedInvestor.previousInvestments || 'Chưa cập nhật kinh nghiệm đầu tư.'}
+                                    </p>
+                                </div>
+
                                 {(selectedInvestor.status || selectedInvestor.approvalStatus) === 'Rejected' && selectedInvestor.rejectionReason && (
                                     <div style={{ padding: '16px', backgroundColor: 'rgba(244, 33, 46, 0.05)', borderRadius: '12px', border: '1px solid rgba(244, 33, 46, 0.1)', marginTop: '8px' }}>
                                         <label style={{ fontSize: '11px', color: '#f4212e', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Lý do từ chối</label>
@@ -4017,8 +4137,27 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 )}
                             </div>
                         </div>
-                        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', backgroundColor: 'var(--bg-secondary)' }}>
-                            <button onClick={() => setShowInvestorDetailModal(false)} className={local.modalSecondaryBtn} style={{ padding: '8px 24px', borderRadius: '99px', height: '40px' }}>Đóng</button>
+                        <div style={{ 
+                            padding: isMobile ? '16px' : '16px 24px', 
+                            borderTop: '1px solid var(--border-color)', 
+                            display: 'flex', 
+                            justifyContent: isMobile ? 'stretch' : 'flex-end', 
+                            backgroundColor: 'var(--bg-secondary)' 
+                        }}>
+                            <button 
+                                onClick={() => setShowInvestorDetailModal(false)} 
+                                className={local.modalSecondaryBtn} 
+                                style={{ 
+                                    padding: '8px 24px', 
+                                    borderRadius: '12px', 
+                                    height: '48px',
+                                    width: isMobile ? '100%' : 'auto',
+                                    fontWeight: '800',
+                                    fontSize: '15px'
+                                }}
+                            >
+                                Đóng
+                            </button>
                         </div>
                     </div>
                 </div>

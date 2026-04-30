@@ -43,6 +43,17 @@ const AdvisorKanbanCard = ({ advisor, status, onDetail, onApprove, onReject, pro
                     <span>{advisor?.expertise || 'Chuyên môn chưa cập nhật'}</span>
                 </div>
 
+                {advisor?.industries && advisor.industries.length > 0 && (
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px', marginBottom: '12px' }}>
+                        {advisor.industries.slice(0, 3).map((ind, idx) => (
+                            <span key={idx} className={local.industryTag} style={{ fontSize: '10px', padding: '2px 8px' }}>{ind}</span>
+                        ))}
+                        {advisor.industries.length > 3 && (
+                            <span className={local.industryTag} style={{ fontSize: '10px', padding: '2px 8px' }}>+{advisor.industries.length - 3}</span>
+                        )}
+                    </div>
+                )}
+
                 <p className={local.bcardDesc}>{advisor?.bio || 'Không có mô tả tiểu sử...'}</p>
 
                 <div className={local.bcardFields}>

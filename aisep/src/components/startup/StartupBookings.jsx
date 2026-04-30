@@ -33,6 +33,10 @@ const BOOKING_STATUS_LABELS = {
     'Cancel': { label: 'Đã hủy', cls: 'badgeError', color: '#f4212e' },
     7: { label: 'Không phản hồi', cls: 'badgeError', color: '#f4212e' },
     'NoResponse': { label: 'Không phản hồi', cls: 'badgeError', color: '#f4212e' },
+    8: { label: 'Quá hạn báo cáo', cls: 'badgeError', color: '#f4212e' },
+    'ConsultingReportOverdue': { label: 'Quá hạn báo cáo', cls: 'badgeError', color: '#f4212e' },
+    9: { label: 'Đang khiếu nại', cls: 'badgeInfo', color: '#1d9bf0' },
+    'ComplaintPending': { label: 'Đang khiếu nại', cls: 'badgeInfo', color: '#1d9bf0' },
 };
 
 // Helper for literal UTC time display
@@ -158,14 +162,23 @@ export default function StartupBookings({ user, targetId, onViewProject, initial
     };
 
     const handleRebookReplacement = (booking) => {
+        const bId = booking.id || booking.bookingId || booking.BookingId;
+        const pId = booking.projectId || booking.project?.projectId || booking.ProjectId;
+
         if (!isApproved) {
             onRestrictedAction?.('Đặt lịch tư vấn');
             return;
         }
+
+        if (!bId) {
+            console.error('Missing Booking ID for replacement');
+            return;
+        }
+
         setRebookData({
-            projectId: booking.projectId || booking.project?.projectId,
+            projectId: pId,
             advisorId: null,
-            sourceBookingId: booking.id || booking.bookingId
+            sourceBookingId: bId
         });
         setShowBookingWizard(true);
     };
@@ -185,26 +198,52 @@ export default function StartupBookings({ user, targetId, onViewProject, initial
                 return;
             }
             setPaymentBooking(booking);
+            setDetailBooking(null);
         }
-        if (action === 'chat') handleOpenChat(booking);
-        if (action === 'rebook') handleRebookReplacement(booking);
+        if (action === 'chat') {
+            handleOpenChat(booking);
+            setDetailBooking(null);
+        }
+        if (action === 'rebook') {
+            handleRebookReplacement(booking);
+            setDetailBooking(null);
+        }
         if (action === 'complain') {
             if (!isApproved) {
                 onRestrictedAction?.('Khiếu nại buổi tư vấn');
                 return;
             }
             setComplainBooking(booking);
+            setDetailBooking(null);
         }
-        if (action === 'review') handleRate(booking);
-        if (action === 'viewComplaint') setViewReport(booking); // Here booking is actually the report object
+        if (action === 'review') {
+            handleRate(booking);
+            setDetailBooking(null);
+        }
+        if (action === 'viewComplaint') {
+            setViewReport(booking);
+            setDetailBooking(null);
+        }
         if (action === 'report') {
             if (!isApproved) {
                 onRestrictedAction?.('Phản hồi/Báo cáo buổi tư vấn');
                 return;
             }
-            setReportModal({ bookingId: booking.id, advisorName: booking.advisorName, userRole: 'Startup' });
+            setReportModal({ bookingId: booking.id || booking.bookingId, advisorName: booking.advisorName, userRole: 'Startup' });
+            setDetailBooking(null);
         }
-        if (action === 'viewProject' && onViewProject) onViewProject(booking.projectId);
+        if (action === 'viewProject' && onViewProject) {
+            onViewProject(booking.projectId || booking.project?.projectId || booking.ProjectId);
+            setDetailBooking(null);
+        }
+        if (action === 'viewConsultationReport') {
+            setReportModal({ bookingId: booking.id || booking.bookingId, advisorName: booking.advisorName, userRole: 'Startup' });
+            setDetailBooking(null);
+        }
+        if (action === 'rate' || action === 'viewReview') {
+            handleRate(booking);
+            setDetailBooking(null);
+        }
     };
 
     const handleClosePayment = useCallback(() => {
@@ -222,8 +261,8 @@ export default function StartupBookings({ user, targetId, onViewProject, initial
         ApprovedAwaitingPayment: bookings.filter(b => b.status === 1 || b.status === 'ApprovedAwaitingPayment').length,
         Confirmed: bookings.filter(b => b.status === 2 || b.status === 'Confirmed').length,
         Completed: bookings.filter(b => b.status === 3 || b.status === 'Completed').length,
-        NoResponse: bookings.filter(b => b.status === 5 || b.status === 'NoResponse').length,
-        Cancel: bookings.filter(b => b.status === 4 || b.status === 'Cancel').length,
+        NoResponse: bookings.filter(b => b.status === 7 || b.status === 'NoResponse').length,
+        Cancel: bookings.filter(b => b.status === 6 || b.status === 'Cancel').length,
         Complaint: bookings.filter(b => userReports.some(r => String(r.bookingId) === String(b.id || b.bookingId))).length
     };
 
@@ -242,8 +281,8 @@ export default function StartupBookings({ user, targetId, onViewProject, initial
             (filterStatus === 'Pending' && (b.status === 0 || b.status === 'Pending')) ||
             (filterStatus === 'Confirmed' && (b.status === 2 || b.status === 'Confirmed')) ||
             (filterStatus === 'Completed' && (b.status === 3 || b.status === 'Completed')) ||
-            (filterStatus === 'NoResponse' && (b.status === 5 || b.status === 'NoResponse')) ||
-            (filterStatus === 'Cancel' && (b.status === 4 || b.status === 'Cancel')) ||
+            (filterStatus === 'NoResponse' && (b.status === 7 || b.status === 'NoResponse')) ||
+            (filterStatus === 'Cancel' && (b.status === 6 || b.status === 'Cancel')) ||
             (filterStatus === 'Complaint' && userReports.some(r => String(r.bookingId) === String(b.id || b.bookingId)));
 
         const displayProjectName = (b.projectName || b.project?.projectName || '').toLowerCase();
@@ -376,96 +415,12 @@ export default function StartupBookings({ user, targetId, onViewProject, initial
                                         </div>
                                         <div className={styles.xActions}>
                                             <button
-                                                className={`${styles.xActionButton} ${styles.xActionButton}`}
+                                                className={styles.xActionButton}
                                                 onClick={() => setDetailBooking(booking)}
+                                                style={{ marginLeft: 'auto', padding: '8px 20px', borderRadius: '9999px' }}
                                             >
                                                 Chi tiết <CaretRight size={14} />
                                             </button>
-
-                                            {(booking.status === 1 || booking.status === 'ApprovedAwaitingPayment') && (
-                                                <button className={`${styles.xActionButton} ${styles.xActionSuccess}`} onClick={() => setPaymentBooking(booking)}>
-                                                    <CreditCard size={14} /> Thanh toán
-                                                </button>
-                                            )}
-
-                                            {(booking.status === 2 || booking.status === 'Confirmed' || booking.status === 3 || booking.status === 'Completed') && (
-                                                <button
-                                                    className={`${styles.xActionButton} ${styles.xActionPrimary} ${chatLoading[booking.id || booking.bookingId] ? styles.xBtnDisabled : ''}`}
-                                                    onClick={() => handleOpenChat(booking)}
-                                                    disabled={!!chatLoading[booking.id || booking.bookingId]}
-                                                >
-                                                    {chatLoading[booking.id || booking.bookingId] ? (
-                                                        <CircleNotch size={14} className={styles.spinner} weight="bold" />
-                                                    ) : (
-                                                        <><ChatCircleText size={14} /> Chat</>
-                                                    )}
-                                                </button>
-                                            )}
-
-                                            {(booking.status === 2 || booking.status === 'Confirmed' || booking.status === 3 || booking.status === 'Completed') && (
-                                                <button className={styles.xActionButton} onClick={() => setReportModal({ bookingId: (booking.id || booking.bookingId), advisorName: booking.advisorName, userRole: 'Startup' })}>
-                                                    <FileText size={14} /> Báo cáo
-                                                </button>
-                                            )}
-
-                                            {(() => {
-                                                const existingReport = userReports.find(r => String(r.bookingId) === String(booking.id || booking.bookingId));
-                                                if (existingReport) {
-                                                    return (
-                                                        <button 
-                                                            className={`${styles.xActionButton}`} 
-                                                            onClick={() => setViewReport(existingReport)} 
-                                                            style={{ color: 'var(--primary-blue)', background: 'rgba(29, 155, 240, 0.05)', borderColor: 'rgba(29, 155, 240, 0.2)' }}
-                                                        >
-                                                            <MagnifyingGlass size={14} /> Xem khiếu nại
-                                                        </button>
-                                                    );
-                                                }
-                                                if (['Confirmed', 'Completed', 2, 3].includes(booking.status)) {
-                                                    return (
-                                                        <button 
-                                                            className={`${styles.xActionButton} ${styles.xActionDanger}`} 
-                                                            onClick={() => setComplainBooking(booking)} 
-                                                            style={{ color: '#f4212e' }}
-                                                        >
-                                                            <WarningCircle size={14} /> Khiếu nại
-                                                        </button>
-                                                    );
-                                                }
-                                                return null;
-                                            })()}
-
-                                            {(booking.status === 3 || booking.status === 'Completed') && (
-                                                (() => {
-                                                    const myReview = userReviews.find(r => String(r.bookingId) === String(booking.id || booking.bookingId));
-                                                    if (!myReview) {
-                                                        return (
-                                                            <button 
-                                                                className={`${styles.xActionButton} ${styles.xActionSuccess}`} 
-                                                                onClick={() => setRateBooking(booking)}
-                                                                style={{ background: 'rgba(23, 191, 99, 0.05)', color: '#17bf63', borderColor: 'rgba(23, 191, 99, 0.2)' }}
-                                                            >
-                                                                <Star size={14} weight="fill" /> Đánh giá
-                                                            </button>
-                                                        );
-                                                    }
-                                                    return (
-                                                        <button 
-                                                            className={styles.xPillBadge}
-                                                            onClick={() => setRateBooking({ ...booking, existingReview: myReview })}
-                                                            title="Xem đánh giá của bạn"
-                                                        >
-                                                            <CheckCircle size={14} weight="fill" /> Đã đánh giá
-                                                        </button>
-                                                    );
-                                                })()
-                                            )}
-
-                                            {[4, 6, 7, 'ComplaintAccepted', 'Cancel', 'NoResponse'].includes(booking.status) && (
-                                                <button className={`${styles.xActionButton} ${styles.xActionPrimary}`} onClick={() => handleRebookReplacement(booking)}>
-                                                    <ArrowsClockwise size={14} /> Đặt lại
-                                                </button>
-                                            )}
                                         </div>
                                     </div>
                                 </div>

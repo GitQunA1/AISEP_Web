@@ -4,12 +4,15 @@ import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
 import { ThemeProvider } from './context/ThemeContext';
+import { ProfileProvider } from './context/ProfileContext';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
   <React.StrictMode>
     <ThemeProvider>
-      <App />
+      <ProfileProvider>
+        <App />
+      </ProfileProvider>
     </ThemeProvider>
   </React.StrictMode>
 );

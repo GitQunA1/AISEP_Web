@@ -40,6 +40,8 @@ export const validationService = {
             minLengthMessage: rule.minLengthMessage,
             maxLengthMessage: rule.maxLengthMessage,
             regexMessage: rule.regexMessage,
+            fieldKey: rule.fieldKey,
+            displayName: rule.displayName,
             label: rule.displayName || rule.fieldKey
           };
         });
@@ -55,7 +57,7 @@ export const validationService = {
 
   /**
    * Validate a single field value against its rule
-   * @param {any} value - The value to validate
+   * @param {any} value - The value to validate (can be string, number, array, or comma-separated string)
    * @param {Object} rule - The rule object from getFormRules
    * @param {string|number} developmentStage - The currently selected stage ID
    * @returns {string|null} Error message if invalid, null if valid
@@ -63,6 +65,16 @@ export const validationService = {
   validateField: (value, rule, developmentStage = null) => {
     if (!rule) return null;
     
+    // Normalize value for multi-select fields (arrays or comma-separated strings)
+    let arrayValue = [];
+    if (Array.isArray(value)) {
+      arrayValue = [...new Set(value.filter(item => item !== null && item !== undefined && item !== ''))];
+    } else if (typeof value === 'string' && value.trim() !== '') {
+      // Check if it's potentially a comma-separated list of IDs or labels
+      // We only treat it as an array if we are checking counts
+      arrayValue = [...new Set(value.split(',').map(s => s.trim()).filter(Boolean))];
+    }
+
     const val = String(value || '').trim();
 
     // Determine if the field is required based on stage
@@ -79,11 +91,25 @@ export const validationService = {
     }
 
     // Required check
-    if (isRequired && !val) {
+    if (isRequired && (!val || (Array.isArray(value) && value.length === 0))) {
       return rule.requiredMessage || `${rule.label || 'Trường này'} là bắt buộc`;
     }
 
-    if (!val) return null; // If not required and empty, skip other checks
+    // Min Count check (for multi-select)
+    if (rule.minCount !== undefined && rule.minCount !== null) {
+      if (arrayValue.length < rule.minCount) {
+        return rule.minCountMessage || `Phải chọn ít nhất ${rule.minCount} lĩnh vực.`;
+      }
+    }
+
+    // Max Count check (for multi-select)
+    if (rule.maxCount !== undefined && rule.maxCount !== null) {
+      if (arrayValue.length > rule.maxCount) {
+        return rule.maxCountMessage || `Chỉ được chọn tối đa ${rule.maxCount} lĩnh vực.`;
+      }
+    }
+
+    if (!val && (!Array.isArray(value) || value.length === 0)) return null; // If not required and empty, skip other checks
 
     // Min length check
     if (rule.minLength && val.length < rule.minLength) {
