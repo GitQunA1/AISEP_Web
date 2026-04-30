@@ -232,6 +232,13 @@ function MainLayout({
   const [investedProjectIds, setInvestedProjectIds] = useState(new Set()); // Cache for already invested projects
   const [investorsByProject, setInvestorsByProject] = useState(new Map()); // Map: projectId -> array of investor objects (Contract_Signed only)
 
+  const isActiveInvestmentStatus = (status) => {
+    const normalized = typeof status === 'string' ? status.toLowerCase() : status;
+    // Startup rejection => Canceled should NOT block reinvest.
+    if (normalized === 'canceled' || normalized === 'cancelled' || normalized === 5 || normalized === '5') return false;
+    return true;
+  };
+
   // Refetch invested projects (called after successful investment)
   const refetchInvestedProjects = useCallback(async () => {
     const isInvestor = user && (
@@ -253,7 +260,11 @@ function MainLayout({
           deals = response.data;
         }
       }
-      const ids = new Set(deals.map(d => d.projectId));
+      const ids = new Set(
+        deals
+          .filter((d) => isActiveInvestmentStatus(d.status))
+          .map((d) => d.projectId)
+      );
       setInvestedProjectIds(ids);
       console.log('[MainLayout] Refetched invested project IDs:', ids);
     } catch (error) {

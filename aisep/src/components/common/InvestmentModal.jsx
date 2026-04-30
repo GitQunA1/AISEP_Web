@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, TrendingUp, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
+import { X, TrendingUp, AlertCircle, Loader2, CheckCircle, FileText, Upload, Trash2 } from 'lucide-react';
 import dealsService from '../../services/dealsService';
 import styles from './InvestmentModal.module.css';
 
@@ -26,6 +26,8 @@ const InvestmentModal = ({
   const [error, setError] = useState(null);
   const [successMessage, setSuccessMessage] = useState(null);
   const [dealStatus, setDealStatus] = useState(null);
+  const [evidenceFile, setEvidenceFile] = useState(null);
+  const fileInputRef = useRef(null);
 
   if (!isOpen) return null;
 
@@ -39,7 +41,10 @@ const InvestmentModal = ({
     let dealStatusString = 'Pending';
 
     try {
-      const response = await dealsService.createDeal(projectId);
+      if (!evidenceFile) {
+        throw new Error('Vui lòng tải lên tài liệu minh chứng thỏa thuận.');
+      }
+      const response = await dealsService.createDeal(projectId, evidenceFile);
       
       console.log('[InvestmentModal] Full response from POST /api/Deals:', response);
       console.log('[InvestmentModal] Response data:', response?.data);
@@ -53,52 +58,19 @@ const InvestmentModal = ({
       
       console.log('[InvestmentModal] ✓ Extracted dealId:', dealId);
       
-      try {
-        console.log(`[InvestmentModal] Fetching contract status for dealId=${dealId}`);
-        const statusResponse = await dealsService.getContractStatus(dealId);
-        console.log('[InvestmentModal] Contract status response:', statusResponse);
-        
-        // Handle response format: {success, data: {dealId, status: "Pending", amount, equityPercentage, ...}}
-        dealStatusString = statusResponse?.data?.status || 'Pending';
-        const statusInfo = dealsService.getStatusInfo(dealStatusString);
-        
-        setDealStatus({
-          dealId: dealId,
-          projectName: response?.data?.projectName,
-          startupName: response?.data?.startupName,
-          statusCode: statusInfo.value,
-          statusInfo: statusInfo,
-          status: dealStatusString,
-          amount: statusResponse?.data?.amount || response?.data?.amount || 0,
-          equityPercentage: statusResponse?.data?.equityPercentage || response?.data?.equityPercentage || null,
-          contractPdfUrl: statusResponse?.data?.contractPdfUrl || null,
-          contractSignedAt: statusResponse?.data?.contractSignedAt || null,
-          isContractSigned: statusResponse?.data?.isContractSigned || false
-        });
-        
-        console.log('[InvestmentModal] ✓ Deal status fetched and set:', statusInfo.labelVi);
-      } catch (statusErr) {
-        console.warn('[InvestmentModal] Could not fetch contract status:', statusErr);
-        // Still show success even if status fetch fails - use response data
-        dealStatusString = response?.data?.status || 'Pending';
-        const statusInfo = dealsService.getStatusInfo(dealStatusString);
-        
-        setDealStatus({
-          dealId: dealId,
-          projectName: response?.data?.projectName,
-          startupName: response?.data?.startupName,
-          statusCode: statusInfo.value,
-          statusInfo: statusInfo,
-          status: dealStatusString,
-          amount: response?.data?.amount || 0,
-          equityPercentage: response?.data?.equityPercentage || null,
-          contractPdfUrl: null,
-          contractSignedAt: null,
-          isContractSigned: false
-        });
-      }
+      dealStatusString = response?.data?.status || 'Pending';
+      const statusInfo = dealsService.getStatusInfo(dealStatusString);
+      setDealStatus({
+        dealId: dealId,
+        projectName: response?.data?.projectName,
+        startupName: response?.data?.startupName,
+        statusCode: statusInfo.value,
+        statusInfo: statusInfo,
+        status: dealStatusString,
+        amount: response?.data?.amount || 0
+      });
       
-      setSuccessMessage('Đầu tư thành công! Chúng tôi sẽ liên hệ với bạn sớm.');
+      setSuccessMessage('Gửi yêu cầu đầu tư thành công! Startup sẽ xem tài liệu và phản hồi trong thời gian sớm nhất.');
       
       // Dispatch event to notify dashboard of new deal
       if (dealId) {
@@ -130,12 +102,27 @@ const InvestmentModal = ({
       }, 2000);
     } catch (err) {
       console.error('[InvestmentModal] Error creating deal:', err);
-      
-      setError(
-        err.response?.data?.message || 
-        err.message || 
-        'Không thể tạo đơn đầu tư. Vui lòng thử lại.'
-      );
+
+      // Improve diagnostics for the common "re-invest after canceled" scenario.
+      if (err?.statusCode === 500) {
+        try {
+          const dealsRes = await dealsService.getInvestorDeals({ pageSize: 100 });
+          const deals = dealsRes?.data?.items || dealsRes?.data || [];
+          const existingDeal = Array.isArray(deals)
+            ? deals.find((d) => String(d.projectId) === String(projectId))
+            : null;
+          const statusNormalized = (existingDeal?.status || '').toString().toLowerCase();
+
+          if (existingDeal && (statusNormalized === 'canceled' || statusNormalized === 'cancelled' || statusNormalized === '5')) {
+            setError('Không thể tạo yêu cầu đầu tư mới vì backend đang giữ deal đã hủy của cùng dự án. Cần backend cho phép tạo lại deal khi trạng thái là "Canceled", hoặc cung cấp endpoint mở lại deal.');
+            return;
+          }
+        } catch (_) {
+          // Ignore diagnostic error and fallback to generic message below.
+        }
+      }
+
+      setError(err?.message || 'Không thể tạo đơn đầu tư. Vui lòng thử lại.');
     } finally {
       setIsLoading(false);
     }
@@ -144,7 +131,15 @@ const InvestmentModal = ({
   const handleClose = () => {
     setError(null);
     setSuccessMessage(null);
+    setEvidenceFile(null);
     onClose?.();
+  };
+
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '0 B';
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
   };
 
   return createPortal(
@@ -223,9 +218,67 @@ const InvestmentModal = ({
               <div className={styles.infoBox}>
                 <AlertCircle size={18} />
                 <p>
-                  Nhấn nút <strong>"Xác nhận Đầu tư"</strong> để gửi đơn đầu tư. 
-                  Sau đó, chúng tôi sẽ xử lý yêu cầu của bạn và liên hệ lại.
+                  Vui lòng tải lên <strong>tài liệu hợp tác đầu tư đã thỏa thuận giữa Investor và Startup</strong>,
+                  ví dụ: biên bản ghi nhớ (MOU), bản scan hợp đồng, phụ lục điều khoản, xác nhận chuyển khoản hoặc
+                  giấy tờ pháp lý liên quan. Sau khi gửi, Startup sẽ xem tài liệu và thực hiện chấp nhận hoặc từ chối yêu cầu.
                 </p>
+              </div>
+
+              <div className={styles.formGroup}>
+                <label className={styles.label}>Tài liệu thỏa thuận *</label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,.webp"
+                  onChange={(e) => setEvidenceFile(e.target.files?.[0] || null)}
+                  disabled={isLoading}
+                  className={styles.hiddenInput}
+                />
+                {!evidenceFile ? (
+                  <button
+                    type="button"
+                    className={styles.uploadArea}
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isLoading}
+                  >
+                    <Upload size={18} />
+                    <div>
+                      <div className={styles.uploadTitle}>Chọn tài liệu để tải lên</div>
+                      <div className={styles.uploadHint}>Hỗ trợ: PDF, JPG, PNG, WEBP</div>
+                    </div>
+                  </button>
+                ) : (
+                  <div className={styles.fileCard}>
+                    <div className={styles.fileMain}>
+                      <FileText size={18} />
+                      <div className={styles.fileMeta}>
+                        <div className={styles.fileName} title={evidenceFile.name}>{evidenceFile.name}</div>
+                        <div className={styles.fileSub}>{formatFileSize(evidenceFile.size)}</div>
+                      </div>
+                    </div>
+                    <div className={styles.fileActions}>
+                      <button
+                        type="button"
+                        className={styles.fileActionBtn}
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isLoading}
+                      >
+                        Đổi file
+                      </button>
+                      <button
+                        type="button"
+                        className={styles.fileActionBtnDanger}
+                        onClick={() => {
+                          setEvidenceFile(null);
+                          if (fileInputRef.current) fileInputRef.current.value = '';
+                        }}
+                        disabled={isLoading}
+                      >
+                        <Trash2 size={14} /> Xóa
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Buttons */}
@@ -249,7 +302,7 @@ const InvestmentModal = ({
                       Đang xử lý...
                     </>
                   ) : (
-                    'Xác nhận Đầu tư'
+                    'Gửi yêu cầu đầu tư'
                   )}
                 </button>
               </div>

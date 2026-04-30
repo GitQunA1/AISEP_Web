@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle, Loader, Shield, Settings, History, ChevronUp, ChevronDown, DollarSign, CreditCard, Newspaper, Landmark, Factory, Milestone } from 'lucide-react';
+import { Home, Compass, Search, TrendingUp, Users, User, Rocket, X, LogOut, Sun, Moon, LayoutDashboard, Sparkles, LogIn, UserPlus, FileText, Calendar, ShieldCheck, Activity, MessageSquare, Award, AlertCircle, Loader, Shield, Settings, History, ChevronUp, ChevronDown, DollarSign, CreditCard, Newspaper, Landmark, Factory, Milestone, Briefcase } from 'lucide-react';
 import styles from './Sidebar.module.css';
 import Button from '../common/Button';
 import { useTheme } from '../../context/ThemeContext';
@@ -97,6 +97,7 @@ function Sidebar({
         { icon: ShieldCheck, label: 'Approvals', displayLabel: 'Phê duyệt Startup', href: '#', showWhenLoggedIn: true },
         { icon: ShieldCheck, label: 'AdvisorApproval', displayLabel: 'Phê duyệt cố vấn', href: '#', showWhenLoggedIn: true },
         { icon: ShieldCheck, label: 'InvestorApproval', displayLabel: 'Phê duyệt nhà đầu tư', href: '#', showWhenLoggedIn: true },
+        { icon: Briefcase, label: 'StaffInvestmentManagement', displayLabel: 'Quản lý đầu tư', href: '#', showWhenLoggedIn: true },
         { icon: ShieldCheck, label: 'Terms', displayLabel: 'Quản lý Điều khoản', href: '#', showWhenLoggedIn: true },
         { icon: User, label: 'AccountProfile', displayLabel: 'Hồ sơ người dùng', href: '#', showWhenLoggedIn: true },
       ];
@@ -227,6 +228,9 @@ function Sidebar({
     }
     if (label === 'InvestorApproval' && onShowDashboard) {
       onShowDashboard('investor_approval');
+    }
+    if (label === 'StaffInvestmentManagement' && onShowDashboard) {
+      onShowDashboard('investment_management');
     }
 
     if (label === 'UserReports' && onShowDashboard) {
@@ -422,6 +426,7 @@ function Sidebar({
                       if (activeView === 'dashboard_package_management') return 'AdminPackageManagement';
                       if (activeView === 'dashboard_subscription_history') return 'AdminSubscriptionHistory';
                       if (activeView === 'dashboard_investor_approval') return 'InvestorApproval';
+                      if (activeView === 'dashboard_investment_management') return 'StaffInvestmentManagement';
                       if (activeView === 'dashboard_preferences') return 'InvestorProfile';
                       if (activeView === 'complete-info' || activeView === 'dashboard_complete-info') return 'StartupProfile';
                       if (activeView === 'dashboard_users') return 'AdminUsers';

@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare, TrendingUpIcon, Loader2, Crown, X, Info, Calendar, PieChart, ArrowRight, FileText, Check, Users, AlertCircle, RefreshCw, Trash2, Settings, Download, XCircle, Clock, Shield, ChevronRight, GripVertical, Camera, Mail, Upload } from 'lucide-react';
+import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare, TrendingUpIcon, Loader2, Crown, X, Info, Calendar, PieChart, ArrowRight, FileText, Check, Users, AlertCircle, RefreshCw, Trash2, Settings, Download, XCircle, Clock, Shield, ChevronRight, GripVertical, Camera, Mail, Upload, ExternalLink } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
 import contractStyles from './ContractSigningModal.module.css';
@@ -111,6 +111,9 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const [activeChatConnectionId, setActiveChatConnectionId] = useState(null);
     const [activeChatSession, setActiveChatSession] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [reuploadingDealId, setReuploadingDealId] = useState(null);
+    const [showOnchainResultModal, setShowOnchainResultModal] = useState(false);
+    const [onchainResultData, setOnchainResultData] = useState(null);
 
     // Contract signing states
     const [showContractModal, setShowContractModal] = useState(false);
@@ -544,12 +547,8 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 }
 
                 const enhancedDeals = dealsData.map((deal) => {
-                    const isRejectedDeal = deal.status === 'Rejected' || deal.status === 5;
-                    if (!isRejectedDeal) return deal;
-
                     const normalizedDealId = String(deal.dealId || '');
                     const notificationReason = reasonByDealId.get(normalizedDealId);
-
                     return {
                         ...deal,
                         rejectionReason: deal.rejectionReason || notificationReason || ''
@@ -824,6 +823,78 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         signatureDataRef.current = ''; // Clear ref
         if (signatureCanvasRef.current) {
             signatureCanvasRef.current.clear();
+        }
+    };
+
+    const getDealStatusInfo = (status) => {
+        const map = {
+            PendingCounterpartyConfirmation: { label: 'Chờ đối tác xác nhận', color: '#f59e0b', value: 0 },
+            PendingStaffApproval: { label: 'Chờ staff duyệt', color: '#0ea5e9', value: 1 },
+            RequireReupload: { label: 'Yêu cầu tải lại tài liệu', color: '#f97316', value: 2 },
+            ProcessingBlockchain: { label: 'Đang xử lý blockchain', color: '#8b5cf6', value: 3 },
+            Completed: { label: 'Hoàn tất', color: '#10b981', value: 4 },
+            Canceled: { label: 'Đã hủy', color: '#ef4444', value: 5 },
+            BlockchainFailed: { label: 'Blockchain thất bại', color: '#dc2626', value: 6 },
+        };
+        const normalize = typeof status === 'number' ? status : Number(status);
+        if (!Number.isNaN(normalize) && normalize >= 0 && normalize <= 6) {
+            const keyByValue = Object.keys(map).find((k) => map[k].value === normalize);
+            return map[keyByValue] || { label: String(status ?? 'Không xác định'), color: '#64748b', value: null };
+        }
+        return map[status] || { label: String(status ?? 'Không xác định'), color: '#64748b', value: null };
+    };
+
+    const handleVerifyDealOnchain = async (dealId) => {
+        if (!dealId) return;
+        try {
+            const response = await dealsService.verifyDealOnchain(dealId);
+            const normalized = dealsService.normalizeDealOnchainResult(response);
+            const explorerLink = dealsService.getDealOnchainExplorerLink(normalized);
+            setOnchainResultData({ ...normalized, explorerLink });
+            setShowOnchainResultModal(true);
+        } catch (error) {
+            console.error('[InvestorDashboard] verify on-chain failed:', error);
+            alert('Lỗi: Không thể xác thực blockchain cho deal này.');
+        }
+    };
+
+    const handleReuploadFileChange = async (dealId, file) => {
+        if (!file || !dealId) return;
+
+        setReuploadingDealId(dealId);
+        try {
+            const response = await dealsService.reuploadDealDocument(dealId, file);
+            if (response && (response.success || response.data || response.statusCode === 200)) {
+                // Backend may reset deal status asynchronously, so we retry fetching latest status.
+                let latestStatus = null;
+                for (let i = 0; i < 4; i += 1) {
+                    try {
+                        const latest = await dealsService.getDealById(dealId);
+                        const latestDeal = latest?.data || latest;
+                        latestStatus = latestDeal?.status;
+                        const statusInfo = getDealStatusInfo(latestStatus);
+                        if (statusInfo.value !== 5) break; // no longer Canceled
+                    } catch (_) {
+                        // ignore and continue retry
+                    }
+                    await new Promise((resolve) => setTimeout(resolve, 1200));
+                }
+
+                const latestStatusInfo = getDealStatusInfo(latestStatus);
+                if (latestStatusInfo.value === 5) {
+                    alert('Tải lại tài liệu thành công nhưng trạng thái deal vẫn là "Đã hủy". Backend cần reset trạng thái sau reupload.');
+                } else {
+                    alert('✓ Tải lại tài liệu thành công. Deal đã được cập nhật để xem xét lại.');
+                }
+                refreshDeals();
+            } else {
+                throw new Error(response?.message || 'Không thể tải lại tài liệu');
+            }
+        } catch (error) {
+            console.error('[InvestorDashboard] Reupload deal document failed:', error);
+            alert('Lỗi: Không thể tải lại tài liệu. Vui lòng thử lại.');
+        } finally {
+            setReuploadingDealId(null);
         }
     };
 
@@ -1709,7 +1780,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                     <div>
                                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Chờ xác nhận</div>
                                         <div style={{ fontSize: '24px', fontWeight: '800', color: '#f59e0b' }}>
-                                            {deals.filter(d => d.status === 'Pending').length}
+                                            {deals.filter(d => getDealStatusInfo(d.status).value === 0).length}
                                         </div>
                                     </div>
                                 </div>
@@ -1718,9 +1789,9 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <CheckCircle size={24} color="#10b981" />
                                     <div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Đã ký kết</div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Hoàn tất</div>
                                         <div style={{ fontSize: '24px', fontWeight: '800', color: '#10b981' }}>
-                                            {deals.filter(d => d.status === 'Contract_Signed' || d.status === 'Minted_NFT').length}
+                                            {deals.filter(d => getDealStatusInfo(d.status).value === 4 || d.isCompleted === true).length}
                                         </div>
                                     </div>
                                 </div>
@@ -1748,17 +1819,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                         {!isLoading && deals.length > 0 && (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
                                 {deals.map((deal, index) => {
-                                    const statusMap = {
-                                        'Pending': { label: 'Chờ xác nhận', color: '#f59e0b' },
-                                        'Confirmed': { label: 'Đã xác nhận', color: '#10b981' },
-                                        'Contract_Signed': { label: 'Đã ký kết', color: '#667eea' },
-                                        'Minted_NFT': { label: 'Đã mint NFT', color: '#8b5cf6' },
-                                        'Rejected': { label: 'Đã từ chối', color: '#ef4444' },
-                                        'Failed': { label: 'Thất bại', color: '#ef4444' }
-                                    };
-                                    const statusInfo = statusMap[deal.status] || { label: deal.status || 'Unknown', color: '#64748b' };
-                                    const isContractSigned = !!deal.contractSignedAt;
-                                    const isRejectedDeal = deal.status === 'Rejected' || deal.status === 5;
+                                    const statusInfo = getDealStatusInfo(deal.status);
+                                    const isContractSigned = !!deal.isCompleted || statusInfo.value === 4;
+                                    const isRejectedDeal = statusInfo.value === 5;
+                                    const canReupload = statusInfo.value === 2;
 
                                     const isHighlighted = String(targetId) === String(deal.dealId);
                                     return (
@@ -1803,25 +1867,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                 </div>
                                             </div>
 
-                                            {/* Deal Details */}
-                                            {!isRejectedDeal && (
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
-                                                    <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '6px' }}>
-                                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Số tiền</div>
-                                                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>
-                                                            {deal.amount > 0 ? `${deal.amount.toLocaleString('vi-VN')} VNĐ` : 'Chưa có'}
-                                                        </div>
-                                                    </div>
-                                                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '10px', borderRadius: '6px' }}>
-                                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Cổ phần</div>
-                                                        <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                                            {deal.equityPercentage !== null && deal.equityPercentage > 0 ? `${deal.equityPercentage}%` : 'Chưa có'}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {isRejectedDeal && !!deal.rejectionReason && (
+                                            {(isRejectedDeal || statusInfo.value === 2) && !!deal.rejectionReason && (
                                                 <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '8px', padding: '10px', marginTop: '4px' }}>
                                                     <div style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', marginBottom: '4px' }}>
                                                         Lý do từ chối
@@ -1829,13 +1875,6 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                     <div style={{ fontSize: '12px', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
                                                         {deal.rejectionReason}
                                                     </div>
-                                                </div>
-                                            )}
-
-                                            {deal.contractSignedAt && (
-                                                <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <Check size={14} color="#10b981" />
-                                                    Đã ký lúc: {new Date(deal.contractSignedAt).toLocaleString('vi-VN')}
                                                 </div>
                                             )}
 
@@ -1876,62 +1915,74 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                                 </button>
                                                             )}
 
-                                                            {(deal.status === 'Confirmed' || deal.status === 1) && (
-                                                                <button
+                                                            {deal.documentUrl && (
+                                                                <a
+                                                                    href={deal.documentUrl}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
                                                                     style={{
                                                                         ...btnStyle,
                                                                         backgroundColor: '#2D7EFF',
                                                                         color: '#fff',
-                                                                        opacity: actionLoading[`contract-${deal.dealId}`] ? 0.7 : 1
+                                                                        textDecoration: 'none'
                                                                     }}
-                                                                    onClick={() => handleShowContractPreview(deal)}
-                                                                    disabled={actionLoading[`contract-${deal.dealId}`]}
                                                                 >
-                                                                    {actionLoading[`contract-${deal.dealId}`] ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
-                                                                    Ký hợp đồng
-                                                                </button>
+                                                                    <FileText size={14} />
+                                                                    Xem tài liệu
+                                                                </a>
                                                             )}
 
-                                                            {(isContractSigned || deal.status === 'Contract_Signed' || deal.status === 3) && deal.contractPdfUrl && (
+                                                            {canReupload && (
+                                                                <>
+                                                                    <input
+                                                                        id={`reupload-deal-${deal.dealId}`}
+                                                                        type="file"
+                                                                        accept=".pdf,.png,.jpg,.jpeg,.webp"
+                                                                        hidden
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            e.target.value = '';
+                                                                            handleReuploadFileChange(deal.dealId, file);
+                                                                        }}
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        style={{
+                                                                            ...btnStyle,
+                                                                            backgroundColor: '#f97316',
+                                                                            color: '#fff',
+                                                                            opacity: reuploadingDealId === deal.dealId ? 0.7 : 1
+                                                                        }}
+                                                                        onClick={() => document.getElementById(`reupload-deal-${deal.dealId}`)?.click()}
+                                                                        disabled={reuploadingDealId === deal.dealId}
+                                                                    >
+                                                                        {reuploadingDealId === deal.dealId ? (
+                                                                            <>
+                                                                                <Loader2 size={14} className={styles.spinner} />
+                                                                                Đang tải...
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Upload size={14} />
+                                                                                Tải lại tài liệu
+                                                                            </>
+                                                                        )}
+                                                                    </button>
+                                                                </>
+                                                            )}
+
+                                                            {(statusInfo.value === 4 || deal.isCompleted === true) && (
                                                                 <button
+                                                                    type="button"
                                                                     style={{
                                                                         ...btnStyle,
                                                                         backgroundColor: '#10b981',
-                                                                        color: '#fff',
-                                                                        opacity: actionLoading[`contract-${deal.dealId}`] ? 0.7 : 1
+                                                                        color: '#fff'
                                                                     }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleShowContractPreview(deal);
-                                                                    }}
-                                                                    disabled={actionLoading[`contract-${deal.dealId}`]}
+                                                                    onClick={() => handleVerifyDealOnchain(deal.dealId)}
                                                                 >
-                                                                    {actionLoading[`contract-${deal.dealId}`] ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
-                                                                    Xem hợp đồng
-                                                                </button>
-                                                            )}
-
-                                                            {(isContractSigned || deal.status === 'Contract_Signed' || deal.status === 3) && (
-                                                                <button
-                                                                    style={{
-                                                                        ...btnStyle,
-                                                                        backgroundColor: '#3b82f6',
-                                                                        color: '#fff',
-                                                                        opacity: actionLoading[`ownership-${deal.dealId}`] ? 0.7 : 1
-                                                                    }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleCheckBlockchainOwnership(deal);
-                                                                    }}
-                                                                    disabled={actionLoading[`ownership-${deal.dealId}`]}
-                                                                    title="Xác thực chuyển giao quyền sở hữu trên blockchain"
-                                                                >
-                                                                    {actionLoading[`ownership-${deal.dealId}`] ? (
-                                                                        <Loader2 size={14} className="animate-spin" />
-                                                                    ) : (
-                                                                        <Shield size={14} />
-                                                                    )}
-                                                                    Xác thực Quyền sở hữu
+                                                                    <Shield size={14} />
+                                                                    Xác thực blockchain
                                                                 </button>
                                                             )}
                                                         </>
@@ -2591,6 +2642,35 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                     onClose={handleCloseChatWindow}
                 />
 
+            {showOnchainResultModal && onchainResultData && (
+                <div className={styles.modalOverlay} onClick={() => setShowOnchainResultModal(false)}>
+                    <div className={styles.modalContent} style={{ maxWidth: '720px', height: 'auto', maxHeight: '88vh' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>Kết quả xác thực blockchain</h3>
+                            <button className={styles.modalCloseBtnInline} onClick={() => setShowOnchainResultModal(false)}><X size={18} /></button>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                            <div><strong>Deal ID:</strong> {onchainResultData.dealId ?? '-'}</div>
+                            <div><strong>Đã xác minh:</strong> {onchainResultData.isVerified ? 'Có' : 'Chưa'}</div>
+                            <div style={{ gridColumn: '1 / -1' }}><strong>Thông điệp:</strong> {onchainResultData.message || '-'}</div>
+                            <div style={{ gridColumn: '1 / -1', wordBreak: 'break-all' }}><strong>Document Hash:</strong> {onchainResultData.documentHash || '-'}</div>
+                            <div style={{ gridColumn: '1 / -1', wordBreak: 'break-all' }}><strong>Investor Wallet:</strong> {onchainResultData.investorWallet || '-'}</div>
+                            <div style={{ gridColumn: '1 / -1' }}><strong>Thời gian on-chain:</strong> {onchainResultData.timestampOnBlockchain || '-'}</div>
+                            <div style={{ gridColumn: '1 / -1', wordBreak: 'break-all' }}><strong>Owners:</strong> {(onchainResultData.owners || []).join(', ') || '-'}</div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <a href={onchainResultData.explorerLink} target="_blank" rel="noreferrer" className={styles.primaryBtn}>
+                                <ExternalLink size={14} /> Xem trực tiếp trên Blockchain Explorer
+                            </a>
+                            <button className={styles.secondaryBtn} onClick={() => setShowOnchainResultModal(false)}>Đóng</button>
+                        </div>
+                        <p style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                            Ghi chú: Nếu trạng thái đã xác minh, dữ liệu hợp đồng đã được ghi nhận trên blockchain và có thể tự kiểm tra công khai bằng liên kết ở trên.
+                        </p>
+                    </div>
+                </div>
+            )}
+
                 {/* Contract Preview Modal - Modernized */}
                 {showContractModal && contractPreviewHtml && (
                     <div className={contractStyles.modalOverlay} onClick={handleCloseContractModal}>
@@ -2890,43 +2970,31 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                     </div>
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                        {/* Investment Stats */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                            <div style={{ backgroundColor: 'var(--bg-hover)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                                                <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Số tiền đầu tư</div>
-                                                <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-blue)' }}>
-                                                    {selectedItem.amount?.toLocaleString('vi-VN')} <span style={{ fontSize: '14px', opacity: 0.8 }}>VND</span>
-                                                </div>
-                                            </div>
-                                            <div style={{ backgroundColor: 'var(--bg-hover)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                                                <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Cổ phần nắm giữ</div>
-                                                <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-primary)' }}>
-                                                    {selectedItem.equityPercentage}<span style={{ fontSize: '14px', marginLeft: '2px' }}>%</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
                                         {/* Status Section */}
                                         <div className={styles.projectDetailSection}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                                 <Info size={14} /> Trạng thái hiện tại
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--primary-blue)', boxShadow: '0 0 8px var(--primary-blue)' }}></div>
-                                                <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>{selectedItem.status}</span>
+                                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getDealStatusInfo(selectedItem.status).color, boxShadow: `0 0 8px ${getDealStatusInfo(selectedItem.status).color}` }}></div>
+                                                <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>{getDealStatusInfo(selectedItem.status).label}</span>
                                             </div>
                                         </div>
 
-                                        {/* Contract Info */}
-                                        {selectedItem.contractSignedAt && (
+                                        {selectedItem.documentUrl && (
                                             <div className={styles.projectDetailSection}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                    <FileText size={14} /> Thông tin hợp đồng
+                                                    <FileText size={14} /> Tài liệu thỏa thuận
                                                 </div>
-                                                <div style={{ backgroundColor: 'rgba(29, 155, 240, 0.05)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(29, 155, 240, 0.1)', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                    <CheckCircle size={16} color="var(--primary-blue)" />
-                                                    <span style={{ fontWeight: '500' }}>Đã ký vào lúc {new Date(selectedItem.contractSignedAt).toLocaleString('vi-VN')}</span>
-                                                </div>
+                                                <a
+                                                    href={selectedItem.documentUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '700', color: 'var(--primary-blue)', textDecoration: 'none' }}
+                                                >
+                                                    <Download size={16} />
+                                                    Xem tài liệu đã tải lên
+                                                </a>
                                             </div>
                                         )}
                                     </div>
