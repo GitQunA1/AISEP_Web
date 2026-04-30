@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare, TrendingUpIcon, Loader2, Crown, X, Info, Calendar, PieChart, ArrowRight, FileText, Check, Users, AlertCircle, RefreshCw, Trash2, Settings, Download, XCircle, Clock, Shield, ChevronRight, GripVertical, Camera, Mail, Upload } from 'lucide-react';
+import { TrendingUp, Heart, DollarSign, CheckCircle, Eye, MessageSquare, TrendingUpIcon, Loader2, Crown, X, Info, Calendar, PieChart, ArrowRight, FileText, Check, Users, AlertCircle, RefreshCw, Trash2, Settings, Download, XCircle, Clock, Shield, ChevronRight, GripVertical, Camera, Mail, Upload, ExternalLink, Plus, Lock } from 'lucide-react';
 import SignatureCanvas from 'react-signature-canvas';
 import styles from '../styles/SharedDashboard.module.css';
 import contractStyles from './ContractSigningModal.module.css';
@@ -49,7 +49,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const [investorProfile, setInvestorProfile] = useState(null);
     const [validationRules, setValidationRules] = useState(null);
     const [configError, setConfigError] = useState('');
-    
+
     // Deep Linking State Tracking
     const [hasAttemptedDeepLink, setHasAttemptedDeepLink] = useState(false);
 
@@ -111,6 +111,9 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const [activeChatConnectionId, setActiveChatConnectionId] = useState(null);
     const [activeChatSession, setActiveChatSession] = useState(null);
     const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const [reuploadingDealId, setReuploadingDealId] = useState(null);
+    const [showOnchainResultModal, setShowOnchainResultModal] = useState(false);
+    const [onchainResultData, setOnchainResultData] = useState(null);
 
     // Contract signing states
     const [showContractModal, setShowContractModal] = useState(false);
@@ -180,7 +183,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         };
 
         console.log(`[InvestorDashboard] Processing targetId: ${targetId} for activeSection: ${activeSection}`);
-        
+
         // 1. Deals Deep Link
         if (activeSection === 'deals' && deals.length > 0) {
             const matchDeal = deals.find(d => String(d.dealId) === String(targetId));
@@ -191,7 +194,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 scrollAndHighlight('deal');
             }
         }
-        
+
         // 2. Connection Requests Deep Link
         else if (activeSection === 'connection-requests' && sentConnectionRequests.length > 0) {
             const matchReq = sentConnectionRequests.find(r => String(r.connectionRequestId || r.id) === String(targetId));
@@ -243,7 +246,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const [currentPackage, setCurrentPackage] = useState(null);
 
     const [availableStages, setAvailableStages] = useState([]);
-    
+
     // Mapping helpers for API strings <-> UI integers
     const RISK_TOLERANCE_MAP = {
         'Low': 0, 'Medium': 1, 'High': 2,
@@ -404,7 +407,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 if (industriesRes && industriesRes.length > 0) {
                     setAvailableIndustries(industriesRes);
                 }
-                
+
                 if (stagesRes && stagesRes.length > 0) {
                     setAvailableStages(stagesRes);
                 }
@@ -413,6 +416,15 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 const formKey = profileRes ? 'investor.update' : 'investor.create';
                 try {
                     const rulesRes = await validationService.getFormRules(formKey);
+                    
+                    // Inject industry count constraints (1-4 for Investors)
+                    if (rulesRes && rulesRes.industryoptionids) {
+                        rulesRes.industryoptionids.minCount = 1;
+                        rulesRes.industryoptionids.maxCount = 4;
+                        rulesRes.industryoptionids.minCountMessage = 'Vui lòng chọn ít nhất 1 lĩnh vực.';
+                        rulesRes.industryoptionids.maxCountMessage = 'Bạn chỉ được chọn tối đa 4 lĩnh vực.';
+                    }
+                    
                     setValidationRules(rulesRes);
                 } catch (err) {
                     console.error('[InvestorDashboard] Config error:', err);
@@ -448,6 +460,34 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                             typicalInvestmentSize: profileRes.typicalInvestmentSize || ''
                         });
 
+                        const normalizeItems = (items, options = []) => {
+                            const rawItems = Array.isArray(items) ? items : [];
+                            return rawItems.map(item => {
+                                if (!item) return null;
+                                if (typeof item === 'string') {
+                                    const match = options.find(o => o.label.toLowerCase() === item.toLowerCase());
+                                    return match ? match.label : item;
+                                }
+                                if (typeof item === 'number' || (!isNaN(Number(item)) && typeof item !== 'object')) {
+                                    const match = options.find(o => String(o.value) === String(item));
+                                    return match ? match.label : null;
+                                }
+                                if (typeof item === 'object') {
+                                    const id = item.id ?? item.value ?? item.industryId;
+                                    const name = item.name ?? item.label ?? item.industryName;
+                                    if (id) {
+                                        const match = options.find(o => String(o.value) === String(id));
+                                        if (match) return match.label;
+                                    }
+                                    if (name) {
+                                        const match = options.find(o => o.label.toLowerCase() === name.toLowerCase());
+                                        return match ? match.label : name;
+                                    }
+                                }
+                                return null;
+                            }).filter(Boolean);
+                        };
+
                         let industries = [];
                         if (profileRes.focusIndustry) industries.push(profileRes.focusIndustry);
                         if (Array.isArray(profileRes.industries)) {
@@ -479,6 +519,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                 }
                             }
                         }
+
+                        // Normalize all collected industries and stages
+                        industries = normalizeItems(industries, industriesRes);
+                        stages = normalizeItems(stages, stagesRes);
 
                         setPreferredIndustries(industries);
                         setPreferredStages(stages);
@@ -544,12 +588,8 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 }
 
                 const enhancedDeals = dealsData.map((deal) => {
-                    const isRejectedDeal = deal.status === 'Rejected' || deal.status === 5;
-                    if (!isRejectedDeal) return deal;
-
                     const normalizedDealId = String(deal.dealId || '');
                     const notificationReason = reasonByDealId.get(normalizedDealId);
-
                     return {
                         ...deal,
                         rejectionReason: deal.rejectionReason || notificationReason || ''
@@ -827,6 +867,78 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         }
     };
 
+    const getDealStatusInfo = (status) => {
+        const map = {
+            PendingCounterpartyConfirmation: { label: 'Chờ đối tác xác nhận', color: '#f59e0b', value: 0 },
+            PendingStaffApproval: { label: 'Chờ staff duyệt', color: '#0ea5e9', value: 1 },
+            RequireReupload: { label: 'Yêu cầu tải lại tài liệu', color: '#f97316', value: 2 },
+            ProcessingBlockchain: { label: 'Đang xử lý blockchain', color: '#8b5cf6', value: 3 },
+            Completed: { label: 'Hoàn tất', color: '#10b981', value: 4 },
+            Canceled: { label: 'Đã hủy', color: '#ef4444', value: 5 },
+            BlockchainFailed: { label: 'Blockchain thất bại', color: '#dc2626', value: 6 },
+        };
+        const normalize = typeof status === 'number' ? status : Number(status);
+        if (!Number.isNaN(normalize) && normalize >= 0 && normalize <= 6) {
+            const keyByValue = Object.keys(map).find((k) => map[k].value === normalize);
+            return map[keyByValue] || { label: String(status ?? 'Không xác định'), color: '#64748b', value: null };
+        }
+        return map[status] || { label: String(status ?? 'Không xác định'), color: '#64748b', value: null };
+    };
+
+    const handleVerifyDealOnchain = async (dealId) => {
+        if (!dealId) return;
+        try {
+            const response = await dealsService.verifyDealOnchain(dealId);
+            const normalized = dealsService.normalizeDealOnchainResult(response);
+            const explorerLink = dealsService.getDealOnchainExplorerLink(normalized);
+            setOnchainResultData({ ...normalized, explorerLink });
+            setShowOnchainResultModal(true);
+        } catch (error) {
+            console.error('[InvestorDashboard] verify on-chain failed:', error);
+            alert('Lỗi: Không thể xác thực blockchain cho deal này.');
+        }
+    };
+
+    const handleReuploadFileChange = async (dealId, file) => {
+        if (!file || !dealId) return;
+
+        setReuploadingDealId(dealId);
+        try {
+            const response = await dealsService.reuploadDealDocument(dealId, file);
+            if (response && (response.success || response.data || response.statusCode === 200)) {
+                // Backend may reset deal status asynchronously, so we retry fetching latest status.
+                let latestStatus = null;
+                for (let i = 0; i < 4; i += 1) {
+                    try {
+                        const latest = await dealsService.getDealById(dealId);
+                        const latestDeal = latest?.data || latest;
+                        latestStatus = latestDeal?.status;
+                        const statusInfo = getDealStatusInfo(latestStatus);
+                        if (statusInfo.value !== 5) break; // no longer Canceled
+                    } catch (_) {
+                        // ignore and continue retry
+                    }
+                    await new Promise((resolve) => setTimeout(resolve, 1200));
+                }
+
+                const latestStatusInfo = getDealStatusInfo(latestStatus);
+                if (latestStatusInfo.value === 5) {
+                    alert('Tải lại tài liệu thành công nhưng trạng thái deal vẫn là "Đã hủy". Backend cần reset trạng thái sau reupload.');
+                } else {
+                    alert('✓ Tải lại tài liệu thành công. Deal đã được cập nhật để xem xét lại.');
+                }
+                refreshDeals();
+            } else {
+                throw new Error(response?.message || 'Không thể tải lại tài liệu');
+            }
+        } catch (error) {
+            console.error('[InvestorDashboard] Reupload deal document failed:', error);
+            alert('Lỗi: Không thể tải lại tài liệu. Vui lòng thử lại.');
+        } finally {
+            setReuploadingDealId(null);
+        }
+    };
+
     const handleCheckBlockchainOwnership = async (deal) => {
         const actionKey = `ownership-${deal.dealId}`;
         console.log('[InvestorDashboard] handleCheckBlockchainOwnership called for deal:', deal.dealId);
@@ -905,13 +1017,33 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     };
 
     // Preference Handlers
+    const INVESTOR_MAX_INDUSTRIES = 4;
+    const INVESTOR_MIN_INDUSTRIES = 1;
+
     const toggleIndustry = (industryLabel) => {
         isFormDirty.current = true;
-        setPreferredIndustries(prev =>
-            prev.includes(industryLabel)
+        setPreferredIndustries(prev => {
+            const isSelected = prev.includes(industryLabel);
+
+            // Block adding beyond max
+            if (!isSelected && prev.length >= INVESTOR_MAX_INDUSTRIES) {
+                setErrors(prevErrors => ({ ...prevErrors, preferredIndustries: `Bạn chỉ được chọn tối đa ${INVESTOR_MAX_INDUSTRIES} lĩnh vực.` }));
+                return prev; // no change
+            }
+
+            const industries = isSelected
                 ? prev.filter(i => i !== industryLabel)
-                : [...prev, industryLabel]
-        );
+                : [...prev, industryLabel];
+
+            // Validate count
+            let errorMsg = null;
+            if (industries.length < INVESTOR_MIN_INDUSTRIES) {
+                errorMsg = `Vui lòng chọn ít nhất ${INVESTOR_MIN_INDUSTRIES} lĩnh vực.`;
+            }
+            setErrors(prevErrors => ({ ...prevErrors, preferredIndustries: errorMsg }));
+
+            return industries;
+        });
     };
 
     const fieldMapping = {
@@ -920,19 +1052,18 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         walletAddress: 'walletAddress',
         investmentAmount: 'investmentAmount',
         investmentRegion: 'investmentRegion',
-        investmentTaste: 'investmentTaste',
         previousInvestments: 'previousInvestments',
         riskTolerance: 'riskTolerance',
-        focusIndustry: 'industryOptionIds',
+        industryOptionIds: 'industryOptionIds',
         preferredStage: 'preferredStageOptionId'
     };
 
     const validateField = (name, value) => {
         if (!validationRules) return null;
-        
+
         const ruleKey = fieldMapping[name]?.toLowerCase();
         if (!ruleKey || !validationRules[ruleKey]) return null;
-        
+
         return validationService.validateField(value, validationRules[ruleKey]);
     };
 
@@ -961,7 +1092,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         if (!file) return;
 
         isFormDirty.current = true;
-        
+
         // Validate file immediately
         const rule = validationRules?.profileimagefile;
         if (rule) {
@@ -982,13 +1113,43 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     };
 
     const validateProfileForm = () => {
-        if (!validationRules) return true;
+        if (!validationRules) {
+            // Even without backend rules, enforce industry count
+            const errs = {};
+            if (preferredIndustries.length < INVESTOR_MIN_INDUSTRIES) {
+                errs.preferredIndustries = `Vui lòng chọn ít nhất ${INVESTOR_MIN_INDUSTRIES} lĩnh vực.`;
+            }
+            if (Object.keys(errs).length > 0) {
+                setErrors(errs);
+                return { isValid: false, errors: errs };
+            }
+            return { isValid: true, errors: {} };
+        }
+
+        const validationData = {
+            ...prefFormData,
+            // Key must match fieldMapping key exactly
+            industryOptionIds: preferredIndustries
+        };
 
         const { isValid, errors: validationErrors } = validationService.validateForm(
-            prefFormData,
+            validationData,
             validationRules,
             fieldMapping
         );
+
+        // Explicitly validate industries in case the rule key differs
+        if (validationRules.industryoptionids) {
+            const error = validationService.validateField(preferredIndustries, validationRules.industryoptionids);
+            if (error) validationErrors.preferredIndustries = error;
+        } else {
+            // Hardcoded fallback when backend doesn't include industryoptionids rule
+            if (preferredIndustries.length < INVESTOR_MIN_INDUSTRIES) {
+                validationErrors.preferredIndustries = `Vui lòng chọn ít nhất ${INVESTOR_MIN_INDUSTRIES} lĩnh vực.`;
+            } else if (preferredIndustries.length > INVESTOR_MAX_INDUSTRIES) {
+                validationErrors.preferredIndustries = `Bạn chỉ được chọn tối đa ${INVESTOR_MAX_INDUSTRIES} lĩnh vực.`;
+            }
+        }
 
         // Also validate profile image if a new one is selected
         if (profileImageFile) {
@@ -999,8 +1160,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             }
         }
 
+        const result = { isValid: Object.keys(validationErrors).length === 0, errors: validationErrors };
+        console.log('[InvestorDashboard] validateProfileForm result:', result, 'industries:', preferredIndustries, 'rules:', Object.keys(validationRules));
         setErrors(validationErrors);
-        return Object.keys(validationErrors).length === 0;
+        return result;
     };
 
     const toggleStage = (stageValue) => {
@@ -1015,14 +1178,23 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const handleUpdatePreferences = async (e) => {
         if (e) e.preventDefault();
 
-        if (!validateProfileForm()) {
-            const firstError = Object.values(errors)[0];
-            if (firstError) {
-                // We'll show errors in UI, but alert just in case they are not visible
-                // alert(`Vui lòng kiểm tra lại thông tin:\n${firstError}`);
-            }
+        console.log('[InvestorDashboard] handleUpdatePreferences called. validationRules:', !!validationRules, 'isUpdatingPrefs:', isUpdatingPrefs, 'preferredIndustries:', preferredIndustries);
+
+        // Block update while profile is pending review
+        const profileStatus = investorProfile?.status ?? investorProfile?.approvalStatus;
+        if (profileStatus === 'Pending') {
+            showRestrictedActionModal('Hồ sơ của bạn hiện đang trong quá trình xét duyệt. Bạn không thể cập nhật hồ sơ cho đến khi quá trình xét duyệt hoàn tất.');
             return;
         }
+
+        const { isValid, errors: valErrors } = validateProfileForm();
+        console.log('[InvestorDashboard] Validation result — isValid:', isValid, 'errors:', valErrors);
+        if (!isValid) {
+            console.log('[InvestorDashboard] Blocked by validation. Errors:', valErrors);
+            return;
+        }
+
+        console.log('[InvestorDashboard] Validation passed, proceeding to submit...');
 
         setIsUpdatingPrefs(true);
         try {
@@ -1038,11 +1210,21 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
             formData.append('riskTolerance', RISK_TOLERANCE_MAP[prefFormData.riskTolerance] || 'Medium');
             formData.append('investmentRegion', prefFormData.investmentRegion || '');
 
-            // Map focusIndustry back to Label if it's an ID
-            const industryLabel = availableIndustries.find(i => i.value === prefFormData.focusIndustry)?.label || prefFormData.focusIndustry;
-            formData.append('focusIndustry', industryLabel);
-            if (industryLabel) {
-                formData.append('industries', industryLabel);
+
+            // Map preferred industries for the backend: IDs for active, labels for inactive
+            preferredIndustries.forEach(label => {
+                const activeOption = availableIndustries.find(i => i.label === label);
+                if (activeOption) {
+                    formData.append('IndustryOptionIds', activeOption.value);
+                } else {
+                    formData.append('Industries', label);
+                }
+            });
+
+            // Keep focusIndustry and industries for backward compatibility if needed by some legacy logic
+            if (preferredIndustries.length > 0) {
+                formData.append('focusIndustry', preferredIndustries[0]);
+                formData.append('industries', preferredIndustries.join(', '));
             }
             if (profileImageFile) {
                 formData.append('profileImageFile', profileImageFile);
@@ -1175,7 +1357,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     const handleReanalyzeClick = () => {
         if (!selectedAIReport) return;
         if (!checkAccess('Tái phân tích AI')) return;
-        
+
         setPendingReanalyzeProjectId(selectedAIReport.projectId);
         fetchQuotaData().then(() => {
             setShowAIReportModal(false);
@@ -1186,7 +1368,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
     // Handle confirmed re-analyze (after quota check passes)
     const handleConfirmReanalyze = async () => {
         if (!pendingReanalyzeProjectId) return;
-        
+
         setIsAnalyzingAI(true);
         try {
             const res = await AIEvaluationService.analyzeProjectByInvestorAPI(pendingReanalyzeProjectId);
@@ -1196,7 +1378,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 setShowAIReportModal(true);
                 setShowAIConfirmModal(false);
                 setPendingReanalyzeProjectId(null);
-                
+
                 // Refresh history list so the new report appears
                 setRefreshTrigger(prev => prev + 1);
             } else {
@@ -1709,7 +1891,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                     <div>
                                         <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Chờ xác nhận</div>
                                         <div style={{ fontSize: '24px', fontWeight: '800', color: '#f59e0b' }}>
-                                            {deals.filter(d => d.status === 'Pending').length}
+                                            {deals.filter(d => getDealStatusInfo(d.status).value === 0).length}
                                         </div>
                                     </div>
                                 </div>
@@ -1718,9 +1900,9 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                                     <CheckCircle size={24} color="#10b981" />
                                     <div>
-                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Đã ký kết</div>
+                                        <div style={{ fontSize: '12px', color: 'var(--text-secondary)', fontWeight: '600', textTransform: 'uppercase' }}>Hoàn tất</div>
                                         <div style={{ fontSize: '24px', fontWeight: '800', color: '#10b981' }}>
-                                            {deals.filter(d => d.status === 'Contract_Signed' || d.status === 'Minted_NFT').length}
+                                            {deals.filter(d => getDealStatusInfo(d.status).value === 4 || d.isCompleted === true).length}
                                         </div>
                                     </div>
                                 </div>
@@ -1748,17 +1930,10 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                         {!isLoading && deals.length > 0 && (
                             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
                                 {deals.map((deal, index) => {
-                                    const statusMap = {
-                                        'Pending': { label: 'Chờ xác nhận', color: '#f59e0b' },
-                                        'Confirmed': { label: 'Đã xác nhận', color: '#10b981' },
-                                        'Contract_Signed': { label: 'Đã ký kết', color: '#667eea' },
-                                        'Minted_NFT': { label: 'Đã mint NFT', color: '#8b5cf6' },
-                                        'Rejected': { label: 'Đã từ chối', color: '#ef4444' },
-                                        'Failed': { label: 'Thất bại', color: '#ef4444' }
-                                    };
-                                    const statusInfo = statusMap[deal.status] || { label: deal.status || 'Unknown', color: '#64748b' };
-                                    const isContractSigned = !!deal.contractSignedAt;
-                                    const isRejectedDeal = deal.status === 'Rejected' || deal.status === 5;
+                                    const statusInfo = getDealStatusInfo(deal.status);
+                                    const isContractSigned = !!deal.isCompleted || statusInfo.value === 4;
+                                    const isRejectedDeal = statusInfo.value === 5;
+                                    const canReupload = statusInfo.value === 2;
 
                                     const isHighlighted = String(targetId) === String(deal.dealId);
                                     return (
@@ -1803,25 +1978,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                 </div>
                                             </div>
 
-                                            {/* Deal Details */}
-                                            {!isRejectedDeal && (
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginTop: '4px' }}>
-                                                    <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '6px' }}>
-                                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Số tiền</div>
-                                                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>
-                                                            {deal.amount > 0 ? `${deal.amount.toLocaleString('vi-VN')} VNĐ` : 'Chưa có'}
-                                                        </div>
-                                                    </div>
-                                                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '10px', borderRadius: '6px' }}>
-                                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Cổ phần</div>
-                                                        <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                                            {deal.equityPercentage !== null && deal.equityPercentage > 0 ? `${deal.equityPercentage}%` : 'Chưa có'}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {isRejectedDeal && !!deal.rejectionReason && (
+                                            {(isRejectedDeal || statusInfo.value === 2) && !!deal.rejectionReason && (
                                                 <div style={{ backgroundColor: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)', borderRadius: '8px', padding: '10px', marginTop: '4px' }}>
                                                     <div style={{ fontSize: '11px', fontWeight: '700', color: '#dc2626', marginBottom: '4px' }}>
                                                         Lý do từ chối
@@ -1829,13 +1986,6 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                     <div style={{ fontSize: '12px', lineHeight: 1.5, color: 'var(--text-secondary)' }}>
                                                         {deal.rejectionReason}
                                                     </div>
-                                                </div>
-                                            )}
-
-                                            {deal.contractSignedAt && (
-                                                <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '8px 12px', borderRadius: '6px', fontSize: '12px', color: 'var(--text-secondary)', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                                                    <Check size={14} color="#10b981" />
-                                                    Đã ký lúc: {new Date(deal.contractSignedAt).toLocaleString('vi-VN')}
                                                 </div>
                                             )}
 
@@ -1876,62 +2026,74 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                                 </button>
                                                             )}
 
-                                                            {(deal.status === 'Confirmed' || deal.status === 1) && (
-                                                                <button
+                                                            {deal.documentUrl && (
+                                                                <a
+                                                                    href={deal.documentUrl}
+                                                                    target="_blank"
+                                                                    rel="noreferrer"
                                                                     style={{
                                                                         ...btnStyle,
                                                                         backgroundColor: '#2D7EFF',
                                                                         color: '#fff',
-                                                                        opacity: actionLoading[`contract-${deal.dealId}`] ? 0.7 : 1
+                                                                        textDecoration: 'none'
                                                                     }}
-                                                                    onClick={() => handleShowContractPreview(deal)}
-                                                                    disabled={actionLoading[`contract-${deal.dealId}`]}
                                                                 >
-                                                                    {actionLoading[`contract-${deal.dealId}`] ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
-                                                                    Ký hợp đồng
-                                                                </button>
+                                                                    <FileText size={14} />
+                                                                    Xem tài liệu
+                                                                </a>
                                                             )}
 
-                                                            {(isContractSigned || deal.status === 'Contract_Signed' || deal.status === 3) && deal.contractPdfUrl && (
+                                                            {canReupload && (
+                                                                <>
+                                                                    <input
+                                                                        id={`reupload-deal-${deal.dealId}`}
+                                                                        type="file"
+                                                                        accept=".pdf,.png,.jpg,.jpeg,.webp"
+                                                                        hidden
+                                                                        onChange={(e) => {
+                                                                            const file = e.target.files?.[0];
+                                                                            e.target.value = '';
+                                                                            handleReuploadFileChange(deal.dealId, file);
+                                                                        }}
+                                                                    />
+                                                                    <button
+                                                                        type="button"
+                                                                        style={{
+                                                                            ...btnStyle,
+                                                                            backgroundColor: '#f97316',
+                                                                            color: '#fff',
+                                                                            opacity: reuploadingDealId === deal.dealId ? 0.7 : 1
+                                                                        }}
+                                                                        onClick={() => document.getElementById(`reupload-deal-${deal.dealId}`)?.click()}
+                                                                        disabled={reuploadingDealId === deal.dealId}
+                                                                    >
+                                                                        {reuploadingDealId === deal.dealId ? (
+                                                                            <>
+                                                                                <Loader2 size={14} className={styles.spinner} />
+                                                                                Đang tải...
+                                                                            </>
+                                                                        ) : (
+                                                                            <>
+                                                                                <Upload size={14} />
+                                                                                Tải lại tài liệu
+                                                                            </>
+                                                                        )}
+                                                                    </button>
+                                                                </>
+                                                            )}
+
+                                                            {(statusInfo.value === 4 || deal.isCompleted === true) && (
                                                                 <button
+                                                                    type="button"
                                                                     style={{
                                                                         ...btnStyle,
                                                                         backgroundColor: '#10b981',
-                                                                        color: '#fff',
-                                                                        opacity: actionLoading[`contract-${deal.dealId}`] ? 0.7 : 1
+                                                                        color: '#fff'
                                                                     }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleShowContractPreview(deal);
-                                                                    }}
-                                                                    disabled={actionLoading[`contract-${deal.dealId}`]}
+                                                                    onClick={() => handleVerifyDealOnchain(deal.dealId)}
                                                                 >
-                                                                    {actionLoading[`contract-${deal.dealId}`] ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
-                                                                    Xem hợp đồng
-                                                                </button>
-                                                            )}
-
-                                                            {(isContractSigned || deal.status === 'Contract_Signed' || deal.status === 3) && (
-                                                                <button
-                                                                    style={{
-                                                                        ...btnStyle,
-                                                                        backgroundColor: '#3b82f6',
-                                                                        color: '#fff',
-                                                                        opacity: actionLoading[`ownership-${deal.dealId}`] ? 0.7 : 1
-                                                                    }}
-                                                                    onClick={(e) => {
-                                                                        e.stopPropagation();
-                                                                        handleCheckBlockchainOwnership(deal);
-                                                                    }}
-                                                                    disabled={actionLoading[`ownership-${deal.dealId}`]}
-                                                                    title="Xác thực chuyển giao quyền sở hữu trên blockchain"
-                                                                >
-                                                                    {actionLoading[`ownership-${deal.dealId}`] ? (
-                                                                        <Loader2 size={14} className="animate-spin" />
-                                                                    ) : (
-                                                                        <Shield size={14} />
-                                                                    )}
-                                                                    Xác thực Quyền sở hữu
+                                                                    <Shield size={14} />
+                                                                    Xác thực blockchain
                                                                 </button>
                                                             )}
                                                         </>
@@ -1948,9 +2110,9 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
                 {activeSection === 'bookings' && (
                     <div className={styles.section} style={{ padding: 0 }}>
-                        <InvestorBookings 
-                            user={user} 
-                            targetId={targetId} 
+                        <InvestorBookings
+                            user={user}
+                            targetId={targetId}
                             onViewProject={onViewProject}
                             onUpdateProfile={() => setActiveSection('preferences')}
                             isApproved={isApproved}
@@ -2260,18 +2422,18 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                         borderRadius: '999px',
                                                         fontSize: '12px',
                                                         fontWeight: '700',
-                                                        backgroundColor: investorProfile.status === 'Approved' ? 'rgba(16,185,129,0.14)' : 
-                                                                         investorProfile.status === 'Rejected' ? 'rgba(239, 68, 68, 0.14)' : 
-                                                                         'rgba(245,158,11,0.14)',
-                                                        color: investorProfile.status === 'Approved' ? '#10b981' : 
-                                                               investorProfile.status === 'Rejected' ? '#ef4444' : 
-                                                               '#f59e0b'
+                                                        backgroundColor: investorProfile.status === 'Approved' ? 'rgba(16,185,129,0.14)' :
+                                                            investorProfile.status === 'Rejected' ? 'rgba(239, 68, 68, 0.14)' :
+                                                                'rgba(245,158,11,0.14)',
+                                                        color: investorProfile.status === 'Approved' ? '#10b981' :
+                                                            investorProfile.status === 'Rejected' ? '#ef4444' :
+                                                                '#f59e0b'
                                                     }}
                                                 >
                                                     <CheckCircle size={12} />
-                                                    {investorProfile.status === 'Approved' ? 'Đã phê duyệt' : 
-                                                     investorProfile.status === 'Rejected' ? 'Bị từ chối' : 
-                                                     'Đang chờ duyệt'}
+                                                    {investorProfile.status === 'Approved' ? 'Đã phê duyệt' :
+                                                        investorProfile.status === 'Rejected' ? 'Bị từ chối' :
+                                                            'Đang chờ duyệt'}
                                                 </div>
                                             ) : (
                                                 <div
@@ -2441,7 +2603,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                     Tùy chọn đầu tư
                                 </div>
 
-                                <div className={styles.formGrid} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '24px' }}>
+                                <div className={styles.formGrid} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px', marginBottom: '24px' }}>
                                     <div className={styles.formGroup}>
                                         <label>Mức độ chấp nhận rủi ro *</label>
                                         <div style={{ display: 'flex', gap: '8px' }}>
@@ -2450,10 +2612,12 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                     key={r} type="button"
                                                     onClick={() => setPrefFormData({ ...prefFormData, riskTolerance: r })}
                                                     style={{
-                                                        flex: 1, padding: '10px', borderRadius: '8px', border: '1px solid var(--border-color)',
+                                                        flex: 1, padding: '10px 4px', borderRadius: '8px', border: '1px solid var(--border-color)',
                                                         backgroundColor: prefFormData.riskTolerance === r ? 'var(--primary-blue)' : 'var(--bg-secondary)',
                                                         color: prefFormData.riskTolerance === r ? '#fff' : 'var(--text-secondary)',
-                                                        fontSize: '13px', fontWeight: '600', transition: 'all 0.2s'
+                                                        fontSize: '13px', fontWeight: '700', transition: 'all 0.2s',
+                                                        whiteSpace: 'nowrap',
+                                                        minWidth: '0'
                                                     }}
                                                 >
                                                     {r === 0 ? 'Thấp' : r === 1 ? 'Trung bình' : 'Cao'}
@@ -2481,24 +2645,57 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                         />
                                     </div>
 
-                                    <div className={styles.formGroup}>
-                                        <label>Lĩnh vực quan tâm chính *</label>
-                                        <CustomSelect
-                                            name="focusIndustry"
-                                            value={prefFormData.focusIndustry}
-                                            onChange={(e) => {
-                                                isFormDirty.current = true;
-                                                setPrefFormData({
-                                                    ...prefFormData,
-                                                    focusIndustry: parseInt(e.target.value)
-                                                });
-                                            }}
-                                            placeholder="Chọn lĩnh vực..."
-                                            options={availableIndustries.map(opt => ({
-                                                label: opt.label,
-                                                value: opt.value
-                                            }))}
-                                        />
+                                    <div className={styles.formGroup} style={{ gridColumn: '1 / -1' }}>
+                                        <label>Lĩnh vực quan tâm (Chọn 1-4) *</label>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                                            {availableIndustries.map(ind => (
+                                                <button
+                                                    key={ind.value}
+                                                    type="button"
+                                                    className={`${styles.pill} ${preferredIndustries.includes(ind.label) ? styles.pillActive : ''}`}
+                                                    onClick={() => toggleIndustry(ind.label)}
+                                                    style={{
+                                                        display: 'flex', alignItems: 'center', gap: '6px',
+                                                        padding: '8px 16px', borderRadius: '20px', border: '1px solid var(--border-color)',
+                                                        backgroundColor: preferredIndustries.includes(ind.label) ? 'var(--primary-blue)' : 'var(--bg-secondary)',
+                                                        color: preferredIndustries.includes(ind.label) ? '#fff' : 'var(--text-secondary)',
+                                                        fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    {ind.label}
+                                                    {preferredIndustries.includes(ind.label) ? <X size={12} /> : <Plus size={12} />}
+                                                </button>
+                                            ))}
+
+                                            {/* Inactive (Legacy) Industries - Shown as selected but not editable */}
+                                            {preferredIndustries
+                                                .filter(label => !availableIndustries.some(opt => opt.label === label))
+                                                .map(label => (
+                                                    <div
+                                                        key={`inactive-${label}`}
+                                                        className={styles.pill}
+                                                        style={{
+                                                            display: 'flex', alignItems: 'center', gap: '6px',
+                                                            padding: '8px 16px', borderRadius: '20px', 
+                                                            border: '1px dashed var(--primary-blue)',
+                                                            backgroundColor: 'rgba(29, 155, 240, 0.1)',
+                                                            color: 'var(--primary-blue)',
+                                                            fontSize: '13px', fontWeight: '600', 
+                                                            cursor: 'not-allowed', opacity: 0.8
+                                                        }}
+                                                        title="Lĩnh vực này hiện đã ngừng hỗ trợ và không thể thay đổi"
+                                                    >
+                                                        {label}
+                                                        <Lock size={12} />
+                                                    </div>
+                                                ))
+                                            }
+                                        </div>
+                                        {errors.preferredIndustries && (
+                                            <span style={{ color: '#f4212e', fontSize: '12px', marginTop: '6px', display: 'block', fontWeight: '600' }}>
+                                                {errors.preferredIndustries}
+                                            </span>
+                                        )}
                                     </div>
                                 </div>
 
@@ -2590,6 +2787,35 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                     sentTime={activeChatSession?.sentTime}
                     onClose={handleCloseChatWindow}
                 />
+
+                {showOnchainResultModal && onchainResultData && (
+                    <div className={styles.modalOverlay} onClick={() => setShowOnchainResultModal(false)}>
+                        <div className={styles.modalContent} style={{ maxWidth: '720px', height: 'auto', maxHeight: '88vh' }} onClick={(e) => e.stopPropagation()}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>Kết quả xác thực blockchain</h3>
+                                <button className={styles.modalCloseBtnInline} onClick={() => setShowOnchainResultModal(false)}><X size={18} /></button>
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                                <div><strong>Deal ID:</strong> {onchainResultData.dealId ?? '-'}</div>
+                                <div><strong>Đã xác minh:</strong> {onchainResultData.isVerified ? 'Có' : 'Chưa'}</div>
+                                <div style={{ gridColumn: '1 / -1' }}><strong>Thông điệp:</strong> {onchainResultData.message || '-'}</div>
+                                <div style={{ gridColumn: '1 / -1', wordBreak: 'break-all' }}><strong>Document Hash:</strong> {onchainResultData.documentHash || '-'}</div>
+                                <div style={{ gridColumn: '1 / -1', wordBreak: 'break-all' }}><strong>Investor Wallet:</strong> {onchainResultData.investorWallet || '-'}</div>
+                                <div style={{ gridColumn: '1 / -1' }}><strong>Thời gian on-chain:</strong> {onchainResultData.timestampOnBlockchain || '-'}</div>
+                                <div style={{ gridColumn: '1 / -1', wordBreak: 'break-all' }}><strong>Owners:</strong> {(onchainResultData.owners || []).join(', ') || '-'}</div>
+                            </div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                <a href={onchainResultData.explorerLink} target="_blank" rel="noreferrer" className={styles.primaryBtn}>
+                                    <ExternalLink size={14} /> Xem trực tiếp trên Blockchain Explorer
+                                </a>
+                                <button className={styles.secondaryBtn} onClick={() => setShowOnchainResultModal(false)}>Đóng</button>
+                            </div>
+                            <p style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                Ghi chú: Nếu trạng thái đã xác minh, dữ liệu hợp đồng đã được ghi nhận trên blockchain và có thể tự kiểm tra công khai bằng liên kết ở trên.
+                            </p>
+                        </div>
+                    </div>
+                )}
 
                 {/* Contract Preview Modal - Modernized */}
                 {showContractModal && contractPreviewHtml && (
@@ -2890,43 +3116,31 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                     </div>
                                 ) : (
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                        {/* Investment Stats */}
-                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                                            <div style={{ backgroundColor: 'var(--bg-hover)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                                                <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Số tiền đầu tư</div>
-                                                <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--primary-blue)' }}>
-                                                    {selectedItem.amount?.toLocaleString('vi-VN')} <span style={{ fontSize: '14px', opacity: 0.8 }}>VND</span>
-                                                </div>
-                                            </div>
-                                            <div style={{ backgroundColor: 'var(--bg-hover)', padding: '20px', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
-                                                <div style={{ color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>Cổ phần nắm giữ</div>
-                                                <div style={{ fontSize: '20px', fontWeight: '900', color: 'var(--text-primary)' }}>
-                                                    {selectedItem.equityPercentage}<span style={{ fontSize: '14px', marginLeft: '2px' }}>%</span>
-                                                </div>
-                                            </div>
-                                        </div>
-
                                         {/* Status Section */}
                                         <div className={styles.projectDetailSection}>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                                 <Info size={14} /> Trạng thái hiện tại
                                             </div>
                                             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: 'var(--primary-blue)', boxShadow: '0 0 8px var(--primary-blue)' }}></div>
-                                                <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>{selectedItem.status}</span>
+                                                <div style={{ width: '10px', height: '10px', borderRadius: '50%', backgroundColor: getDealStatusInfo(selectedItem.status).color, boxShadow: `0 0 8px ${getDealStatusInfo(selectedItem.status).color}` }}></div>
+                                                <span style={{ fontSize: '15px', fontWeight: '700', color: 'var(--text-primary)' }}>{getDealStatusInfo(selectedItem.status).label}</span>
                                             </div>
                                         </div>
 
-                                        {/* Contract Info */}
-                                        {selectedItem.contractSignedAt && (
+                                        {selectedItem.documentUrl && (
                                             <div className={styles.projectDetailSection}>
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                                                    <FileText size={14} /> Thông tin hợp đồng
+                                                    <FileText size={14} /> Tài liệu thỏa thuận
                                                 </div>
-                                                <div style={{ backgroundColor: 'rgba(29, 155, 240, 0.05)', padding: '16px', borderRadius: '16px', border: '1px solid rgba(29, 155, 240, 0.1)', fontSize: '14px', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                                                    <CheckCircle size={16} color="var(--primary-blue)" />
-                                                    <span style={{ fontWeight: '500' }}>Đã ký vào lúc {new Date(selectedItem.contractSignedAt).toLocaleString('vi-VN')}</span>
-                                                </div>
+                                                <a
+                                                    href={selectedItem.documentUrl}
+                                                    target="_blank"
+                                                    rel="noreferrer"
+                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '700', color: 'var(--primary-blue)', textDecoration: 'none' }}
+                                                >
+                                                    <Download size={16} />
+                                                    Xem tài liệu đã tải lên
+                                                </a>
                                             </div>
                                         )}
                                     </div>
@@ -2946,6 +3160,13 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                         </div>
                     </div>
                 )}
+
+                {/* Restricted Action Modal (e.g. Pending Status) */}
+                <RestrictedActionModal
+                    isOpen={showRestrictedModal}
+                    onClose={() => setShowRestrictedModal(false)}
+                    message={restrictedActionMessage}
+                />
             </div>
         </div>
     );

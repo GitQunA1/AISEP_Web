@@ -120,6 +120,20 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
 
                     <div className={styles.handle}>{handle}</div>
 
+                    {Array.isArray(investor.industries) && investor.industries.length > 0 && (
+                        <div className={styles.industryChips} style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '10px' }}>
+                            {investor.industries.map((ind, idx) => (
+                                <span key={idx} style={{ 
+                                    fontSize: '11px', fontWeight: '700', padding: '4px 10px', 
+                                    borderRadius: '99px', background: 'rgba(45, 126, 255, 0.1)', color: 'var(--primary-blue)',
+                                    border: '1px solid rgba(45, 126, 255, 0.2)'
+                                }}>
+                                    #{ind}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+
                     <p className={styles.bio}>
                         {investor.investmentTaste || 'Thông tin giới thiệu về nhà đầu tư đang được cập nhật.'}
                     </p>
@@ -190,7 +204,11 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
                             <div className={styles.rowContent}>
                                 <div className={styles.rowTitle}>Chiến lược đầu tư</div>
                                 <div className={styles.rowText}>
-                                    Nhà đầu tư quan tâm đến các dự án thuộc lĩnh vực {investor.focusIndustry?.toLowerCase() || 'đa ngành'} với giai đoạn {investor.preferredStage?.toLowerCase() || 'vốn mồi'}.
+                                    Nhà đầu tư quan tâm đến các dự án thuộc lĩnh vực {
+                                        Array.isArray(investor.industries) && investor.industries.length > 0
+                                            ? investor.industries.join(', ')
+                                            : (investor.focusIndustry?.toLowerCase() || 'đa ngành')
+                                    } với giai đoạn {investor.preferredStage?.toLowerCase() || 'vốn mồi'}.
                                 </div>
                             </div>
                         </div>

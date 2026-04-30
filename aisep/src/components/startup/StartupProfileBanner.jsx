@@ -32,7 +32,7 @@ const StartupProfileBanner = ({ onRedirect, status, approvalStatus, reason }) =>
             </h4>
             <p className={styles.description}>
               {isPending 
-                ? 'Thông tin của bạn đang được đội ngũ AISEP kiểm tra. Bạn vẫn có thể cập nhật thông tin nếu cần thiết trong quá trình chờ đợi.' 
+                ? 'Thông tin của bạn đang được đội ngũ AISEP kiểm tra. Bạn không thể cập nhật thông tin cho đến khi quá trình xét duyệt hoàn tất.' 
                 : isRejected
                   ? `Lý do: ${reason || 'Hồ sơ không đáp ứng đủ tiêu chuẩn hoặc thiếu thông tin minh chứng'}. Vui lòng kiểm tra lại thông tin và cập nhật để được phê duyệt lại.`
                   : 'Hoàn thiện hồ sơ để có thể đăng dự án, thu hút nhà đầu tư và sử dụng đầy đủ các tính năng nâng cao của hệ thống AISEP.'}

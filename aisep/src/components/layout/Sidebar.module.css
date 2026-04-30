@@ -389,6 +389,37 @@
   background-color: rgba(29, 155, 240, 0.1);
 }
 
+/* --- LEGAL SECTION --- */
+.legalSection {
+  padding: 0 24px 20px;
+  display: none; /* Hidden on full desktop where RightPanel has it */
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legalLink {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  text-align: left;
+  transition: color 0.2s ease;
+  width: fit-content;
+}
+
+.legalLink:hover {
+  color: var(--primary-blue);
+  text-decoration: underline;
+}
+
+.copyright {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.6;
+}
+
 /* =========================================
    SIDEBAR - TABLET & LAPTOP (Icon Only)
    ========================================= */
@@ -525,22 +556,21 @@
     position: fixed;
     top: 0;
     left: 0;
-    height: 100vh;
+    height: 100%;
+    height: 100dvh; /* Dynamic viewport height for mobile browsers */
     width: 280px;
     max-width: 85vw;
 
     /* Higher z-index to overlay everything including bottom nav */
     z-index: 1100;
     background-color: var(--bg-primary);
-    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
-
     /* Smooth slide-in animation */
     transform: translateX(-100%);
-    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.35s ease;
 
     /* Reset Desktop Borders */
     border-right: none;
-    padding: 20px 10px;
+    padding: 20px 10px 0; /* Removed bottom padding to rely on safe-area in legalSection */
 
     /* Flex layout for mobile */
     display: flex;
@@ -558,6 +588,7 @@
   /* The "Open" State */
   .sidebarOpen {
     transform: translateX(0);
+    box-shadow: 4px 0 24px rgba(0, 0, 0, 0.3);
   }
 
   /* Content area - full height flex container */
@@ -594,12 +625,14 @@
     /* Below sidebar but above everything else */
     opacity: 0;
     visibility: hidden;
+    pointer-events: none;
     transition: opacity 0.35s ease, visibility 0.35s ease;
   }
 
   .backdropOpen {
     opacity: 1;
     visibility: visible;
+    pointer-events: auto;
   }
 
   /* Mobile Overrides for Padding */
@@ -632,39 +665,16 @@
     margin-bottom: 24px;
     padding: 10px;
   }
-}
 
-/* Theme Toggle - Removed duplicate to avoid margin conflicts */
-
-/* --- LEGAL SECTION --- */
-.legalSection {
-  padding: 0 24px 20px;
-  display: none; /* Hidden on full desktop where RightPanel has it */
-  flex-direction: column;
-  gap: 4px;
-}
-
-.legalLink {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-  text-align: left;
-  transition: color 0.2s ease;
-  width: fit-content;
-}
-
-.legalLink:hover {
-  color: var(--primary-blue);
-  text-decoration: underline;
-}
-
-.copyright {
-  font-size: 11px;
-  color: var(--text-secondary);
-  opacity: 0.6;
+  /* Legal Section - Add safety padding for mobile bars */
+  .legalSection {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px 12px calc(16px + env(safe-area-inset-bottom, 16px));
+    border-top: 1px solid var(--border-color);
+    margin-top: auto;
+  }
 }
 
 /* Tablet Icon-Only Sidebar: Hide legal fully to save space */
@@ -688,16 +698,6 @@
   .legalLink, .copyright {
     font-size: 10px;
     text-align: center;
-  }
-}
-
-/* Mobile Side Drawer: Show legal at the bottom */
-@media (max-width: 1023px) {
-  /* ... exists ... */
-  .legalSection {
-    display: flex;
-    padding: 16px 12px 10px;
-    border-top: 1px solid var(--border-color);
   }
 }
 

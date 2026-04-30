@@ -286,7 +286,7 @@ const InvestorKanbanCard = ({ investor, status, onDetail, onApprove, onReject, p
     const isAnyProcessing = !!processingId;
 
     return (
-        <div id={`investor-${investor.investorId}`} className={`${local.investorProCard} ${isHighlighted ? styles.targetHighlight : ''}`}>
+        <div id={`investor-${investor.investorId}`} className={`${local.investorProCard} ${local[status]} ${isHighlighted ? styles.targetHighlight : ''}`}>
             <div className={`${local.investorProCardStrip} ${local[status]}`}></div>
 
             <div className={local.investorProHeader}>
@@ -325,19 +325,23 @@ const InvestorKanbanCard = ({ investor, status, onDetail, onApprove, onReject, p
                     </span>
                 </div>
 
-                {investor.focusIndustry && (
-                    <div className={local.investorProRow} style={{ alignItems: 'flex-start' }}>
-                        <span className={local.investorProLabel} style={{ marginTop: '2px' }}>Lĩnh vực</span>
-                        <div className={local.investorProTags} style={{ margin: '0', flex: 1 }}>
-                            {investor.focusIndustry.split(',').slice(0, 3).map((ind, idx) => (
-                                <span key={idx} className={local.investorProTag}>{ind.trim()}</span>
-                            ))}
-                            {investor.focusIndustry.split(',').length > 3 && (
-                                <span className={local.investorProTag}>+{investor.focusIndustry.split(',').length - 3}</span>
-                            )}
+                {(() => {
+                    const industries = investor.industries || (investor.focusIndustry ? investor.focusIndustry.split(',') : []);
+                    if (industries.length === 0) return null;
+                    return (
+                        <div className={local.investorProRow} style={{ alignItems: 'flex-start' }}>
+                            <span className={local.investorProLabel} style={{ marginTop: '2px' }}>Lĩnh vực</span>
+                            <div className={local.investorProTags} style={{ margin: '0', flex: 1 }}>
+                                {industries.slice(0, 3).map((ind, idx) => (
+                                    <span key={idx} className={local.investorProTag}>{ind.trim()}</span>
+                                ))}
+                                {industries.length > 3 && (
+                                    <span className={local.investorProTag}>+{industries.length - 3}</span>
+                                )}
+                            </div>
                         </div>
-                    </div>
-                )}
+                    );
+                })()}
             </div>
 
             <div className={local.investorProFooter}>
@@ -618,6 +622,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [showHistoryView, setShowHistoryView] = useState(false);
     const [selectedHistoryResult, setSelectedHistoryResult] = useState(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [userReportSearchTerm, setUserReportSearchTerm] = useState('');
     const [payoutSearchTerm, setPayoutSearchTerm] = useState('');
     const [commissionSearchTerm, setCommissionSearchTerm] = useState('');
     const [subscriptionSearchTerm, setSubscriptionSearchTerm] = useState('');
@@ -632,10 +637,12 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
     const handleSearchChange = (val) => {
         if (activeSection === 'project_management') setSearchTerm(val);
+        else if (activeSection === 'user_reports') setUserReportSearchTerm(val);
         else if (activeSection === 'bookings') setBookingSearchTerm(val);
         else if (activeSection === 'commission') setCommissionSearchTerm(val);
         else if (activeSection === 'advisor_approval') setAdvisorSearchTerm(val);
         else if (activeSection === 'terms') setTermsSearchTerm(val);
+        else if (activeSection === 'investment_management') setStaffDealSearchTerm(val);
         else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
     };
 
@@ -680,8 +687,8 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         }
 
         // Filter by search term
-        if (searchTerm && searchTerm.trim()) {
-            const lowerSearch = searchTerm.toLowerCase();
+        if (userReportSearchTerm && userReportSearchTerm.trim()) {
+            const lowerSearch = userReportSearchTerm.toLowerCase();
             list = list.filter(r =>
                 (r.category || '').toLowerCase().includes(lowerSearch) ||
                 (r.description || '').toLowerCase().includes(lowerSearch) ||
@@ -693,7 +700,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         }
 
         return list;
-    }, [userReports, searchTerm, reportFilter]);
+    }, [userReports, userReportSearchTerm, reportFilter]);
 
     // Investor Approval States
     const [pendingInvestors, setPendingInvestors] = useState([]);
@@ -729,6 +736,20 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [selectedPRForEdit, setSelectedPRForEdit] = useState(null);
     const [editTitle, setEditTitle] = useState('');
     const [editContent, setEditContent] = useState('');
+
+    // Investment management state (staff deal review)
+    const [staffDeals, setStaffDeals] = useState([]);
+    const [isLoadingStaffDeals, setIsLoadingStaffDeals] = useState(false);
+    const [staffDealsError, setStaffDealsError] = useState(null);
+    const [staffDealSearchTerm, setStaffDealSearchTerm] = useState('');
+    const [selectedStaffDeal, setSelectedStaffDeal] = useState(null);
+    const [showStaffDealModal, setShowStaffDealModal] = useState(false);
+    const [staffRejectReason, setStaffRejectReason] = useState('');
+    const [isSubmittingStaffReview, setIsSubmittingStaffReview] = useState(false);
+    const [isCheckingOnchain, setIsCheckingOnchain] = useState(false);
+    const [onchainCheckResult, setOnchainCheckResult] = useState(null);
+    const [showDealDocumentLightbox, setShowDealDocumentLightbox] = useState(false);
+    const [showOnchainResultModal, setShowOnchainResultModal] = useState(false);
 
     // Mobile States
     const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
@@ -772,6 +793,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             case 'commission': return "Cấu hình Hoa hồng";
             case 'pr_management': return "Đăng bài PR - Dự án Đầu tư";
             case 'investor_approval': return "Phê duyệt Nhà đầu tư";
+            case 'investment_management': return "Quản lý đầu tư";
             case 'analytics': return "Phân tích dữ liệu";
             case 'activity': return "Giám sát hoạt động";
             case 'terms': return "Quản lý Điều khoản";
@@ -793,6 +815,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             case 'commission': return "Điều chỉnh tỷ lệ phần trăm hoa hồng hệ thống áp dụng cho các phiên tư vấn.";
             case 'pr_management': return "Quản lý và đăng bài PR cho các dự án đã được đầu tư thành công (hợp đồng đã ký).";
             case 'investor_approval': return "Xem xét hồ sơ và phê duyệt tư cách nhà đầu tư trên hệ thống.";
+            case 'investment_management': return "Duyệt tài liệu hợp đồng đầu tư, từ chối để yêu cầu investor tải lại, và kiểm tra trạng thái on-chain.";
             case 'analytics': return "Biểu đồ phân tích chuyên sâu về dữ liệu hệ thống.";
             case 'activity': return "Nhật ký hoạt động và giám sát thời gian thực.";
             case 'terms': return "Xem lịch sử và phiên bản hiện tại của điều khoản hệ thống.";
@@ -1040,6 +1063,8 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             fetchPRNews();
         } else if (activeSection === 'pr_news') {
             fetchPRNews();
+        } else if (activeSection === 'investment_management') {
+            fetchStaffDeals();
         }
     }, [activeSection]);
 
@@ -1472,6 +1497,147 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         }
     };
 
+    const getDealStatusInfo = (status) => {
+        const map = {
+            PendingCounterpartyConfirmation: { label: 'Chờ startup xác nhận', value: 0, color: '#f59e0b' },
+            PendingStaffApproval: { label: 'Chờ staff duyệt', value: 1, color: '#0ea5e9' },
+            RequireReupload: { label: 'Yêu cầu investor tải lại', value: 2, color: '#f97316' },
+            ProcessingBlockchain: { label: 'Đang đưa lên blockchain', value: 3, color: '#8b5cf6' },
+            Completed: { label: 'Hoàn tất', value: 4, color: '#10b981' },
+            Canceled: { label: 'Đã hủy', value: 5, color: '#ef4444' },
+            BlockchainFailed: { label: 'Blockchain thất bại', value: 6, color: '#dc2626' },
+        };
+        const numeric = typeof status === 'number' ? status : Number(status);
+        if (!Number.isNaN(numeric) && numeric >= 0 && numeric <= 6) {
+            const key = Object.keys(map).find((k) => map[k].value === numeric);
+            return map[key] || { label: 'Không xác định', value: null, color: '#64748b' };
+        }
+        return map[status] || { label: String(status || 'Không xác định'), value: null, color: '#64748b' };
+    };
+
+    const isImageDocumentUrl = (url = '') => /\.(png|jpe?g|gif|webp|bmp|svg)(\?|#|$)/i.test(url);
+
+    const fetchStaffDeals = async () => {
+        setIsLoadingStaffDeals(true);
+        setStaffDealsError(null);
+        try {
+            const response = await dealsService.getAllSignedDeals();
+            let deals = [];
+            if (response?.data?.items && Array.isArray(response.data.items)) {
+                deals = response.data.items;
+            } else if (Array.isArray(response?.data)) {
+                deals = response.data;
+            }
+            const sortedDeals = [...deals].sort((a, b) => {
+                const dateB = new Date(b.dealDate || b.updatedAt || b.createdAt || 0);
+                const dateA = new Date(a.dealDate || a.updatedAt || a.createdAt || 0);
+                return dateB - dateA;
+            });
+            setStaffDeals(sortedDeals);
+        } catch (error) {
+            console.error('Error fetching staff deals:', error);
+            setStaffDealsError('Không thể tải danh sách thỏa thuận đầu tư.');
+            setStaffDeals([]);
+        } finally {
+            setIsLoadingStaffDeals(false);
+        }
+    };
+
+    const handleOpenStaffDealModal = (deal) => {
+        setSelectedStaffDeal(deal);
+        setStaffRejectReason('');
+        setOnchainCheckResult(null);
+        setShowDealDocumentLightbox(false);
+        setShowStaffDealModal(true);
+    };
+
+    const handleOpenStaffDealModalAndVerify = async (deal) => {
+        setSelectedStaffDeal(deal);
+        setOnchainCheckResult(null);
+        setShowOnchainResultModal(true);
+        setIsCheckingOnchain(true);
+        try {
+            const response = await dealsService.verifyDealOnchain(deal.dealId);
+            const normalized = dealsService.normalizeDealOnchainResult(response);
+            const explorerLink = dealsService.getDealOnchainExplorerLink(normalized);
+            setOnchainCheckResult({ ...normalized, explorerLink });
+        } catch (error) {
+            console.error('Error verify on-chain:', error);
+            setOnchainCheckResult({
+                error: true,
+                message: error?.response?.data?.message || error?.message || 'Không thể kiểm tra on-chain.'
+            });
+        } finally {
+            setIsCheckingOnchain(false);
+        }
+    };
+
+    const handleCloseStaffDealModal = () => {
+        if (isSubmittingStaffReview || isCheckingOnchain) return;
+        setShowStaffDealModal(false);
+        setSelectedStaffDeal(null);
+        setStaffRejectReason('');
+        setOnchainCheckResult(null);
+        setShowDealDocumentLightbox(false);
+    };
+
+    const handleStaffReviewDeal = async (isApproved) => {
+        if (!selectedStaffDeal?.dealId) return;
+        const reason = isApproved ? '' : staffRejectReason.trim();
+        if (!isApproved && !reason) {
+            setModalType('error');
+            setModalMessage('Vui lòng nhập lý do từ chối để investor có thể chỉnh sửa và tải lại tài liệu.');
+            setShowModal(true);
+            return;
+        }
+        setIsSubmittingStaffReview(true);
+        try {
+            const response = await dealsService.staffReviewDeal(selectedStaffDeal.dealId, isApproved, reason);
+            if (response && (response.success || response.data || response.statusCode === 200)) {
+                setModalType('success');
+                setModalMessage(
+                    isApproved
+                        ? '✅ Staff đã duyệt thỏa thuận. Hệ thống sẽ tự động chuyển sang xử lý blockchain sau ít phút.'
+                        : '✅ Staff đã từ chối thỏa thuận. Investor có thể tải lại tài liệu mới.'
+                );
+                setShowModal(true);
+                handleCloseStaffDealModal();
+                await fetchStaffDeals();
+            } else {
+                throw new Error(response?.message || 'Không thể xử lý thỏa thuận');
+            }
+        } catch (error) {
+            console.error('Error staff review deal:', error);
+            setModalType('error');
+            setModalMessage(error?.message || 'Không thể xử lý duyệt/từ chối thỏa thuận.');
+            setShowModal(true);
+        } finally {
+            setIsSubmittingStaffReview(false);
+        }
+    };
+
+    const handleVerifyOnchainDeal = async () => {
+        if (!selectedStaffDeal?.dealId) return;
+        setIsCheckingOnchain(true);
+        setOnchainCheckResult(null);
+        try {
+            const response = await dealsService.verifyDealOnchain(selectedStaffDeal.dealId);
+            const normalized = dealsService.normalizeDealOnchainResult(response);
+            const explorerLink = dealsService.getDealOnchainExplorerLink(normalized);
+            setOnchainCheckResult({ ...normalized, explorerLink });
+            setShowOnchainResultModal(true);
+        } catch (error) {
+            console.error('Error verify on-chain:', error);
+            setOnchainCheckResult({
+                error: true,
+                message: error?.response?.data?.message || error?.message || 'Không thể kiểm tra on-chain.'
+            });
+            setShowOnchainResultModal(true);
+        } finally {
+            setIsCheckingOnchain(false);
+        }
+    };
+
     const handleSubmitPR = async () => {
         if (!selectedDealForPR || !prFormData.title.trim() || !prFormData.content.trim()) {
             setModalType('error');
@@ -1752,32 +1918,39 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     subtitle={getSectionSubtitle(activeSection)}
                     showFilter={false}
                     user={user}
-                    searchTerm={
-                        activeSection === 'project_management' ? searchTerm :
-                            (activeSection === 'bookings' ? bookingSearchTerm :
-                                (activeSection === 'pr_management' ? prSearchTerm :
-                                    (activeSection === 'pr_news' ? prNewsSearchTerm :
-                                        (activeSection === 'advisor_approval' ? advisorSearchTerm :
-                                            (activeSection === 'terms' ? termsSearchTerm :
-                                                (activeSection === 'package_management' || activeSection === 'subscription_history' ? subscriptionSearchTerm : ''))))))
-                    }
+                    searchTerm={(() => {
+                        if (activeSection === 'project_management') return searchTerm;
+                        if (activeSection === 'user_reports') return userReportSearchTerm;
+                        if (activeSection === 'bookings') return bookingSearchTerm;
+                        if (activeSection === 'pr_management') return prSearchTerm;
+                        if (activeSection === 'pr_news') return prNewsSearchTerm;
+                        if (activeSection === 'advisor_approval') return advisorSearchTerm;
+                        if (activeSection === 'terms') return termsSearchTerm;
+                        if (activeSection === 'investment_management') return staffDealSearchTerm;
+                        if (activeSection === 'package_management' || activeSection === 'subscription_history') return subscriptionSearchTerm;
+                        return '';
+                    })()}
                     onSearchChange={(val) => {
                         if (activeSection === 'project_management') setSearchTerm(val);
+                        else if (activeSection === 'user_reports') setUserReportSearchTerm(val);
                         else if (activeSection === 'bookings') setBookingSearchTerm(val);
                         else if (activeSection === 'pr_management') setPrSearchTerm(val);
                         else if (activeSection === 'pr_news') setPrNewsSearchTerm(val);
                         else if (activeSection === 'advisor_approval') setAdvisorSearchTerm(val);
                         else if (activeSection === 'terms') setTermsSearchTerm(val);
+                        else if (activeSection === 'investment_management') setStaffDealSearchTerm(val);
                         else if (activeSection === 'package_management' || activeSection === 'subscription_history') setSubscriptionSearchTerm(val);
                     }}
-                    searchPlaceholder={
-                        activeSection === 'project_management' ? "Tìm kiếm dự án..." :
-                            (activeSection === 'bookings' ? "Tìm kiếm booking..." :
-                                (activeSection === 'pr_management' ? "Tìm kiếm dự án đã ký..." :
-                                    (activeSection === 'pr_news' ? "Tìm kiếm bài PR..." :
-                                        (activeSection === 'advisor_approval' ? "Tìm kiếm cố vấn..." : 
-                                            (activeSection === 'terms' ? "Tìm kiếm phiên bản hoặc ngày..." : "Tìm kiếm...")))))
-                    }
+                    searchPlaceholder={(() => {
+                        if (activeSection === 'project_management') return "Tìm kiếm dự án...";
+                        if (activeSection === 'bookings') return "Tìm kiếm booking...";
+                        if (activeSection === 'pr_management') return "Tìm kiếm dự án đã ký...";
+                        if (activeSection === 'pr_news') return "Tìm kiếm bài PR...";
+                        if (activeSection === 'advisor_approval') return "Tìm kiếm cố vấn...";
+                        if (activeSection === 'terms') return "Tìm kiếm phiên bản hoặc ngày...";
+                        if (activeSection === 'investment_management') return "Tìm kiếm deal, startup, investor...";
+                        return "Tìm kiếm...";
+                    })()}
                     showNotification={true}
                     onNotificationNavigate={onNotificationNavigate}
                 />
@@ -2101,7 +2274,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     {activeSection === 'project_management' && (
                         <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
                             {/* Tab Switcher - Same as Booking */}
-                            <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                            <div className={styles.tabs} style={{ padding: '0 4px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
                                 <button className={`${styles.tab} ${activeMobileTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileTab('all')}>
                                     Tất cả
                                     <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{filteredPending.length + filteredApproved.length + filteredRejected.length}</span>
@@ -2147,7 +2320,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                         }
 
                                         return (
-                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                                 {listToShow.map(project => (
                                                     <ProjectKanbanCard
                                                         key={project.projectId}
@@ -2173,7 +2346,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     {activeSection === 'investor_approval' && (
                         <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
                             {/* Tab Switcher - Same as Booking */}
-                            <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                            <div className={styles.tabs} style={{ padding: '0 4px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
                                 <button className={`${styles.tab} ${activeMobileInvTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileInvTab('all')}>
                                     Tất cả
                                     <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{pendingInvestors.length + approvedInvestors.length + rejectedInvestors.length}</span>
@@ -2219,7 +2392,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                         }
 
                                         return (
-                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                                 {listToShow.map(i => (
                                                     <InvestorKanbanCard
                                                         key={i.investorId}
@@ -2247,9 +2420,125 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                         </div>
                     )}
 
+                    {/* Investment Management Section */}
+                    {activeSection === 'investment_management' && (
+                        <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
+                            {staffDealsError && (
+                                <div className={local.errorWrapper} style={{ marginBottom: '20px' }}>
+                                    <EmptyState
+                                        icon={AlertCircle}
+                                        title="Lỗi tải dữ liệu"
+                                        message={staffDealsError}
+                                        isError={true}
+                                        onRetry={fetchStaffDeals}
+                                    />
+                                </div>
+                            )}
+
+                            {isLoadingStaffDeals ? (
+                                <KanbanSkeleton count={4} />
+                            ) : (
+                                (() => {
+                                    const filteredDeals = (staffDeals || []).filter((deal) => {
+                                        if (!staffDealSearchTerm.trim()) return true;
+                                        const search = staffDealSearchTerm.toLowerCase();
+                                        return (
+                                            deal.projectName?.toLowerCase().includes(search) ||
+                                            deal.startupName?.toLowerCase().includes(search) ||
+                                            deal.investorName?.toLowerCase().includes(search) ||
+                                            String(deal.dealId || '').includes(search)
+                                        );
+                                    });
+
+                                    if (filteredDeals.length === 0) {
+                                        return (
+                                            <EmptyState
+                                                icon={Briefcase}
+                                                title="Không có thỏa thuận đầu tư"
+                                                message="Hiện chưa có deal nào để staff theo dõi hoặc duyệt."
+                                            />
+                                        );
+                                    }
+
+                                    return (
+                                        <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
+                                            {filteredDeals.map((deal) => {
+                                                const statusInfo = getDealStatusInfo(deal.status);
+                                                const canStaffReview = statusInfo.value === 1;
+                                                const isCompletedDeal = statusInfo.value === 4 || deal.isCompleted === true;
+                                                return (
+                                                    <div key={deal.dealId} className={local.sleekCard} style={{ borderLeft: `4px solid ${statusInfo.color}` }}>
+                                                        <div className={local.sleekCardHeader}>
+                                                            <div>
+                                                                <h4 style={{ margin: '0 0 4px 0', fontSize: '15px', fontWeight: '800', color: 'var(--text-primary)' }}>
+                                                                    {deal.projectName || 'Dự án không tên'}
+                                                                </h4>
+                                                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                                    Deal #{deal.dealId}
+                                                                </p>
+                                                            </div>
+                                                            <div style={{
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                backgroundColor: `${statusInfo.color}20`,
+                                                                color: statusInfo.color,
+                                                                padding: '4px 10px',
+                                                                borderRadius: '9999px',
+                                                                fontSize: '11px',
+                                                                fontWeight: '700'
+                                                            }}>
+                                                                {statusInfo.label}
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '8px' }}>
+                                                            <div>
+                                                                <div className={local.sleekMetaLabel}>Startup</div>
+                                                                <div className={local.sleekMetaValue}>{deal.startupName || '-'}</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className={local.sleekMetaLabel}>Investor</div>
+                                                                <div className={local.sleekMetaValue}>{deal.investorName || '-'}</div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ marginTop: '12px' }}>
+                                                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                                                <button
+                                                                    type="button"
+                                                                    className={`${local.sleekButton} ${local.sleekButtonPrimary}`}
+                                                                    style={{ flex: 1, minWidth: '160px' }}
+                                                                    onClick={() => handleOpenStaffDealModal(deal)}
+                                                                >
+                                                                    <Eye size={14} />
+                                                                    {canStaffReview ? 'Xem hợp đồng & duyệt' : 'Xem hợp đồng'}
+                                                                </button>
+                                                                {isCompletedDeal && (
+                                                                    <button
+                                                                        type="button"
+                                                                        className={`${local.sleekButton} ${local.sleekButtonOutline}`}
+                                                                        style={{ flex: 1, minWidth: '160px' }}
+                                                                        onClick={() => handleOpenStaffDealModalAndVerify(deal)}
+                                                                    >
+                                                                        <Shield size={14} />
+                                                                        Xác thực blockchain
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    );
+                                })()
+                            )}
+                        </div>
+                    )}
+
                     {/* PR Management Section */}
                     {activeSection === 'pr_management' && (
-                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, margin: '-24px', display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+                        <div className={styles.section} style={{ background: 'transparent', boxShadow: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
                             {/* Sleek Subtab Switcher */}
                             <div className={styles.tabs} style={{ marginBottom: '0px' }}>
                                 <button
@@ -2336,7 +2625,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
                                     {/* Deals List */}
                                     {!isLoadingSignedDeals && signedDeals.length > 0 && (
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                             {signedDeals
                                                 .filter(deal => {
                                                     if (!prSearchTerm.trim()) return true;
@@ -2515,7 +2804,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
                                         {/* PR News List */}
                                         {!isLoadingPRNews && prNewsList.length > 0 && (
-                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                                 {prNewsList
                                                     .filter(pr => {
                                                         if (!prNewsSearchTerm.trim()) return true;
@@ -2596,7 +2885,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     {/* Booking Management Section */}
                     {activeSection === 'bookings' && (
                         <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
-                            <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                            <div className={styles.tabs} style={{ padding: '0 4px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
                                 <button className={`${styles.tab} ${activeMobileBookingTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileBookingTab('all')}>
                                     Tất cả
                                     <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{filterBookings(allBookings).length}</span>
@@ -2695,7 +2984,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                             }
 
                                             return (
-                                                <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                                <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                                     {activeList.map(booking => (
                                                         <BookingKanbanCard
                                                             key={booking.id}
@@ -2718,7 +3007,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     {activeSection === 'approvals' && (
                         <div className={styles.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
                             {/* Tab Switcher */}
-                            <div className={styles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                            <div className={styles.tabs} style={{ padding: '0 4px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
                                 <button className={`${styles.tab} ${activeMobileStartupTab === 'all' ? styles.active : ''}`} onClick={() => setActiveMobileStartupTab('all')}>
                                     Tất cả
                                     <span className={local.mobileTabCount} style={{ marginLeft: '8px' }}>{pendingStartups.length + approvedStartups.length + rejectedStartups.length}</span>
@@ -2764,7 +3053,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                         }
 
                                         return (
-                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
+                                            <div className={styles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(min(100%, 320px), 1fr))', gap: '16px' }}>
                                                 {listToShow.map(s => (
                                                     <StartupApprovalCard
                                                         key={s.id}
@@ -2854,9 +3143,9 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 ) : filteredUserReports.length === 0 ? (
                                     <div style={{ padding: '60px' }}>
                                         <EmptyState
-                                            icon={searchTerm ? Search : Shield}
-                                            title={searchTerm ? "Không tìm thấy" : "Trống"}
-                                            message={searchTerm ? `Không tìm thấy báo cáo nào khớp với "${searchTerm}"` : "Hiện không có báo cáo vi phạm nào trong danh mục này."}
+                                            icon={userReportSearchTerm ? Search : Shield}
+                                            title={userReportSearchTerm ? "Không tìm thấy" : "Trống"}
+                                            message={userReportSearchTerm ? `Không tìm thấy báo cáo nào khớp với "${userReportSearchTerm}"` : "Hiện không có báo cáo vi phạm nào trong danh mục này."}
                                         />
                                     </div>
                                 ) : (
@@ -3686,48 +3975,160 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 <X size={20} />
                             </button>
                         </div>
-                        <div className={local.inv_modalCompactBody} style={{ maxHeight: '70vh', overflowY: 'auto' }}>
-                            <div className={local.inv_detailGrid}>
-                                <div>
-                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Tên tổ chức / Cá nhân</label>
-                                    <p style={{ fontSize: '17px', fontWeight: '800', color: 'var(--text-primary)', margin: '4px 0 0 0' }}>{selectedInvestor.organizationName || selectedInvestor.fullName}</p>
+                        <div className={local.inv_modalCompactBody} style={{ maxHeight: '75vh', overflowY: 'auto', padding: isMobile ? '16px' : '24px' }}>
+                            <div className={local.inv_detailGrid} style={{ gap: isMobile ? '20px' : '24px' }}>
+                                {/* Profile Header Section - Optimized for Mobile */}
+                                <div style={{ 
+                                    display: 'flex', 
+                                    flexDirection: isMobile ? 'column' : 'row',
+                                    gap: isMobile ? '16px' : '20px', 
+                                    alignItems: 'center', 
+                                    padding: isMobile ? '20px 16px' : '20px', 
+                                    backgroundColor: 'var(--bg-secondary)', 
+                                    borderRadius: '20px', 
+                                    marginBottom: '8px',
+                                    textAlign: isMobile ? 'center' : 'left',
+                                    border: '1px solid var(--border-color)'
+                                }}>
+                                    <div style={{ 
+                                        width: isMobile ? '90px' : '80px', 
+                                        height: isMobile ? '90px' : '80px', 
+                                        borderRadius: '50%', 
+                                        overflow: 'hidden', 
+                                        border: '3px solid var(--primary-blue)', 
+                                        backgroundColor: 'var(--bg-primary)', 
+                                        flexShrink: 0,
+                                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+                                    }}>
+                                        {selectedInvestor.profileImageUrl ? (
+                                            <img src={selectedInvestor.profileImageUrl} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                        ) : (
+                                            <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)' }}>
+                                                <User size={isMobile ? 44 : 40} />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
+                                        <h3 style={{ 
+                                            margin: 0, 
+                                            fontSize: isMobile ? '22px' : '20px', 
+                                            fontWeight: '900', 
+                                            color: 'var(--text-primary)',
+                                            lineHeight: 1.2,
+                                            wordBreak: 'break-word'
+                                        }}>
+                                            {selectedInvestor.organizationName || selectedInvestor.fullName || 'Chưa cập nhật tên'}
+                                        </h3>
+                                        <div style={{ 
+                                            display: 'flex', 
+                                            flexDirection: isMobile ? 'column' : 'row',
+                                            alignItems: isMobile ? 'center' : 'center', 
+                                            gap: isMobile ? '4px' : '8px', 
+                                            marginTop: '8px' 
+                                        }}>
+                                            <span style={{ fontSize: '14px', color: 'var(--primary-blue)', fontWeight: '800' }}>@{selectedInvestor.userName || 'username'}</span>
+                                            {!isMobile && <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--text-muted)' }}></span>}
+                                            <span style={{ 
+                                                fontSize: '13px', 
+                                                color: 'var(--text-secondary)',
+                                                wordBreak: 'break-all',
+                                                opacity: 0.8
+                                            }}>{selectedInvestor.email}</span>
+                                        </div>
+                                    </div>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '20px' : '24px' }}>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Email</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', fontWeight: '500' }}>{selectedInvestor.email || '-'}</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Địa chỉ ví Blockchain</label>
+                                        <p style={{ 
+                                            fontSize: '12px', 
+                                            color: 'var(--text-primary)', 
+                                            margin: 0, 
+                                            fontWeight: '600', 
+                                            fontFamily: 'monospace', 
+                                            wordBreak: 'break-all', 
+                                            backgroundColor: 'rgba(29, 155, 240, 0.05)', 
+                                            padding: '10px 12px', 
+                                            borderRadius: '10px',
+                                            border: '1px dashed rgba(29, 155, 240, 0.2)',
+                                            lineHeight: 1.4
+                                        }}>
+                                            {selectedInvestor.walletAddress || '-'}
+                                        </p>
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Khu vực đầu tư</label>
-                                        <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', fontWeight: '500' }}>{selectedInvestor.investmentRegion || '-'}</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Khu vực đầu tư</label>
+                                        <p style={{ fontSize: '15px', color: 'var(--text-primary)', margin: 0, fontWeight: '700' }}>{selectedInvestor.investmentRegion || '-'}</p>
                                     </div>
                                 </div>
-                                <div>
-                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Khẩu vị đầu tư</label>
-                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: '4px 0 0 0', lineHeight: 1.6 }}>{selectedInvestor.investmentTaste || '-'}</p>
-                                </div>
-                                <div>
-                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Lĩnh vực quan tâm</label>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginTop: '6px' }}>
-                                        {selectedInvestor.focusIndustry?.split(',').map((industry, id) => (
-                                            <span key={id} className={local.btag} style={{ background: 'rgba(29, 155, 240, 0.08)', color: 'var(--primary-blue)', padding: '2px 10px', borderRadius: '4px', fontSize: '11px' }}>
-                                                {industry.trim()}
+
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '20px' : '24px' }}>
+                                    <div>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Ngân sách đầu tư</label>
+                                        <p style={{ fontSize: '20px', fontWeight: '900', color: '#10b981', margin: 0 }}>
+                                            {selectedInvestor.investmentAmount ? Number(selectedInvestor.investmentAmount).toLocaleString() : '0'} ₫
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Khẩu vị rủi ro</label>
+                                        <div style={{ marginTop: '2px' }}>
+                                            <span style={{ 
+                                                fontSize: '12px', 
+                                                fontWeight: '900', 
+                                                padding: '6px 14px', 
+                                                borderRadius: '20px',
+                                                display: 'inline-flex',
+                                                backgroundColor: selectedInvestor.riskTolerance === 'High' ? 'rgba(244, 33, 46, 0.1)' : (selectedInvestor.riskTolerance === 'Medium' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)'),
+                                                color: selectedInvestor.riskTolerance === 'High' ? '#f4212e' : (selectedInvestor.riskTolerance === 'Medium' ? '#f59e0b' : '#10b981'),
+                                                textTransform: 'uppercase'
+                                            }}>
+                                                {selectedInvestor.riskTolerance || 'Chưa xác định'}
                                             </span>
-                                        )) || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                        </div>
                                     </div>
                                 </div>
-                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '20px' }}>
+
+                                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '20px' : '24px' }}>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Ngân sách đầu tư</label>
-                                        <p style={{ fontSize: '15px', fontWeight: '800', color: '#10b981', margin: '4px 0 0 0' }}>{selectedInvestor.investmentAmount ? Number(selectedInvestor.investmentAmount).toLocaleString() : 'Chưa cập nhật'} ₫</p>
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Lĩnh vực quan tâm</label>
+                                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                            {(selectedInvestor.industries || (selectedInvestor.focusIndustry ? selectedInvestor.focusIndustry.split(',') : [])).map((industry, id) => (
+                                                <span key={id} className={local.btag} style={{ background: 'rgba(29, 155, 240, 0.1)', color: 'var(--primary-blue)', padding: '5px 12px', borderRadius: '8px', fontSize: '12px', fontWeight: '750' }}>
+                                                    {industry.trim()}
+                                                </span>
+                                            )) || <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                            {(!selectedInvestor.industries && !selectedInvestor.focusIndustry) && <span style={{ color: 'var(--text-muted)' }}>-</span>}
+                                        </div>
                                     </div>
                                     <div>
-                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Giai đoạn ưu tiên</label>
-                                        <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--primary-blue)', margin: '4px 0 0 0' }}>
-                                            {selectedInvestor.preferredStage === 'Idea' || selectedInvestor.preferredStage === 0 ? 'Ý tưởng (Idea)' : (selectedInvestor.preferredStage === 'MVP' || selectedInvestor.preferredStage === 1 ? 'MVP' : (selectedInvestor.preferredStage === 'Growth' || selectedInvestor.preferredStage === 2 ? 'Phát triển (Growth)' : '-'))}
+                                        <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Giai đoạn ưu tiên</label>
+                                        <p style={{ fontSize: '15px', fontWeight: '800', color: 'var(--primary-blue)', margin: 0 }}>
+                                            {(() => {
+                                                const stage = selectedInvestor.preferredStageOptionId !== undefined ? selectedInvestor.preferredStageOptionId : selectedInvestor.preferredStage;
+                                                if (stage === 'Idea' || stage === 1 || stage === 0) return 'Ý tưởng (Idea)';
+                                                if (stage === 'MVP' || stage === 2 || stage === 1) return 'Sản phẩm khả thi (MVP)';
+                                                if (stage === 'Growth' || stage === 3 || stage === 2) return 'Tăng trưởng (Growth)';
+                                                return '-';
+                                            })()}
                                         </p>
                                     </div>
                                 </div>
+
+                                <div>
+                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '8px' }}>Khẩu vị đầu tư</label>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.6, padding: '14px', backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', border: '1px solid var(--border-color)', minHeight: '60px' }}>
+                                        {selectedInvestor.investmentTaste || 'Không có mô tả chi tiết về khẩu vị đầu tư.'}
+                                    </p>
+                                </div>
+
+                                <div>
+                                    <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '8px' }}>Kinh nghiệm đầu tư trước đây</label>
+                                    <p style={{ fontSize: '14px', color: 'var(--text-primary)', margin: 0, lineHeight: 1.6, padding: '14px', backgroundColor: 'var(--bg-secondary)', borderRadius: '14px', border: '1px solid var(--border-color)', minHeight: '60px' }}>
+                                        {selectedInvestor.previousInvestments || 'Chưa cập nhật kinh nghiệm đầu tư.'}
+                                    </p>
+                                </div>
+
                                 {(selectedInvestor.status || selectedInvestor.approvalStatus) === 'Rejected' && selectedInvestor.rejectionReason && (
                                     <div style={{ padding: '16px', backgroundColor: 'rgba(244, 33, 46, 0.05)', borderRadius: '12px', border: '1px solid rgba(244, 33, 46, 0.1)', marginTop: '8px' }}>
                                         <label style={{ fontSize: '11px', color: '#f4212e', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.5px' }}>Lý do từ chối</label>
@@ -3736,9 +4137,116 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 )}
                             </div>
                         </div>
-                        <div style={{ padding: '16px 24px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'flex-end', backgroundColor: 'var(--bg-secondary)' }}>
-                            <button onClick={() => setShowInvestorDetailModal(false)} className={local.modalSecondaryBtn} style={{ padding: '8px 24px', borderRadius: '99px', height: '40px' }}>Đóng</button>
+                        <div style={{ 
+                            padding: isMobile ? '16px' : '16px 24px', 
+                            borderTop: '1px solid var(--border-color)', 
+                            display: 'flex', 
+                            justifyContent: isMobile ? 'stretch' : 'flex-end', 
+                            backgroundColor: 'var(--bg-secondary)' 
+                        }}>
+                            <button 
+                                onClick={() => setShowInvestorDetailModal(false)} 
+                                className={local.modalSecondaryBtn} 
+                                style={{ 
+                                    padding: '8px 24px', 
+                                    borderRadius: '12px', 
+                                    height: '48px',
+                                    width: isMobile ? '100%' : 'auto',
+                                    fontWeight: '800',
+                                    fontSize: '15px'
+                                }}
+                            >
+                                Đóng
+                            </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {showStaffDealModal && selectedStaffDeal && (
+                <div className={styles.modalOverlay} onClick={handleCloseStaffDealModal}>
+                    <div className={styles.modalContent} style={{ maxWidth: '760px', padding: '20px' }} onClick={(e) => e.stopPropagation()}>
+                        {(() => {
+                            const statusInfo = getDealStatusInfo(selectedStaffDeal.status);
+                            const canStaffReview = statusInfo.value === 1;
+                            return (
+                                <>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>
+                                {canStaffReview ? 'Duyệt thỏa thuận đầu tư' : 'Xem hợp đồng đầu tư'}
+                            </h3>
+                            <button type="button" className={styles.modalCloseBtn} onClick={handleCloseStaffDealModal} disabled={isSubmittingStaffReview || isCheckingOnchain}>
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                            Deal #{selectedStaffDeal.dealId} - Startup: <b>{selectedStaffDeal.startupName || '-'}</b> - Investor: <b>{selectedStaffDeal.investorName || '-'}</b>
+                        </div>
+
+                        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '10px', padding: '14px', marginBottom: '12px' }}>
+                            {selectedStaffDeal.documentUrl ? (
+                                <>
+                                    <div
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => setShowDealDocumentLightbox(true)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                setShowDealDocumentLightbox(true);
+                                            }
+                                        }}
+                                        style={{ width: '100%', height: '320px', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', background: '#fff', cursor: 'zoom-in' }}
+                                        title="Bấm để phóng to"
+                                    >
+                                        {isImageDocumentUrl(selectedStaffDeal.documentUrl) ? (
+                                            <img src={selectedStaffDeal.documentUrl} alt={`deal-${selectedStaffDeal.dealId}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                        ) : (
+                                            <iframe src={selectedStaffDeal.documentUrl} title={`deal-preview-${selectedStaffDeal.dealId}`} style={{ width: '100%', height: '100%', border: 'none' }} />
+                                        )}
+                                    </div>
+                                    <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                        Bấm vào khung để phóng to tài liệu.
+                                    </div>
+                                </>
+                            ) : (
+                                <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Deal chưa có tài liệu hợp đồng.</p>
+                            )}
+                        </div>
+
+                        {canStaffReview && (
+                            <div className={styles.formGroup} style={{ marginBottom: '12px' }}>
+                                <label>Lý do từ chối (bắt buộc khi bấm Từ chối)</label>
+                                <textarea
+                                    value={staffRejectReason}
+                                    onChange={(e) => setStaffRejectReason(e.target.value)}
+                                    placeholder="Nhập lý do để investor chỉnh sửa và upload lại tài liệu"
+                                    rows={3}
+                                    maxLength={1000}
+                                    disabled={isSubmittingStaffReview}
+                                />
+                            </div>
+                        )}
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                <button type="button" className={styles.secondaryBtn} onClick={handleCloseStaffDealModal} disabled={isSubmittingStaffReview || isCheckingOnchain}>Đóng</button>
+                                {canStaffReview && (
+                                    <>
+                                        <button type="button" className={styles.dangerBtn} onClick={() => handleStaffReviewDeal(false)} disabled={isSubmittingStaffReview}>
+                                            {isSubmittingStaffReview ? <><Loader2 size={14} className={styles.spinner} /> Đang gửi...</> : 'Từ chối'}
+                                        </button>
+                                        <button type="button" className={styles.primaryBtn} onClick={() => handleStaffReviewDeal(true)} disabled={isSubmittingStaffReview}>
+                                            {isSubmittingStaffReview ? <><Loader2 size={14} className={styles.spinner} /> Đang gửi...</> : 'Chấp nhận'}
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+                        </div>
+                                </>
+                            );
+                        })()}
                     </div>
                 </div>
             )}
@@ -3774,6 +4282,110 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                             <p style={{ margin: '4px 0 0 0', opacity: 0.8, fontSize: '14px', fontWeight: 700 }}>
                                 {STATUS_LABELS[detailProject.status] || 'Bản nháp'}
                             </p>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showDealDocumentLightbox && showStaffDealModal && selectedStaffDeal?.documentUrl && (
+                <div className={styles.imageLightbox} onClick={() => setShowDealDocumentLightbox(false)}>
+                    <div className={styles.lightboxOverlay} />
+                    <button className={styles.lightboxClose} onClick={() => setShowDealDocumentLightbox(false)} title="Đóng">
+                        <X size={32} />
+                    </button>
+                    <div className={styles.lightboxContent} onClick={(e) => e.stopPropagation()} style={{ width: 'min(1200px, 92vw)', height: 'min(86vh, 900px)', maxWidth: 'none' }}>
+                        {isImageDocumentUrl(selectedStaffDeal.documentUrl) ? (
+                            <img src={selectedStaffDeal.documentUrl} alt={`deal-document-${selectedStaffDeal.dealId}`} className={styles.lightboxImage} style={{ objectFit: 'contain' }} />
+                        ) : (
+                            <iframe src={selectedStaffDeal.documentUrl} title={`deal-document-lightbox-${selectedStaffDeal.dealId}`} style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px', backgroundColor: '#fff' }} />
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {showOnchainResultModal && onchainCheckResult && (
+                <div className={styles.modalOverlay} onClick={() => setShowOnchainResultModal(false)}>
+                    <div className={styles.modalContent} style={{ maxWidth: '680px', height: 'auto', maxHeight: '86vh' }} onClick={(e) => e.stopPropagation()}>
+                        <div className={local.staffModalHeader}>
+                            <div className={local.staffModalTitleGrp}>
+                                <Shield size={22} color={onchainCheckResult.error ? '#ef4444' : '#10b981'} />
+                                <h2 className={local.staffModalTitleText}>Xác thực Blockchain</h2>
+                            </div>
+                            <button onClick={() => setShowOnchainResultModal(false)} className={local.staffModalCloseBtn}>
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div style={{ padding: '18px 22px' }}>
+                            {onchainCheckResult.error ? (
+                                <div style={{ padding: '12px', borderRadius: '10px', border: '1px solid #fecaca', background: '#fff1f2', color: '#b91c1c', fontSize: '13px' }}>
+                                    {onchainCheckResult.message}
+                                </div>
+                            ) : (
+                                <>
+                                    <div style={{ padding: '12px', borderRadius: '12px', background: onchainCheckResult.isVerified ? '#ecfdf3' : '#fff7ed', border: `1px solid ${onchainCheckResult.isVerified ? '#86efac' : '#fdba74'}`, textAlign: 'center', marginBottom: '14px' }}>
+                                        <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>TÌNH TRẠNG XÁC THỰC</div>
+                                        <div style={{ fontSize: '28px', fontWeight: 900, color: onchainCheckResult.isVerified ? '#16a34a' : '#ea580c' }}>
+                                            {onchainCheckResult.isVerified ? '✓ Đã xác thực' : '⏳ Chưa xác thực'}
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Deal ID</div>
+                                            <div style={{ fontSize: '24px', fontWeight: 900 }}>{onchainCheckResult.dealId ?? '-'}</div>
+                                        </div>
+                                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Thông điệp</div>
+                                            <div style={{ fontSize: '13px', fontWeight: 700 }}>{onchainCheckResult.message || '-'}</div>
+                                        </div>
+                                    </div>
+
+                                    <div style={{ display: 'grid', gap: '10px' }}>
+                                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Document Hash</div>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <code style={{ flex: 1, fontSize: '12px', wordBreak: 'break-all' }}>{onchainCheckResult.documentHash || '-'}</code>
+                                                {!!onchainCheckResult.documentHash && (
+                                                    <button className={styles.secondaryBtn} style={{ padding: '6px 10px' }} onClick={() => navigator.clipboard.writeText(onchainCheckResult.documentHash)}>
+                                                        Sao chép
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Investor Wallet</div>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <code style={{ flex: 1, fontSize: '12px', wordBreak: 'break-all' }}>{onchainCheckResult.investorWallet || '-'}</code>
+                                                {!!onchainCheckResult.investorWallet && (
+                                                    <button className={styles.secondaryBtn} style={{ padding: '6px 10px' }} onClick={() => navigator.clipboard.writeText(onchainCheckResult.investorWallet)}>
+                                                        Sao chép
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
+                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Thời gian ghi nhận blockchain</div>
+                                            <div style={{ fontSize: '13px', fontWeight: 700 }}>{onchainCheckResult.timestampOnBlockchain || '-'}</div>
+                                        </div>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+
+                        <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '420px' }}>
+                                Ghi chú: Liên kết Explorer cho phép bạn đối soát dữ liệu công khai trực tiếp trên blockchain.
+                            </p>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                {!onchainCheckResult.error && (
+                                    <a href={onchainCheckResult.explorerLink} target="_blank" rel="noreferrer" className={styles.secondaryBtn} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                        <ExternalLink size={14} />
+                                        Mở Blockchain Explorer
+                                    </a>
+                                )}
+                                <button className={styles.primaryBtn} onClick={() => setShowOnchainResultModal(false)}>Đóng</button>
+                            </div>
                         </div>
                     </div>
                 </div>

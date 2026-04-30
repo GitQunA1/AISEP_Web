@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, XCircle, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User, Crown, DollarSign, Settings, Info, Download, Check } from 'lucide-react';
-import SignatureCanvas from 'react-signature-canvas';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User, Crown, DollarSign, Info, Download, Check } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
-import contractStyles from './ContractSigningModal.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
 import SuccessModal from '../components/common/SuccessModal';
@@ -40,6 +38,7 @@ import subscriptionService from '../services/subscriptionService';
 import paymentService from '../services/paymentService';
 import AIAnalyzeConfirmationModal from '../components/common/AIAnalyzeConfirmationModal';
 import RestrictedActionModal from '../components/common/RestrictedActionModal';
+import { useProfile } from '../context/ProfileContext';
 
 
 /**
@@ -119,8 +118,8 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                 };
             case 'deals':
                 return {
-                    title: 'Đầu tư & Ký kết',
-                    subtitle: 'Theo dõi các thỏa thuận đầu tư và quy trình ký kết hợp đồng.'
+                    title: 'Thỏa thuận đầu tư',
+                    subtitle: 'Nhận thỏa thuận tài liệu từ investor và xác nhận hoặc từ chối.'
                 };
             case 'connection-requests':
                 return {
@@ -179,6 +178,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     const [isPublishingProject, setIsPublishingProject] = React.useState(false);
     const [blockchainProof, setBlockchainProof] = React.useState(null);
     const [isLoadingInitialData, setIsLoadingInitialData] = React.useState(true);
+    const [dashboardError, setDashboardError] = React.useState(null);
     const [showDetailModal, setShowDetailModal] = React.useState(false);
     const [detailProject, setDetailProject] = React.useState(null);
     const [project, setProject] = React.useState(null);
@@ -207,34 +207,15 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     // Deals Approval States (for investment deals from investors)
     const [dealsToApprove, setDealsToApprove] = React.useState([]);
     const [isLoadingDeals, setIsLoadingDeals] = React.useState(false);
-    const [isRespondingToDeal, setIsRespondingToDeal] = React.useState(null);
-    const [showRejectDealModal, setShowRejectDealModal] = React.useState(false);
-    const [rejectDealId, setRejectDealId] = React.useState(null);
     const [rejectReason, setRejectReason] = React.useState('');
 
-    // Contract Preview States
+    // Deal document modal states
     const [showContractModal, setShowContractModal] = React.useState(false);
-    const [contractPreviewHtml, setContractPreviewHtml] = React.useState(null);
-    const [isLoadingContract, setIsLoadingContract] = React.useState(false);
     const [contractDealData, setContractDealData] = React.useState(null);
-    const [contractStatus, setContractStatus] = React.useState(null); // Track deal status
-    const [isSigningContract, setIsSigningContract] = React.useState(false);
-    const [showRejectContractModal, setShowRejectContractModal] = React.useState(false);
-    const [rejectContractReason, setRejectContractReason] = React.useState('');
-    const [isRejectingContract, setIsRejectingContract] = React.useState(false);
-
-    // Contract signing form states
-    const [signFormData, setSignFormData] = React.useState({
-        finalAmount: 0,
-        finalEquityPercentage: 0,
-        additionalTerms: '',
-        signatureBase64: ''
-    });
-
-    // Signature canvas ref
-    const signatureCanvasRef = React.useRef(null);
-    const signatureDataRef = React.useRef(''); // Keep latest signature value
-    const [isSignatureEmpty, setIsSignatureEmpty] = React.useState(true);
+    const [isVerifyingDealFromModal, setIsVerifyingDealFromModal] = React.useState(false);
+    const [showDealDocumentLightbox, setShowDealDocumentLightbox] = React.useState(false);
+    const [showOnchainResultModal, setShowOnchainResultModal] = React.useState(false);
+    const [onchainResultData, setOnchainResultData] = React.useState(null);
 
     // AI Analysis Quote states
     const [subscription, setSubscription] = React.useState(null);
@@ -256,7 +237,12 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     const [blockedFiles, setBlockedFiles] = React.useState([]); // Session-based blacklist for verified docs
     const hiddenFileInput = React.useRef(null);
 
-    const isApproved = startupProfile?.status === 'Approved' || startupProfile?.status === 1 || startupProfile?.approvalStatus === 'Approved' || startupProfile?.approvalStatus === 1;
+    const { startupProfile: ctxProfile, startupProfileStatus, isStartupApproved, refreshProfile, profileLoading } = useProfile();
+    
+    // Fallback to context profile if local state not yet synced
+    const displayProfile = startupProfile || ctxProfile;
+    const isApproved = isStartupApproved;
+    const profileReady = !profileLoading;
 
     const showRestrictedActionModal = (actionName = 'hành động này') => {
         setRestrictedActionMessage(`Bạn cần được phê duyệt hồ sơ Startup để thực hiện hành động: ${actionName}. Vui lòng hoàn tất hồ sơ và đợi đội ngũ AISEP xác nhận.`);
@@ -277,7 +263,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         };
 
         console.log(`[StartupDashboard] Processing targetId: ${targetId} for activeSection: ${activeSection}`);
-        
+
         // 1. My Projects Deep Link
         if (activeSection === 'my-projects' && myProjects.length > 0) {
             const matchProject = myProjects.find(p => String(p.id || p.projectId) === String(targetId));
@@ -287,7 +273,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                 scrollAndHighlight('project');
             }
         }
-        
+
         // 2. Deals Deep Link
         else if (activeSection === 'deals' && dealsToApprove.length > 0) {
             const matchDeal = dealsToApprove.find(d => String(d.dealId) === String(targetId));
@@ -295,13 +281,13 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                 // If it's ready to sign, pop the contract modal
                 if (matchDeal.status === 'Confirmed' || matchDeal.status === 1 || matchDeal.status === 'Waiting_For_Startup_Signature' || matchDeal.status === 2) {
                     setContractDealData(matchDeal);
-                    setContractPreviewHtml(null); 
+                    setContractPreviewHtml(null);
                     setShowContractModal(true);
-                } 
+                }
                 scrollAndHighlight('deal');
             }
         }
-        
+
         // 3. Connect Requests Deep Link
         else if (activeSection === 'connection-requests' && connectionRequests.length > 0) {
             const matchReq = connectionRequests.find(r => String(r.connectionRequestId) === String(targetId));
@@ -334,13 +320,32 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         { id: 'rejected', label: 'Đã từ chối', statuses: ['rejected'] }
     ];
 
+    const getDealStatusInfo = (status) => {
+        const map = {
+            PendingCounterpartyConfirmation: { label: 'Chờ đối tác xác nhận', value: 0, color: '#f59e0b' },
+            PendingStaffApproval: { label: 'Chờ staff duyệt', value: 1, color: '#0ea5e9' },
+            RequireReupload: { label: 'Yêu cầu tải lại tài liệu', value: 2, color: '#f97316' },
+            ProcessingBlockchain: { label: 'Đang xử lý blockchain', value: 3, color: '#8b5cf6' },
+            Completed: { label: 'Hoàn tất', value: 4, color: '#10b981' },
+            Canceled: { label: 'Đã hủy', value: 5, color: '#ef4444' },
+            BlockchainFailed: { label: 'Blockchain thất bại', value: 6, color: '#dc2626' },
+        };
+        const numeric = typeof status === 'number' ? status : Number(status);
+        if (!Number.isNaN(numeric) && numeric >= 0 && numeric <= 6) {
+            const key = Object.keys(map).find((k) => map[k].value === numeric);
+            return map[key] || { label: 'Không xác định', value: null, color: '#64748b' };
+        }
+        return map[status] || { label: String(status || 'Không xác định'), value: null, color: '#64748b' };
+    };
+
     const dealFilterOptions = [
-        { id: 'all', label: 'Tất cả', statuses: [] },
-        { id: 'pending', label: 'Chờ xác nhận', statuses: ['Pending', 0] },
-        { id: 'confirmed', label: 'Đã xác nhận', statuses: ['Confirmed', 1] },
-        { id: 'waiting', label: 'Chờ ký', statuses: ['Waiting_For_Startup_Signature', 2] },
-        { id: 'signed', label: 'Ký kết', statuses: ['Contract_Signed', 3, 'Minted_NFT', 4] },
-        { id: 'failed', label: 'Từ chối/Lỗi', statuses: ['Rejected', 5, 'Failed', 6] }
+        { id: 'all', label: 'Tất cả', values: [] },
+        { id: 'pending', label: 'Chờ xác nhận', values: [0] },
+        { id: 'staff', label: 'Chờ staff duyệt', values: [1] },
+        { id: 'reupload', label: 'Yêu cầu tải lại', values: [2] },
+        { id: 'processing', label: 'Đang xử lý', values: [3] },
+        { id: 'completed', label: 'Hoàn tất', values: [4] },
+        { id: 'failed', label: 'Hủy/Lỗi', values: [5, 6] }
     ];
 
     const getProjectCounts = () => {
@@ -367,7 +372,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         const counts = { all: dealsToApprove.length };
         dealFilterOptions.forEach(opt => {
             if (opt.id !== 'all') {
-                counts[opt.id] = dealsToApprove.filter(d => opt.statuses.includes(d.status)).length;
+                counts[opt.id] = dealsToApprove.filter(d => opt.values.includes(getDealStatusInfo(d.status).value)).length;
             }
         });
         return counts;
@@ -409,7 +414,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         // Status filter
         if (dealFilter === 'all') return matchesSearch;
         const activeOpt = dealFilterOptions.find(o => o.id === dealFilter);
-        return matchesSearch && activeOpt.statuses.includes(d.status);
+        return matchesSearch && activeOpt.values.includes(getDealStatusInfo(d.status).value);
     });
 
     React.useEffect(() => {
@@ -534,83 +539,60 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         }
     };
 
-    React.useEffect(() => {
-        const fetchDashboardData = async () => {
-            try {
-                // Fetch profile and projects in PARALLEL (not sequential)
-                const promises = [];
+    const fetchDashboardData = async () => {
+        setIsLoadingInitialData(true);
+        setDashboardError(null);
+        try {
+            // Fetch projects in parallel with other dashboard-specific data
+            const response = await projectSubmissionService.getMyProjects();
+            
+            if (response.success && response.data) {
+                const rawProjects = Array.isArray(response.data) ? response.data : (response.data.items || []);
+                // Sort projects by CreatedAt descending (most recent first)
+                const sortedProjects = [...rawProjects].sort((a, b) => {
+                    const dateB = new Date(b.createdAt || 0);
+                    const dateA = new Date(a.createdAt || 0);
+                    if (dateB - dateA !== 0) return dateB - dateA;
+                    return (b.id || b.projectId || 0) - (a.id || a.projectId || 0);
+                });
+                setMyProjects(sortedProjects);
+                
+                if (sortedProjects.length > 0) {
+                    const loadedProject = sortedProjects[0];
+                    setProject(loadedProject);
 
-                // 1. Fetch startup profile (if user exists)
-                if (user && user.userId) {
-                    promises.push(
-                        startupProfileService.getStartupMe()
-                            .then(data => ({ key: 'profile', data }))
-                    );
+                    setProjectFormData({
+                        ...projectFormData,
+                        projectName: loadedProject.name || loadedProject.projectName || '',
+                        description: loadedProject.description || '',
+                        tagline: loadedProject.tagline || '',
+                        industry: loadedProject.industry || '',
+                        stage: loadedProject.stage || '',
+                    });
                 }
-
-                // 2. Fetch projects - run in parallel with profile
-                promises.push(
-                    projectSubmissionService.getMyProjects()
-                        .then(data => ({ key: 'projects', data }))
-                );
-
-                const results = await Promise.all(promises);
-
-                // Process results
-                for (const result of results) {
-                    if (result.key === 'profile') {
-                        const profileData = result.data;
-                        setStartupProfile(profileData);
-
-                        // Check for auto-setup flag in URL
-                        const params = new URLSearchParams(window.location.search);
-                        if (!profileData && params.get('setup') === 'true') {
-                            setActiveSection('complete-info');
-                            window.history.replaceState({}, document.title, window.location.pathname);
-                        }
-                    } else if (result.key === 'projects') {
-                        const response = result.data;
-                        if (response.success && response.data) {
-                            const rawProjects = Array.isArray(response.data) ? response.data : (response.data.items || []);
-                            // Sort projects by CreatedAt descending (most recent first)
-                            // Fallback to ID/ProjectId if createdAt is missing
-                            const sortedProjects = [...rawProjects].sort((a, b) => {
-                                const dateB = new Date(b.createdAt || b.createdAt || 0);
-                                const dateA = new Date(a.createdAt || a.createdAt || 0);
-                                if (dateB - dateA !== 0) return dateB - dateA;
-                                return (b.id || b.projectId || 0) - (a.id || a.projectId || 0);
-                            });
-                            setMyProjects(sortedProjects);
-                            setDocuments([]);
-
-                            if (sortedProjects.length > 0) {
-                                const loadedProject = sortedProjects[0];
-                                setProject(loadedProject);
-
-                                // Pre-fill form data for updates
-                                setProjectFormData({
-                                    ...projectFormData,
-                                    projectName: loadedProject.name || loadedProject.projectName || '',
-                                    description: loadedProject.description || '',
-                                    tagline: loadedProject.tagline || '',
-                                    industry: loadedProject.industry || '',
-                                    stage: loadedProject.stage || '',
-                                });
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                console.error("Failed to load dashboard data:", err);
-            } finally {
-                setIsLoadingInitialData(false);
             }
-        };
+            
+            // Sync context profile to local state if needed (for legacy code compatibility)
+            if (ctxProfile) {
+                setStartupProfile(ctxProfile);
+            }
+        } catch (err) {
+            console.error("Failed to load dashboard data:", err);
+            setDashboardError("Không thể tải dữ liệu bảng điều khiển. Vui lòng kiểm tra kết nối mạng.");
+        } finally {
+            setIsLoadingInitialData(false);
+        }
+    };
 
+    React.useEffect(() => {
         fetchDashboardData();
         fetchSubscriptionData();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [user]);
+    }, [user, ctxProfile]);
+
+    const handleRetryDashboard = () => {
+        fetchDashboardData();
+        fetchSubscriptionData();
+    };
 
     const fetchSubscriptionData = async () => {
         setIsLoadingSubscription(true);
@@ -856,399 +838,86 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
             showRestrictedActionModal('chấp nhận đầu tư');
             return;
         }
-        setIsRespondingToDeal(dealId);
+        setIsRespondingToDeal(true);
         try {
-            console.log('[StartupDashboard] Approving deal:', dealId);
-            const response = await dealsService.respondToDeal(dealId, true);
-            console.log('[StartupDashboard] Approved deal:', response);
-
+            const response = await dealsService.verifyDeal(dealId, true, '');
             if (response && (response.success || response.data)) {
-                // Remove from pending list and show success
-                setDealsToApprove(dealsToApprove.filter(d => d.dealId !== dealId));
-                setSuccessMessage('✓ Đã chấp nhận đầu tư!');
+                setSuccessMessage('✓ Đã chấp nhận yêu cầu đầu tư.');
                 setShowSuccessModal(true);
+                await fetchDealsToApprove();
             }
         } catch (error) {
             console.error('[StartupDashboard] Failed to approve deal:', error);
-            setSuccessMessage('Lỗi: Không thể chấp nhận đầu tư');
+            setSuccessMessage('Lỗi: Không thể chấp nhận yêu cầu đầu tư.');
             setShowSuccessModal(true);
         } finally {
-            setIsRespondingToDeal(null);
+            setIsRespondingToDeal(false);
         }
-    };
-
-    const handleRejectDeal = async (dealId) => {
-        if (!isApproved) {
-            showRestrictedActionModal('từ chối đầu tư');
-            return;
-        }
-        setIsRespondingToDeal(dealId);
-        try {
-            console.log('[StartupDashboard] Rejecting deal:', dealId);
-            const normalizedReason = rejectReason.trim();
-            if (!normalizedReason) {
-                setSuccessMessage('Vui lòng nhập lý do từ chối trước khi gửi');
-                setShowSuccessModal(true);
-                return;
-            }
-
-            const response = await dealsService.respondToDeal(dealId, false, normalizedReason);
-            console.log('[StartupDashboard] Rejected deal:', response);
-
-            if (response && (response.success || response.data)) {
-                setDealsToApprove(dealsToApprove.filter(d => d.dealId !== dealId));
-                setSuccessMessage('✓ Đã từ chối đầu tư');
-                setShowSuccessModal(true);
-                setShowRejectDealModal(false);
-                setRejectDealId(null);
-                setRejectReason('');
-            }
-        } catch (error) {
-            console.error('[StartupDashboard] Failed to reject deal:', error);
-            setSuccessMessage('Lỗi: Không thể từ chối đầu tư');
-            setShowSuccessModal(true);
-        } finally {
-            setIsRespondingToDeal(null);
-        }
-    };
-
-    const handleOpenRejectDealModal = (dealId) => {
-        setRejectDealId(dealId);
-        setRejectReason('');
-        setShowRejectDealModal(true);
-    };
-
-    const handleCloseRejectDealModal = () => {
-        if (isRespondingToDeal) return;
-        setShowRejectDealModal(false);
-        setRejectDealId(null);
-        setRejectReason('');
     };
 
     const handleShowContractPreview = async (deal) => {
-        console.log('[StartupDashboard] handleShowContractPreview called for deal:', deal.dealId, 'status:', deal.status);
-        console.log('[StartupDashboard] Loading contract preview for deal:', deal.dealId);
-        setIsLoadingContract(true);
-
-        try {
-            setContractDealData(deal);
-            // Use status directly from deal object (already have it from GET /api/Deals)
-            setContractStatus(deal.status);
-            console.log('[StartupDashboard] Set contractStatus to:', deal.status, 'type:', typeof deal.status);
-
-            setSignFormData({
-                finalAmount: deal.investmentAmount || 0,
-                finalEquityPercentage: deal.equityPercentage || 0,
-                additionalTerms: '',
-                signatureBase64: ''
-            });
-
-            const response = await dealsService.getContractPreview(deal.dealId);
-            console.log('[StartupDashboard] Contract preview loaded:', response?.success);
-
-            if (response && response.data) {
-                setContractPreviewHtml(response.data);
-                setShowContractModal(true);
-            } else {
-                setSuccessMessage('Lỗi: Không thể tải hợp đồng');
-                setShowSuccessModal(true);
-            }
-        } catch (error) {
-            console.error('[StartupDashboard] Failed to load contract:', error);
-            setSuccessMessage('Lỗi: Không thể tải hợp đồng - ' + (error.message || 'Vui lòng thử lại'));
-            setShowSuccessModal(true);
-        } finally {
-            setIsLoadingContract(false);
-        }
-    };
-
-    const handleSignatureChange = () => {
-        // Called when user draws on canvas
-        if (signatureCanvasRef.current) {
-            const isEmpty = signatureCanvasRef.current.isEmpty();
-            setIsSignatureEmpty(isEmpty);
-        }
-    };
-
-    const handleClearSignature = () => {
-        console.log('[StartupDashboard] Clearing signature');
-        if (signatureCanvasRef.current) {
-            signatureCanvasRef.current.clear();
-            signatureDataRef.current = ''; // Clear ref too
-            setIsSignatureEmpty(true);
-            setSignFormData(prev => ({ ...prev, signatureBase64: '' }));
-        }
-    };
-
-    const handleSaveSignature = () => {
-        console.log('[StartupDashboard] Saving signature...');
-        if (signatureCanvasRef.current) {
-            const isEmpty = signatureCanvasRef.current.isEmpty();
-            console.log('[StartupDashboard] Canvas isEmpty:', isEmpty);
-
-            if (!isEmpty) {
-                try {
-                    const canvasUrl = signatureCanvasRef.current.toDataURL('image/png');
-                    // Extract plain base64 from data URL (remove 'data:image/png;base64,' prefix)
-                    const base64String = canvasUrl.replace(/^data:image\/png;base64,/, '');
-                    console.log('[StartupDashboard] Signature Base64 length:', base64String.length);
-
-                    // Store in ref for reliable access
-                    signatureDataRef.current = base64String;
-
-                    // Also update state for UI
-                    setSignFormData(prev => {
-                        const updated = { ...prev, signatureBase64: base64String };
-                        console.log('[StartupDashboard] Updated signFormData with signature');
-                        return updated;
-                    });
-                } catch (err) {
-                    console.error('[StartupDashboard] Error saving signature:', err);
-                }
-            } else {
-                console.log('[StartupDashboard] Canvas is empty, cannot save');
-            }
-        } else {
-            console.log('[StartupDashboard] No canvas ref found');
-        }
-    };
-
-    const handleSignContract = async () => {
-        if (!contractDealData) return;
-        if (!isApproved) {
-            showRestrictedActionModal('ký kết hợp đồng');
-            return;
-        }
-
-        console.log('[StartupDashboard] handleSignContract called');
-        console.log('[StartupDashboard] Current signFormData:', signFormData);
-        console.log('[StartupDashboard] Ref signature length:', signatureDataRef.current.length);
-
-        // Priority: ref > state > canvas
-        let finalSignature = signatureDataRef.current || signFormData.signatureBase64;
-
-        // If no signature in ref/state, try to get from canvas directly
-        if (!finalSignature && signatureCanvasRef.current) {
-            console.log('[StartupDashboard] Getting signature from canvas directly');
-            if (!signatureCanvasRef.current.isEmpty()) {
-                try {
-                    const canvasUrl = signatureCanvasRef.current.toDataURL('image/png');
-                    finalSignature = canvasUrl.replace(/^data:image\/png;base64,/, ''); // Extract plain base64
-                    signatureDataRef.current = finalSignature; // Store in ref
-                    console.log('[StartupDashboard] Got signature from canvas, length:', finalSignature.length);
-                } catch (err) {
-                    console.error('[StartupDashboard] Error getting signature from canvas:', err);
-                }
-            }
-        }
-
-        // Validate form
-        if (!signFormData.finalAmount || signFormData.finalAmount === 0) {
-            setSuccessMessage('Vui lòng nhập số tiền');
-            setShowSuccessModal(true);
-            return;
-        }
-
-        if (!signFormData.finalEquityPercentage && signFormData.finalEquityPercentage !== 0) {
-            setSuccessMessage('Vui lòng nhập phần trăm cổ phần');
-            setShowSuccessModal(true);
-            return;
-        }
-
-        if (!finalSignature) {
-            console.log('[StartupDashboard] No signature found');
-            setSuccessMessage('Vui lòng vẽ chữ ký');
-            setShowSuccessModal(true);
-            return;
-        }
-
-        setIsSigningContract(true);
-        try {
-            console.log('[StartupDashboard] Signing contract for deal:', contractDealData.dealId);
-
-            // Prepare data with final signature
-            const contractData = {
-                finalAmount: signFormData.finalAmount,
-                finalEquityPercentage: signFormData.finalEquityPercentage,
-                additionalTerms: signFormData.additionalTerms,
-                signatureBase64: finalSignature
-            };
-
-            console.log('[StartupDashboard] Sending contract data (Investor signing):', {
-                dealId: contractDealData.dealId,
-                finalAmount: contractData.finalAmount,
-                finalEquityPercentage: contractData.finalEquityPercentage,
-                signatureBase64Length: contractData.signatureBase64.length
-            });
-
-            const response = await dealsService.signContract(contractDealData.dealId, contractData);
-            console.log('[StartupDashboard] Contract signed:', response);
-
-            if (response && (response.success || response.data)) {
-                setSuccessMessage('✓ Hợp đồng đã được ký thành công!');
-                setShowSuccessModal(true);
-                setShowContractModal(false);
-                setContractPreviewHtml(null);
-                setContractDealData(null);
-                setSignFormData({ finalAmount: 0, finalEquityPercentage: 0, additionalTerms: '', signatureBase64: '' });
-                setIsSignatureEmpty(true);
-                signatureDataRef.current = ''; // Clear ref
-
-                // Refresh deals list
-                await fetchDealsToApprove();
-            } else {
-                setSuccessMessage('Lỗi: Không thể ký hợp đồng');
-                setShowSuccessModal(true);
-            }
-        } catch (error) {
-            console.error('[StartupDashboard] Failed to sign contract:', error);
-            setSuccessMessage('Lỗi: Không thể ký hợp đồng - ' + (error.message || 'Vui lòng thử lại'));
-            setShowSuccessModal(true);
-        } finally {
-            setIsSigningContract(false);
-        }
-    };
-
-    const handleSignContractAsStartup = async () => {
-        if (!isApproved) {
-            showRestrictedActionModal('ký kết hợp đồng');
-            return;
-        }
-        if (!contractDealData) return;
-
-        console.log('[StartupDashboard] handleSignContractAsStartup called');
-        console.log('[StartupDashboard] Ref signature length:', signatureDataRef.current.length);
-
-        // Priority: ref > state > canvas
-        let finalSignature = signatureDataRef.current || signFormData.signatureBase64;
-
-        // If no signature in ref/state, try to get from canvas directly
-        if (!finalSignature && signatureCanvasRef.current) {
-            console.log('[StartupDashboard] Getting signature from canvas directly');
-            if (!signatureCanvasRef.current.isEmpty()) {
-                try {
-                    const canvasUrl = signatureCanvasRef.current.toDataURL('image/png');
-                    finalSignature = canvasUrl.replace(/^data:image\/png;base64,/, ''); // Extract plain base64
-                    signatureDataRef.current = finalSignature; // Store in ref
-                    console.log('[StartupDashboard] Got signature from canvas, length:', finalSignature.length);
-                } catch (err) {
-                    console.error('[StartupDashboard] Error getting signature from canvas:', err);
-                }
-            }
-        }
-
-        // Validate signature only
-        if (!finalSignature) {
-            console.log('[StartupDashboard] No signature found');
-            setSuccessMessage('Vui lòng vẽ chữ ký');
-            setShowSuccessModal(true);
-            return;
-        }
-
-        setIsSigningContract(true);
-        try {
-            console.log('[StartupDashboard] Signing contract as STARTUP for deal:', contractDealData.dealId);
-
-            // Only send signature - API only requires signatureBase64
-            const contractData = {
-                signatureBase64: finalSignature
-            };
-
-            console.log('[StartupDashboard] Sending contract data (Startup signing):', {
-                dealId: contractDealData.dealId,
-                signatureBase64Length: contractData.signatureBase64.length
-            });
-
-            const response = await dealsService.signContractStartup(contractDealData.dealId, contractData);
-            console.log('[StartupDashboard] Contract signed by startup:', response);
-
-            if (response && (response.success || response.data)) {
-                setSuccessMessage('✓ Startup đã ký hợp đồng thành công!');
-                setShowSuccessModal(true);
-                setShowContractModal(false);
-                setContractPreviewHtml(null);
-                setContractDealData(null);
-                setSignFormData({ finalAmount: 0, finalEquityPercentage: 0, additionalTerms: '', signatureBase64: '' });
-                setIsSignatureEmpty(true);
-                signatureDataRef.current = ''; // Clear ref
-
-                // Refresh deals list
-                await fetchDealsToApprove();
-            } else {
-                setSuccessMessage('Lỗi: Không thể ký hợp đồng');
-                setShowSuccessModal(true);
-            }
-        } catch (error) {
-            console.error('[StartupDashboard] Failed to sign contract as startup:', error);
-            setSuccessMessage('Lỗi: Không thể ký hợp đồng - ' + (error.message || 'Vui lòng thử lại'));
-            setShowSuccessModal(true);
-        } finally {
-            setIsSigningContract(false);
-        }
+        setContractDealData(deal);
+        setRejectReason('');
+        setShowContractModal(true);
     };
 
     const handleCloseContractModal = () => {
+        if (isVerifyingDealFromModal) return;
         setShowContractModal(false);
-        setContractPreviewHtml(null);
         setContractDealData(null);
-        setContractStatus(null);
-        setSignFormData({ finalAmount: 0, finalEquityPercentage: 0, additionalTerms: '', signatureBase64: '' });
-        setIsSignatureEmpty(true);
-        signatureDataRef.current = ''; // Clear ref
-        if (signatureCanvasRef.current) {
-            signatureCanvasRef.current.clear();
-        }
+        setRejectReason('');
+        setShowDealDocumentLightbox(false);
     };
 
-    const handleOpenRejectContractModal = () => {
-        setRejectContractReason('');
-        // Hide contract preview modal first so it does not cover rejection form.
-        setShowContractModal(false);
-        setShowRejectContractModal(true);
-    };
-
-    const handleCloseRejectContractModal = () => {
-        if (isRejectingContract) return;
-        setShowRejectContractModal(false);
-        setRejectContractReason('');
-    };
-
-    const handleRejectContractAsStartup = async () => {
+    const handleVerifyDealFromModal = async (isConfirmed) => {
         if (!contractDealData?.dealId) return;
         if (!isApproved) {
-            showRestrictedActionModal('từ chối hợp đồng');
+            showRestrictedActionModal(isConfirmed ? 'chấp nhận đầu tư' : 'từ chối đầu tư');
             return;
         }
-
-        const normalizedReason = rejectContractReason.trim();
-        if (!normalizedReason) {
-            setSuccessMessage('Vui lòng nhập lý do từ chối hợp đồng');
+        const reason = isConfirmed ? '' : rejectReason.trim();
+        if (!isConfirmed && !reason) {
+            setSuccessMessage('Vui lòng nhập lý do khi từ chối yêu cầu đầu tư.');
             setShowSuccessModal(true);
             return;
         }
-
-        setIsRejectingContract(true);
+        setIsVerifyingDealFromModal(true);
         try {
-            const response = await dealsService.rejectContractByStartup(contractDealData.dealId, normalizedReason);
+            const response = await dealsService.verifyDeal(contractDealData.dealId, isConfirmed, reason);
             if (response && (response.success || response.data)) {
-                setSuccessMessage('✓ Đã từ chối hợp đồng và gửi lý do cho nhà đầu tư');
+                setSuccessMessage(isConfirmed ? '✓ Đã chấp nhận yêu cầu đầu tư.' : '✓ Đã từ chối yêu cầu đầu tư.');
                 setShowSuccessModal(true);
-                setShowRejectContractModal(false);
-                setRejectContractReason('');
                 handleCloseContractModal();
                 await fetchDealsToApprove();
             } else {
-                setSuccessMessage('Lỗi: Không thể từ chối hợp đồng');
+                setSuccessMessage('Lỗi: Không thể xử lý yêu cầu đầu tư.');
                 setShowSuccessModal(true);
             }
         } catch (error) {
-            console.error('[StartupDashboard] Failed to reject contract as startup:', error);
-            setSuccessMessage('Lỗi: Không thể từ chối hợp đồng - ' + (error.message || 'Vui lòng thử lại'));
+            console.error('[StartupDashboard] Failed to verify deal:', error);
+            setSuccessMessage('Lỗi: Không thể xử lý yêu cầu đầu tư - ' + (error.message || 'Vui lòng thử lại'));
             setShowSuccessModal(true);
         } finally {
-            setIsRejectingContract(false);
+            setIsVerifyingDealFromModal(false);
         }
     };
+
+    const handleVerifyDealOnchain = async (dealId) => {
+        if (!dealId) return;
+        try {
+            const response = await dealsService.verifyDealOnchain(dealId);
+            const normalized = dealsService.normalizeDealOnchainResult(response);
+            const explorerLink = dealsService.getDealOnchainExplorerLink(normalized);
+            setOnchainResultData({ ...normalized, explorerLink });
+            setShowOnchainResultModal(true);
+        } catch (error) {
+            console.error('[StartupDashboard] Failed to verify on-chain:', error);
+            setSuccessMessage('Lỗi: Không thể xác thực blockchain cho deal này.');
+            setShowSuccessModal(true);
+        }
+    };
+
+    const isImageDocumentUrl = (url = '') => /\.(png|jpe?g|gif|webp|bmp|svg)(\?|#|$)/i.test(url);
 
     /**
      * translateError - Maps English backend error messages to Vietnamese
@@ -2041,17 +1710,17 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                 </>
             )}
 
-            {(!startupProfile || (String(startupProfile.status || startupProfile.approvalStatus || '').toUpperCase() !== 'APPROVED')) && 
-             !activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
-                <div style={{ padding: '0', marginBottom: '0', width: '100%' }}>
-                    <StartupProfileBanner
-                        status={startupProfile?.status}
-                        approvalStatus={startupProfile?.approvalStatus}
-                        reason={startupProfile?.rejectionReason}
-                        onRedirect={activeSection === 'complete-info' ? null : () => setActiveSection('complete-info')}
-                    />
-                </div>
-            )}
+            {profileReady && startupProfileStatus && startupProfileStatus.toUpperCase() !== 'APPROVED' &&
+                !activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
+                    <div style={{ padding: '0', marginBottom: '0', width: '100%' }}>
+                        <StartupProfileBanner
+                            status={startupProfileStatus}
+                            approvalStatus={displayProfile?.approvalStatus}
+                            reason={displayProfile?.rejectionReason}
+                            onRedirect={activeSection === 'complete-info' ? null : () => setActiveSection('complete-info')}
+                        />
+                    </div>
+                )}
 
             {activeSection !== 'pr_news' && (
                 <div className={`${activeSection.startsWith('project_') ? styles.contentFull : styles.content} ${styles.scrollableSection}`}>
@@ -2064,6 +1733,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                 user={user}
                                 onSuccess={(data) => {
                                     setStartupProfile(data);
+                                    refreshProfile(); // Sync global state
                                     setSuccessMessage('Cập nhật thông tin startup thành công!');
                                     setShowSuccessModal(true);
                                 }}
@@ -2107,7 +1777,19 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                 />
                             }
                         >
-                            {isLoadingInitialData ? (
+                            {dashboardError ? (
+                                <div className={styles.card} style={{ padding: '40px', textAlign: 'center', border: '1px solid #fee2e2', backgroundColor: 'rgba(239, 68, 68, 0.05)' }}>
+                                    <AlertCircle size={48} style={{ margin: '0 auto 16px', color: '#ef4444' }} />
+                                    <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Lỗi tải dữ liệu</h3>
+                                    <p style={{ margin: '0 0 24px 0', color: 'var(--text-secondary)' }}>{dashboardError}</p>
+                                    <button 
+                                        onClick={handleRetryDashboard}
+                                        style={{ padding: '8px 24px', backgroundColor: 'var(--primary-blue)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
+                                    >
+                                        Thử lại
+                                    </button>
+                                </div>
+                            ) : isLoadingInitialData ? (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
                                     {[1, 2, 3, 4].map(i => (
                                         <div key={i} className={kanban.skeletonCard} style={{ height: '180px' }}><div className={kanban.shimmer}></div></div>
@@ -2529,9 +2211,9 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                     )}
 
                     {activeSection === 'account_profile' && (
-                        <AccountProfileTab 
-                            user={user} 
-                            onLogout={onLogout} 
+                        <AccountProfileTab
+                            user={user}
+                            onLogout={onLogout}
                         />
                     )}
 
@@ -2549,7 +2231,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                     {/* Deals Approval Section */}
                     {activeSection === 'deals' && (
                         <DashboardSection
-                            title="Đầu tư & Ký kết"
+                            title="Thỏa thuận đầu tư"
                             topBarExtra={
                                 <div className={styles.searchWrapper} style={{ position: 'relative', width: isMobile ? '100%' : '300px' }}>
                                     <Search className={styles.searchIcon} size={16} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: 'var(--text-secondary)' }} />
@@ -2604,23 +2286,8 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                             {!isLoadingDeals && filteredDeals.length > 0 && (
                                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px' }}>
                                     {filteredDeals.map(deal => {
-                                        const statusMap = {
-                                            0: { label: 'Chờ xác nhận', color: '#f59e0b' },
-                                            'Pending': { label: 'Chờ xác nhận', color: '#f59e0b' },
-                                            1: { label: 'Đã xác nhận', color: '#10b981' },
-                                            'Confirmed': { label: 'Đã xác nhận', color: '#10b981' },
-                                            2: { label: 'Chờ ký từ Startup', color: '#f97316' },
-                                            'Waiting_For_Startup_Signature': { label: 'Chờ ký từ Startup', color: '#f97316' },
-                                            3: { label: 'Đã ký kết', color: '#667eea' },
-                                            'Contract_Signed': { label: 'Đã ký kết', color: '#667eea' },
-                                            4: { label: 'Đã mint NFT', color: '#8b5cf6' },
-                                            'Minted_NFT': { label: 'Đã mint NFT', color: '#8b5cf6' },
-                                            5: { label: 'Bị từ chối', color: '#ef4444' },
-                                            'Rejected': { label: 'Bị từ chối', color: '#ef4444' },
-                                            6: { label: 'Thất bại', color: '#dc2626' },
-                                            'Failed': { label: 'Thất bại', color: '#dc2626' }
-                                        };
-                                        const statusInfo = statusMap[deal.status] || { label: 'Không xác định', color: '#64748b' };
+                                        const statusInfo = getDealStatusInfo(deal.status);
+                                        const isCompletedDeal = statusInfo.value === 4 || deal.isCompleted === true;
 
                                         return (
                                             <div
@@ -2680,180 +2347,61 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                                 </div>
 
                                                 {/* Deal Details */}
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                                    {deal.investmentAmount && (
-                                                        <div style={{ backgroundColor: 'rgba(16, 185, 129, 0.1)', padding: '10px', borderRadius: '6px' }}>
-                                                            <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Số tiền</div>
-                                                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#10b981' }}>
-                                                                {deal.investmentAmount.toLocaleString('vi-VN')} VNĐ
-                                                            </div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px' }}>
+                                                    <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '10px', borderRadius: '6px' }}>
+                                                        <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Ngày gửi yêu cầu</div>
+                                                        <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
+                                                            {new Date(deal.dealDate || deal.createdAt || Date.now()).toLocaleDateString('vi-VN')}
                                                         </div>
-                                                    )}
-                                                    {deal.createdAt && (
-                                                        <div style={{ backgroundColor: 'var(--bg-secondary)', padding: '10px', borderRadius: '6px' }}>
-                                                            <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '2px' }}>Ngày tạo</div>
-                                                            <div style={{ fontSize: '13px', fontWeight: '700', color: 'var(--text-primary)' }}>
-                                                                {new Date(deal.createdAt).toLocaleDateString('vi-VN')}
-                                                            </div>
-                                                        </div>
-                                                    )}
+                                                    </div>
                                                 </div>
 
                                                 {/* Actions */}
-                                                <div style={{ display: 'flex', gap: '8px', marginTop: 'auto', flexWrap: 'wrap' }}>
-                                                    {(deal.status === 'Pending' || deal.status === 0) && (
-                                                        <>
-                                                            <button
-                                                                style={{
-                                                                    flex: 1,
-                                                                    padding: '8px 12px',
-                                                                    backgroundColor: '#10b981',
-                                                                    color: '#fff',
-                                                                    border: 'none',
-                                                                    borderRadius: '4px',
-                                                                    fontSize: '12px',
-                                                                    fontWeight: '600',
-                                                                    cursor: 'pointer',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    gap: '4px',
-                                                                    transition: 'all 0.2s',
-                                                                    opacity: isRespondingToDeal === deal.dealId ? 0.7 : 1
-                                                                }}
-                                                                onClick={() => handleApproveDeal(deal.dealId)}
-                                                                disabled={isRespondingToDeal === deal.dealId}
-                                                            >
-                                                                {isRespondingToDeal === deal.dealId ? (
-                                                                    <>
-                                                                        <Loader2 size={12} className={styles.spinner} />
-                                                                        Xử lý...
-                                                                    </>
-                                                                ) : (
-                                                                    <>✓ Chấp nhận</>
-                                                                )}
-                                                            </button>
-                                                            <button
-                                                                style={{
-                                                                    flex: 1,
-                                                                    padding: '8px 12px',
-                                                                    backgroundColor: '#cbd5e1',
-                                                                    color: '#475569',
-                                                                    border: 'none',
-                                                                    borderRadius: '4px',
-                                                                    fontSize: '12px',
-                                                                    fontWeight: '600',
-                                                                    cursor: 'pointer',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    gap: '4px',
-                                                                    transition: 'all 0.2s',
-                                                                    opacity: isRespondingToDeal === deal.dealId ? 0.7 : 1
-                                                                }}
-                                                                onClick={() => handleOpenRejectDealModal(deal.dealId)}
-                                                                disabled={isRespondingToDeal === deal.dealId}
-                                                            >
-                                                                {isRespondingToDeal === deal.dealId ? (
-                                                                    <>
-                                                                        <Loader2 size={12} className={styles.spinner} />
-                                                                        Xử lý...
-                                                                    </>
-                                                                ) : (
-                                                                    <>✗ Từ chối</>
-                                                                )}
-                                                            </button>
-                                                        </>
-                                                    )}
-
-                                                    {(deal.status === 'Confirmed' || deal.status === 1) && (
+                                                <div style={{ display: 'flex', gap: '8px', marginTop: 'auto' }}>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => handleShowContractPreview(deal)}
+                                                        style={{
+                                                            flex: 1,
+                                                            padding: '9px 12px',
+                                                            backgroundColor: '#0ea5e9',
+                                                            color: '#fff',
+                                                            border: 'none',
+                                                            borderRadius: '6px',
+                                                            fontSize: '12px',
+                                                            fontWeight: '600',
+                                                            cursor: 'pointer',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            gap: '6px'
+                                                        }}
+                                                    >
+                                                        <FileText size={14} />
+                                                        Xem hợp đồng
+                                                    </button>
+                                                    {isCompletedDeal && (
                                                         <button
+                                                            type="button"
+                                                            onClick={() => handleVerifyDealOnchain(deal.dealId)}
                                                             style={{
                                                                 flex: 1,
-                                                                padding: '8px 12px',
-                                                                backgroundColor: '#0ea5e9',
-                                                                color: '#fff',
-                                                                border: 'none',
-                                                                borderRadius: '4px',
-                                                                fontSize: '12px',
-                                                                fontWeight: '600',
-                                                                cursor: 'pointer',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                gap: '4px',
-                                                                transition: 'all 0.2s'
-                                                            }}
-                                                            onClick={() => handleShowContractPreview(deal)}
-                                                        >
-                                                            📄 Ký hợp đồng
-                                                        </button>
-                                                    )}
-
-                                                    {(deal.status === 'Waiting_For_Startup_Signature' || deal.status === 2) && (
-                                                        <button
-                                                            style={{
-                                                                flex: 1,
-                                                                padding: '8px 12px',
-                                                                backgroundColor: '#0ea5e9',
-                                                                color: '#fff',
-                                                                border: 'none',
-                                                                borderRadius: '4px',
-                                                                fontSize: '12px',
-                                                                fontWeight: '600',
-                                                                cursor: 'pointer',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                gap: '4px',
-                                                                transition: 'all 0.2s'
-                                                            }}
-                                                            onClick={() => handleShowContractPreview(deal)}
-                                                        >
-                                                            ✓ Xem & Ký
-                                                        </button>
-                                                    )}
-
-                                                    {(deal.status === 'Contract_Signed' || deal.status === 3) && (
-                                                        <button
-                                                            style={{
-                                                                flex: 1,
-                                                                padding: '8px 12px',
+                                                                padding: '9px 12px',
                                                                 backgroundColor: '#10b981',
                                                                 color: '#fff',
                                                                 border: 'none',
-                                                                borderRadius: '4px',
+                                                                borderRadius: '6px',
                                                                 fontSize: '12px',
                                                                 fontWeight: '600',
                                                                 cursor: 'pointer',
                                                                 display: 'flex',
                                                                 alignItems: 'center',
                                                                 justifyContent: 'center',
-                                                                gap: '4px',
-                                                                transition: 'all 0.2s'
+                                                                gap: '6px'
                                                             }}
-                                                            onClick={() => handleShowContractPreview(deal)}
                                                         >
-                                                            📄 Xem hợp đồng
-                                                        </button>
-                                                    )}
-
-                                                    {(deal.status === 'Minted_NFT' || deal.status === 4 || deal.status === 'Failed' || deal.status === 6) && (
-                                                        <button
-                                                            style={{
-                                                                flex: 1,
-                                                                padding: '8px 12px',
-                                                                backgroundColor: 'var(--bg-secondary)',
-                                                                color: 'var(--text-secondary)',
-                                                                border: '1px solid var(--border-color)',
-                                                                borderRadius: '4px',
-                                                                fontSize: '12px',
-                                                                fontWeight: '600',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                            onClick={() => handleShowContractPreview(deal)}
-                                                        >
-                                                            📄 Chi tiết
+                                                            <Shield size={14} />
+                                                            Xác thực blockchain
                                                         </button>
                                                     )}
                                                 </div>
@@ -2892,6 +2440,13 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                             user={user}
                             initialData={startupProfile}
                             onSubmit={async (formData) => {
+                                // Block update while profile is pending review
+                                const currentStatus = startupProfile?.status ?? startupProfile?.approvalStatus;
+                                if (currentStatus === 'Pending') {
+                                    showRestrictedActionModal('cập nhật hồ sơ trong khi đang chờ xét duyệt. Vui lòng đợi kết quả từ đội ngũ AISEP.');
+                                    return;
+                                }
+
                                 try {
                                     // Make API request here
                                     const payload = {
@@ -2913,6 +2468,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                     }
 
                                     setStartupProfile(result);
+                                    refreshProfile(); // Sync global state
                                     setSuccessMessage('Lưu thông tin hồ sơ thành công.');
                                     setShowSuccessModal(true);
                                 } catch (error) {
@@ -3762,376 +3318,108 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                 />
             )}
 
-            {showRejectDealModal && (
-                <div className={styles.modalOverlay} onClick={handleCloseRejectDealModal}>
-                    <div className={styles.modalContent} style={{ maxWidth: '520px', padding: '20px 22px' }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>Từ chối đề nghị đầu tư</h3>
-                            <button
-                                type="button"
-                                className={styles.modalCloseBtn}
-                                onClick={handleCloseRejectDealModal}
-                                disabled={!!isRespondingToDeal}
-                            >
+            {showContractModal && contractDealData && (
+                <div className={styles.modalOverlay} onClick={handleCloseContractModal}>
+                    <div className={styles.modalContent} style={{ maxWidth: '680px', padding: '20px' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800, color: 'var(--text-primary)' }}>Xem hợp đồng yêu cầu đầu tư</h3>
+                            <button type="button" className={styles.modalCloseBtn} onClick={handleCloseContractModal} disabled={isVerifyingDealFromModal}>
                                 <X size={18} />
                             </button>
                         </div>
-                        <p style={{ margin: '0 0 14px 0', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                            Lý do này sẽ được gửi cho nhà đầu tư để họ biết vì sao đề nghị chưa phù hợp.
-                        </p>
 
-                        <div className={styles.formGroup} style={{ marginBottom: '18px' }}>
-                            <label>Lý do từ chối *</label>
+                        <div style={{ fontSize: '14px', color: 'var(--text-secondary)', marginBottom: '14px' }}>
+                            Nhà đầu tư: <strong style={{ color: 'var(--text-primary)' }}>{contractDealData.investorName || 'N/A'}</strong> - Deal #{contractDealData.dealId}
+                        </div>
+
+                        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '10px', padding: '14px', marginBottom: '14px' }}>
+                            {contractDealData.documentUrl ? (
+                                <>
+                                    <div
+                                        role="button"
+                                        tabIndex={0}
+                                        onClick={() => setShowDealDocumentLightbox(true)}
+                                        onKeyDown={(e) => {
+                                            if (e.key === 'Enter' || e.key === ' ') {
+                                                e.preventDefault();
+                                                setShowDealDocumentLightbox(true);
+                                            }
+                                        }}
+                                        style={{
+                                            width: '100%',
+                                            height: '280px',
+                                            borderRadius: '10px',
+                                            overflow: 'hidden',
+                                            cursor: 'zoom-in',
+                                            border: '1px solid rgba(148, 163, 184, 0.35)',
+                                            backgroundColor: '#fff',
+                                            marginBottom: '10px'
+                                        }}
+                                        title="Bấm để phóng to tài liệu"
+                                    >
+                                        {isImageDocumentUrl(contractDealData.documentUrl) ? (
+                                            <img
+                                                src={contractDealData.documentUrl}
+                                                alt={`Tài liệu deal #${contractDealData.dealId}`}
+                                                style={{ width: '100%', height: '100%', objectFit: 'contain' }}
+                                            />
+                                        ) : (
+                                            <iframe
+                                                src={contractDealData.documentUrl}
+                                                title={`preview-deal-${contractDealData.dealId}`}
+                                                style={{ width: '100%', height: '100%', border: 'none' }}
+                                            />
+                                        )}
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                        <span style={{ fontSize: '12px', color: 'var(--text-secondary)' }}>Đây là bản xem nhanh. Bấm vào khung để xem lớn.</span>
+                                        <a href={contractDealData.documentUrl} target="_blank" rel="noreferrer" style={{ fontSize: '12px', fontWeight: 700, color: 'var(--primary-blue)', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                            <ExternalLink size={12} />
+                                            Mở tab mới
+                                        </a>
+                                    </div>
+                                </>
+                            ) : (
+                                <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Nhà đầu tư chưa tải tài liệu lên.</p>
+                            )}
+                        </div>
+
+                        <div className={styles.formGroup} style={{ marginBottom: '16px' }}>
+                            <label>Lý do từ chối (bắt buộc khi bấm Từ chối)</label>
                             <textarea
                                 value={rejectReason}
                                 onChange={(e) => setRejectReason(e.target.value)}
-                                placeholder="Ví dụ: Startup chưa phù hợp mức định giá/điều khoản đầu tư hiện tại."
-                                rows={4}
+                                placeholder="Nhập lý do nếu bạn muốn từ chối yêu cầu đầu tư"
+                                rows={3}
                                 maxLength={1000}
-                                disabled={!!isRespondingToDeal}
-                                style={{
-                                    minHeight: '110px',
-                                    resize: 'vertical',
-                                    borderRadius: '10px',
-                                    border: '1px solid var(--border-color, #e2e8f0)',
-                                    background: 'var(--bg-secondary)',
-                                    padding: '12px 14px',
-                                    fontSize: '14px',
-                                    lineHeight: 1.45
-                                }}
+                                disabled={isVerifyingDealFromModal}
                             />
-                            <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'right' }}>
-                                {rejectReason.trim().length}/1000 ký tự
-                            </div>
                         </div>
 
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '2px' }}>
-                            <button
-                                type="button"
-                                className={styles.secondaryBtn}
-                                onClick={handleCloseRejectDealModal}
-                                disabled={!!isRespondingToDeal}
-                                style={{
-                                    minWidth: '96px',
-                                    borderRadius: '10px',
-                                    height: '40px'
-                                }}
-                            >
-                                Hủy
+                        <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+                            {(getDealStatusInfo(contractDealData.status).value === 4 || contractDealData.isCompleted === true) && (
+                                <button type="button" className={styles.secondaryBtn} onClick={() => handleVerifyDealOnchain(contractDealData.dealId)} disabled={isVerifyingDealFromModal}>
+                                    Xác thực blockchain
+                                </button>
+                            )}
+                            <button type="button" className={styles.secondaryBtn} onClick={handleCloseContractModal} disabled={isVerifyingDealFromModal}>
+                                Đóng
                             </button>
                             <button
                                 type="button"
                                 className={styles.dangerBtn}
-                                onClick={() => handleRejectDeal(rejectDealId)}
-                                disabled={!rejectDealId || !rejectReason.trim() || !!isRespondingToDeal}
-                                style={{
-                                    minWidth: '152px',
-                                    borderRadius: '10px',
-                                    height: '40px',
-                                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                                    border: 'none',
-                                    color: '#fff',
-                                    fontWeight: 600
-                                }}
+                                onClick={() => handleVerifyDealFromModal(false)}
+                                disabled={isVerifyingDealFromModal}
                             >
-                                {isRespondingToDeal ? (
-                                    <>
-                                        <Loader2 size={14} className={styles.spinner} />
-                                        Đang gửi...
-                                    </>
-                                ) : (
-                                    'Gửi từ chối'
-                                )}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Contract Preview Modal - Modernized */}
-            {showContractModal && contractPreviewHtml && (
-                <div className={contractStyles.modalOverlay} onClick={handleCloseContractModal}>
-                    <div className={contractStyles.modalContent} onClick={(e) => e.stopPropagation()}>
-                        {/* Header */}
-                        <div className={contractStyles.header}>
-                            <div className={contractStyles.headerInfo}>
-                                <h2>Ký hợp đồng đầu tư</h2>
-                                {contractDealData && (
-                                    <p>
-                                        Nhà đầu tư: <strong>{contractDealData.investorName || 'Nhà đầu tư'}</strong> • Số tiền: <strong>{contractDealData.investmentAmount?.toLocaleString('vi-VN')} VND</strong>
-                                    </p>
-                                )}
-                            </div>
-                            <button className={contractStyles.closeBtn} onClick={handleCloseContractModal}>
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        {/* Body: Two Column / Stacked */}
-                        <div className={contractStyles.body}>
-                            {/* Left: Contract Preview */}
-                            <div className={contractStyles.previewColumn}>
-                                <div className={contractStyles.sectionTitle}>
-                                    <FileText size={16} /> Hợp đồng đầu tư
-                                </div>
-                                {isLoadingContract ? (
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '300px', color: 'var(--text-secondary)' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '8px' }}>
-                                            <Loader2 size={24} className="animate-spin" />
-                                            <span>Đang tải hợp đồng...</span>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <div
-                                        className={contractStyles.contractPaper}
-                                        dangerouslySetInnerHTML={{ __html: contractPreviewHtml }}
-                                    />
-                                )}
-                            </div>
-
-                            {/* Right: Signing Form - Only show when NOT Signed */}
-                            {![3, 4, '3', '4', 'Contract_Signed', 'Minted_NFT'].includes(contractStatus) && (
-                                <div className={contractStyles.formColumn}>
-                                    <div className={contractStyles.sectionTitle}>
-                                        <Settings size={16} /> Điều khoản ký kết
-                                    </div>
-
-                                    {/* Final Amount - Only for Investor (or if editable) */}
-                                    {(!contractStatus || contractStatus < 2) && (
-                                        <>
-                                            <div className={styles.formGroup}>
-                                                <label>Số tiền cuối cùng (VND) *</label>
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={signFormData.finalAmount || ''}
-                                                    onChange={(e) => setSignFormData({ ...signFormData, finalAmount: e.target.value ? parseFloat(e.target.value) : 0 })}
-                                                    placeholder="Nhập số tiền"
-                                                />
-                                            </div>
-
-                                            <div className={styles.formGroup}>
-                                                <label>Phần trăm cổ phần (%) *</label>
-                                                <input
-                                                    type="number"
-                                                    step="0.01"
-                                                    value={signFormData.finalEquityPercentage || ''}
-                                                    onChange={(e) => setSignFormData({ ...signFormData, finalEquityPercentage: e.target.value ? parseFloat(e.target.value) : 0 })}
-                                                    placeholder="Nhập phần trăm"
-                                                />
-                                            </div>
-
-                                            <div className={styles.formGroup}>
-                                                <label>Điều khoản bổ sung</label>
-                                                <textarea
-                                                    value={signFormData.additionalTerms}
-                                                    onChange={(e) => setSignFormData({ ...signFormData, additionalTerms: e.target.value })}
-                                                    placeholder="Nhập các điều khoản bổ sung (nếu có)"
-                                                    rows={4}
-                                                />
-                                            </div>
-                                        </>
-                                    )}
-
-                                    {/* Signature Section */}
-                                    <div className={styles.formGroup}>
-                                        <label>Chữ ký (vẽ bên dưới) *</label>
-                                        <div className={contractStyles.signaturePaper}>
-                                            <SignatureCanvas
-                                                ref={signatureCanvasRef}
-                                                onEnd={handleSignatureChange}
-                                                penColor="#000"
-                                                canvasProps={{
-                                                    width: 400,
-                                                    height: 150,
-                                                    className: 'signature-canvas',
-                                                    style: {
-                                                        display: 'block',
-                                                        backgroundColor: '#fff',
-                                                        cursor: 'crosshair',
-                                                        touchAction: 'none'
-                                                    }
-                                                }}
-                                            />
-                                        </div>
-
-                                        <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
-                                            <button
-                                                type="button"
-                                                onClick={handleClearSignature}
-                                                className={styles.dangerBtn}
-                                                style={{ flex: 1, padding: '10px' }}
-                                            >
-                                                <Trash2 size={16} /> Xóa chữ ký
-                                            </button>
-                                            <button
-                                                type="button"
-                                                onClick={handleSaveSignature}
-                                                disabled={signFormData.signatureBase64 || isSignatureEmpty}
-                                                className={styles.primaryBtn}
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '10px',
-                                                    backgroundColor: signFormData.signatureBase64 ? '#10b981' : undefined,
-                                                    opacity: signFormData.signatureBase64 ? 0.8 : (isSignatureEmpty ? 0.5 : 1),
-                                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)'
-                                                }}
-                                            >
-                                                {signFormData.signatureBase64 ? (
-                                                    <><CheckCircle size={16} /> Đã lưu chữ ký</>
-                                                ) : (
-                                                    <><Check size={16} /> Lưu chữ ký</>
-                                                )}
-                                            </button>
-                                        </div>
-
-                                        <div className={contractStyles.signatureHint}>
-                                            <Info size={16} />
-                                            <div>
-                                                Vẽ chữ ký ở trên rồi click <b>"Lưu chữ ký"</b> để xác nhận.
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-                        </div>
-
-                        {/* Footer */}
-                        <div className={contractStyles.footer}>
-                            <button
-                                onClick={handleCloseContractModal}
-                                className={styles.secondaryBtn}
-                                style={{ padding: '10px 24px' }}
-                            >
-                                Hủy
-                            </button>
-
-                            {contractStatus === 'Contract_Signed' && contractDealData?.contractPdfUrl && (
-                                <a
-                                    href={contractDealData.contractPdfUrl}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    download={`DEAL-${contractDealData.dealId}.pdf`}
-                                    className={styles.primaryBtn}
-                                    style={{ padding: '10px 24px', backgroundColor: '#3b82f6' }}
-                                >
-                                    <Download size={16} /> Tải hợp đồng
-                                </a>
-                            )}
-
-                            {contractStatus !== 'Contract_Signed' && (
-                                <>
-                                    {['Waiting_For_Startup_Signature', 2, '2'].includes(contractStatus) && (
-                                        <button
-                                            onClick={handleOpenRejectContractModal}
-                                            disabled={isSigningContract || isRejectingContract}
-                                            className={styles.dangerBtn}
-                                            style={{ padding: '10px 22px' }}
-                                        >
-                                            <XCircle size={16} /> Hủy ký hợp đồng
-                                        </button>
-                                    )}
-                                    <button
-                                        onClick={handleSignContractAsStartup}
-                                        disabled={isSigningContract || isRejectingContract}
-                                        className={styles.primaryBtn}
-                                        style={{ padding: '10px 32px' }}
-                                    >
-                                        {isSigningContract ? (
-                                            <>
-                                                <Loader2 size={16} className="animate-spin" />
-                                                Đang ký...
-                                            </>
-                                        ) : (
-                                            <><Check size={16} /> Ký (Startup)</>
-                                        )}
-                                    </button>
-                                </>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {showRejectContractModal && (
-                <div className={styles.modalOverlay} onClick={handleCloseRejectContractModal}>
-                    <div className={styles.modalContent} style={{ maxWidth: '520px', padding: '20px 22px' }} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 700, color: 'var(--text-primary)' }}>Hủy ký hợp đồng</h3>
-                            <button
-                                type="button"
-                                className={styles.modalCloseBtn}
-                                onClick={handleCloseRejectContractModal}
-                                disabled={isRejectingContract}
-                            >
-                                <X size={18} />
-                            </button>
-                        </div>
-
-                        <p style={{ margin: '0 0 14px 0', fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
-                            Lý do từ chối sẽ được gửi cho nhà đầu tư và hiển thị ở deal bị từ chối.
-                        </p>
-
-                        <div className={styles.formGroup} style={{ marginBottom: '18px' }}>
-                            <label>Lý do từ chối hợp đồng *</label>
-                            <textarea
-                                value={rejectContractReason}
-                                onChange={(e) => setRejectContractReason(e.target.value)}
-                                placeholder="Ví dụ: Điều khoản số tiền/cổ phần trong hợp đồng chưa đúng với thỏa thuận."
-                                rows={4}
-                                maxLength={1000}
-                                disabled={isRejectingContract}
-                                style={{
-                                    minHeight: '110px',
-                                    resize: 'vertical',
-                                    borderRadius: '10px',
-                                    border: '1px solid var(--border-color, #e2e8f0)',
-                                    background: 'var(--bg-secondary)',
-                                    padding: '12px 14px',
-                                    fontSize: '14px',
-                                    lineHeight: 1.45
-                                }}
-                            />
-                            <div style={{ marginTop: '6px', fontSize: '12px', color: 'var(--text-secondary)', textAlign: 'right' }}>
-                                {rejectContractReason.trim().length}/1000 ký tự
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                            <button
-                                type="button"
-                                className={styles.secondaryBtn}
-                                onClick={handleCloseRejectContractModal}
-                                disabled={isRejectingContract}
-                                style={{ minWidth: '96px', borderRadius: '10px', height: '40px' }}
-                            >
-                                Hủy
+                                {isVerifyingDealFromModal ? <><Loader2 size={14} className={styles.spinner} /> Đang xử lý...</> : 'Từ chối'}
                             </button>
                             <button
                                 type="button"
-                                className={styles.dangerBtn}
-                                onClick={handleRejectContractAsStartup}
-                                disabled={!rejectContractReason.trim() || isRejectingContract}
-                                style={{
-                                    minWidth: '170px',
-                                    borderRadius: '10px',
-                                    height: '40px',
-                                    background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                                    border: 'none',
-                                    color: '#fff',
-                                    fontWeight: 600
-                                }}
+                                className={styles.primaryBtn}
+                                onClick={() => handleVerifyDealFromModal(true)}
+                                disabled={isVerifyingDealFromModal}
                             >
-                                {isRejectingContract ? (
-                                    <>
-                                        <Loader2 size={14} className={styles.spinner} />
-                                        Đang gửi...
-                                    </>
-                                ) : (
-                                    <>
-                                        <AlertCircle size={14} /> Gửi từ chối hợp đồng
-                                    </>
-                                )}
+                                {isVerifyingDealFromModal ? <><Loader2 size={14} className={styles.spinner} /> Đang xử lý...</> : 'Chấp nhận'}
                             </button>
                         </div>
                     </div>
@@ -4282,6 +3570,68 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                 </div>
             )}
 
+            {showDealDocumentLightbox && showContractModal && contractDealData?.documentUrl && (
+                <div className={styles.imageLightbox} onClick={() => setShowDealDocumentLightbox(false)}>
+                    <div className={styles.lightboxOverlay} />
+                    <button
+                        className={styles.lightboxClose}
+                        onClick={() => setShowDealDocumentLightbox(false)}
+                        title="Đóng"
+                    >
+                        <X size={32} />
+                    </button>
+                    <div
+                        className={styles.lightboxContent}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{ width: 'min(1200px, 92vw)', height: 'min(86vh, 900px)', maxWidth: 'none' }}
+                    >
+                        {isImageDocumentUrl(contractDealData.documentUrl) ? (
+                            <img
+                                src={contractDealData.documentUrl}
+                                alt={`Tài liệu deal #${contractDealData.dealId}`}
+                                className={styles.lightboxImage}
+                                style={{ objectFit: 'contain' }}
+                            />
+                        ) : (
+                            <iframe
+                                src={contractDealData.documentUrl}
+                                title={`deal-document-${contractDealData.dealId}`}
+                                style={{ width: '100%', height: '100%', border: 'none', borderRadius: '12px', backgroundColor: '#fff' }}
+                            />
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {showOnchainResultModal && onchainResultData && (
+                <div className={styles.modalOverlay} onClick={() => setShowOnchainResultModal(false)}>
+                    <div className={styles.modalContent} style={{ maxWidth: '720px', height: 'auto', maxHeight: '88vh' }} onClick={(e) => e.stopPropagation()}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>Kết quả xác thực blockchain</h3>
+                            <button className={styles.modalCloseBtn} onClick={() => setShowOnchainResultModal(false)}><X size={18} /></button>
+                        </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                            <div><strong>Deal ID:</strong> {onchainResultData.dealId ?? '-'}</div>
+                            <div><strong>Đã xác minh:</strong> {onchainResultData.isVerified ? 'Có' : 'Chưa'}</div>
+                            <div style={{ gridColumn: '1 / -1' }}><strong>Thông điệp:</strong> {onchainResultData.message || '-'}</div>
+                            <div style={{ gridColumn: '1 / -1', wordBreak: 'break-all' }}><strong>Document Hash:</strong> {onchainResultData.documentHash || '-'}</div>
+                            <div style={{ gridColumn: '1 / -1', wordBreak: 'break-all' }}><strong>Investor Wallet:</strong> {onchainResultData.investorWallet || '-'}</div>
+                            <div style={{ gridColumn: '1 / -1' }}><strong>Thời gian on-chain:</strong> {onchainResultData.timestampOnBlockchain || '-'}</div>
+                            <div style={{ gridColumn: '1 / -1', wordBreak: 'break-all' }}><strong>Owners:</strong> {(onchainResultData.owners || []).join(', ') || '-'}</div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <a href={onchainResultData.explorerLink} target="_blank" rel="noreferrer" className={styles.primaryBtn}>
+                                <ExternalLink size={14} /> Xem trực tiếp trên Blockchain Explorer
+                            </a>
+                            <button className={styles.secondaryBtn} onClick={() => setShowOnchainResultModal(false)}>Đóng</button>
+                        </div>
+                        <p style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                            Ghi chú: Nếu trạng thái đã xác minh, dữ liệu hợp đồng đã được ghi nhận trên blockchain và có thể tự kiểm tra công khai bằng liên kết ở trên.
+                        </p>
+                    </div>
+                </div>
+            )}
+
             <FloatingChatWidget
                 chatSessionId={activeChatSession?.chatSessionId}
                 displayName={activeChatSession?.displayName}
@@ -4303,8 +3653,8 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
 
             {/* PR News Section — direct child of container, no styles.content padding */}
             {activeSection === 'pr_news' && (
-                <NewsPRSection 
-                    user={user} 
+                <NewsPRSection
+                    user={user}
                     onOpenChat={(chatSessionId, notification) => {
                         setActiveChatSession({
                             chatSessionId,

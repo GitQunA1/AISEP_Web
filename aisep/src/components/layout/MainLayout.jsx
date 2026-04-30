@@ -21,7 +21,7 @@ import apiDebug from '../../utils/apiDebug';
 import { apiClient } from '../../services/apiClient';
 import InvestorStatusBanner from '../common/InvestorStatusBanner';
 import AdvisorsPage from '../../pages/AdvisorsPage';
-import advisorService from '../../services/advisorService';
+// advisorService import removed — profile fetch delegated to ProfileContext
 import AdvisorDetailView from '../profile/AdvisorDetailView';
 import InvestorDiscovery from '../investors/InvestorDiscovery';
 import AIChatAssistant from '../../pages/AIChatAssistant';
@@ -35,6 +35,7 @@ import SuccessModal from '../common/SuccessModal';
 import RestrictedActionModal from '../common/RestrictedActionModal.jsx';
 import StartupProfileBanner from '../startup/StartupProfileBanner';
 import AdvisorProfileBanner from '../advisor/AdvisorProfileBanner';
+import { useProfile } from '../../context/ProfileContext';
 
 /**
  * MainLayout Component - Main application layout
@@ -79,14 +80,25 @@ function MainLayout({
   const [isReturning, setIsReturning] = useState(false);
   const [activeChatSession, setActiveChatSession] = useState(null);
   const [myStartupProfileId, setMyStartupProfileId] = useState(null);
-  const [investorProfileStatus, setInvestorProfileStatus] = useState(null); // 'Pending', 'Approved', 'Rejected', 'Missing' or null
-  const [investorProfile, setInvestorProfile] = useState(null);
-  const [startupProfileStatus, setStartupProfileStatus] = useState(null); // 'Pending', 'Approved', 'Rejected', 'Missing'
-  const [startupProfile, setStartupProfile] = useState(null);
-  const [advisorProfileStatus, setAdvisorProfileStatus] = useState(null);
-  const [advisorProfile, setAdvisorProfile] = useState(null);
   const [showRestrictedModal, setShowRestrictedModal] = useState(false);
   const [restrictedActionMessage, setRestrictedActionMessage] = useState('');
+
+  // ---- Global profile state from ProfileContext ----
+  const {
+    startupProfile,
+    startupProfileStatus,
+    isStartupApproved,
+    investorProfile,
+    investorProfileStatus,
+    isInvestorApproved,
+    advisorProfile,
+    advisorProfileStatus,
+    isAdvisorApproved,
+    profileLoading,
+  } = useProfile();
+
+  // Helper: only show banner AFTER profile status is known (not during initial load)
+  const profileReady = !profileLoading;
 
   const mainContentRef = useRef(null);
   const homeScrollPos = useRef(0);
@@ -98,10 +110,6 @@ function MainLayout({
     activeView: activeView
   });
 
-  const isInvestorApproved = investorProfileStatus === 'Approved' || investorProfileStatus === 1 || investorProfile?.status === 'Approved' || investorProfile?.status === 1 || investorProfile?.approvalStatus === 'Approved' || investorProfile?.approvalStatus === 1;
-  const isStartupApproved = startupProfileStatus === 'Approved' || startupProfileStatus === 1 || startupProfile?.status === 'Approved' || startupProfile?.status === 1 || startupProfile?.approvalStatus === 'Approved' || startupProfile?.approvalStatus === 1;
-  const isAdvisorApproved = advisorProfileStatus === 'Approved' || advisorProfileStatus === 1 || advisorProfile?.status === 'Approved' || advisorProfile?.status === 1 || advisorProfile?.approvalStatus === 'Approved' || advisorProfile?.approvalStatus === 1;
-  
   const isApproved = (() => {
     const roleStr = user?.role?.toString().toLowerCase() || '';
     const roleNum = Number(user?.role);
@@ -159,7 +167,7 @@ function MainLayout({
       // RETURNING TO HOME FROM DETAIL: Restore position instantly
       setIsReturning(true);
       setScroll(homeScrollPos.current);
-      
+
       // AUTO-REFRESH investor/feed state when returning to home per user request
       refreshAllFeedData();
     } else if (isDetailView && wasDetailView) {
@@ -232,6 +240,13 @@ function MainLayout({
   const [investedProjectIds, setInvestedProjectIds] = useState(new Set()); // Cache for already invested projects
   const [investorsByProject, setInvestorsByProject] = useState(new Map()); // Map: projectId -> array of investor objects (Contract_Signed only)
 
+  const isActiveInvestmentStatus = (status) => {
+    const normalized = typeof status === 'string' ? status.toLowerCase() : status;
+    // Startup rejection => Canceled should NOT block reinvest.
+    if (normalized === 'canceled' || normalized === 'cancelled' || normalized === 5 || normalized === '5') return false;
+    return true;
+  };
+
   // Refetch invested projects (called after successful investment)
   const refetchInvestedProjects = useCallback(async () => {
     const isInvestor = user && (
@@ -253,7 +268,11 @@ function MainLayout({
           deals = response.data;
         }
       }
-      const ids = new Set(deals.map(d => d.projectId));
+      const ids = new Set(
+        deals
+          .filter((d) => isActiveInvestmentStatus(d.status))
+          .map((d) => d.projectId)
+      );
       setInvestedProjectIds(ids);
       console.log('[MainLayout] Refetched invested project IDs:', ids);
     } catch (error) {
@@ -390,38 +409,25 @@ function MainLayout({
     sort: 'newest',
   });
 
+  // Sync hasStartupProfile and myStartupProfileId from context
   useEffect(() => {
-    const checkProfile = async () => {
-      const userRole = (user?.role !== undefined && user?.role !== null) ? user.role.toString().toLowerCase() : '';
-      if (user && (userRole === 'startup' || userRole === '0') && user.userId) {
-        try {
-          const profile = await startupProfileService.getStartupProfileByUserId(user.userId);
-          const hasProfile = !!profile;
-          setHasStartupProfile(hasProfile);
-          setStartupProfile(profile);
-          if (profile) {
-            setMyStartupProfileId(profile.startupId || profile.id);
-            setStartupProfileStatus(profile.status || profile.approvalStatus || 'Pending');
-          } else {
-            setStartupProfileStatus('Missing');
-          }
-
-          // If redirected with setup=true and no profile, show modal
-          const params = new URLSearchParams(window.location.search);
-          if (!hasProfile && params.get('setup') === 'true') {
-            setShowProfileModal(true);
-            // Clean URL
-            window.history.replaceState({}, document.title, window.location.pathname);
-          }
-        } catch (err) {
-          console.error("Failed to check profile", err);
-        }
-      } else {
-        setHasStartupProfile(true);
+    const userRole = (user?.role !== undefined && user?.role !== null) ? user.role.toString().toLowerCase() : '';
+    if (user && (userRole === 'startup' || userRole === '0')) {
+      const hasProfile = !!startupProfile;
+      setHasStartupProfile(hasProfile);
+      if (startupProfile) {
+        setMyStartupProfileId(startupProfile.startupId || startupProfile.id);
       }
-    };
-    checkProfile();
-  }, [user]);
+      // If redirected with setup=true and no profile, show modal
+      const params = new URLSearchParams(window.location.search);
+      if (!hasProfile && params.get('setup') === 'true') {
+        setShowProfileModal(true);
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }
+    } else {
+      setHasStartupProfile(true);
+    }
+  }, [user, startupProfile]);
 
   // Initial data fetches using refactored callbacks
   useEffect(() => {
@@ -464,7 +470,7 @@ function MainLayout({
             const name = s.organizationName || s.companyName;
             const logo = s.logoUrl || s.logo;
             if (!name) return;
-            
+
             const info = { name, logo };
 
             // Map by all possible ID fields to be safe
@@ -569,50 +575,11 @@ function MainLayout({
       }
     };
 
-    const fetchProfiles = async () => {
-      const isInvestor = user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1;
-      if (token && isInvestor) {
-        try {
-          const res = await investorService.getMyProfile();
-          setInvestorProfile(res);
-          if (res) {
-            setInvestorProfileStatus(res.status || res.approvalStatus || 'Pending');
-          } else {
-            setInvestorProfileStatus('Missing');
-          }
-        } catch (error) {
-          if (error.response?.status === 404) {
-            setInvestorProfileStatus('Missing');
-          } else {
-            console.error('[MainLayout] Failed to fetch investor profile:', error);
-          }
-        }
-      }
-
-      const isAdvisor = user?.role?.toString().toLowerCase() === 'advisor' || Number(user?.role) === 2;
-      if (token && isAdvisor) {
-        try {
-          const res = await advisorService.getMyProfile();
-          setAdvisorProfile(res);
-          if (res) {
-            setAdvisorProfileStatus(res.status || res.approvalStatus || 'Pending');
-          } else {
-            setAdvisorProfileStatus('Missing');
-          }
-        } catch (error) {
-          if (error.response?.status === 404) {
-            setAdvisorProfileStatus('Missing');
-          } else {
-            console.error('[MainLayout] Failed to fetch advisor profile:', error);
-          }
-        }
-      }
-    };
-
     fetchFeed();
     fetchStats();
-    fetchProfiles();
+    // Profile fetching removed — handled globally by ProfileContext
   }, [showAdvisors, showInvestors, user, token]);
+
 
   // 2. Define Handlers
   const toggleMobileMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -804,9 +771,10 @@ function MainLayout({
               }}
               startupBanner={
                 (() => {
+                  if (!profileReady) return null; // still loading — don't flash wrong banner
                   const roleStr = user?.role?.toString().toLowerCase() || '';
                   const roleNum = Number(user?.role);
-                  if ((roleStr === 'startup' || roleNum === 0) && (!startupProfileStatus || startupProfileStatus.toUpperCase() !== 'APPROVED')) {
+                  if ((roleStr === 'startup' || roleNum === 0) && startupProfileStatus && startupProfileStatus.toUpperCase() !== 'APPROVED') {
                     return (
                       <StartupProfileBanner
                         status={startupProfile?.status}
@@ -815,7 +783,7 @@ function MainLayout({
                       />
                     );
                   }
-                  if ((roleStr === 'advisor' || roleNum === 2) && (!advisorProfileStatus || (advisorProfileStatus.toUpperCase() !== 'APPROVED' && advisorProfileStatus !== 1))) {
+                  if ((roleStr === 'advisor' || roleNum === 2) && advisorProfileStatus && advisorProfileStatus.toUpperCase() !== 'APPROVED' && advisorProfileStatus !== 1) {
                     return (
                       <AdvisorProfileBanner
                         status={advisorProfileStatus}
@@ -834,11 +802,21 @@ function MainLayout({
             user={user}
             onShowLogin={onShowLogin}
             onNotificationNavigate={onNotificationNavigate}
+            investorBanner={
+              profileReady && (user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1) ? (
+                <InvestorStatusBanner
+                  status={investorProfileStatus}
+                  reason={investorProfile?.rejectionReason}
+                  onUpdateProfile={() => onShowDashboard('preferences')}
+                />
+              ) : null
+            }
             startupBanner={
               (() => {
+                if (!profileReady) return null; // still loading
                 const roleStr = user?.role?.toString().toLowerCase() || '';
                 const roleNum = Number(user?.role);
-                if ((roleStr === 'startup' || roleNum === 0) && (!startupProfileStatus || startupProfileStatus.toUpperCase() !== 'APPROVED')) {
+                if ((roleStr === 'startup' || roleNum === 0) && startupProfileStatus && startupProfileStatus.toUpperCase() !== 'APPROVED') {
                   return (
                     <StartupProfileBanner
                       status={startupProfile?.status}
@@ -847,7 +825,7 @@ function MainLayout({
                     />
                   );
                 }
-                if ((roleStr === 'advisor' || roleNum === 2) && (!advisorProfileStatus || (advisorProfileStatus.toUpperCase() !== 'APPROVED' && advisorProfileStatus !== 1))) {
+                if ((roleStr === 'advisor' || roleNum === 2) && advisorProfileStatus && advisorProfileStatus.toUpperCase() !== 'APPROVED' && advisorProfileStatus !== 1) {
                   return (
                     <AdvisorProfileBanner
                       status={advisorProfileStatus}
@@ -885,11 +863,14 @@ function MainLayout({
             onShowLogin={onShowLogin}
             isInvestorApproved={isInvestorApproved}
             isStartupApproved={isStartupApproved}
+            isAdvisorApproved={isAdvisorApproved}
             onRestrictedAction={showRestrictedActionModal}
             isFullView={(() => {
               const roleStr = user?.role?.toString().toLowerCase() || '';
               const roleNum = Number(user?.role);
-              return roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleStr === 'advisor' || roleNum === 3 || roleNum === 2;
+              const isStaff = roleStr === 'staff' || roleStr === 'operationstaff' || roleStr === 'operation_staff' || roleNum === 3;
+              const isApprovedAdvisor = (roleStr === 'advisor' || roleNum === 2) && isAdvisorApproved;
+              return isStaff || isApprovedAdvisor;
             })()}
             onUnlock={handleProjectUnlock}
             onBack={() => {
@@ -916,7 +897,7 @@ function MainLayout({
               />
 
               {/* Status Alert Banner (Discovery Tab) */}
-              {(user?.role === 'Investor' || user?.role === 1 || String(user?.role) === '1') && (
+              {profileReady && (user?.role === 'Investor' || user?.role === 1 || String(user?.role) === '1') && (
                 <InvestorStatusBanner
                   status={investorProfileStatus}
                   reason={investorProfile?.rejectionReason}
@@ -924,7 +905,7 @@ function MainLayout({
                 />
               )}
 
-              {(user?.role === 'Startup' || user?.role === 0 || String(user?.role) === '0') && (!startupProfileStatus || startupProfileStatus.toUpperCase() !== 'APPROVED') && (
+              {profileReady && (user?.role === 'Startup' || user?.role === 0 || String(user?.role) === '0') && startupProfileStatus && startupProfileStatus.toUpperCase() !== 'APPROVED' && (
                 <div style={{ marginBottom: '12px', padding: '0' }}>
                   <StartupProfileBanner
                     status={startupProfile?.status}
@@ -935,7 +916,7 @@ function MainLayout({
                 </div>
               )}
 
-              {(user?.role?.toString().toLowerCase() === 'advisor' || Number(user?.role) === 2) && (!advisorProfileStatus || advisorProfileStatus.toUpperCase() !== 'APPROVED' && advisorProfileStatus !== 1) && (
+              {profileReady && (user?.role?.toString().toLowerCase() === 'advisor' || Number(user?.role) === 2) && advisorProfileStatus && advisorProfileStatus.toUpperCase() !== 'APPROVED' && advisorProfileStatus !== 1 && (
                 <div style={{ marginBottom: '12px', padding: '0' }}>
                   <AdvisorProfileBanner
                     status={advisorProfileStatus}
@@ -995,6 +976,15 @@ function MainLayout({
                         }
                       }}
                       onViewProject={(id) => {
+                        const roleStr = user?.role?.toString().toLowerCase() || '';
+                        const roleNum = Number(user?.role);
+                        
+                        // Restriction: Advisors must be approved to even enter the detail view
+                        if ((roleStr === 'advisor' || roleNum === 2) && !isAdvisorApproved) {
+                          showRestrictedActionModal('Bạn cần được phê duyệt hồ sơ Cố vấn để xem chi tiết các dự án.');
+                          return;
+                        }
+
                         // Capture scroll BEFORE state change
                         const isMobile = window.innerWidth < 1024;
                         const scrollPos = isMobile ? window.scrollY : (mainContentRef.current ? mainContentRef.current.scrollTop : 0);

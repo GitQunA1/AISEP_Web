@@ -28,6 +28,7 @@ import AccountProfileTab from '../components/common/AccountProfileTab';
 import BookingRejectionModal from '../components/booking/BookingRejectionModal';
 import UserReportStatusModal from '../components/booking/UserReportStatusModal';
 import RestrictedActionModal from '../components/common/RestrictedActionModal';
+import { useProfile } from '../context/ProfileContext';
 
 
 /**
@@ -40,7 +41,12 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
     const [showRestrictedModal, setShowRestrictedModal] = useState(false);
     const [restrictedActionMessage, setRestrictedActionMessage] = useState('');
 
-    const isApproved = advisorProfile?.status === 'Approved' || advisorProfile?.approvalStatus === 'Approved' || advisorProfile?.status === 1 || advisorProfile?.approvalStatus === 1;
+    const { advisorProfile: ctxProfile, advisorProfileStatus, isAdvisorApproved, refreshProfile, profileLoading } = useProfile();
+    
+    // Source of truth
+    const displayProfile = advisorProfile || ctxProfile;
+    const isApproved = isAdvisorApproved;
+    const profileReady = !profileLoading;
 
     const showRestrictedActionModal = (message) => {
         setRestrictedActionMessage(message);
@@ -97,16 +103,10 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
 
     // ── Advisor profile ────────────────────────────────────────────────────
     useEffect(() => {
-        const loadProfile = async () => {
-            try {
-                const profile = await advisorService.getMyProfile();
-                setAdvisorProfile(profile);
-            } catch (e) {
-                console.error('Could not load advisor profile', e);
-            }
-        };
-        loadProfile();
-    }, []);
+        if (ctxProfile) {
+            setAdvisorProfile(ctxProfile);
+        }
+    }, [ctxProfile]);
 
     const [hasAttemptedDeepLink, setHasAttemptedDeepLink] = useState(false);
     const [availabilities, setAvailabilities] = useState([]);
@@ -129,7 +129,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
         };
 
         console.log(`[AdvisorDashboard] Processing targetId: ${targetId} for activeSection: ${activeSection}`);
-        
+
         // 1. Bookings Deep Link (General list or Kanban)
         if (activeSection === 'bookings' && incomingBookings.length > 0) {
             const match = incomingBookings.find(b => String(b.id || b.bookingId) === String(targetId));
@@ -137,7 +137,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                 scrollAndHighlight('booking');
             }
         }
-        
+
         // 2. Booking Approvals Deep Link
         else if (activeSection === 'approve_bookings' && incomingBookings.length > 0) {
             const match = incomingBookings.find(b => String(b.id || b.bookingId) === String(targetId));
@@ -188,7 +188,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
             ]);
             const items = data?.items ?? (Array.isArray(data) ? data : []);
             const reports = reportRes?.items ?? (Array.isArray(reportRes) ? reportRes : []);
-            
+
             setUserReportsReported(reports);
 
             // Sort newest to oldest (descending ID)
@@ -250,13 +250,13 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
         'investors': "Danh sách các nhà đầu tư trên hệ thống."
     };
 
-    const showBanner = (!advisorProfile || (advisorProfile.approvalStatus !== 1 && advisorProfile.approvalStatus !== 'Approved')) && !availabilitiesLoading;
+    const showBanner = profileReady && advisorProfileStatus && advisorProfileStatus.toUpperCase() !== 'APPROVED';
 
     return (
         <div className={styles.container}>
             {/* Top Header - Only for dashboard-native sections. Global pages like Discovery handle their own headers. */}
             {!['discovery', 'news', 'investors'].includes(activeSection) && !activeSection.startsWith('project_') && activeSection !== 'pr_news' && (
-                <FeedHeader 
+                <FeedHeader
                     user={user}
                     title={sectionTitles[activeSection] || "Bảng điều khiển"}
                     subtitle={sectionSubtitles[activeSection] || "Quản lý hoạt động chuyên gia của bạn"}
@@ -313,8 +313,8 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
 
             <div className={`${styles.content} ${styles.scrollableSection}`} style={(['discovery', 'news', 'investors', 'pr_news'].includes(activeSection) || activeSection.startsWith('project_')) ? { padding: 0 } : {}}>
                 {activeSection === 'discovery' && (
-                    <DiscoveryHub 
-                        user={user} 
+                    <DiscoveryHub
+                        user={user}
                         onNotificationNavigate={handleNavigate}
                         onSelectStartup={(id) => handleNavigate(`project_${id}`)}
                         isInvestorApproved={isApproved}
@@ -329,9 +329,9 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                     />
                 )}
                 {activeSection === 'investors' && (
-                    <AdvisorsPage 
-                        user={user} 
-                        role="investor" 
+                    <AdvisorsPage
+                        user={user}
+                        role="investor"
                         onNotificationNavigate={handleNavigate}
                         isApproved={isApproved}
                         onRestrictedAction={showRestrictedActionModal}
@@ -345,8 +345,8 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                     />
                 )}
                 {activeSection === 'pr_news' && (
-                    <NewsPRSection 
-                        user={user} 
+                    <NewsPRSection
+                        user={user}
                         onNotificationNavigate={handleNavigate}
                         startupBanner={showBanner ? (
                             <AdvisorProfileBanner
@@ -359,8 +359,8 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                 )}
 
                 {activeSection === 'profile' && (
-                    <AdvisorProfilePage 
-                        user={user} 
+                    <AdvisorProfilePage
+                        user={user}
                         onBack={() => handleNavigate('overview')}
                         banner={showBanner ? (
                             <AdvisorProfileBanner
@@ -403,12 +403,12 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                             <p>Bạn cần hoàn tất hồ sơ trước khi xét duyệt các yêu cầu.</p>
                         </div>
                     ) : (
-                        <BookingApprovalSection 
-                            bookings={incomingBookings.filter(b => b.status === 0 || b.status === 'Pending')} 
-                            targetId={targetId} 
-                            loading={bookingsLoading} 
-                            onRefresh={loadIncomingBookings} 
-                            user={user} 
+                        <BookingApprovalSection
+                            bookings={incomingBookings.filter(b => b.status === 0 || b.status === 'Pending')}
+                            targetId={targetId}
+                            loading={bookingsLoading}
+                            onRefresh={loadIncomingBookings}
+                            user={user}
                             onNavigate={handleNavigate}
                             isApproved={isApproved}
                             onRestrictedAction={showRestrictedActionModal}
@@ -423,14 +423,14 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                             <p>Bạn cần hoàn tất hồ sơ trước khi xem danh sách Booking.</p>
                         </div>
                     ) : (
-                        <IncomingBookingsSection 
-                            bookings={incomingBookings} 
+                        <IncomingBookingsSection
+                            bookings={incomingBookings}
                             userReports={userReportsReported}
-                            targetId={targetId} 
-                            loading={bookingsLoading} 
-                            onRefresh={loadIncomingBookings} 
-                            user={user} 
-                            activeSection={activeSection} 
+                            targetId={targetId}
+                            loading={bookingsLoading}
+                            onRefresh={loadIncomingBookings}
+                            user={user}
+                            activeSection={activeSection}
                             onNavigate={handleNavigate}
                             isApproved={isApproved}
                             onRestrictedAction={showRestrictedActionModal}
@@ -445,9 +445,9 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                             <p>Bạn cần hoàn tất hồ sơ trước khi quản lý lịch rảnh.</p>
                         </div>
                     ) : (
-                        <AvailabilitySection 
-                            availabilities={availabilities} 
-                            loading={availabilitiesLoading} 
+                        <AvailabilitySection
+                            availabilities={availabilities}
+                            loading={availabilitiesLoading}
                             onRefresh={loadAvailabilities}
                             isApproved={isApproved}
                             checkAccess={checkAccess}
@@ -462,8 +462,8 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                             <p>Bạn cần hoàn tất hồ sơ trước khi quản lý thanh toán.</p>
                         </div>
                     ) : (
-                        <AdvisorPayoutSection 
-                            user={user} 
+                        <AdvisorPayoutSection
+                            user={user}
                             isApproved={isApproved}
                             onRestrictedAction={showRestrictedActionModal}
                         />
@@ -475,9 +475,9 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                 )}
 
                 {activeSection === 'profile' && (
-                    <AccountProfileTab 
-                        user={user} 
-                        onLogout={onLogout} 
+                    <AccountProfileTab
+                        user={user}
+                        onLogout={onLogout}
                         banner={
                             <AdvisorProfileBanner
                                 status={advisorProfile?.status}
@@ -489,9 +489,9 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                 )}
 
                 {activeSection === 'discovery' && (
-                    <DiscoveryHub 
-                        user={user} 
-                        onSelectStartup={(id) => handleNavigate(`project_${id}`)} 
+                    <DiscoveryHub
+                        user={user}
+                        onSelectStartup={(id) => handleNavigate(`project_${id}`)}
                         isInvestorApproved={isApproved}
                         onRestrictedAction={showRestrictedActionModal}
                     />
@@ -503,7 +503,7 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
                         onBack={() => handleNavigate('bookings')}
                         user={user}
                         isFullView={true}
-                        isInvestorApproved={isApproved}
+                        isAdvisorApproved={isApproved}
                         onRestrictedAction={showRestrictedActionModal}
                     />
                 )}
@@ -711,8 +711,8 @@ const AdvisorBookingKanbanCard = ({ booking, onDetail, onApprove, onReject, onCh
     const formatTimeUTC = (dateStr) => {
         if (!dateStr) return '—';
         const d = new Date(dateStr);
-        return d.getUTCHours().toString().padStart(2, '0') + ':' + 
-               d.getUTCMinutes().toString().padStart(2, '0');
+        return d.getUTCHours().toString().padStart(2, '0') + ':' +
+            d.getUTCMinutes().toString().padStart(2, '0');
     };
 
     return (
@@ -763,37 +763,8 @@ const AdvisorBookingKanbanCard = ({ booking, onDetail, onApprove, onReject, onCh
 
                 <div className={avStyles.bcardActions}>
                     <button className={avStyles.baBtn} onClick={onDetail} title="Chi tiết">
-                        <Eye size={16} />
+                        <Eye size={16} /> <span>Chi tiết</span> <ChevronRight size={14} />
                     </button>
-                    {(status === 0 || status === 'Pending') && (
-                        <>
-                            <button className={`${avStyles.baBtn} ${avStyles.rej}`} onClick={onReject} disabled={!!isActioning} title="Từ chối">
-                                {isActioning === 'reject' ? <Loader size={16} className={styles.spinner} /> : <X size={16} />}
-                            </button>
-                            <button className={`${avStyles.baBtn} ${avStyles.apr}`} onClick={onApprove} disabled={!!isActioning} title="Chấp nhận">
-                                {isActioning === 'approve' ? <Loader size={16} className={styles.spinner} /> : <Check size={16} />}
-                            </button>
-                        </>
-                    )}
-                    {(status === 2 || status === 'Confirmed') && (
-                        <>
-                            <button
-                                className={`${avStyles.baBtn} ${avStyles.chat} ${isChatLoading ? avStyles.btnDisabled : ''}`}
-                                onClick={onChat}
-                                disabled={isChatLoading}
-                                title="Chat với khách hàng"
-                            >
-                                {isChatLoading ? (
-                                    <Loader2 size={16} className={styles.spinner} />
-                                ) : (
-                                    <MessageSquare size={16} />
-                                )}
-                            </button>
-                            <button className={avStyles.baBtn} onClick={onReport} title="Báo cáo công việc">
-                                <FileText size={16} />
-                            </button>
-                        </>
-                    )}
                 </div>
             </div>
         </div>
@@ -825,23 +796,27 @@ const EmptyState = ({ icon: Icon, title, message }) => (
 /**
  * BookingApprovalSection - Dedicated section for approving NEW bookings (status 0)
  */
-function BookingApprovalSection({ bookings, targetId, loading, onRefresh, user, onNavigate }) {
+function BookingApprovalSection({ bookings, targetId, loading, onRefresh, user, onNavigate, isApproved, onRestrictedAction }) {
     const [actionLoading, setActionLoading] = useState({});
     const [actionError, setActionError] = useState({});
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [rejectingBooking, setRejectingBooking] = useState(null);
     const [showRejectionModal, setShowRejectionModal] = useState(false);
-    
+
     const pendingBookings = bookings.filter(b => b.status === 0 || b.status === 'Pending');
 
     const formatTimeUTC = (dateStr) => {
         if (!dateStr) return '—';
         const d = new Date(dateStr);
         return d.getUTCHours().toString().padStart(2, '0') + ':' +
-               d.getUTCMinutes().toString().padStart(2, '0');
+            d.getUTCMinutes().toString().padStart(2, '0');
     };
 
     const handleApprove = async (bookingId) => {
+        if (!isApproved) {
+            onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Cố vấn để chấp nhận yêu cầu tư vấn.');
+            return;
+        }
         setActionLoading(prev => ({ ...prev, [bookingId]: 'approve' }));
         setActionError(prev => ({ ...prev, [bookingId]: null }));
         try {
@@ -858,6 +833,10 @@ function BookingApprovalSection({ bookings, targetId, loading, onRefresh, user, 
     };
 
     const handleRejectClick = (booking) => {
+        if (!isApproved) {
+            onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Cố vấn để từ chối yêu cầu tư vấn.');
+            return;
+        }
         setRejectingBooking(booking);
         setShowRejectionModal(true);
     };
@@ -947,26 +926,11 @@ function BookingApprovalSection({ bookings, targetId, loading, onRefresh, user, 
                                 <div className={avStyles.approvalActions}>
                                     <button
                                         onClick={() => setSelectedBooking(b)}
-                                        style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'transparent', border: '1px solid var(--border-color)', color: 'var(--text-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0 }}
+                                        className={avStyles.baBtn}
+                                        style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '8px 20px', borderRadius: '9999px', background: 'var(--bg-secondary)', border: '1px solid var(--border-color)', cursor: 'pointer', marginLeft: 'auto' }}
                                         title="Xem chi tiết"
                                     >
-                                        <Eye size={18} />
-                                    </button>
-                                    <button
-                                        onClick={() => handleRejectClick(b)}
-                                        disabled={!!actionLoading[b.id]}
-                                        style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'rgba(244, 33, 46, 0.1)', border: 'none', color: '#f4212e', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', transition: 'all 0.2s', flexShrink: 0 }}
-                                        title="Từ chối"
-                                    >
-                                        {actionLoading[b.id] === 'reject' ? <Loader size={18} className={styles.spinner} /> : <X size={18} />}
-                                    </button>
-                                    <button
-                                        className={styles.primaryBtn}
-                                        onClick={() => handleApprove(b.id)}
-                                        disabled={!!actionLoading[b.id]}
-                                        style={{ borderRadius: '10px', height: '40px', padding: '0 20px', fontSize: '14px', fontWeight: '700' }}
-                                    >
-                                        {actionLoading[b.id] === 'approve' ? <Loader size={16} className={styles.spinner} /> : 'Chấp nhận'}
+                                        <Eye size={16} /> <span>Chi tiết</span> <ChevronRight size={14} />
                                     </button>
                                 </div>
 
@@ -1035,7 +999,7 @@ function BookingApprovalSection({ bookings, targetId, loading, onRefresh, user, 
     );
 }
 
-function IncomingBookingsSection({ bookings, userReports = [], targetId, loading, onRefresh, user, activeSection, onNavigate }) {
+function IncomingBookingsSection({ bookings, userReports = [], targetId, loading, onRefresh, user, activeSection, onNavigate, isApproved, onRestrictedAction }) {
     const [actionLoading, setActionLoading] = useState({});
     const [actionError, setActionError] = useState({});
     const [reportModal, setReportModal] = useState(null);
@@ -1328,7 +1292,7 @@ function IncomingBookingsSection({ bookings, userReports = [], targetId, loading
     );
 }
 
-function AvailabilitySection({ availabilities, loading, onRefresh }) {
+function AvailabilitySection({ availabilities, loading, onRefresh, isApproved, checkAccess }) {
     const todayVal = new Date();
     const todayStr = `${todayVal.getFullYear()}-${String(todayVal.getMonth() + 1).padStart(2, '0')}-${String(todayVal.getDate()).padStart(2, '0')}`;
     const [selectedDate, setSelectedDate] = useState(todayStr);
@@ -1410,9 +1374,9 @@ function AvailabilitySection({ availabilities, loading, onRefresh }) {
 
     const handleCreate = async () => {
         setFormError(null);
-        if (previewSlots.length === 0) { 
-            setFormError('Thời gian kết thúc phải sau thời gian bắt đầu.'); 
-            return; 
+        if (previewSlots.length === 0) {
+            setFormError('Thời gian kết thúc phải sau thời gian bắt đầu.');
+            return;
         }
 
         // Frontend validation for future dates

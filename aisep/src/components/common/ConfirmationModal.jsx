@@ -12,7 +12,7 @@ export default function ConfirmationModal({
     message, 
     type = 'info',
     primaryBtnText = 'OK',
-    secondaryBtnText = 'Cancel',
+    secondaryBtnText = 'Hủy',
     onPrimaryClick,
     onSecondaryClick,
     onClose,

@@ -85,7 +85,10 @@ const AdvisorDetailView = ({ user, advisor, onBack, onShowLogin, isApproved, onR
     return 'linear-gradient(135deg,#2D7EFF,#00ba7c)';
   };
 
-  const expertiseTags = advisor.expertise ? advisor.expertise.split(',').map(s => s.trim()).filter(Boolean) : [];
+  // Extract industries from the new industries array (if present) or fallback to expertise string
+  const expertiseTags = Array.isArray(advisor.industries) && advisor.industries.length > 0
+    ? advisor.industries
+    : (advisor.expertise ? advisor.expertise.split(',').map(s => s.trim()).filter(Boolean) : []);
 
   return (
     <div className={styles.container}>

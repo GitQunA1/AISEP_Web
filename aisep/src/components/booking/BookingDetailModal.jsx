@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Calendar, Clock, User, Briefcase, CreditCard, CaretRight, ChatCircleText, ArrowsClockwise, WarningCircle, FileText, Sparkle, ShieldCheck, Gavel, Info, MagnifyingGlass } from '@phosphor-icons/react';
+import { X, Calendar, Clock, User, Briefcase, CreditCard, CaretRight, ChatCircleText, ArrowsClockwise, WarningCircle, FileText, Sparkle, ShieldCheck, Gavel, Info, MagnifyingGlass, Star } from '@phosphor-icons/react';
 import userReportService from '../../services/userReportService';
 import consultingReportService from '../../services/consultingReportService';
+import reviewService from '../../services/reviewService';
 import styles from './BookingDetailModal.module.css';
 
 const STATUS_CONFIG = {
@@ -12,18 +13,20 @@ const STATUS_CONFIG = {
   'ApprovedAwaitingPayment': { label: 'Chờ thanh toán', badgeClass: styles.badgeConfirmed },
   2: { label: 'Đã xác nhận', badgeClass: styles.badgeConfirmed },
   'Confirmed': { label: 'Đã xác nhận', badgeClass: styles.badgeConfirmed },
-  3: { label: 'Quá hạn báo cáo', badgeClass: styles.badgeCancelled }, // Overdue
-  'ConsultingReportOverdue': { label: 'Quá hạn báo cáo', badgeClass: styles.badgeCancelled },
-  4: { label: 'Đang khiếu nại', badgeClass: styles.badgeConfirmed }, // ComplaintPending
-  'ComplaintPending': { label: 'Đang khiếu nại', badgeClass: styles.badgeConfirmed },
-  5: { label: 'Hoàn thành', badgeClass: styles.badgeCompleted },
+  3: { label: 'Hoàn thành', badgeClass: styles.badgeCompleted },
   'Completed': { label: 'Hoàn thành', badgeClass: styles.badgeCompleted },
-  6: { label: 'Khiếu nại chấp nhận', badgeClass: styles.badgeCompleted },
+  4: { label: 'Khiếu nại chấp nhận', badgeClass: styles.badgeCompleted },
   'ComplaintAccepted': { label: 'Khiếu nại chấp nhận', badgeClass: styles.badgeCompleted },
-  7: { label: 'Đã hủy', badgeClass: styles.badgeCancelled },
+  5: { label: 'Khiếu nại từ chối', badgeClass: styles.badgeCancelled },
+  'ComplaintRejected': { label: 'Khiếu nại từ chối', badgeClass: styles.badgeCancelled },
+  6: { label: 'Đã hủy', badgeClass: styles.badgeCancelled },
   'Cancel': { label: 'Đã hủy', badgeClass: styles.badgeCancelled },
-  8: { label: 'Không phản hồi', badgeClass: styles.badgeCancelled },
+  7: { label: 'Không phản hồi', badgeClass: styles.badgeCancelled },
   'NoResponse': { label: 'Không phản hồi', badgeClass: styles.badgeCancelled },
+  8: { label: 'Quá hạn báo cáo', badgeClass: styles.badgeCancelled },
+  'ConsultingReportOverdue': { label: 'Quá hạn báo cáo', badgeClass: styles.badgeCancelled },
+  9: { label: 'Đang khiếu nại', badgeClass: styles.badgeConfirmed },
+  'ComplaintPending': { label: 'Đang khiếu nại', badgeClass: styles.badgeConfirmed },
 };
 
 // Helper for literal UTC time display
@@ -36,57 +39,89 @@ const formatTimeUTC = (dateStr) => {
 
 export default function BookingDetailModal({ booking, onClose, onAction, userRole = 'Startup' }) {
   const [existingReport, setExistingReport] = useState(null);
+  const [existingReview, setExistingReview] = useState(null);
   const [consultationReport, setConsultationReport] = useState(null);
   const [loadingReport, setLoadingReport] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
-    const checkExistingReport = async () => {
-      // Allow Startup, Investor (Reporters) and Staff, Advisor (Involved/Reviewers) to see the report
+    const fetchData = async () => {
       if (!booking || !booking.id) return;
       
+      setIsInitialLoading(true);
+      setHasError(false);
       setLoadingReport(true);
-      try {
-          let reports;
-          if (userRole === 'Staff') {
-            reports = await userReportService.getAllReports();
-          } else if (userRole === 'Advisor') {
-            reports = await userReportService.getMyReportsAsReported();
-          } else if (['Startup', 'Investor'].includes(userRole)) {
-            reports = await userReportService.getMyReportsAsReporter();
-          } else {
-            return;
-          }
+      
+      // Clear previous states
+      setExistingReport(null);
+      setConsultationReport(null);
 
-          const reportsList = Array.isArray(reports) ? reports : (reports?.items || []);
+      try {
+        // Parallel fetch for reports, consultation report, and reviews
+        const [reportsData, cReport, reviewsData] = await Promise.all([
+          (async () => {
+            try {
+              if (userRole === 'Staff') return await userReportService.getAllReports();
+              if (userRole === 'Advisor') return await userReportService.getMyReportsAsReported();
+              if (['Startup', 'Investor'].includes(userRole)) return await userReportService.getMyReportsAsReporter();
+              return null;
+            } catch (err) { return null; }
+          })(),
+          (async () => {
+            try {
+              return await consultingReportService.getReportByBookingId(booking.id || booking.bookingId);
+            } catch (err) { return null; }
+          })(),
+          (async () => {
+            try {
+              // Only fetch review if booking is completed
+              if (![3, 'Completed'].includes(booking.status)) return null;
+              
+              if (['Startup', 'Investor'].includes(userRole)) {
+                return await reviewService.getMyReviews();
+              } else if (userRole === 'Advisor' || userRole === 'Staff') {
+                const advisorId = booking.advisorId || booking.advisor?.id;
+                if (advisorId) return await reviewService.getReviewsByAdvisor(advisorId);
+              }
+              return null;
+            } catch (err) { return null; }
+          })()
+        ]);
+
+        // Process User Reports (Complaints)
+        if (reportsData) {
+          const reportsList = Array.isArray(reportsData) ? reportsData : (reportsData?.items || []);
           const report = reportsList.find(r => 
             String(r.bookingId) === String(booking.id || booking.bookingId)
           );
-          
-          if (report && (report.userReportId || report.id)) {
-              setExistingReport(report);
-          } else {
-              setExistingReport(null);
-          }
+          setExistingReport(report || null);
+        }
 
-          // Also check for Consultation Report (Advisor report of the session)
-          try {
-              const cReport = await consultingReportService.getReportByBookingId(booking.id || booking.bookingId);
-              if (cReport && cReport.consultingReportId) {
-                  setConsultationReport(cReport);
-              }
-          } catch (err) {
-              // Report might not exist yet, which is fine
-              setConsultationReport(null);
-          }
+        // Process Consultation Report
+        if (cReport && cReport.consultingReportId) {
+          setConsultationReport(cReport);
+        }
+
+        // Process Review
+        if (reviewsData) {
+          const reviewsList = Array.isArray(reviewsData) ? reviewsData : (reviewsData?.items || []);
+          const review = reviewsList.find(r => 
+            String(r.bookingId) === String(booking.id || booking.bookingId)
+          );
+          setExistingReview(review || null);
+        }
       } catch (error) {
-          console.error('Error checking reports:', error);
-          setExistingReport(null);
+        console.error('Error fetching modal data:', error);
+        setHasError(true);
       } finally {
-          setLoadingReport(false);
+        setLoadingReport(false);
+        // Small artificial delay for smoothness
+        setTimeout(() => setIsInitialLoading(false), 400);
       }
     };
 
-    checkExistingReport();
+    fetchData();
   }, [booking, userRole]);
 
   if (!booking) return null;
@@ -113,20 +148,50 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
   return createPortal(
     <div className={styles.overlay} onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className={styles.modal}>
-        {/* Modal Header — Replicating Staff Dashboard Style */}
         <div className={styles.header}>
-          <div className={styles.headerTitleGrp}>
-            <h2 className={styles.headerTitleText}>
-              Booking #{booking.id || booking.bookingId}
-            </h2>
-            <span className={`${styles.bookingBadge} ${statusInfo.badgeClass}`}>
-              {statusInfo.label}
-            </span>
-          </div>
+          {!isInitialLoading && !hasError ? (
+            <div className={styles.headerContent}>
+              <h2 className={styles.headerTitleText}>
+                Booking #{booking.id || booking.bookingId}
+              </h2>
+              <span className={`${styles.bookingBadge} ${statusInfo.badgeClass}`}>
+                {statusInfo.label}
+              </span>
+            </div>
+          ) : (
+            <div style={{ flex: 1 }}></div>
+          )}
           <button onClick={onClose} className={styles.closeBtn}>
             <X size={24} />
           </button>
         </div>
+
+        {isInitialLoading ? (
+          <div className={styles.fullLoadingView}>
+             <div className={styles.loadingPulse}>
+                <ArrowsClockwise size={48} weight="bold" className={styles.spinnerLarge} />
+                <h3>Đang chuẩn bị dữ liệu...</h3>
+                <p>Vui lòng đợi trong giây lát</p>
+             </div>
+          </div>
+        ) : hasError ? (
+          <div className={styles.fullLoadingView}>
+             <WarningCircle size={48} weight="fill" color="#f4212e" />
+             <h3 style={{ color: 'var(--text-primary)', marginTop: '16px' }}>Đã có lỗi xảy ra</h3>
+             <p style={{ color: 'var(--text-secondary)', marginBottom: '24px' }}>Không thể tải thông tin chi tiết cho booking này.</p>
+             <button 
+                className={styles.primaryBtn} 
+                onClick={() => {
+                   setHasError(false);
+                   setIsInitialLoading(true);
+                   fetchData();
+                }}
+             >
+                <ArrowsClockwise size={18} /> Thử lại ngay
+             </button>
+          </div>
+        ) : (
+          <>
         
         {/* Role-Specific Guidance Banner */}
         {(() => {
@@ -134,16 +199,19 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
           const isAdvisor = userRole === 'Advisor';
           const isCustomer = ['Startup', 'Investor'].includes(userRole);
           const isStaff = userRole === 'Staff';
+          const isComplaintPending = status === 9 || status === 'ComplaintPending';
+          const isOverdue = status === 8 || status === 'ConsultingReportOverdue';
+          const isComplaintAccepted = status === 4 || status === 'ComplaintAccepted';
 
-          // 3: ConsultingReportOverdue
-          if (status === 3 || status === 'ConsultingReportOverdue') {
+          // 8: ConsultingReportOverdue
+          if (isOverdue) {
             return (
               <div className={`${styles.guidanceBanner} ${styles.guidanceWarning}`}>
                 <WarningCircle size={20} weight="fill" className={styles.guidanceIcon} />
                 <div className={styles.guidanceContent}>
                   <strong className={styles.guidanceTitle}>Advisor đã quá hạn nộp báo cáo (24h)</strong>
                   <p className={styles.guidanceDesc}>
-                    {isCustomer && "Hệ thống ghi nhận Advisor chưa nộp báo cáo kết quả đúng hạn. Vui lòng liên hệ Staff để được hỗ trợ hoàn lượt/đặt lại lịch mới."}
+                    {isCustomer && "Hệ thống ghi nhận Advisor chưa nộp báo cáo kết quả đúng hạn."}
                     {isAdvisor && "Bạn đã bỏ lỡ thời hạn nộp báo cáo (24h sau khi kết thúc). Thanh toán cho booking này tạm thời bị giữ lại, vui lòng nộp báo cáo ngay."}
                     {isStaff && "Advisor này đã quá hạn nộp báo cáo. Hệ thống đã đánh dấu overdue. Staff cần kiểm tra nếu có khiếu nại từ khách hàng."}
                   </p>
@@ -152,8 +220,8 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
             );
           }
 
-          // 4: ComplaintPending
-          if (status === 4 || status === 'ComplaintPending') {
+          // 9: ComplaintPending
+          if (isComplaintPending) {
             return (
               <div className={`${styles.guidanceBanner} ${styles.guidanceInfo}`}>
                 <Info size={20} weight="fill" className={styles.guidanceIcon} />
@@ -169,8 +237,8 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
             );
           }
 
-          // 6: ComplaintAccepted
-          if (status === 6 || status === 'ComplaintAccepted') {
+          // 4: ComplaintAccepted
+          if (isComplaintAccepted) {
             return (
               <div className={`${styles.guidanceBanner} ${styles.guidanceSuccess}`}>
                 <ShieldCheck size={20} weight="fill" className={styles.guidanceIcon} />
@@ -302,7 +370,7 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
             </div>
           </div>
 
-          {booking.rejectReason && [4, 5, 'Cancel', 'NoResponse'].includes(booking.status) && (
+          {booking.rejectReason && [6, 7, 'Cancel', 'NoResponse'].includes(booking.status) && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               <h4 className={styles.sectionTitle} style={{ color: '#f4212e' }}>Lý do từ chối</h4>
               <div className={styles.noteBox} style={{ borderLeft: '4px solid #f4212e', background: 'rgba(244, 33, 46, 0.05)' }}>
@@ -314,43 +382,62 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
 
         {/* Modal Footer — Standardized Actions */}
         <div className={styles.footer}>
-          <button onClick={onClose} className={styles.secondaryBtn}>
-            Đóng
-          </button>
-
           {['Startup', 'Investor'].includes(userRole) && (booking.status === 1 || booking.status === 'ApprovedAwaitingPayment') && (
-            <button className={`${styles.primaryBtn} ${styles.successBtn}`} onClick={() => { onAction('pay', booking); onClose(); }}>
-              <CreditCard size={16} /> Thanh toán phí
+            <button className={`${styles.primaryBtn} ${styles.successBtn}`} onClick={() => { onAction('pay', booking); }}>
+              <CreditCard size={16} /> <span>Thanh toán phí</span>
             </button>
           )}
           {(booking.status === 2 || booking.status === 'Confirmed') && userRole !== 'Staff' && (
-            <button className={styles.primaryBtn} onClick={() => { onAction('chat', booking); onClose(); }}>
-              <ChatCircleText size={16} /> Vào phòng chat
+            <button className={styles.primaryBtn} onClick={() => { onAction('chat', booking); }}>
+              <ChatCircleText size={16} /> <span>Vào phòng chat</span>
             </button>
           )}
-          {['Startup', 'Investor'].includes(userRole) && [4, 5, 'Cancel', 'NoResponse'].includes(booking.status) && (
-            <button className={styles.primaryBtn} onClick={() => { onAction('rebook', booking); onClose(); }}>
-              <ArrowsClockwise size={16} /> Tìm cố vấn thay thế
+          {['Startup', 'Investor'].includes(userRole) && [6, 7, 8, 'Cancel', 'NoResponse', 'ConsultingReportOverdue'].includes(booking.status) && (
+            <button className={styles.primaryBtn} onClick={() => { onAction('rebook', booking); }}>
+              <ArrowsClockwise size={16} /> <span>Tìm cố vấn thay thế</span>
             </button>
           )}
 
-          {/* Complaint Action: Shown for all roles if a report exists, or for Startup/Investor to CREATE a report */}
-          {existingReport ? (
-            <button
-              className={`${styles.secondaryBtn}`}
-              onClick={() => { onAction('viewComplaint', existingReport); onClose(); }}
-              style={{ backgroundColor: 'rgba(29, 155, 240, 0.05)', color: 'var(--primary-blue)', border: '1px solid rgba(29, 155, 240, 0.2)' }}
-            >
-              <MagnifyingGlass size={16} /> Xem khiếu nại
-            </button>
+          {/* Unified Dynamic Actions Area — Rendered only when needed to prevent spacing issues */}
+          {loadingReport ? (
+            <div className={styles.actionSlot}>
+              <div className={`${styles.loadingSmall} ${styles.fadeIn}`}>
+                <ArrowsClockwise size={16} className={styles.spinner} />
+                <span className={styles.loadingText}>Đang kiểm tra dữ liệu...</span>
+              </div>
+            </div>
           ) : (
-            ['Startup', 'Investor'].includes(userRole) && [2, 'Confirmed'].includes(booking.status) && (
-              <button
-                className={`${styles.secondaryBtn} ${styles.dangerBtn}`}
-                onClick={() => { onAction('complain', booking); onClose(); }}
-              >
-                <WarningCircle size={16} /> Khiếu nại
-              </button>
+            (existingReport || (userRole === 'Staff' && consultationReport)) && (
+              <div className={styles.dynamicActions}>
+                {existingReport ? (
+                  <button
+                    className={`${styles.secondaryBtn} ${styles.animateIn}`}
+                    onClick={() => { onAction('viewComplaint', existingReport); }}
+                    style={{ backgroundColor: 'rgba(29, 155, 240, 0.05)', color: 'var(--primary-blue)', border: '1px solid rgba(29, 155, 240, 0.2)' }}
+                  >
+                    <MagnifyingGlass size={16} /> <span>Xem khiếu nại</span>
+                  </button>
+                ) : (
+                  ['Startup', 'Investor'].includes(userRole) && [2, 'Confirmed'].includes(booking.status) && (
+                    <button
+                      className={`${styles.secondaryBtn} ${styles.dangerBtn} ${styles.animateIn}`}
+                      onClick={() => { onAction('complain', booking); }}
+                    >
+                      <WarningCircle size={16} /> <span>Khiếu nại</span>
+                    </button>
+                  )
+                )}
+
+                {userRole === 'Staff' && consultationReport && (
+                  <button
+                    className={`${styles.primaryBtn} ${styles.animateIn}`}
+                    onClick={() => { onAction('viewConsultationReport', booking); }}
+                    style={{ background: 'var(--primary-blue)' }}
+                  >
+                    <FileText size={16} /> <span>Xem báo cáo tư vấn</span>
+                  </button>
+                )}
+              </div>
             )
           )}
 
@@ -358,53 +445,90 @@ export default function BookingDetailModal({ booking, onClose, onAction, userRol
           {booking.projectId && (
             <button
               className={styles.primaryBtn}
-              onClick={() => { onAction('viewProject', booking); onClose(); }}
+              onClick={() => { onAction('viewProject', booking); }}
               style={{ background: '#10b981' }}
             >
-              <Briefcase size={16} /> Xem dự án
+              <Briefcase size={16} /> <span>Xem dự án</span>
             </button>
           )}
 
           {userRole === 'Advisor' && (booking.status === 2 || booking.status === 'Confirmed') && (
             <button
               className={styles.primaryBtn}
-              onClick={() => { onAction('report', booking); onClose(); }}
+              onClick={() => { onAction('report', booking); }}
               style={{ background: '#1d9bf0' }}
             >
-              <FileText size={16} /> Viết báo cáo
+              <FileText size={16} /> <span>Viết báo cáo</span>
             </button>
           )}
 
-          {/* Staff: View Consultation Report if it exists */}
-          {userRole === 'Staff' && consultationReport && (
+          {/* New Actions for Completed Bookings */}
+          {['Startup', 'Investor'].includes(userRole) && (booking.status === 3 || booking.status === 'Completed') && (
+            <>
+              <button
+                className={styles.primaryBtn}
+                onClick={() => { onAction('viewConsultationReport', booking); }}
+                style={{ background: 'var(--primary-blue)' }}
+              >
+                <FileText size={16} /> <span>Xem báo cáo</span>
+              </button>
+              
+              {!existingReview ? (
+                <button
+                  className={styles.primaryBtn}
+                  onClick={() => { onAction('rate', booking); }}
+                  style={{ background: '#f59e0b' }}
+                >
+                  <Star size={16} weight="fill" /> <span>Viết đánh giá</span>
+                </button>
+              ) : (
+                <button
+                  className={styles.secondaryBtn}
+                  onClick={() => { onAction('viewReview', { ...booking, existingReview }); }}
+                  style={{ borderColor: '#f59e0b', color: '#f59e0b' }}
+                >
+                  <Star size={16} weight="fill" /> <span>Xem đánh giá</span>
+                </button>
+              )}
+            </>
+          )}
+
+          {/* View Review for Advisor/Staff if already reviewed */}
+          {['Advisor', 'Staff'].includes(userRole) && existingReview && (
             <button
-              className={styles.primaryBtn}
-              onClick={() => { onAction('viewConsultationReport', booking); onClose(); }}
-              style={{ background: 'var(--primary-blue)' }}
+              className={styles.secondaryBtn}
+              onClick={() => { onAction('viewReview', { ...booking, existingReview }); }}
+              style={{ borderColor: '#f59e0b', color: '#f59e0b' }}
             >
-              <FileText size={16} /> Xem báo cáo tư vấn
+              <Star size={16} weight="fill" /> <span>Xem đánh giá</span>
             </button>
           )}
+
 
           {userRole === 'Advisor' && (booking.status === 0 || booking.status === 'Pending') && (
             <>
               <button
                 className={`${styles.secondaryBtn} ${styles.dangerBtn}`}
-                onClick={() => { onAction('reject', booking); onClose(); }}
+                onClick={() => { onAction('reject', booking); }}
                 style={{ color: '#f4212e', borderColor: 'rgba(244, 33, 46, 0.2)' }}
               >
-                Từ chối
+                <span>Từ chối</span>
               </button>
               <button
                 className={styles.primaryBtn}
-                onClick={() => { onAction('approve', booking); onClose(); }}
+                onClick={() => { onAction('approve', booking); }}
                 style={{ background: '#1d9bf0' }}
               >
-                Phê duyệt
+                <span>Phê duyệt</span>
               </button>
             </>
           )}
+          <button onClick={onClose} className={styles.secondaryBtn}>
+            <X size={20} /> <span>Đóng</span>
+          </button>
         </div>
+        </>
+        )}
       </div>
     </div>,
     document.body

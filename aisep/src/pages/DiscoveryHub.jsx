@@ -47,6 +47,13 @@ const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner, i
     const isInvestor = user && (user.role === 'Investor' || user.role === 1);
     const isStartup = user && (user.role === 'Startup' || user.role === 2);
 
+    const isActiveInvestmentStatus = (status) => {
+        const normalized = typeof status === 'string' ? status.toLowerCase() : status;
+        // Startup rejected -> Canceled must allow investor to invest again.
+        if (normalized === 'canceled' || normalized === 'cancelled' || normalized === 5 || normalized === '5') return false;
+        return true;
+    };
+
     useEffect(() => {
         const fetchMyStartup = async () => {
             if (isStartup) {
@@ -129,6 +136,7 @@ const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner, i
 
             const combinedMap = {};
             deals.forEach(deal => {
+                if (!isActiveInvestmentStatus(deal.status)) return;
                 const dealInfo = {
                     dealId: deal.dealId,
                     status: deal.status,
@@ -270,7 +278,7 @@ const DiscoveryHub = ({ user, onSelectStartup, onNotificationNavigate, banner, i
                                     // Passing empty arrays for simple discovery view if these stats aren't fetched here
                                     followedProjectIds={new Set()}
                                     sentConnectionIds={new Set()}
-                                    investedProjectIds={new Set()}
+                                    investedProjectIds={new Set(Object.keys(investmentStatusMap).map((k) => Number(k)).filter((v) => Number.isFinite(v)))}
                                     investors={[]}
                                     isInvestorApproved={isInvestorApproved}
                                     onRestrictedAction={onRestrictedAction}

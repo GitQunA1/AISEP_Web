@@ -11,6 +11,7 @@
   justify-content: center;
   z-index: 2000;
   padding: 24px;
+  box-sizing: border-box;
 }
 
 .modal {
@@ -44,14 +45,16 @@
 .header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 16px 28px;
+  align-items: center; /* Essential for vertical centering */
+  padding: 16px 28px; /* Balanced padding for desktop */
   border-bottom: 2px solid var(--border-color);
   background-color: var(--bg-secondary);
   box-sizing: border-box;
+  min-height: 100px;
 }
 
-.headerTitleGrp {
+.headerContent {
+  flex: 1;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -260,11 +263,12 @@
 }
 
 .successBtn {
-  background: #17bf63;
+  background: #00ba7c !important; /* More premium green */
 }
 
-.successBtn:hover {
-  background: #15a957;
+.primaryBtn.successBtn:hover {
+  background: #00a970 !important;
+  box-shadow: 0 4px 12px rgba(0, 186, 124, 0.2);
 }
 
 .secondaryBtn {
@@ -296,14 +300,23 @@
   .modal {
     width: 100%;
     height: 100%;
-    max-height: none;
+    max-height: 100vh;
     max-width: none;
     border-radius: 0;
     border: none;
+    margin-top: 0;
+    animation: none; /* Full screen doesn't need slideUpMobile */
   }
 
   .header {
-    padding: 14px 20px;
+    padding: 0 16px;
+    min-height: 84px; /* More compact header for mobile */
+    align-items: center;
+    display: flex;
+  }
+
+  .headerTitleText {
+    font-size: 18px; /* Slightly smaller title on mobile */
   }
 
   .body {
@@ -316,8 +329,32 @@
   }
 
   .footer {
-    padding: 12px 20px;
+    padding: 16px 20px;
     border-radius: 0;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .primaryBtn, .secondaryBtn {
+    width: 64px;
+    height: 42px;
+    min-width: 64px;
+    justify-content: center;
+    padding: 0;
+    border-radius: 9999px;
+    font-size: 14px;
+  }
+
+  .primaryBtn svg, .secondaryBtn svg {
+    width: 22px !important;
+    height: 22px !important;
+  }
+
+  .primaryBtn span, .secondaryBtn span {
+    display: none;
   }
 }
 
@@ -376,7 +413,7 @@
   color: var(--text-secondary); /* Balanced color for description */
 }
 
-/* ===== Unified Banners - Matching "Thông tin nhân sự" (#1d9bf0) ===== */
+/* ===== Unified Banners - Matching "ThÃ´ng tin nhÃ¢n sá»±" (#1d9bf0) ===== */
 .guidanceInfo, .guidanceWarning, .guidanceSuccess {
   background: rgba(29, 155, 240, 0.05);
   border: 1px solid rgba(29, 155, 240, 0.15);
@@ -398,4 +435,115 @@
 :global([data-theme='dark']) .guidanceWarning .guidanceDesc,
 :global([data-theme='dark']) .guidanceSuccess .guidanceDesc {
   color: var(--text-secondary);
+}
+
+.loadingSmall {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 100%;
+}
+
+.loadingText {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  letter-spacing: -0.2px;
+}
+
+.spinner {
+  animation: spin 0.8s linear infinite;
+  color: var(--primary-blue);
+}
+
+.actionSlot {
+  display: contents; /* Makes children direct flex items of the footer */
+}
+
+.fullLoadingView {
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 40px;
+  animation: fadeIn 0.5s ease-out;
+}
+
+.loadingPulse {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.loadingPulse h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.loadingPulse p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.spinnerLarge {
+  color: var(--primary-blue);
+  animation: spin 1s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.dynamicActions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.animateIn {
+  animation: slideInFade 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideInFade {
+  from {
+    opacity: 0;
+    transform: translateX(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.fadeIn {
+  animation: fadeIn 0.4s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 768px) {
+  .loadingSmall {
+    padding: 0;
+    width: auto;
+    justify-content: center;
+  }
+  
+  .loadingSmall span {
+    display: none;
+  }
+}
+
+@keyframes slideUpMobile {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
 }
