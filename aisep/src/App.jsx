@@ -314,7 +314,7 @@ function App() {
           showInvestors={currentView === 'investors'}
           showAI={currentView === 'ai'}
           activeView={currentView}
-          isFullWidthContent={currentView.startsWith('dashboard_project_')}
+          isFullWidthContent={currentView.startsWith('dashboard_project_') && currentView !== 'dashboard_project_management'}
         >
           <>
             {currentView === 'subscription' && <SubscriptionManagement user={user} />}
@@ -413,9 +413,6 @@ function App() {
         />
       )}
 
-      {isSessionExpired && (
-        <SessionExpiredModal onLogin={handleShowLogin} />
-      )}
 
       {needsTermsAcceptance && (
         <TermsEnforcementModal

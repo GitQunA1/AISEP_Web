@@ -64,7 +64,7 @@ const T = {
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 const DISP = (v, fb = 'Đang cập nhật') => (v && String(v).trim() ? v : fb);
-const FMT = v => v ? Number(v).toLocaleString('vi-VN') + ' VND' : '—';
+const FMT = (val) => Number(val).toLocaleString('vi-VN') + ' VND';
 
 const avatarGrad = tag => {
   const t = (tag || '').toLowerCase();
@@ -163,6 +163,8 @@ const FieldGrid = ({ children, cols = 2 }) => (
     display: 'grid',
     gridTemplateColumns: `repeat(${cols}, 1fr)`,
     gap: '14px 18px',
+    width: '100%',
+    minWidth: 0
   }}>
     {children}
   </div>
@@ -275,7 +277,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   const [advisorBookings, setAdvisorBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 850);
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 1024);
   const [showBookingWizard, setShowBookingWizard] = useState(false);
   const [showFullscreenImage, setShowFullscreenImage] = useState(false);
 
@@ -382,7 +384,12 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
 
   const handleAIAnalyze = async () => {
     if (!projectId) return;
-    if (!isInvestorApproved) {
+
+    const roleStr = user?.role?.toString().toLowerCase() || '';
+    const roleNum = Number(user?.role);
+    const isInvestor = roleStr === 'investor' || roleNum === 1;
+
+    if (isInvestor && !isInvestorApproved) {
       onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để sử dụng tính năng Phân tích AI.');
       return;
     }
@@ -409,7 +416,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   useEffect(() => {
     fetchQuotaData();
     fetchInvestorProfile();
-    const isStartup = user?.role?.toString().toLowerCase() === 'startup' || Number(user?.role) === 2;
+    const isStartup = user?.role?.toString().toLowerCase() === 'startup' || Number(user?.role) === 0;
     if (isStartup) {
       startupProfileService.getStartupMe().then(setMyStartupProfile).catch(() => { });
     }
@@ -419,7 +426,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   }, [user, isPaidUser, projectId]);
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth <= 850);
+    const onResize = () => setIsMobile(window.innerWidth < 1024);
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
@@ -427,6 +434,13 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   useEffect(() => {
     if (!projectId || !user) return;
     setLoading(true); setError(null);
+
+    // Scroll parent container to top on project change
+    const container = document.querySelector('.scrollableSection') || document.querySelector('.mainContent');
+    if (container) {
+      container.scrollTo({ top: 0, behavior: 'instant' });
+    }
+    window.scrollTo({ top: 0, behavior: 'instant' });
 
     const roleStr = user?.role?.toString().toLowerCase() || '';
     const roleNum = Number(user?.role);
@@ -500,10 +514,21 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
 
   const handleUnlockClick = (e) => {
     if (e) e.stopPropagation();
-    if (!isInvestorApproved) {
+
+    const roleStr = user?.role?.toString().toLowerCase() || '';
+    const roleNum = Number(user?.role);
+    const isInvestor = roleStr === 'investor' || roleNum === 1;
+    const isStartup = roleStr === 'startup' || roleNum === 0;
+
+    if (isInvestor && !isInvestorApproved) {
       onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để mở khóa thông tin chi tiết của dự án.');
       return;
     }
+    if (isStartup && !isStartupApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Startup để mở khóa thông tin chi tiết của dự án.');
+      return;
+    }
+
     if (!effectiveIsPaidUser) return;
     fetchQuotaData();
     setShowUnlockConfirm(true);
@@ -543,15 +568,19 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     // Check if the user is a Startup or Investor - they need approval
     const roleStr = user?.role?.toString().toLowerCase() || '';
     const roleNum = Number(user?.role);
-    const isStartup = roleStr === 'startup' || roleNum === 0;
     const isInvestor = roleStr === 'investor' || roleNum === 1;
+    const isStartup = roleStr === 'startup' || roleNum === 0;
+    const isAdvisor = roleStr === 'advisor' || roleNum === 2;
 
     if (isInvestor && !isInvestorApproved) {
       onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Nhà đầu tư để thực hiện xác thực Blockchain.');
       return;
     }
-
-    if ((roleStr === 'advisor' || roleNum === 2) && !isAdvisorApproved) {
+    if (isStartup && !isStartupApproved) {
+      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Startup để thực hiện xác thực Blockchain.');
+      return;
+    }
+    if (isAdvisor && !isAdvisorApproved) {
       onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Cố vấn để thực hiện xác thực Blockchain.');
       return;
     }
@@ -594,15 +623,15 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   const industryTags = Array.isArray(project.industries) && project.industries.length > 0
     ? project.industries
     : [
-        project?.industry ||
-        project?.industryName ||
-        project?.projectIndustry ||
-        project?.category ||
-        project?.field ||
-        (project.tags && project.tags[0]) ||
-        ''
-      ].filter(Boolean);
-  
+      project?.industry ||
+      project?.industryName ||
+      project?.projectIndustry ||
+      project?.category ||
+      project?.field ||
+      (project.tags && project.tags[0]) ||
+      ''
+    ].filter(Boolean);
+
   const mainTag = industryTags[0] || '';
   const approved = ['approved', 'Approved'].includes(project.status);
   const latestAI = aiHistory.length > 0
@@ -616,23 +645,23 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   const PremiumBadge = ({ inline }) => {
     const roleStr = user?.role?.toString().toLowerCase() || '';
     const roleNum = Number(user?.role);
-    const isBypassRole = ['staff', 'operationstaff', 'operation_staff', 'advisor'].includes(roleStr) || [3, 4, 5].includes(roleNum);
+    const isBypassRole = ['staff', 'operationstaff', 'operation_staff', 'advisor'].includes(roleStr) || [2, 3, 4, 5].includes(roleNum);
 
     // Also bypass if current user is the owner of this project
     const isOwner = project?.startupId && myStartupProfile && project.startupId === myStartupProfile.id;
 
     if (isBypassRole || isOwner) return null;
 
-    const isBuyerRole = ['investor', 'startup'].includes(roleStr) || [0, 1, 2].includes(roleNum);
+    const isBuyerRole = ['investor', 'startup'].includes(roleStr) || [0, 1].includes(roleNum);
     const canUnlock = effectiveIsPaidUser && isBuyerRole;
     return (
       <div
         onClick={canUnlock ? handleUnlockClick : undefined}
         style={{
-          display: inline ? 'inline-flex' : 'flex', alignItems: 'center', justifyContent: inline ? 'flex-start' : 'center',
-          gap: 6, fontSize: 12, fontWeight: 700, color: '#ffad1f', background: 'rgba(255, 173, 31, 0.12)',
+          display: inline ? 'inline-flex' : 'flex', alignItems: 'center', justifyContent: 'center',
+          gap: 6, fontSize: isMobile ? 11 : 12, fontWeight: 700, color: '#ffad1f', background: 'rgba(255, 173, 31, 0.12)',
           padding: '4px 10px', borderRadius: 6, border: '1px solid rgba(255, 173, 31, 0.2)',
-          marginTop: inline ? 0 : 4, width: inline ? 'auto' : 'fit-content',
+          marginTop: 0, width: inline ? 'auto' : (isMobile ? 'auto' : '100%'),
           cursor: canUnlock ? 'pointer' : 'default', userSelect: 'none'
         }}
       >
@@ -642,7 +671,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   };
 
   return (
-    <div className="project-detail-view" style={{ display: 'flex', flexDirection: 'column', width: '100%', flex: 1, minHeight: '100%', background: T.bg }}>
+    <div className="project-detail-view" style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '100%', boxSizing: 'border-box', overflowX: 'clip', flex: 1, minHeight: '100%', background: T.bg }}>
       <style>{`
         .project-detail-view {
           --pd-bg: var(--bg-primary);
@@ -704,28 +733,28 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
       )}
 
       {/* TOPBAR */}
-      <div style={{ position: 'sticky', zIndex: 1000, minHeight: 53, height: 53, background: 'var(--pd-topbar)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${T.border}`, padding: '0 16px', display: 'flex', alignItems: 'center', gap: 16, top: isMobile ? 60 : 0 }}>
+      <div style={{ position: 'sticky', zIndex: 1000, minHeight: isMobile ? 48 : 53, height: isMobile ? 48 : 53, background: 'var(--pd-topbar)', backdropFilter: 'blur(20px)', borderBottom: `1px solid ${T.border}`, padding: isMobile ? '0 12px' : '0 16px', display: 'flex', alignItems: 'center', gap: 16, top: isMobile ? 'var(--sticky-top, 60px)' : 0 }}>
         <button onClick={onBack} style={{ width: 34, height: 34, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: T.text, background: 'transparent', border: 'none' }}>
-          <ArrowLeft size={20} weight="bold" />
+          <ArrowLeft size={isMobile ? 18 : 20} weight="bold" />
         </button>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <h2 style={{ fontSize: 17, fontWeight: 800, color: T.text, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project.name}</h2>
-          <div style={{ fontSize: 12.5, color: T.textMuted, lineHeight: 1 }}>Chi tiết dự án</div>
+          <h2 style={{ fontSize: isMobile ? 15 : 17, fontWeight: 800, color: T.text, margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project.name}</h2>
+          <div style={{ fontSize: isMobile ? 11 : 12.5, color: T.textMuted, lineHeight: 1 }}>Chi tiết dự án</div>
         </div>
-        {approved && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: '3px 10px', borderRadius: 999, fontSize: 11.5, fontWeight: 700, background: T.greenDim, color: T.green, border: '1px solid rgba(0,186,124,0.2)' }}>✓ Đã duyệt</span>}
+        {approved && <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, padding: isMobile ? '2px 8px' : '3px 10px', borderRadius: 999, fontSize: isMobile ? 10 : 11.5, fontWeight: 700, background: T.greenDim, color: T.green, border: '1px solid rgba(0,186,124,0.2)' }}>✓ Đã duyệt</span>}
       </div>
 
       {/* PROFILE CARD */}
-      <div style={{ margin: '0 20px', marginTop: 16, position: 'relative', zIndex: 10, background: T.card, border: `1px solid ${T.border}`, borderRadius: 24, padding: '16px 20px', display: 'flex', gap: 18, alignItems: 'center', flexWrap: 'wrap', boxShadow: T.shadow, backdropFilter: 'blur(20px)' }}>
+      <div style={{ margin: isMobile ? '0 12px' : '0 20px', marginTop: isMobile ? 8 : 16, position: 'relative', zIndex: 10, background: T.card, border: `1px solid ${T.border}`, borderRadius: isMobile ? 20 : 24, padding: isMobile ? '12px 14px' : '16px 20px', display: 'flex', gap: isMobile ? 14 : 18, alignItems: 'center', flexWrap: 'wrap', boxShadow: T.shadow, backdropFilter: 'blur(20px)' }}>
         <div style={{ width: 64, height: 64, borderRadius: 18, background: avatarGrad(mainTag), display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: 26, color: '#fff', border: `3px solid ${T.card}`, flexShrink: 0 }}>{letter}</div>
         <div style={{ flex: 1, minWidth: 200 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}>
             <div>
-              <h1 style={{ fontSize: 21, fontWeight: 800, color: T.text, margin: 0, letterSpacing: '-0.02em' }}>{project.name}</h1>
-              <p style={{ fontSize: 13.5, color: T.textMuted, lineHeight: 1.5, margin: '2px 0 8px', maxWidth: 550, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project.description}</p>
-              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+              <h1 style={{ fontSize: isMobile ? 18 : 21, fontWeight: 800, color: T.text, margin: 0, letterSpacing: '-0.02em' }}>{project.name}</h1>
+              <p style={{ fontSize: isMobile ? 12.5 : 13.5, color: T.textMuted, lineHeight: 1.5, margin: isMobile ? '1px 0 6px' : '2px 0 8px', maxWidth: 550, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{project.description}</p>
+              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                 {industryTags.map((tag, idx) => (
-                  <span key={idx} style={{ fontSize: 12, color: T.blue, background: T.blueDim, padding: '2px 10px', borderRadius: 99, fontWeight: 700 }}>
+                  <span key={idx} style={{ fontSize: isMobile ? 10.5 : 12, color: T.blue, background: T.blueDim, padding: isMobile ? '1px 8px' : '2px 10px', borderRadius: 99, fontWeight: 700 }}>
                     #{tag}
                   </span>
                 ))}
@@ -791,16 +820,28 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           </div>
         </div>
 
-        <div style={{ width: '100%', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', borderTop: `1px solid ${T.border}`, marginTop: 14, paddingTop: 14, gap: 12 }}>
+        <div style={{ width: '100%', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', borderTop: `1px solid ${T.border}`, marginTop: isMobile ? 12 : 14, paddingTop: isMobile ? 6 : 14, gap: isMobile ? 0 : 12 }}>
           {[
-            { icon: <CurrencyDollar size={22} weight="duotone" color={T.blue} />, val: project.revenue ? Number(project.revenue).toLocaleString('vi-VN') + ' VND' : (project.revenue === undefined ? <PremiumBadge inline /> : '—'), lbl: 'Doanh thu', color: T.blue },
-            { icon: <ChartBar size={22} weight="duotone" color={T.green} />, val: project.marketSize ? Number(project.marketSize).toLocaleString('vi-VN') + ' VND' : (project.marketSize === undefined ? <PremiumBadge inline /> : '—'), lbl: 'Quy mô thị trường', color: T.green },
-            { icon: <Lightning size={22} weight="duotone" color={latestAI != null ? T.amber : T.textDim} />, val: latestAI != null ? String(latestAI) : '—', lbl: 'Điểm AI Potential', color: latestAI != null ? T.amber : T.textDim }
+            { icon: <CurrencyDollar size={isMobile ? 20 : 22} weight="duotone" color={T.blue} />, val: project.revenue ? FMT(project.revenue) : (project.revenue === undefined ? <PremiumBadge /> : '—'), lbl: 'Doanh thu', color: T.blue },
+            { icon: <ChartBar size={isMobile ? 20 : 22} weight="duotone" color={T.green} />, val: project.marketSize ? FMT(project.marketSize) : (project.marketSize === undefined ? <PremiumBadge /> : '—'), lbl: 'Quy mô thị trường', color: T.green },
+            { icon: <Lightning size={isMobile ? 20 : 22} weight="duotone" color={latestAI != null ? T.amber : T.textDim} />, val: latestAI != null ? String(latestAI) : '—', lbl: 'Điểm AI Potential', color: latestAI != null ? T.amber : T.textDim }
           ].map((k, i, arr) => (
-            <div key={i} style={{ textAlign: 'center', borderRight: (!isMobile && i < arr.length - 1) ? `1px solid ${T.border}` : 'none', padding: '8px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-              <div style={{ marginBottom: 4 }}>{k.icon}</div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: k.color, fontFamily: "'IBM Plex Mono', monospace" }}>{k.val}</div>
-              <div style={{ fontSize: 10.5, fontWeight: 700, color: T.textDim, textTransform: 'uppercase', letterSpacing: '0.04em' }}>{k.lbl}</div>
+            <div key={i} style={{
+              textAlign: isMobile ? 'left' : 'center',
+              borderRight: (!isMobile && i < arr.length - 1) ? `1px solid ${T.border}` : 'none',
+              borderBottom: (isMobile && i < arr.length - 1) ? `1px solid ${T.border}` : 'none',
+              padding: isMobile ? '14px 4px' : '8px',
+              display: 'flex',
+              flexDirection: isMobile ? 'row' : 'column',
+              alignItems: 'center',
+              gap: isMobile ? 16 : 1,
+              width: '100%'
+            }}>
+              <div style={{ marginBottom: isMobile ? 0 : 2, width: isMobile ? 32 : 'auto', display: 'flex', justifyContent: 'center' }}>{k.icon}</div>
+              <div style={{ flex: 1, display: 'flex', flexDirection: isMobile ? 'row' : 'column', alignItems: 'center', justifyContent: isMobile ? 'space-between' : 'center', gap: isMobile ? 12 : 1 }}>
+                <div style={{ fontSize: isMobile ? 11.5 : 10.5, fontWeight: isMobile ? 700 : 700, textTransform: 'uppercase', color: T.textDim, opacity: 0.8, letterSpacing: '0.02em', order: isMobile ? 1 : 2 }}>{k.lbl}</div>
+                <div style={{ fontSize: isMobile ? 14.5 : 15, fontWeight: 900, color: k.color, letterSpacing: '-0.02em', order: isMobile ? 2 : 1, display: 'flex', alignItems: 'center' }}>{k.val}</div>
+              </div>
             </div>
           ))}
         </div>
@@ -808,9 +849,9 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
       </div>
 
       {/* GRID CONTENT */}
-      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '38% 62%', padding: '28px 20px', gap: 0 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '38% 62%', padding: isMobile ? '20px 12px' : '28px 20px', gap: isMobile ? 14 : 0, width: '100%', minWidth: 0, boxSizing: 'border-box' }}>
         {/* LEFT COLUMN */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingRight: isMobile ? 0 : 20, borderRight: isMobile ? 'none' : `1px solid ${T.border}` }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingRight: isMobile ? 0 : 20, borderRight: isMobile ? 'none' : `1px solid ${T.border}`, minWidth: 0 }}>
           <SectionCard>
             <SectionHeader><ClipboardText size={18} weight="duotone" /> Thông tin cơ bản</SectionHeader>
             <SectionBody>
@@ -870,7 +911,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
         </div>
 
         {/* RIGHT COLUMN */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingLeft: isMobile ? 0 : 20 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingLeft: isMobile ? 0 : 20, minWidth: 0 }}>
           <SectionCard>
             <SectionHeader><TrendUp size={18} weight="duotone" /> Thị trường & Mô hình</SectionHeader>
             <SectionBody>

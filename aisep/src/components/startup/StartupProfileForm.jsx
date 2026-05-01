@@ -130,9 +130,12 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
     }
   };
 
+  // Use stable identity key (profile ID) as dependency instead of the full object reference.
+  // This prevents fetchConfig from re-running on every background poll re-render.
+  const profileId = initialData?.id ?? initialData?.startupId ?? null;
   useEffect(() => {
     fetchConfig();
-  }, [initialData]);
+  }, [profileId]);
 
   const handleRetry = () => {
     fetchConfig();

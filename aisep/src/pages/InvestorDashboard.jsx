@@ -33,6 +33,7 @@ import AIAnalyzeConfirmationModal from '../components/common/AIAnalyzeConfirmati
 import subscriptionService from '../services/subscriptionService';
 import paymentService from '../services/paymentService';
 import InvestorBookings from '../components/investor/InvestorBookings';
+import BlockchainOnchainResultModal from '../components/common/BlockchainOnchainResultModal';
 /**
  * InvestorDashboard - Comprehensive dashboard for investors
  * Features: Portfolio overview, Watchlist, Sent interests, Active investments, Preferences
@@ -416,7 +417,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 const formKey = profileRes ? 'investor.update' : 'investor.create';
                 try {
                     const rulesRes = await validationService.getFormRules(formKey);
-                    
+
                     // Inject industry count constraints (1-4 for Investors)
                     if (rulesRes && rulesRes.industryoptionids) {
                         rulesRes.industryoptionids.minCount = 1;
@@ -424,7 +425,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                         rulesRes.industryoptionids.minCountMessage = 'Vui lòng chọn ít nhất 1 lĩnh vực.';
                         rulesRes.industryoptionids.maxCountMessage = 'Bạn chỉ được chọn tối đa 4 lĩnh vực.';
                     }
-                    
+
                     setValidationRules(rulesRes);
                 } catch (err) {
                     console.error('[InvestorDashboard] Config error:', err);
@@ -2676,11 +2677,11 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                         className={styles.pill}
                                                         style={{
                                                             display: 'flex', alignItems: 'center', gap: '6px',
-                                                            padding: '8px 16px', borderRadius: '20px', 
+                                                            padding: '8px 16px', borderRadius: '20px',
                                                             border: '1px dashed var(--primary-blue)',
                                                             backgroundColor: 'rgba(29, 155, 240, 0.1)',
                                                             color: 'var(--primary-blue)',
-                                                            fontSize: '13px', fontWeight: '600', 
+                                                            fontSize: '13px', fontWeight: '600',
                                                             cursor: 'not-allowed', opacity: 0.8
                                                         }}
                                                         title="Lĩnh vực này hiện đã ngừng hỗ trợ và không thể thay đổi"
@@ -2788,34 +2789,11 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                     onClose={handleCloseChatWindow}
                 />
 
-                {showOnchainResultModal && onchainResultData && (
-                    <div className={styles.modalOverlay} onClick={() => setShowOnchainResultModal(false)}>
-                        <div className={styles.modalContent} style={{ maxWidth: '720px', height: 'auto', maxHeight: '88vh' }} onClick={(e) => e.stopPropagation()}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                                <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>Kết quả xác thực blockchain</h3>
-                                <button className={styles.modalCloseBtnInline} onClick={() => setShowOnchainResultModal(false)}><X size={18} /></button>
-                            </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-                                <div><strong>Deal ID:</strong> {onchainResultData.dealId ?? '-'}</div>
-                                <div><strong>Đã xác minh:</strong> {onchainResultData.isVerified ? 'Có' : 'Chưa'}</div>
-                                <div style={{ gridColumn: '1 / -1' }}><strong>Thông điệp:</strong> {onchainResultData.message || '-'}</div>
-                                <div style={{ gridColumn: '1 / -1', wordBreak: 'break-all' }}><strong>Document Hash:</strong> {onchainResultData.documentHash || '-'}</div>
-                                <div style={{ gridColumn: '1 / -1', wordBreak: 'break-all' }}><strong>Investor Wallet:</strong> {onchainResultData.investorWallet || '-'}</div>
-                                <div style={{ gridColumn: '1 / -1' }}><strong>Thời gian on-chain:</strong> {onchainResultData.timestampOnBlockchain || '-'}</div>
-                                <div style={{ gridColumn: '1 / -1', wordBreak: 'break-all' }}><strong>Owners:</strong> {(onchainResultData.owners || []).join(', ') || '-'}</div>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                <a href={onchainResultData.explorerLink} target="_blank" rel="noreferrer" className={styles.primaryBtn}>
-                                    <ExternalLink size={14} /> Xem trực tiếp trên Blockchain Explorer
-                                </a>
-                                <button className={styles.secondaryBtn} onClick={() => setShowOnchainResultModal(false)}>Đóng</button>
-                            </div>
-                            <p style={{ marginTop: '10px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                Ghi chú: Nếu trạng thái đã xác minh, dữ liệu hợp đồng đã được ghi nhận trên blockchain và có thể tự kiểm tra công khai bằng liên kết ở trên.
-                            </p>
-                        </div>
-                    </div>
-                )}
+                <BlockchainOnchainResultModal
+                    isOpen={showOnchainResultModal && !!onchainResultData}
+                    onClose={() => setShowOnchainResultModal(false)}
+                    result={onchainResultData}
+                />
 
                 {/* Contract Preview Modal - Modernized */}
                 {showContractModal && contractPreviewHtml && (

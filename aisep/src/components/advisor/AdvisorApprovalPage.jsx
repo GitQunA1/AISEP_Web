@@ -270,7 +270,7 @@ export default function AdvisorApprovalPage({ user, searchTerm }) {
 
             <div className={local.section} style={{ flex: 1, minHeight: 0, paddingBottom: 0 }}>
                 {/* Tab Switcher - Fully synced with Dashboard shared styles */}
-                <div className={sharedStyles.tabs} style={{ margin: '0 -24px 0 -24px', padding: '0 24px', overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
+                <div className={sharedStyles.tabs} style={{ overflowX: 'auto', borderBottom: '1px solid var(--border-color)', display: 'flex', gap: '8px' }}>
                     <button
                         className={`${sharedStyles.tab} ${activeMobileTab === 'All' ? sharedStyles.active : ''}`}
                         onClick={() => setActiveMobileTab('All')}
@@ -315,15 +315,15 @@ export default function AdvisorApprovalPage({ user, searchTerm }) {
 
                             const filteredList = filterAdvisors(list);
 
-                                if (filteredList.length === 0) {
-                                    return (
-                                        <EmptyState
-                                            icon={Archive}
-                                            title="Trống"
-                                            message={searchTerm ? 'Không tìm thấy kết quả phù hợp với tìm kiếm của bạn' : 'Hiện chưa có hồ sơ cố vấn nào trong danh mục này'}
-                                        />
-                                    );
-                                }
+                            if (filteredList.length === 0) {
+                                return (
+                                    <EmptyState
+                                        icon={Archive}
+                                        title="Trống"
+                                        message={searchTerm ? 'Không tìm thấy kết quả phù hợp với tìm kiếm của bạn' : 'Hiện chưa có hồ sơ cố vấn nào trong danh mục này'}
+                                    />
+                                );
+                            }
 
                             return (
                                 <div className={sharedStyles.sectionGrid} style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '16px', padding: '16px 0 24px 0' }}>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import {
     Users, Calendar, FileText, Star, Clock, CheckCircle, MessageSquare,
@@ -27,6 +27,7 @@ import AdvisorWalletSection from '../components/advisor/AdvisorWalletSection';
 import AccountProfileTab from '../components/common/AccountProfileTab';
 import BookingRejectionModal from '../components/booking/BookingRejectionModal';
 import UserReportStatusModal from '../components/booking/UserReportStatusModal';
+import ReviewModal from '../components/booking/ReviewModal';
 import RestrictedActionModal from '../components/common/RestrictedActionModal';
 import { useProfile } from '../context/ProfileContext';
 
@@ -42,7 +43,11 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
     const [restrictedActionMessage, setRestrictedActionMessage] = useState('');
 
     const { advisorProfile: ctxProfile, advisorProfileStatus, isAdvisorApproved, refreshProfile, profileLoading } = useProfile();
-    
+
+    // --- Silent Polling Infrastructure ---
+    const isFirstLoad = useRef(true);
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+
     // Source of truth
     const displayProfile = advisorProfile || ctxProfile;
     const isApproved = isAdvisorApproved;
@@ -58,16 +63,21 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
         setActiveChatSession(sessionId);
     };
 
-    // Initialize SignalR on mount
+    // SignalR: initialize and trigger immediate silent refresh on notification
     useEffect(() => {
         const initSignalR = async () => {
             try {
-                const token = localStorage.getItem('aisep_token');
+                const token = localStorage.getItem('aisep_token') || sessionStorage.getItem('token');
                 if (token && user?.userId) {
                     await signalRService.initialize(token);
+                    signalRService.onNotificationReceived(() => {
+                        console.log('[AdvisorDashboard] SignalR notification → silent refresh');
+                        setRefreshTrigger(prev => prev + 1);
+                    });
+                    console.log('[AdvisorDashboard] SignalR initialized');
                 }
             } catch (error) {
-                console.error('[AdvisorDashboard] Failed to initialize SignalR:', error);
+                console.warn('[AdvisorDashboard] SignalR init failed (non-critical):', error);
             }
         };
 
@@ -79,6 +89,22 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
             signalRService.disconnect();
         };
     }, [user?.userId]);
+
+    // Silent background polling every 5 seconds
+    useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('[AdvisorDashboard] Silent background poll triggered');
+            setRefreshTrigger(prev => prev + 1);
+        }, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Tab-switch: trigger immediate silent refresh when user switches section
+    useEffect(() => {
+        if (!isFirstLoad.current) {
+            setRefreshTrigger(prev => prev + 1);
+        }
+    }, [activeSection]);
 
     // Sync internal state with prop changes from sidebar
     useEffect(() => {
@@ -101,9 +127,14 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
     };
 
 
-    // ── Advisor profile ────────────────────────────────────────────────────
+    // Sync advisor profile from context to local state — only on first load.
+    // Subsequent silent polls must NOT update this to avoid triggering child
+    // component re-initialization (flash of empty content pattern).
     useEffect(() => {
-        if (ctxProfile) {
+        if (ctxProfile && isFirstLoad.current) {
+            setAdvisorProfile(ctxProfile);
+        } else if (ctxProfile && !advisorProfile) {
+            // Fallback: sync once if local state is still empty
             setAdvisorProfile(ctxProfile);
         }
     }, [ctxProfile]);
@@ -162,54 +193,53 @@ export default function AdvisorDashboard({ user, initialSection = 'overview', ta
 
     // ── Stats từ real data ─────────────────────────────────────────────────
 
-    const loadAvailabilities = useCallback(async () => {
-        setAvailabilitiesLoading(true);
+    const loadAvailabilities = useCallback(async ({ silent = false } = {}) => {
+        if (!silent) setAvailabilitiesLoading(true);
         try {
-            const [data] = await Promise.all([
-                advisorAvailabilityService.getMyAvailabilities(),
-                new Promise(resolve => setTimeout(resolve, 1000))
-            ]);
+            const data = await advisorAvailabilityService.getMyAvailabilities();
             setAvailabilities(data);
         } catch (e) {
-            console.error('Failed to load availabilities', e);
+            if (!silent) console.error('Failed to load availabilities', e);
         } finally {
-            setAvailabilitiesLoading(false);
+            if (!silent) setAvailabilitiesLoading(false);
         }
     }, []);
 
-    const loadIncomingBookings = useCallback(async () => {
+    const loadIncomingBookings = useCallback(async ({ silent = false } = {}) => {
         if (!advisorId) return;
-        setBookingsLoading(true);
+        if (!silent) setBookingsLoading(true);
         try {
             const [data, reportRes] = await Promise.all([
                 bookingService.getMyAdvisorBookings('', '-Id', 1, 100),
                 userReportService.getMyReportsAsReported(),
-                new Promise(resolve => setTimeout(resolve, 1000))
             ]);
             const items = data?.items ?? (Array.isArray(data) ? data : []);
             const reports = reportRes?.items ?? (Array.isArray(reportRes) ? reportRes : []);
-
             setUserReportsReported(reports);
-
-            // Sort newest to oldest (descending ID)
             const sortedItems = [...items].sort((a, b) => (b.id || 0) - (a.id || 0));
             setIncomingBookings(sortedItems);
         } catch (e) {
-            console.error('Failed to load incoming bookings', e);
+            if (!silent) console.error('Failed to load incoming bookings', e);
         } finally {
-            setBookingsLoading(false);
+            if (!silent) setBookingsLoading(false);
         }
     }, [advisorId]);
 
+    // Main data fetch engine: fires on mount + every refreshTrigger increment
     useEffect(() => {
-        loadAvailabilities();
-    }, [loadAvailabilities]);
-
-    useEffect(() => {
-        if (advisorId) {
-            loadIncomingBookings();
-        }
-    }, [advisorId, loadIncomingBookings]);
+        const silent = !isFirstLoad.current;
+        const doFetch = async () => {
+            try {
+                await Promise.all([
+                    loadAvailabilities({ silent }),
+                    loadIncomingBookings({ silent }),
+                ]);
+            } finally {
+                if (!silent) isFirstLoad.current = false;
+            }
+        };
+        doFetch();
+    }, [refreshTrigger, loadAvailabilities, loadIncomingBookings]);
 
     const pendingBookingCount = incomingBookings.filter(b => b.status === 0 || b.status === 'Pending').length;
     const availableSlotCount = availabilities.filter(a => a.status === 0 || a.status === 'Available').length;
@@ -1007,6 +1037,7 @@ function IncomingBookingsSection({ bookings, userReports = [], targetId, loading
     const [chatLoading, setChatLoading] = useState({});
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [selectedReportForView, setSelectedReportForView] = useState(null);
+    const [selectedReviewForView, setSelectedReviewForView] = useState(null);
     const [activeMobileTab, setActiveMobileTab] = useState('pend'); // pend, conf, comp, complaint, canc
     const tabSwitcherRef = React.useRef(null);
     const [showLeftTabIndicator, setShowLeftTabIndicator] = useState(false);
@@ -1239,7 +1270,13 @@ function IncomingBookingsSection({ bookings, userReports = [], targetId, loading
                         if (act === 'chat') handleOpenChat(b);
                         if (act === 'report') setReportModal({ bookingId: b.id, advisorName: b.customerName, userRole: 'Advisor' });
                         if (act === 'viewComplaint') {
+                            // b here is the existingReport object from BookingDetailModal
                             setSelectedReportForView(b);
+                            setSelectedBooking(null);
+                        }
+                        if (act === 'viewReview') {
+                            // b here is { ...booking, existingReview } from BookingDetailModal
+                            setSelectedReviewForView(b);
                             setSelectedBooking(null);
                         }
                         if (act === 'viewProject') {
@@ -1278,6 +1315,14 @@ function IncomingBookingsSection({ bookings, userReports = [], targetId, loading
                 <UserReportStatusModal
                     report={selectedReportForView}
                     onClose={() => setSelectedReportForView(null)}
+                />
+            )}
+
+            {selectedReviewForView && (
+                <ReviewModal
+                    booking={selectedReviewForView}
+                    viewerRole="Advisor"
+                    onClose={() => setSelectedReviewForView(null)}
                 />
             )}
 

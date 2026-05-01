@@ -91,6 +91,7 @@
   align-items: center;
   justify-content: flex-start !important;
   background: linear-gradient(to bottom, var(--bg-primary) 0%, var(--bg-primary) 100%);
+  --sticky-top: 0px;
 }
 
 .noScroll {
@@ -100,6 +101,11 @@
 .fullWidthContent {
   padding: 0 !important;
   background: var(--bg-primary) !important;
+}
+
+.hideHeaderOnMobile {
+  margin-top: 0 !important;
+  --sticky-top: 0px !important;
 }
 
 /* GLOBAL NO-SCROLL class for dashboards/AI mode */
@@ -198,6 +204,7 @@
     overflow: visible;
     margin-top: 60px;
     padding-bottom: 24px;
+    --sticky-top: 60px;
   }
 
   /* Add horizontal padding for mobile — SIGNIFICANTLY REDUCED to fix gaps */

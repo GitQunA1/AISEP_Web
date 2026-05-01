@@ -60,9 +60,15 @@ export default function AIEvaluationModal({
     const isNonStartupViewer = (isInvestorViewer || isStaffOrAdvisorViewer) && !isStartupViewer;
 
     // Determine if this is a staff-initiated eligibility report
-    const isEligibilityReport = analysisData && (
-        (typeof analysisData.is_eligible_startup === 'boolean') || 
-        (typeof analysisData.isEligibleStartup === 'boolean')
+    // Priority: explicit _type tag from caller > field-sniffing
+    const explicitType = analysisResult?._type; // 'startup' | 'eligibility' | undefined
+    const isEligibilityReport = explicitType === 'eligibility' || (
+        explicitType !== 'startup' &&
+        analysisData &&
+        (
+            (typeof analysisData.is_eligible_startup === 'boolean') ||
+            (typeof analysisData.isEligibleStartup === 'boolean')
+        )
     );
     const isEligible = analysisData?.is_eligible_startup || analysisData?.isEligibleStartup;
     const eligibilityReason = analysisData?.eligibility_reason || analysisData?.eligibilityReason;
@@ -195,7 +201,7 @@ export default function AIEvaluationModal({
                                         <div className={styles.scoreBar}>
                                             <div
                                                 className={styles.scoreBarFill}
-                                                style={{ width: `${(item.score / 1.5) * 100}%` }}
+                                                style={{ width: `${((item?.score || 0) / 1.5) * 100}%` }}
                                             ></div>
                                         </div>
                                         <span className={styles.componentScore}>{item.score?.toFixed(1) || 0}</span>
@@ -212,7 +218,7 @@ export default function AIEvaluationModal({
                         <h3 className={styles.sectionTitle}>🔍 Chi Tiết Phân Phối Điểm</h3>
                         <div className={styles.analysisList}>
                             {Object.entries(analysis).map(([key, section]) => {
-                                if (typeof section !== 'object' || !section.score) return null;
+                                if (section == null || typeof section !== 'object' || !section.score) return null;
 
                                 const isExpanded = expandedSections[key];
 

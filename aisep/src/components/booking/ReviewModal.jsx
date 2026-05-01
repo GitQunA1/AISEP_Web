@@ -12,7 +12,7 @@ import reviewService from '../../services/reviewService';
  *   onClose {fn}     - Close modal callback
  *   onDone  {fn}     - Success callback
  */
-export default function ReviewModal({ booking, onClose, onDone }) {
+export default function ReviewModal({ booking, onClose, onDone, viewerRole = 'Customer' }) {
     const existingReview = booking?.existingReview;
     const isReadOnly = !!existingReview;
 
@@ -65,9 +65,11 @@ export default function ReviewModal({ booking, onClose, onDone }) {
                         <div className={styles.headerIcon}>
                             <Sparkle size={24} weight="fill" />
                         </div>
-                        <h2 className={styles.title}>{isReadOnly ? 'Đánh giá của bạn' : 'Đánh giá buổi tư vấn'}</h2>
+                        <h2 className={styles.title}>
+                            {isReadOnly ? (['Advisor', 'Staff'].includes(viewerRole) ? 'Đánh giá từ khách hàng' : 'Đánh giá của bạn') : 'Đánh giá buổi tư vấn'}
+                        </h2>
                         <p className={styles.subtitle}>
-                            {isReadOnly ? 'Nội dung bạn đã gửi cho buổi tư vấn này' : 'Chia sẻ trải nghiệm của bạn về buổi tư vấn này'}
+                            {isReadOnly ? (['Advisor', 'Staff'].includes(viewerRole) ? 'Nội dung đánh giá cho buổi tư vấn này' : 'Nội dung bạn đã gửi cho buổi tư vấn này') : 'Chia sẻ trải nghiệm của bạn về buổi tư vấn này'}
                         </p>
                     </div>
                     <button className={styles.closeBtn} onClick={onClose} aria-label="Đóng">
@@ -90,7 +92,7 @@ export default function ReviewModal({ booking, onClose, onDone }) {
                     {/* Star Rating Section */}
                     <div>
                         <label className={styles.ratingLabel}>
-                            {isReadOnly ? 'Đánh giá của bạn' : 'Bạn cảm thấy buổi tư vấn thế nào?'}
+                            {isReadOnly ? (['Advisor', 'Staff'].includes(viewerRole) ? 'Mức độ hài lòng của khách hàng' : 'Đánh giá của bạn') : 'Bạn cảm thấy buổi tư vấn thế nào?'}
                         </label>
                         <div className={styles.starRow}>
                             {[1, 2, 3, 4, 5].map((star) => (

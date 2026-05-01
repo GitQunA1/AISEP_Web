@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FileCheck, CheckCircle, AlertCircle, Search, Archive, Users, Activity, Settings, Trash2, Download, Eye, ArrowRight, X, XCircle, FileText, Loader2, TrendingUp, ExternalLink, Shield, History, Calendar, PieChart, Briefcase, Clock, DollarSign, Send, Newspaper, User, Edit2, PenTool, Image as ImageIcon, ImageOff, Maximize2 } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import local from '../styles/OperationStaffDashboard.module.css';
@@ -24,6 +24,7 @@ import CommissionManagement from '../components/staff/CommissionManagement';
 import TermsManagement from '../components/admin/TermsManagement';
 import EmptyState from '../components/common/EmptyState';
 import BlockchainVerificationModal from '../components/common/BlockchainVerificationModal';
+import BlockchainOnchainResultModal from '../components/common/BlockchainOnchainResultModal';
 import blockchainVerificationService from '../services/blockchainVerificationService';
 import AccountProfileTab from '../components/common/AccountProfileTab';
 import StartupApprovalCard from '../components/staff/StartupApprovalCard';
@@ -31,6 +32,7 @@ import StartupDetailModal from '../components/staff/StartupDetailModal';
 import NewsPRSection from '../components/common/NewsPRSection';
 import BookingDetailModal from '../components/booking/BookingDetailModal';
 import ConsultingReportModal from '../components/booking/ConsultingReportModal';
+import ReviewModal from '../components/booking/ReviewModal';
 
 
 const T = {
@@ -569,6 +571,10 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [activeSection, setActiveSection] = useState(initialSection);
     const [activePRTab, setActivePRTab] = useState('posting'); // 'posting' or 'news'
 
+    // --- Polling Infrastructure ---
+    const [refreshTrigger, setRefreshTrigger] = useState(0);
+    const isFirstLoad = useRef(true);
+
     // Deep LINK State
     const [hasAttemptedDeepLink, setHasAttemptedDeepLink] = useState(false);
 
@@ -586,12 +592,12 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [pendingProjects, setPendingProjects] = useState([]);
     const [approvedProjects, setApprovedProjects] = useState([]);
     const [rejectedProjects, setRejectedProjects] = useState([]);
-    const [isLoadingProjects, setIsLoadingProjects] = useState(false);
+    const [isLoadingProjects, setIsLoadingProjects] = useState(true);
     const [projectSubmissions, setProjectSubmissions] = useState([]);
     const [pendingStartups, setPendingStartups] = useState([]);
     const [approvedStartups, setApprovedStartups] = useState([]);
     const [rejectedStartups, setRejectedStartups] = useState([]);
-    const [isLoadingStartups, setIsLoadingStartups] = useState(false);
+    const [isLoadingStartups, setIsLoadingStartups] = useState(true);
     const [selectedStartupForDetail, setSelectedStartupForDetail] = useState(null);
     const [showStartupDetailModal, setShowStartupDetailModal] = useState(false);
     const [activeMobileStartupTab, setActiveMobileStartupTab] = useState('pend'); // 'all', 'pend', 'appr', 'rej'
@@ -656,17 +662,18 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
     // Booking Management state
     const [bookings, setBookings] = useState([]);
-    const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+    const [isLoadingBookings, setIsLoadingBookings] = useState(true);
     const [bookingFilters, setBookingFilters] = useState('');
     const [bookingPage, setBookingPage] = useState(1);
     const [bookingSearchTerm, setBookingSearchTerm] = useState('');
     const [activeMobileBookingTab, setActiveMobileBookingTab] = useState('all'); // 'all', 'pend', 'conf', 'comp', 'complaint', 'canc'
     const [bookingsError, setBookingsError] = useState(null);
     const [projectsError, setProjectsError] = useState(null);
+    const [selectedReviewForView, setSelectedReviewForView] = useState(null);
 
     // User Reports state
     const [userReports, setUserReports] = useState([]);
-    const [isLoadingUserReports, setIsLoadingUserReports] = useState(false);
+    const [isLoadingUserReports, setIsLoadingUserReports] = useState(true);
     const [userReportsError, setUserReportsError] = useState(null);
     const [reportFilter, setReportFilter] = useState('All'); // 'All', 'Pending', 'Resolved', 'Dismissed'
     const [showReportResolveModal, setShowReportResolveModal] = useState(false);
@@ -706,7 +713,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const [pendingInvestors, setPendingInvestors] = useState([]);
     const [approvedInvestors, setApprovedInvestors] = useState([]);
     const [rejectedInvestors, setRejectedInvestors] = useState([]);
-    const [isLoadingInvestors, setIsLoadingInvestors] = useState(false);
+    const [isLoadingInvestors, setIsLoadingInvestors] = useState(true);
     const [processingInvestorId, setProcessingInvestorId] = useState(null);
     const [investorAction, setInvestorAction] = useState(null);
     const [selectedInvestor, setSelectedInvestor] = useState(null);
@@ -715,7 +722,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
     // PR Management state
     const [signedDeals, setSignedDeals] = useState([]);
-    const [isLoadingSignedDeals, setIsLoadingSignedDeals] = useState(false);
+    const [isLoadingSignedDeals, setIsLoadingSignedDeals] = useState(true);
     const [signedDealsError, setSignedDealsError] = useState(null);
     const [prSearchTerm, setPrSearchTerm] = useState('');
     const [processingDealId, setProcessingDealId] = useState(null);
@@ -726,7 +733,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
     // PR News state
     const [prNewsList, setPrNewsList] = useState([]);
-    const [isLoadingPRNews, setIsLoadingPRNews] = useState(false);
+    const [isLoadingPRNews, setIsLoadingPRNews] = useState(true);
     const [prNewsError, setPrNewsError] = useState(null);
     const [prNewsSearchTerm, setPrNewsSearchTerm] = useState('');
     const [processingPRId, setProcessingPRId] = useState(null);
@@ -739,7 +746,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
     // Investment management state (staff deal review)
     const [staffDeals, setStaffDeals] = useState([]);
-    const [isLoadingStaffDeals, setIsLoadingStaffDeals] = useState(false);
+    const [isLoadingStaffDeals, setIsLoadingStaffDeals] = useState(true);
     const [staffDealsError, setStaffDealsError] = useState(null);
     const [staffDealSearchTerm, setStaffDealSearchTerm] = useState('');
     const [selectedStaffDeal, setSelectedStaffDeal] = useState(null);
@@ -909,9 +916,9 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     const paginatedBookings = displayedBookings.slice((bookingPage - 1) * bookingPageSize, bookingPage * bookingPageSize);
 
     // Fetch bookings
-    const fetchBookings = async () => {
-        setIsLoadingBookings(true);
-        setBookingsError(null);
+    const fetchBookings = async ({ silent = false } = {}) => {
+        if (!silent) setIsLoadingBookings(true);
+        if (!silent) setBookingsError(null);
         try {
             const response = await bookingService.getAllBookings('', '', 1, 100);
             if (response && response.items) {
@@ -919,14 +926,14 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                 bookings.sort((a, b) => new Date(b.updatedAt || b.createdAt || 0) - new Date(a.updatedAt || a.createdAt || 0));
                 setAllBookings(bookings);
             } else {
-                setBookingsError('Không thể tải dữ liệu booking. Vui lòng thử lại sau.');
+                if (!silent) setBookingsError('Không thể tải dữ liệu booking. Vui lòng thử lại sau.');
             }
         } catch (error) {
             console.error('Error fetching bookings:', error);
-            setBookingsError('Lỗi kết nối máy chủ hoặc API không phản hồi.');
-            setAllBookings([]);
+            if (!silent) setBookingsError('Lỗi kết nối máy chủ hoặc API không phản hồi.');
+            if (!silent) setAllBookings([]);
         } finally {
-            setIsLoadingBookings(false);
+            if (!silent) setIsLoadingBookings(false);
         }
     };
 
@@ -959,9 +966,9 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
     };
 
 
-    const fetchPendingProjects = async () => {
-        setIsLoadingProjects(true);
-        setProjectsError(null);
+    const fetchPendingProjects = async ({ silent = false } = {}) => {
+        if (!silent) setIsLoadingProjects(true);
+        if (!silent) setProjectsError(null);
         try {
             const response = await projectSubmissionService.getPendingProjects();
             if (response.success && response.data) {
@@ -969,19 +976,19 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                 projects.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
                 setPendingProjects(projects);
             } else {
-                setProjectsError('Không thể tải danh sách dự án chờ xử lý.');
+                if (!silent) setProjectsError('Không thể tải danh sách dự án chờ xử lý.');
             }
         } catch (error) {
             console.error('Error fetching pending projects:', error);
-            setProjectsError('Lỗi kết nối máy chủ khi tải dự án.');
-            setPendingProjects([]);
+            if (!silent) setProjectsError('Lỗi kết nối máy chủ khi tải dự án.');
+            if (!silent) setPendingProjects([]);
         } finally {
-            setIsLoadingProjects(false);
+            if (!silent) setIsLoadingProjects(false);
         }
     };
 
-    const fetchApprovedProjects = async () => {
-        setIsLoadingProjects(true);
+    const fetchApprovedProjects = async ({ silent = false } = {}) => {
+        if (!silent) setIsLoadingProjects(true);
         try {
             const response = await projectSubmissionService.getApprovedProjects();
             if (response.success && response.data) {
@@ -991,14 +998,14 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             }
         } catch (error) {
             console.error('Error fetching approved projects:', error);
-            setApprovedProjects([]);
+            if (!silent) setApprovedProjects([]);
         } finally {
-            setIsLoadingProjects(false);
+            if (!silent) setIsLoadingProjects(false);
         }
     };
 
-    const fetchRejectedProjects = async () => {
-        setIsLoadingProjects(true);
+    const fetchRejectedProjects = async ({ silent = false } = {}) => {
+        if (!silent) setIsLoadingProjects(true);
         try {
             const response = await projectSubmissionService.getRejectedProjects();
             if (response.success && response.data) {
@@ -1008,14 +1015,14 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             }
         } catch (error) {
             console.error('Error fetching rejected projects:', error);
-            setRejectedProjects([]);
+            if (!silent) setRejectedProjects([]);
         } finally {
-            setIsLoadingProjects(false);
+            if (!silent) setIsLoadingProjects(false);
         }
     };
 
-    const fetchStartupsData = async () => {
-        setIsLoadingStartups(true);
+    const fetchStartupsData = async ({ silent = false } = {}) => {
+        if (!silent) setIsLoadingStartups(true);
         try {
             const response = await startupProfileService.getAllStartups();
             const items = Array.isArray(response) ? response : (response?.data?.items || response?.items || []);
@@ -1034,39 +1041,58 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         } catch (error) {
             console.error('Error fetching startups data:', error);
         } finally {
-            setIsLoadingStartups(false);
+            if (!silent) setIsLoadingStartups(false);
         }
     };
 
-    // Tự động tải dữ liệu cần thiết cho Statistics và các tab chính ngay khi component khởi tập (Mounting).
-    // Giúp hiển thị số liệu thực ngay ở tab Tổng quan thay vì số 0.
+    // Polling engine: chạy lại khi refreshTrigger thay đổi (mount + interval + tab switch)
     React.useEffect(() => {
-        fetchAllData();
-        fetchInvestors();
-    }, []);
+        const silent = !isFirstLoad.current;
+        fetchAllData({ silent });
+        fetchInvestors({ silent });
+    }, [refreshTrigger]);
 
-    // Refresh dữ liệu khi người dùng chủ động chuyển tab (nếu cần cập nhật mới nhất)
+    // Silent tab-switch refresh: kích hoạt poll ngay khi user chuyển tab (không hiện skeleton)
     React.useEffect(() => {
-        if (activeSection === 'project_management') {
-            fetchPendingProjects();
-            fetchApprovedProjects();
-            fetchRejectedProjects();
-        } else if (activeSection === 'bookings') {
-            fetchBookings();
-            fetchUserReports();
-        } else if (activeSection === 'approvals') {
-            fetchStartupsData();
-        } else if (activeSection === 'user_reports') {
-            fetchUserReports();
-        } else if (activeSection === 'pr_management') {
-            fetchSignedDeals();
-            fetchPRNews();
-        } else if (activeSection === 'pr_news') {
-            fetchPRNews();
-        } else if (activeSection === 'investment_management') {
-            fetchStaffDeals();
+        if (!isFirstLoad.current) {
+            setRefreshTrigger(prev => prev + 1);
         }
     }, [activeSection]);
+
+    // Silent background polling mỗi 5 giây
+    React.useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('[OperationStaffDashboard] Silent background poll triggered');
+            setRefreshTrigger(prev => prev + 1);
+        }, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // SignalR: refresh ngay khi nhận notification real-time
+    React.useEffect(() => {
+        const initSignalR = async () => {
+            try {
+                const { default: signalRService } = await import('../services/signalRService');
+                const token = localStorage.getItem('aisep_token') || sessionStorage.getItem('token');
+                if (token && user?.userId) {
+                    await signalRService.initialize(token);
+                    signalRService.onNotificationReceived(() => {
+                        console.log('[OperationStaffDashboard] SignalR notification → silent refresh');
+                        setRefreshTrigger(prev => prev + 1);
+                    });
+                    console.log('[OperationStaffDashboard] SignalR initialized');
+                }
+            } catch (err) {
+                console.warn('[OperationStaffDashboard] SignalR init failed (non-critical):', err);
+            }
+        };
+        initSignalR();
+        return () => {
+            import('../services/signalRService').then(({ default: signalRService }) => {
+                signalRService.disconnect();
+            }).catch(() => { });
+        };
+    }, [user?.userId]);
 
     // Fetch project documents when detail modal opens
     useEffect(() => {
@@ -1445,9 +1471,9 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         }
     };
 
-    const fetchUserReports = async () => {
-        setIsLoadingUserReports(true);
-        setUserReportsError(null);
+    const fetchUserReports = async ({ silent = false } = {}) => {
+        if (!silent) setIsLoadingUserReports(true);
+        if (!silent) setUserReportsError(null);
         try {
             const response = await userReportService.getAllReports();
             // Some API endpoints return { data: [...] } or { items: [...] }
@@ -1461,9 +1487,9 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
             setUserReports(sortedReports);
         } catch (error) {
             console.error('Error fetching user reports:', error);
-            setUserReportsError('Không thể tải danh sách báo cáo vi phạm.');
+            if (!silent) setUserReportsError('Không thể tải danh sách báo cáo vi phạm.');
         } finally {
-            setIsLoadingUserReports(false);
+            if (!silent) setIsLoadingUserReports(false);
         }
     };
 
@@ -1798,30 +1824,35 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
 
 
     /**
-     * fetchAllData - Aggregates data from all specific fetch functions
-     * to ensure the dashboard stats are up to date.
+     * fetchAllData - Aggregates data from all specific fetch functions.
+     * Only shows loading skeletons on the very first mount (isFirstLoad guard).
      */
-    const fetchAllData = async () => {
+    const fetchAllData = async ({ silent: forceSilent } = {}) => {
+        const silent = forceSilent ?? !isFirstLoad.current;
+
         try {
             await Promise.all([
-                fetchPendingProjects(),
-                fetchApprovedProjects(),
-                fetchRejectedProjects(),
-                fetchPendingStartups(),
-                fetchUserReports(),
-                fetchBookings(),
-                fetchInvestors()
+                fetchPendingProjects({ silent }),
+                fetchApprovedProjects({ silent }),
+                fetchRejectedProjects({ silent }),
+                fetchStartupsData({ silent }),
+                fetchUserReports({ silent }),
+                fetchBookings({ silent }),
             ]);
         } catch (error) {
-            console.error('Error fetching all dashboard data:', error);
+            console.error('[OperationStaffDashboard] Error in fetchAllData:', error);
+        } finally {
+            if (!silent) {
+                isFirstLoad.current = false;
+            }
         }
     };
 
     /**
      * fetchInvestors - Fetches all investors and splits them by approval status
      */
-    const fetchInvestors = async () => {
-        setIsLoadingInvestors(true);
+    const fetchInvestors = async ({ silent = false } = {}) => {
+        if (!silent) setIsLoadingInvestors(true);
         try {
             const response = await investorService.getAllInvestors({ pageSize: 100 });
             const investors = response.items || [];
@@ -1832,7 +1863,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
         } catch (error) {
             console.error('Error fetching investors:', error);
         } finally {
-            setIsLoadingInvestors(false);
+            if (!silent) setIsLoadingInvestors(false);
         }
     };
 
@@ -3739,7 +3770,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                             {isLoadingHistory ? <Loader2 className={styles.spinner} size={20} /> : (
                                                 <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
                                                     {analysisHistory.length > 0 ? analysisHistory.map((h, i) => (
-                                                        <button key={i} onClick={() => { setSelectedHistoryResult({ data: h }); setShowHistoryView(true); }} className={styles.scoreCard} style={{ minWidth: '100px' }}>
+                                                        <button key={i} onClick={() => { setSelectedHistoryResult({ data: h, _type: 'startup' }); setShowHistoryView(true); }} className={styles.scoreCard} style={{ minWidth: '100px' }}>
                                                             <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{new Date(h.createdAt || h.evaluatedAt).toLocaleDateString('vi-VN')}</div>
                                                             <div style={{ fontSize: '18px', fontWeight: '900', color: 'var(--primary-blue)' }}>{h.potentialScore || 0}<small style={{ fontSize: '10px' }}>/100</small></div>
                                                         </button>
@@ -3766,7 +3797,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                                     {staffAnalysisHistory.length > 0 ? staffAnalysisHistory.map((h, i) => {
                                                         const isEligible = h.is_eligible_startup || h.isEligibleStartup || h.data?.is_eligible_startup;
                                                         return (
-                                                            <button key={i} onClick={() => { setSelectedHistoryResult({ data: h }); setShowHistoryView(true); }} className={styles.scoreCard} style={{ minWidth: '110px', borderLeft: `4px solid ${isEligible ? '#10b981' : '#ef4444'}` }}>
+                                                            <button key={i} onClick={() => { setSelectedHistoryResult({ data: h, _type: 'eligibility' }); setShowHistoryView(true); }} className={styles.scoreCard} style={{ minWidth: '110px', borderLeft: `4px solid ${isEligible ? '#10b981' : '#ef4444'}` }}>
                                                                 <div style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{new Date(h.createdAt).toLocaleDateString('vi-VN')}</div>
                                                                 <div style={{ color: isEligible ? '#10b981' : '#ef4444', fontWeight: '900', fontSize: '12px' }}>{isEligible ? 'ĐỦ ĐIỀU KIỆN' : 'KHÔNG ĐỦ Đ/K'}</div>
                                                             </button>
@@ -3918,6 +3949,10 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                             setReportBookingId(b.id || b.bookingId);
                             setReportAdvisorName(b.advisorName || '');
                             setShowConsultantReportModal(true);
+                        } else if (type === 'viewReview') {
+                            // b here is { ...booking, existingReview } from BookingDetailModal
+                            setSelectedReviewForView(b);
+                            setShowBookingModal(false);
                         }
                     }}
                 />
@@ -3930,6 +3965,15 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     userRole="Staff"
                     advisorName={reportAdvisorName}
                     onClose={() => setShowConsultantReportModal(false)}
+                />
+            )}
+
+            {/* Review Modal for Staff */}
+            {selectedReviewForView && (
+                <ReviewModal
+                    booking={selectedReviewForView}
+                    viewerRole="Staff"
+                    onClose={() => setSelectedReviewForView(null)}
                 />
             )}
 
@@ -3978,25 +4022,25 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                         <div className={local.inv_modalCompactBody} style={{ maxHeight: '75vh', overflowY: 'auto', padding: isMobile ? '16px' : '24px' }}>
                             <div className={local.inv_detailGrid} style={{ gap: isMobile ? '20px' : '24px' }}>
                                 {/* Profile Header Section - Optimized for Mobile */}
-                                <div style={{ 
-                                    display: 'flex', 
+                                <div style={{
+                                    display: 'flex',
                                     flexDirection: isMobile ? 'column' : 'row',
-                                    gap: isMobile ? '16px' : '20px', 
-                                    alignItems: 'center', 
-                                    padding: isMobile ? '20px 16px' : '20px', 
-                                    backgroundColor: 'var(--bg-secondary)', 
-                                    borderRadius: '20px', 
+                                    gap: isMobile ? '16px' : '20px',
+                                    alignItems: 'center',
+                                    padding: isMobile ? '20px 16px' : '20px',
+                                    backgroundColor: 'var(--bg-secondary)',
+                                    borderRadius: '20px',
                                     marginBottom: '8px',
                                     textAlign: isMobile ? 'center' : 'left',
                                     border: '1px solid var(--border-color)'
                                 }}>
-                                    <div style={{ 
-                                        width: isMobile ? '90px' : '80px', 
-                                        height: isMobile ? '90px' : '80px', 
-                                        borderRadius: '50%', 
-                                        overflow: 'hidden', 
-                                        border: '3px solid var(--primary-blue)', 
-                                        backgroundColor: 'var(--bg-primary)', 
+                                    <div style={{
+                                        width: isMobile ? '90px' : '80px',
+                                        height: isMobile ? '90px' : '80px',
+                                        borderRadius: '50%',
+                                        overflow: 'hidden',
+                                        border: '3px solid var(--primary-blue)',
+                                        backgroundColor: 'var(--bg-primary)',
                                         flexShrink: 0,
                                         boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
                                     }}>
@@ -4009,27 +4053,27 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                         )}
                                     </div>
                                     <div style={{ flex: 1, minWidth: 0, width: '100%' }}>
-                                        <h3 style={{ 
-                                            margin: 0, 
-                                            fontSize: isMobile ? '22px' : '20px', 
-                                            fontWeight: '900', 
+                                        <h3 style={{
+                                            margin: 0,
+                                            fontSize: isMobile ? '22px' : '20px',
+                                            fontWeight: '900',
                                             color: 'var(--text-primary)',
                                             lineHeight: 1.2,
                                             wordBreak: 'break-word'
                                         }}>
                                             {selectedInvestor.organizationName || selectedInvestor.fullName || 'Chưa cập nhật tên'}
                                         </h3>
-                                        <div style={{ 
-                                            display: 'flex', 
+                                        <div style={{
+                                            display: 'flex',
                                             flexDirection: isMobile ? 'column' : 'row',
-                                            alignItems: isMobile ? 'center' : 'center', 
-                                            gap: isMobile ? '4px' : '8px', 
-                                            marginTop: '8px' 
+                                            alignItems: isMobile ? 'center' : 'center',
+                                            gap: isMobile ? '4px' : '8px',
+                                            marginTop: '8px'
                                         }}>
                                             <span style={{ fontSize: '14px', color: 'var(--primary-blue)', fontWeight: '800' }}>@{selectedInvestor.userName || 'username'}</span>
                                             {!isMobile && <span style={{ width: '4px', height: '4px', borderRadius: '50%', backgroundColor: 'var(--text-muted)' }}></span>}
-                                            <span style={{ 
-                                                fontSize: '13px', 
+                                            <span style={{
+                                                fontSize: '13px',
                                                 color: 'var(--text-secondary)',
                                                 wordBreak: 'break-all',
                                                 opacity: 0.8
@@ -4041,15 +4085,15 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: isMobile ? '20px' : '24px' }}>
                                     <div>
                                         <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Địa chỉ ví Blockchain</label>
-                                        <p style={{ 
-                                            fontSize: '12px', 
-                                            color: 'var(--text-primary)', 
-                                            margin: 0, 
-                                            fontWeight: '600', 
-                                            fontFamily: 'monospace', 
-                                            wordBreak: 'break-all', 
-                                            backgroundColor: 'rgba(29, 155, 240, 0.05)', 
-                                            padding: '10px 12px', 
+                                        <p style={{
+                                            fontSize: '12px',
+                                            color: 'var(--text-primary)',
+                                            margin: 0,
+                                            fontWeight: '600',
+                                            fontFamily: 'monospace',
+                                            wordBreak: 'break-all',
+                                            backgroundColor: 'rgba(29, 155, 240, 0.05)',
+                                            padding: '10px 12px',
                                             borderRadius: '10px',
                                             border: '1px dashed rgba(29, 155, 240, 0.2)',
                                             lineHeight: 1.4
@@ -4073,10 +4117,10 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                     <div>
                                         <label style={{ fontSize: '11px', color: 'var(--text-secondary)', textTransform: 'uppercase', fontWeight: '800', letterSpacing: '0.8px', display: 'block', marginBottom: '6px' }}>Khẩu vị rủi ro</label>
                                         <div style={{ marginTop: '2px' }}>
-                                            <span style={{ 
-                                                fontSize: '12px', 
-                                                fontWeight: '900', 
-                                                padding: '6px 14px', 
+                                            <span style={{
+                                                fontSize: '12px',
+                                                fontWeight: '900',
+                                                padding: '6px 14px',
                                                 borderRadius: '20px',
                                                 display: 'inline-flex',
                                                 backgroundColor: selectedInvestor.riskTolerance === 'High' ? 'rgba(244, 33, 46, 0.1)' : (selectedInvestor.riskTolerance === 'Medium' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(16, 185, 129, 0.1)'),
@@ -4137,19 +4181,19 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                 )}
                             </div>
                         </div>
-                        <div style={{ 
-                            padding: isMobile ? '16px' : '16px 24px', 
-                            borderTop: '1px solid var(--border-color)', 
-                            display: 'flex', 
-                            justifyContent: isMobile ? 'stretch' : 'flex-end', 
-                            backgroundColor: 'var(--bg-secondary)' 
+                        <div style={{
+                            padding: isMobile ? '16px' : '16px 24px',
+                            borderTop: '1px solid var(--border-color)',
+                            display: 'flex',
+                            justifyContent: isMobile ? 'stretch' : 'flex-end',
+                            backgroundColor: 'var(--bg-secondary)'
                         }}>
-                            <button 
-                                onClick={() => setShowInvestorDetailModal(false)} 
-                                className={local.modalSecondaryBtn} 
-                                style={{ 
-                                    padding: '8px 24px', 
-                                    borderRadius: '12px', 
+                            <button
+                                onClick={() => setShowInvestorDetailModal(false)}
+                                className={local.modalSecondaryBtn}
+                                style={{
+                                    padding: '8px 24px',
+                                    borderRadius: '12px',
                                     height: '48px',
                                     width: isMobile ? '100%' : 'auto',
                                     fontWeight: '800',
@@ -4171,79 +4215,79 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                             const canStaffReview = statusInfo.value === 1;
                             return (
                                 <>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
-                            <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>
-                                {canStaffReview ? 'Duyệt thỏa thuận đầu tư' : 'Xem hợp đồng đầu tư'}
-                            </h3>
-                            <button type="button" className={styles.modalCloseBtn} onClick={handleCloseStaffDealModal} disabled={isSubmittingStaffReview || isCheckingOnchain}>
-                                <X size={18} />
-                            </button>
-                        </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+                                        <h3 style={{ margin: 0, fontSize: '20px', fontWeight: 800 }}>
+                                            {canStaffReview ? 'Duyệt thỏa thuận đầu tư' : 'Xem hợp đồng đầu tư'}
+                                        </h3>
+                                        <button type="button" className={styles.modalCloseBtn} onClick={handleCloseStaffDealModal} disabled={isSubmittingStaffReview || isCheckingOnchain}>
+                                            <X size={18} />
+                                        </button>
+                                    </div>
 
-                        <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
-                            Deal #{selectedStaffDeal.dealId} - Startup: <b>{selectedStaffDeal.startupName || '-'}</b> - Investor: <b>{selectedStaffDeal.investorName || '-'}</b>
-                        </div>
+                                    <div style={{ fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '12px' }}>
+                                        Deal #{selectedStaffDeal.dealId} - Startup: <b>{selectedStaffDeal.startupName || '-'}</b> - Investor: <b>{selectedStaffDeal.investorName || '-'}</b>
+                                    </div>
 
-                        <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '10px', padding: '14px', marginBottom: '12px' }}>
-                            {selectedStaffDeal.documentUrl ? (
-                                <>
-                                    <div
-                                        role="button"
-                                        tabIndex={0}
-                                        onClick={() => setShowDealDocumentLightbox(true)}
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
-                                                e.preventDefault();
-                                                setShowDealDocumentLightbox(true);
-                                            }
-                                        }}
-                                        style={{ width: '100%', height: '320px', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', background: '#fff', cursor: 'zoom-in' }}
-                                        title="Bấm để phóng to"
-                                    >
-                                        {isImageDocumentUrl(selectedStaffDeal.documentUrl) ? (
-                                            <img src={selectedStaffDeal.documentUrl} alt={`deal-${selectedStaffDeal.dealId}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                    <div style={{ backgroundColor: 'var(--bg-secondary)', borderRadius: '10px', padding: '14px', marginBottom: '12px' }}>
+                                        {selectedStaffDeal.documentUrl ? (
+                                            <>
+                                                <div
+                                                    role="button"
+                                                    tabIndex={0}
+                                                    onClick={() => setShowDealDocumentLightbox(true)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === 'Enter' || e.key === ' ') {
+                                                            e.preventDefault();
+                                                            setShowDealDocumentLightbox(true);
+                                                        }
+                                                    }}
+                                                    style={{ width: '100%', height: '320px', border: '1px solid var(--border-color)', borderRadius: '10px', overflow: 'hidden', background: '#fff', cursor: 'zoom-in' }}
+                                                    title="Bấm để phóng to"
+                                                >
+                                                    {isImageDocumentUrl(selectedStaffDeal.documentUrl) ? (
+                                                        <img src={selectedStaffDeal.documentUrl} alt={`deal-${selectedStaffDeal.dealId}`} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+                                                    ) : (
+                                                        <iframe src={selectedStaffDeal.documentUrl} title={`deal-preview-${selectedStaffDeal.dealId}`} style={{ width: '100%', height: '100%', border: 'none' }} />
+                                                    )}
+                                                </div>
+                                                <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                                                    Bấm vào khung để phóng to tài liệu.
+                                                </div>
+                                            </>
                                         ) : (
-                                            <iframe src={selectedStaffDeal.documentUrl} title={`deal-preview-${selectedStaffDeal.dealId}`} style={{ width: '100%', height: '100%', border: 'none' }} />
+                                            <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Deal chưa có tài liệu hợp đồng.</p>
                                         )}
                                     </div>
-                                    <div style={{ marginTop: '8px', fontSize: '12px', color: 'var(--text-secondary)' }}>
-                                        Bấm vào khung để phóng to tài liệu.
+
+                                    {canStaffReview && (
+                                        <div className={styles.formGroup} style={{ marginBottom: '12px' }}>
+                                            <label>Lý do từ chối (bắt buộc khi bấm Từ chối)</label>
+                                            <textarea
+                                                value={staffRejectReason}
+                                                onChange={(e) => setStaffRejectReason(e.target.value)}
+                                                placeholder="Nhập lý do để investor chỉnh sửa và upload lại tài liệu"
+                                                rows={3}
+                                                maxLength={1000}
+                                                disabled={isSubmittingStaffReview}
+                                            />
+                                        </div>
+                                    )}
+
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                                            <button type="button" className={styles.secondaryBtn} onClick={handleCloseStaffDealModal} disabled={isSubmittingStaffReview || isCheckingOnchain}>Đóng</button>
+                                            {canStaffReview && (
+                                                <>
+                                                    <button type="button" className={styles.dangerBtn} onClick={() => handleStaffReviewDeal(false)} disabled={isSubmittingStaffReview}>
+                                                        {isSubmittingStaffReview ? <><Loader2 size={14} className={styles.spinner} /> Đang gửi...</> : 'Từ chối'}
+                                                    </button>
+                                                    <button type="button" className={styles.primaryBtn} onClick={() => handleStaffReviewDeal(true)} disabled={isSubmittingStaffReview}>
+                                                        {isSubmittingStaffReview ? <><Loader2 size={14} className={styles.spinner} /> Đang gửi...</> : 'Chấp nhận'}
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
                                     </div>
-                                </>
-                            ) : (
-                                <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Deal chưa có tài liệu hợp đồng.</p>
-                            )}
-                        </div>
-
-                        {canStaffReview && (
-                            <div className={styles.formGroup} style={{ marginBottom: '12px' }}>
-                                <label>Lý do từ chối (bắt buộc khi bấm Từ chối)</label>
-                                <textarea
-                                    value={staffRejectReason}
-                                    onChange={(e) => setStaffRejectReason(e.target.value)}
-                                    placeholder="Nhập lý do để investor chỉnh sửa và upload lại tài liệu"
-                                    rows={3}
-                                    maxLength={1000}
-                                    disabled={isSubmittingStaffReview}
-                                />
-                            </div>
-                        )}
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap', marginBottom: '10px' }}>
-                            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                                <button type="button" className={styles.secondaryBtn} onClick={handleCloseStaffDealModal} disabled={isSubmittingStaffReview || isCheckingOnchain}>Đóng</button>
-                                {canStaffReview && (
-                                    <>
-                                        <button type="button" className={styles.dangerBtn} onClick={() => handleStaffReviewDeal(false)} disabled={isSubmittingStaffReview}>
-                                            {isSubmittingStaffReview ? <><Loader2 size={14} className={styles.spinner} /> Đang gửi...</> : 'Từ chối'}
-                                        </button>
-                                        <button type="button" className={styles.primaryBtn} onClick={() => handleStaffReviewDeal(true)} disabled={isSubmittingStaffReview}>
-                                            {isSubmittingStaffReview ? <><Loader2 size={14} className={styles.spinner} /> Đang gửi...</> : 'Chấp nhận'}
-                                        </button>
-                                    </>
-                                )}
-                            </div>
-                        </div>
                                 </>
                             );
                         })()}
@@ -4303,93 +4347,16 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                 </div>
             )}
 
-            {showOnchainResultModal && onchainCheckResult && (
-                <div className={styles.modalOverlay} onClick={() => setShowOnchainResultModal(false)}>
-                    <div className={styles.modalContent} style={{ maxWidth: '680px', height: 'auto', maxHeight: '86vh' }} onClick={(e) => e.stopPropagation()}>
-                        <div className={local.staffModalHeader}>
-                            <div className={local.staffModalTitleGrp}>
-                                <Shield size={22} color={onchainCheckResult.error ? '#ef4444' : '#10b981'} />
-                                <h2 className={local.staffModalTitleText}>Xác thực Blockchain</h2>
-                            </div>
-                            <button onClick={() => setShowOnchainResultModal(false)} className={local.staffModalCloseBtn}>
-                                <X size={20} />
-                            </button>
-                        </div>
-
-                        <div style={{ padding: '18px 22px' }}>
-                            {onchainCheckResult.error ? (
-                                <div style={{ padding: '12px', borderRadius: '10px', border: '1px solid #fecaca', background: '#fff1f2', color: '#b91c1c', fontSize: '13px' }}>
-                                    {onchainCheckResult.message}
-                                </div>
-                            ) : (
-                                <>
-                                    <div style={{ padding: '12px', borderRadius: '12px', background: onchainCheckResult.isVerified ? '#ecfdf3' : '#fff7ed', border: `1px solid ${onchainCheckResult.isVerified ? '#86efac' : '#fdba74'}`, textAlign: 'center', marginBottom: '14px' }}>
-                                        <div style={{ fontSize: '12px', fontWeight: 800, color: '#475569', marginBottom: '4px' }}>TÌNH TRẠNG XÁC THỰC</div>
-                                        <div style={{ fontSize: '28px', fontWeight: 900, color: onchainCheckResult.isVerified ? '#16a34a' : '#ea580c' }}>
-                                            {onchainCheckResult.isVerified ? '✓ Đã xác thực' : '⏳ Chưa xác thực'}
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-                                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Deal ID</div>
-                                            <div style={{ fontSize: '24px', fontWeight: 900 }}>{onchainCheckResult.dealId ?? '-'}</div>
-                                        </div>
-                                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Thông điệp</div>
-                                            <div style={{ fontSize: '13px', fontWeight: 700 }}>{onchainCheckResult.message || '-'}</div>
-                                        </div>
-                                    </div>
-
-                                    <div style={{ display: 'grid', gap: '10px' }}>
-                                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Document Hash</div>
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                <code style={{ flex: 1, fontSize: '12px', wordBreak: 'break-all' }}>{onchainCheckResult.documentHash || '-'}</code>
-                                                {!!onchainCheckResult.documentHash && (
-                                                    <button className={styles.secondaryBtn} style={{ padding: '6px 10px' }} onClick={() => navigator.clipboard.writeText(onchainCheckResult.documentHash)}>
-                                                        Sao chép
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginBottom: '6px' }}>Investor Wallet</div>
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                <code style={{ flex: 1, fontSize: '12px', wordBreak: 'break-all' }}>{onchainCheckResult.investorWallet || '-'}</code>
-                                                {!!onchainCheckResult.investorWallet && (
-                                                    <button className={styles.secondaryBtn} style={{ padding: '6px 10px' }} onClick={() => navigator.clipboard.writeText(onchainCheckResult.investorWallet)}>
-                                                        Sao chép
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </div>
-                                        <div style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '10px' }}>
-                                            <div style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>Thời gian ghi nhận blockchain</div>
-                                            <div style={{ fontSize: '13px', fontWeight: 700 }}>{onchainCheckResult.timestampOnBlockchain || '-'}</div>
-                                        </div>
-                                    </div>
-                                </>
-                            )}
-                        </div>
-
-                        <div style={{ padding: '14px 22px', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                            <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)', maxWidth: '420px' }}>
-                                Ghi chú: Liên kết Explorer cho phép bạn đối soát dữ liệu công khai trực tiếp trên blockchain.
-                            </p>
-                            <div style={{ display: 'flex', gap: '8px' }}>
-                                {!onchainCheckResult.error && (
-                                    <a href={onchainCheckResult.explorerLink} target="_blank" rel="noreferrer" className={styles.secondaryBtn} style={{ textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                        <ExternalLink size={14} />
-                                        Mở Blockchain Explorer
-                                    </a>
-                                )}
-                                <button className={styles.primaryBtn} onClick={() => setShowOnchainResultModal(false)}>Đóng</button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <BlockchainOnchainResultModal
+                isOpen={showOnchainResultModal && !!onchainCheckResult}
+                onClose={() => setShowOnchainResultModal(false)}
+                result={onchainCheckResult?.error ? null : onchainCheckResult}
+                errorMessage={
+                    onchainCheckResult?.error
+                        ? onchainCheckResult.message || 'Không thể kiểm tra on-chain.'
+                        : null
+                }
+            />
 
             {showBlockchainModal && blockchainData && (
                 <BlockchainVerificationModal
