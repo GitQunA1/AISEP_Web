@@ -83,6 +83,11 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     const [dealFilter, setDealFilter] = React.useState('all');
 
     // Refs for scroll tracking
+    const isFirstLoad = useRef(true);
+    const isFormDirty = useRef(false);
+
+    // --- Silent Polling Infrastructure ---
+    const [refreshTrigger, setRefreshTrigger] = React.useState(0);
     const tabsRef = React.useRef(null);
     const [indicatorStyle, setIndicatorStyle] = React.useState({ transform: 'translateX(0)', width: '0px' });
     const [showRestrictedModal, setShowRestrictedModal] = React.useState(false);
@@ -239,7 +244,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     const hiddenFileInput = React.useRef(null);
 
     const { startupProfile: ctxProfile, startupProfileStatus, isStartupApproved, refreshProfile, profileLoading } = useProfile();
-    
+
     // Fallback to context profile if local state not yet synced
     const displayProfile = startupProfile || ctxProfile;
     const isApproved = isStartupApproved;
@@ -418,15 +423,21 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         return matchesSearch && activeOpt.values.includes(getDealStatusInfo(d.status).value);
     });
 
+    // SignalR: initialize and trigger immediate silent refresh on notification
     React.useEffect(() => {
         const initSignalR = async () => {
             try {
-                const token = localStorage.getItem('aisep_token');
+                const token = localStorage.getItem('aisep_token') || sessionStorage.getItem('token');
                 if (token && user?.userId) {
                     await signalRService.initialize(token);
+                    signalRService.onNotificationReceived(() => {
+                        console.log('[StartupDashboard] SignalR notification → silent refresh');
+                        setRefreshTrigger(prev => prev + 1);
+                    });
+                    console.log('[StartupDashboard] SignalR initialized');
                 }
             } catch (error) {
-                console.error('[StartupDashboard] Failed to initialize SignalR:', error);
+                console.warn('[StartupDashboard] SignalR init failed (non-critical):', error);
             }
         };
 
@@ -438,6 +449,22 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
             signalRService.disconnect();
         };
     }, [user?.userId]);
+
+    // Silent background polling every 5 seconds
+    React.useEffect(() => {
+        const interval = setInterval(() => {
+            console.log('[StartupDashboard] Silent background poll triggered');
+            setRefreshTrigger(prev => prev + 1);
+        }, 5000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Tab-switch: trigger immediate silent refresh when user switches section
+    React.useEffect(() => {
+        if (!isFirstLoad.current) {
+            setRefreshTrigger(prev => prev + 1);
+        }
+    }, [activeSection]);
 
     const checkTabScroll = () => {
         if (tabsRef.current) {
@@ -540,13 +567,15 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         }
     };
 
-    const fetchDashboardData = async () => {
-        setIsLoadingInitialData(true);
-        setDashboardError(null);
+    const fetchDashboardData = async ({ silent = false } = {}) => {
+        if (!silent) {
+            setIsLoadingInitialData(true);
+            setDashboardError(null);
+        }
         try {
             // Fetch projects in parallel with other dashboard-specific data
             const response = await projectSubmissionService.getMyProjects();
-            
+
             if (response.success && response.data) {
                 const rawProjects = Array.isArray(response.data) ? response.data : (response.data.items || []);
                 // Sort projects by CreatedAt descending (most recent first)
@@ -557,7 +586,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                     return (b.id || b.projectId || 0) - (a.id || a.projectId || 0);
                 });
                 setMyProjects(sortedProjects);
-                
+
                 if (sortedProjects.length > 0) {
                     const loadedProject = sortedProjects[0];
                     setProject(loadedProject);
@@ -572,23 +601,26 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                     });
                 }
             }
-            
-            // Sync context profile to local state if needed (for legacy code compatibility)
-            if (ctxProfile) {
+
+            // Only sync context profile to local state on first load (not on silent polls)
+            // to prevent StartupProfileForm from re-initializing on every background refresh.
+            if (!silent && ctxProfile) {
+                setStartupProfile(ctxProfile);
+            } else if (!startupProfile && ctxProfile) {
+                // Fallback: sync once if local state is still empty (e.g. after context loads)
                 setStartupProfile(ctxProfile);
             }
         } catch (err) {
-            console.error("Failed to load dashboard data:", err);
-            setDashboardError("Không thể tải dữ liệu bảng điều khiển. Vui lòng kiểm tra kết nối mạng.");
+            if (!silent) {
+                console.error("Failed to load dashboard data:", err);
+                setDashboardError("Không thể tải dữ liệu bảng điều khiển. Vui lòng kiểm tra kết nối mạng.");
+            }
         } finally {
-            setIsLoadingInitialData(false);
+            if (!silent) {
+                setIsLoadingInitialData(false);
+            }
         }
     };
-
-    React.useEffect(() => {
-        fetchDashboardData();
-        fetchSubscriptionData();
-    }, [user, ctxProfile]);
 
     const handleRetryDashboard = () => {
         fetchDashboardData();
@@ -656,8 +688,8 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     };
 
     // Fetch connection requests for startup
-    const fetchConnectionRequests = async () => {
-        setIsLoadingRequests(true);
+    const fetchConnectionRequests = async ({ silent = false } = {}) => {
+        if (!silent) setIsLoadingRequests(true);
         try {
             // Fetch received connection requests from investors using original API
             const response = await connectionService.getReceivedConnectionRequests();
@@ -714,22 +746,17 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
             console.log('[StartupDashboard] Formatted requests:', formattedRequests);
             setConnectionRequests(formattedRequests);
         } catch (error) {
-            console.error('[StartupDashboard] Failed to fetch connection requests:', error);
-            console.error('[StartupDashboard] Error details - Message:', error?.message);
-            console.error('[StartupDashboard] Error details - Status:', error?.response?.status);
-            console.error('[StartupDashboard] Error details - Data:', error?.response?.data);
-            setConnectionRequests([]);
+            if (!silent) {
+                console.error('[StartupDashboard] Failed to fetch connection requests:', error);
+                console.error('[StartupDashboard] Error details - Message:', error?.message);
+                console.error('[StartupDashboard] Error details - Status:', error?.response?.status);
+                console.error('[StartupDashboard] Error details - Data:', error?.response?.data);
+                setConnectionRequests([]);
+            }
         } finally {
-            setIsLoadingRequests(false);
+            if (!silent) setIsLoadingRequests(false);
         }
     };
-
-    // Load connection requests on mount
-    React.useEffect(() => {
-        if (activeSection === 'connection-requests') {
-            fetchConnectionRequests();
-        }
-    }, [activeSection]);
 
     const handleApproveConnectionRequest = async (requestId) => {
         if (!isApproved) {
@@ -807,32 +834,49 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
 
     // --- Deals Approval Functions ---
 
-    const fetchDealsToApprove = async () => {
-        setIsLoadingDeals(true);
+    const fetchDealsToApprove = async ({ silent = false } = {}) => {
+        if (!silent) setIsLoadingDeals(true);
         try {
-            console.log('[StartupDashboard] Fetching deals to approve...');
             const response = await dealsService.getStartupDeals();
-            console.log('[StartupDashboard] Deals response:', response);
-
             let deals = Array.isArray(response?.data) ? response.data : (response?.data?.items || []);
-            // Get all deals - no filtering
-
             setDealsToApprove(deals);
-            console.log('[StartupDashboard] Deals loaded:', deals.length);
         } catch (error) {
-            console.error('[StartupDashboard] Error fetching deals:', error);
-            setDealsToApprove([]);
+            if (!silent) {
+                console.error('[StartupDashboard] Error fetching deals:', error);
+                setDealsToApprove([]);
+            }
         } finally {
-            setIsLoadingDeals(false);
+            if (!silent) setIsLoadingDeals(false);
         }
     };
 
-    // Load deals on mount when deals tab is active
-    React.useEffect(() => {
-        if (activeSection === 'deals') {
-            fetchDealsToApprove();
+    /**
+     * fetchAllData - Consolidated silent-aware fetch for all startup dashboard data.
+     * On first load: shows loading spinners. On subsequent polls: silent background refresh.
+     */
+    const fetchAllData = async ({ silent: forceSilent } = {}) => {
+        const silent = forceSilent ?? !isFirstLoad.current;
+        try {
+            await Promise.all([
+                fetchDashboardData({ silent }),
+                fetchConnectionRequests({ silent }),
+                fetchDealsToApprove({ silent }),
+            ]);
+        } catch (err) {
+            console.error('[StartupDashboard] fetchAllData error:', err);
+        } finally {
+            if (!silent) {
+                isFirstLoad.current = false;
+            }
         }
-    }, [activeSection]);
+    };
+
+    // Main data fetch engine: fires on mount + every refreshTrigger increment
+    React.useEffect(() => {
+        const silent = !isFirstLoad.current;
+        fetchAllData({ silent });
+        if (!silent) fetchSubscriptionData();
+    }, [refreshTrigger]);
 
     const handleApproveDeal = async (dealId) => {
         if (!isApproved) {
@@ -1729,16 +1773,27 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                     {/* Startup Profile Form (Section View) */}
                     {activeSection === 'complete-info' && (
                         <div className={styles.section}>
-                            <StartupProfileForm
-                                initialData={startupProfile}
-                                user={user}
-                                onSuccess={(data) => {
-                                    setStartupProfile(data);
-                                    refreshProfile(); // Sync global state
-                                    setSuccessMessage('Cập nhật thông tin startup thành công!');
-                                    setShowSuccessModal(true);
-                                }}
-                            />
+                            {(profileLoading || (isLoadingInitialData && !displayProfile)) ? (
+                                // Show skeleton while profile data is loading to prevent empty form flash
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', padding: '8px 0' }}>
+                                    {[1, 2, 3].map(i => (
+                                        <div key={i} className={kanban.skeletonCard} style={{ height: i === 1 ? '220px' : '160px', borderRadius: '16px' }}>
+                                            <div className={kanban.shimmer}></div>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <StartupProfileForm
+                                    initialData={displayProfile}
+                                    user={user}
+                                    onSuccess={(data) => {
+                                        setStartupProfile(data);
+                                        refreshProfile(); // Sync global state
+                                        setSuccessMessage('Cập nhật thông tin startup thành công!');
+                                        setShowSuccessModal(true);
+                                    }}
+                                />
+                            )}
                         </div>
                     )}
 
@@ -1783,7 +1838,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                     <AlertCircle size={48} style={{ margin: '0 auto 16px', color: '#ef4444' }} />
                                     <h3 style={{ margin: '0 0 8px 0', color: 'var(--text-primary)' }}>Lỗi tải dữ liệu</h3>
                                     <p style={{ margin: '0 0 24px 0', color: 'var(--text-secondary)' }}>{dashboardError}</p>
-                                    <button 
+                                    <button
                                         onClick={handleRetryDashboard}
                                         style={{ padding: '8px 24px', backgroundColor: 'var(--primary-blue)', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600' }}
                                     >

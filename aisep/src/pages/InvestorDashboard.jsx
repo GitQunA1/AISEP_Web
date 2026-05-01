@@ -417,7 +417,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 const formKey = profileRes ? 'investor.update' : 'investor.create';
                 try {
                     const rulesRes = await validationService.getFormRules(formKey);
-                    
+
                     // Inject industry count constraints (1-4 for Investors)
                     if (rulesRes && rulesRes.industryoptionids) {
                         rulesRes.industryoptionids.minCount = 1;
@@ -425,7 +425,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                         rulesRes.industryoptionids.minCountMessage = 'Vui lòng chọn ít nhất 1 lĩnh vực.';
                         rulesRes.industryoptionids.maxCountMessage = 'Bạn chỉ được chọn tối đa 4 lĩnh vực.';
                     }
-                    
+
                     setValidationRules(rulesRes);
                 } catch (err) {
                     console.error('[InvestorDashboard] Config error:', err);
@@ -2677,11 +2677,11 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                         className={styles.pill}
                                                         style={{
                                                             display: 'flex', alignItems: 'center', gap: '6px',
-                                                            padding: '8px 16px', borderRadius: '20px', 
+                                                            padding: '8px 16px', borderRadius: '20px',
                                                             border: '1px dashed var(--primary-blue)',
                                                             backgroundColor: 'rgba(29, 155, 240, 0.1)',
                                                             color: 'var(--primary-blue)',
-                                                            fontSize: '13px', fontWeight: '600', 
+                                                            fontSize: '13px', fontWeight: '600',
                                                             cursor: 'not-allowed', opacity: 0.8
                                                         }}
                                                         title="Lĩnh vực này hiện đã ngừng hỗ trợ và không thể thay đổi"

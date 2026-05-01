@@ -1,113 +1,136 @@
 import React from 'react';
-import { ArrowRight, CheckCircle, XCircle, Loader2, MapPin, Globe, Award, DollarSign } from 'lucide-react';
-import local from './AdvisorApprovalPage.module.css';
-
+import { ArrowRight, CheckCircle, XCircle, Loader2, MapPin, Award, Mail, DollarSign } from 'lucide-react';
 import staffLocal from '../../styles/OperationStaffDashboard.module.css';
 
 /**
- * AdvisorKanbanCard - Single card for the Advisor Approval Kanban board
+ * AdvisorKanbanCard - Card phê duyệt cố vấn, đồng bộ style với InvestorKanbanCard
  */
-const AdvisorKanbanCard = ({ advisor, status, onDetail, onApprove, onReject, processingId, processingAction }) => {
+const AdvisorKanbanCard = ({ advisor, status, onDetail, onApprove, onReject, processingId, processingAction, isHighlighted }) => {
     const isPending = status === 'pend';
-    const isApproved = status === 'appr';
-    const isRejected = status === 'rej';
+    const isProcessing = processingId === advisor.advisorId;
+    const isAnyProcessing = !!processingId;
 
-    // Format hourly rate
-    const formatPrice = (price) => {
-        return Number(price || 0).toLocaleString('vi-VN');
-    };
+    const formatPrice = (price) => Number(price || 0).toLocaleString('vi-VN');
 
     return (
-        <div className={staffLocal.inv_card}>
-            <div className={`${staffLocal.inv_cardStrip} ${staffLocal[status]}`}></div>
-            <div className={local.bcardBody}>
-                <div className={local.bcardRow1}>
-                    <div className={local.bcardMainInfo}>
-                        <div className={local.bcardName} title={advisor?.userName || advisor?.fullName}>
-                            {advisor?.userName || advisor?.fullName || 'Ẩn danh'}
-                        </div>
-                        {advisor?.location && (
-                            <div className={local.bcardLoc}>
-                                <MapPin size={12} />
-                                <span>{advisor.location}</span>
-                            </div>
+        <div
+            id={`advisor-${advisor.advisorId}`}
+            className={`${staffLocal.investorProCard} ${staffLocal[status]} ${isHighlighted ? staffLocal.targetHighlight : ''}`}
+        >
+            <div className={`${staffLocal.investorProCardStrip} ${staffLocal[status]}`}></div>
+
+            {/* Header */}
+            <div className={staffLocal.investorProHeader}>
+                <div style={{ flex: 1, overflow: 'hidden' }}>
+                    <h4 className={staffLocal.investorProName} title={advisor.userName || advisor.fullName}>
+                        {advisor.userName || advisor.fullName || 'Cố vấn'}
+                    </h4>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginTop: '6px' }}>
+                        <span className={staffLocal.investorProBadge}>
+                            Cố vấn
+                        </span>
+                        {advisor.location && (
+                            <span style={{ fontSize: '11px', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                                <MapPin size={10} />
+                                {advisor.location}
+                            </span>
                         )}
                     </div>
-                    <div className={local.bcardTime}>
-                        {advisor?.createdAt ? new Date(advisor.createdAt).toLocaleDateString('vi-VN') : null}
-                    </div>
+                </div>
+            </div>
+
+            {/* Body */}
+            <div className={staffLocal.investorProBody}>
+                {/* Expertise */}
+                <div className={staffLocal.investorProRow}>
+                    <span className={staffLocal.investorProLabel}>Chuyên môn</span>
+                    <span className={staffLocal.investorProValue} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <Award size={12} style={{ color: 'var(--primary-blue)', flexShrink: 0 }} />
+                        {advisor.expertise || 'Chưa cập nhật'}
+                    </span>
                 </div>
 
-                <div className={local.advisorExpertise}>
-                    <Award size={14} className={local.expIcon} />
-                    <span>{advisor?.expertise || 'Chuyên môn chưa cập nhật'}</span>
+                {/* Email */}
+                <div className={staffLocal.investorProRow}>
+                    <span className={staffLocal.investorProLabel}>Email</span>
+                    <span className={staffLocal.investorProValue} title={advisor.email}>
+                        {advisor.email || '-'}
+                    </span>
                 </div>
 
-                {advisor?.industries && advisor.industries.length > 0 && (
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px', marginBottom: '12px' }}>
-                        {advisor.industries.slice(0, 3).map((ind, idx) => (
-                            <span key={idx} className={local.industryTag} style={{ fontSize: '10px', padding: '2px 8px' }}>{ind}</span>
-                        ))}
-                        {advisor.industries.length > 3 && (
-                            <span className={local.industryTag} style={{ fontSize: '10px', padding: '2px 8px' }}>+{advisor.industries.length - 3}</span>
-                        )}
+                {/* Hourly Rate */}
+                <div className={staffLocal.investorProRow}>
+                    <span className={staffLocal.investorProLabel}>Phí tư vấn</span>
+                    <span className={staffLocal.investorProValue} style={{ color: '#f59e0b', fontWeight: '700' }}>
+                        {formatPrice(advisor.hourlyRate)} <span style={{ fontSize: '11px', fontWeight: '400', color: 'var(--text-muted)' }}>₫/giờ</span>
+                    </span>
+                </div>
+
+                {/* Language */}
+                {advisor.languagesSpoken && (
+                    <div className={staffLocal.investorProRow}>
+                        <span className={staffLocal.investorProLabel}>Ngôn ngữ</span>
+                        <span className={staffLocal.investorProValue}>{advisor.languagesSpoken}</span>
                     </div>
                 )}
 
-                <p className={local.bcardDesc}>{advisor?.bio || 'Không có mô tả tiểu sử...'}</p>
-
-                <div className={local.bcardFields}>
-                    <div className={local.bf}>
-                        <div className={local.bfKey}>Phí tư vấn</div>
-                        <div className={local.bfVal} style={{ color: '#f59e0b', fontWeight: '700' }}>
-                            {formatPrice(advisor?.hourlyRate)} <span style={{ fontSize: '11px', fontWeight: '400', color: 'var(--text-secondary)' }}>₫/giờ</span>
-                        </div>
-                    </div>
-                    {advisor?.languagesSpoken && (
-                        <div className={local.bf}>
-                            <div className={local.bfKey}>Ngôn ngữ</div>
-                            <div className={local.bfVal}>{advisor.languagesSpoken}</div>
-                        </div>
-                    )}
-                </div>
-
-                <div className={local.bcardActions}>
-                    <button className={local.baBtn} onClick={onDetail} title="Chi tiết">
-                        <ArrowRight size={16} />
-                        Chi tiết
-                    </button>
-
-                    {isPending && (
-                        <>
-                            <button
-                                className={`${local.baBtn} ${local.rej} ${processingId !== null ? local.btnDisabled : ''}`}
-                                onClick={onReject}
-                                disabled={processingId !== null}
-                                title="Từ chối"
-                            >
-                                {processingId === advisor.advisorId && processingAction === 'reject' ? (
-                                    <Loader2 size={16} className="animate-spin" />
-                                ) : (
-                                    <XCircle size={16} />
+                {/* Industries */}
+                {(() => {
+                    const industries = advisor.industries || [];
+                    if (industries.length === 0) return null;
+                    return (
+                        <div className={staffLocal.investorProRow} style={{ alignItems: 'flex-start' }}>
+                            <span className={staffLocal.investorProLabel} style={{ marginTop: '2px' }}>Lĩnh vực</span>
+                            <div className={staffLocal.investorProTags} style={{ margin: '0', flex: 1 }}>
+                                {industries.slice(0, 3).map((ind, idx) => (
+                                    <span key={idx} className={staffLocal.investorProTag}>{ind}</span>
+                                ))}
+                                {industries.length > 3 && (
+                                    <span className={staffLocal.investorProTag}>+{industries.length - 3}</span>
                                 )}
-                                Từ chối
-                            </button>
-                            <button
-                                className={`${local.baBtn} ${local.apr} ${processingId !== null ? local.btnDisabled : ''}`}
-                                onClick={onApprove}
-                                disabled={processingId !== null}
-                                title="Phê duyệt"
-                            >
-                                {processingId === advisor.advisorId && processingAction === 'approve' ? (
-                                    <Loader2 size={16} className="animate-spin" />
-                                ) : (
-                                    <CheckCircle size={16} />
-                                )}
-                                Duyệt
-                            </button>
-                        </>
-                    )}
-                </div>
+                            </div>
+                        </div>
+                    );
+                })()}
+            </div>
+
+            {/* Footer */}
+            <div className={staffLocal.investorProFooter}>
+                <button className={staffLocal.investorProBtn} onClick={onDetail} title="Chi tiết">
+                    <ArrowRight size={16} />
+                    Chi tiết
+                </button>
+
+                {isPending && (
+                    <>
+                        <button
+                            className={`${staffLocal.investorProBtn} ${staffLocal.investorProRejectBtn} ${isAnyProcessing ? staffLocal.btnDisabled : ''}`}
+                            onClick={onReject}
+                            disabled={isAnyProcessing}
+                            title="Từ chối"
+                        >
+                            {isProcessing && processingAction === 'reject' ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <XCircle size={16} />
+                            )}
+                            Từ chối
+                        </button>
+                        <button
+                            className={`${staffLocal.investorProBtn} ${staffLocal.investorProApproveBtn} ${isAnyProcessing ? staffLocal.btnDisabled : ''}`}
+                            onClick={onApprove}
+                            disabled={isAnyProcessing}
+                            title="Phê duyệt"
+                        >
+                            {isProcessing && processingAction === 'approve' ? (
+                                <Loader2 size={16} className="animate-spin" />
+                            ) : (
+                                <CheckCircle size={16} />
+                            )}
+                            Duyệt
+                        </button>
+                    </>
+                )}
             </div>
         </div>
     );

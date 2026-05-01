@@ -732,11 +732,11 @@ function MainLayout({
       {/* 2. Main Feed (Scrollable) */}
       {/* MOBILE HEADER (Fixed Top) */}
       {/* TopBar visibility is controlled by CSS (display: none on desktop) */}
-      <TopBar onMenuClick={toggleMobileMenu} />
+      {(!isFullWidthContent || window.innerWidth >= 1024) && <TopBar onMenuClick={toggleMobileMenu} />}
 
       <main
         ref={mainContentRef}
-        className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} ${isFullWidthContent ? styles.fullWidthContent : ''}`}
+        className={`${styles.mainContent} ${showAI ? styles.noScroll : ''} ${isFullWidthContent ? styles.fullWidthContent : ''} ${isFullWidthContent ? styles.hideHeaderOnMobile : ''}`}
       >
 
         {/* Feed Content or Profile Page */}
@@ -978,7 +978,7 @@ function MainLayout({
                       onViewProject={(id) => {
                         const roleStr = user?.role?.toString().toLowerCase() || '';
                         const roleNum = Number(user?.role);
-                        
+
                         // Restriction: Advisors must be approved to even enter the detail view
                         if ((roleStr === 'advisor' || roleNum === 2) && !isAdvisorApproved) {
                           showRestrictedActionModal('Bạn cần được phê duyệt hồ sơ Cố vấn để xem chi tiết các dự án.');

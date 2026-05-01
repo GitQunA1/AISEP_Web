@@ -266,24 +266,25 @@ function StartupRegisterForm({ onBack, onComplete, termsData, onFetchTerms }) {
 
             {/* Terms and Conditions */}
             <div className={styles.reg_formGroup} style={{ marginBottom: '24px' }}>
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+              <div className={styles.reg_checkboxWrapper}>
                 <input
                   id="isTermsAccepted"
                   name="isTermsAccepted"
                   type="checkbox"
                   checked={formData.isTermsAccepted}
                   onChange={(e) => setFormData(prev => ({ ...prev, isTermsAccepted: e.target.checked }))}
-                  style={{ marginTop: '4px', cursor: 'pointer' }}
+                  className={styles.reg_checkbox}
                   disabled={isLoading}
                 />
-                <label htmlFor="isTermsAccepted" className={styles.reg_label} style={{ fontSize: '14px', cursor: 'pointer' }}>
+                <label htmlFor="isTermsAccepted" className={styles.reg_checkboxLabel}>
                   Tôi đồng ý với <button 
                     type="button" 
-                    onClick={() => {
+                    onClick={(e) => {
+                      e.preventDefault();
                       onFetchTerms && onFetchTerms();
                       setShowTermsModal(true);
                     }}
-                    style={{ background: 'none', border: 'none', color: 'var(--primary-blue)', padding: 0, font: 'inherit', cursor: 'pointer', textDecoration: 'underline' }}
+                    style={{ background: 'none', border: 'none', color: 'var(--primary-blue)', padding: 0, font: 'inherit', fontWeight: 700, cursor: 'pointer', textDecoration: 'underline' }}
                   >
                     Điều khoản sử dụng
                   </button>
