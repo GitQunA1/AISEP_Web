@@ -98,6 +98,9 @@ class ProjectValidationService {
       errors.targetCustomers = 'Khách hàng mục tiêu là bắt buộc';
     }
 
+    const sc = formData.projectScorecard || formData.ProjectScorecard || {};
+    const scVal = (k) => sc[k] ?? sc[k.charAt(0).toUpperCase() + k.slice(1)];
+
     // MVP & Growth Requirements
     if (stage === '1' || stage === 'mvp' || stage === '2' || stage === 'growth') {
       if (!formData.uniqueValueProposition && !formData.differentiator) {
@@ -106,28 +109,22 @@ class ProjectValidationService {
       if (!formData.businessModel && !formData.revenueMethod) {
         errors.businessModel = 'Mô hình kinh doanh là bắt buộc';
       }
-      if (!formData.keySkills) {
-        errors.keySkills = 'Kỹ năng cốt lõi là bắt buộc';
-      }
       if (!formData.competitors) {
         errors.competitors = 'Đối thủ cạnh tranh là bắt buộc';
       }
       if (!formData.documents || formData.documents.length === 0) {
         errors.documents = 'Tài liệu (Pitch Deck/Demo) là bắt buộc';
       }
-    }
-
-    // Growth Specific Requirements
-    if (stage === '2' || stage === 'growth') {
-      if (!formData.revenue || parseInt(formData.revenue) <= 0) {
-        errors.revenue = 'Doanh thu phải lớn hơn 0 cho giai đoạn Tăng trưởng';
-      }
-      if (!formData.marketSize || parseInt(formData.marketSize) <= 0) {
-        errors.marketSize = 'Quy mô thị trường phải lớn hơn 0 cho giai đoạn Tăng trưởng';
-      }
-      if (!formData.teamExperience) {
-        errors.teamExperience = 'Kinh nghiệm đội ngũ là bắt buộc';
-      }
+      const scoreKeys = [
+        'teamSize', 'teamExperience', 'targetMarketSize', 'marketGrowth',
+        'productReadiness', 'ipProtection', 'barrierToEntry', 'currentTraction', 'runwayMonths',
+      ];
+      scoreKeys.forEach((k) => {
+        const v = scVal(k);
+        if (v === undefined || v === null || v === '') {
+          errors[`projectScorecard.${k}`] = 'Vui lòng điền đủ bảng điểm dự án (scorecard)';
+        }
+      });
     }
 
     return {

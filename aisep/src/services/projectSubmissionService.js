@@ -1,5 +1,112 @@
 import { apiClient } from './apiClient';
 
+const DEPRECATED_PROJECT_FIELDS = new Set([
+  'MarketSize', 'marketSize', 'Revenue', 'revenue', 'TeamMembers', 'teamMembers',
+  'KeySkills', 'keySkills',
+]);
+
+/**
+ * Axios mặc định Content-Type: application/json. Với FormData phải để trình duyệt
+ * tự gắn multipart/form-data kèm boundary — nếu set tay "multipart/form-data" không boundary
+ * thì server parse lỗi / 400.
+ */
+function formDataRequestConfig() {
+  return {
+    transformRequest: [
+      (data, headers) => {
+        if (data instanceof FormData) {
+          delete headers['Content-Type'];
+        }
+        return data;
+      },
+    ],
+  };
+}
+
+/**
+ * Scorecard trên FormData: tên field PascalCase cùng cấp với ProjectName (đúng kiểu Swagger [FromForm] phẳng).
+ * Nếu BE chỉ bind nested ProjectScorecard, cần đổi sang prefix ProjectScorecard. (báo team BE / OpenAPI).
+ * calculatedScore không gửi.
+ */
+function appendProjectScorecardToFormData(formData, sc) {
+  if (!sc || typeof sc !== 'object') return;
+  const get = (camel, pascal) => sc[camel] ?? sc[pascal];
+  const pairs = [
+    ['teamSize', get('teamSize', 'TeamSize')],
+    ['teamExperience', get('teamExperience', 'TeamExperience')],
+    ['hasTechnicalCofounder', get('hasTechnicalCofounder', 'HasTechnicalCofounder')],
+    ['targetMarketSize', get('targetMarketSize', 'TargetMarketSize')],
+    ['marketGrowth', get('marketGrowth', 'MarketGrowth')],
+    ['productReadiness', get('productReadiness', 'ProductReadiness')],
+    ['iPProtection', get('iPProtection', 'IpProtection')],
+    ['barrierToEntry', get('barrierToEntry', 'BarrierToEntry')],
+    ['currentTraction', get('currentTraction', 'CurrentTraction')],
+    ['runwayMonths', get('runwayMonths', 'RunwayMonths')],
+  ];
+  pairs.forEach(([k, v]) => {
+    if (v === null || v === undefined || v === '') return;
+    if (typeof v === 'boolean') {
+      formData.append(k, v ? 'true' : 'false');
+    } else {
+      formData.append(k, String(v));
+    }
+  });
+}
+
+function buildMultipartFormData(projectData) {
+  const formData = new FormData();
+  const sc = projectData.ProjectScorecard || projectData.projectScorecard;
+
+  const fieldAlias = {
+    ProjectName: 'projectName',
+    ShortDescription: 'shortDescription',
+    StageOptionId: 'stageOptionId',
+    ProblemStatement: 'problemStatement',
+    SolutionDescription: 'solutionDescription',
+    TargetCustomers: 'targetCustomers',
+    UniqueValueProposition: 'uniqueValueProposition',
+    BusinessModel: 'businessModel',
+    Competitors: 'competitors',
+    ProjectImageFile: 'projectImageFile',
+    IndustryOptionIds: 'industryOptionId',
+    industryOptionIds: 'industryOptionId',
+  };
+
+  Object.keys(projectData).forEach((key) => {
+    if (key === 'ProjectScorecard' || key === 'projectScorecard') return;
+    if (DEPRECATED_PROJECT_FIELDS.has(key)) return;
+    const value = projectData[key];
+    if (value !== null && value !== undefined && value !== '') {
+      const targetKey = fieldAlias[key] || key;
+      if (Array.isArray(value)) {
+        if (targetKey === 'industryOptionId') {
+          const first = value[0];
+          if (first !== null && first !== undefined && first !== '') {
+            formData.append(targetKey, String(first));
+          }
+        } else {
+          value.forEach((v) => {
+            if (v !== null && v !== undefined && v !== '') {
+              formData.append(targetKey, String(v));
+            }
+          });
+        }
+      } else if (value instanceof File || value instanceof Blob) {
+        // Preserve binary payload for multipart file upload fields (e.g., projectImageFile)
+        formData.append(targetKey, value);
+      } else if (typeof value === 'boolean') {
+        formData.append(targetKey, value ? 'true' : 'false');
+      } else {
+        formData.append(targetKey, String(value));
+      }
+    }
+  });
+  if (sc && typeof sc === 'object') {
+    appendProjectScorecardToFormData(formData, sc);
+  }
+  return formData;
+}
+
 /**
  * Project Submission Service
  * Handles project creation, document upload, and AI evaluation interactions.
@@ -7,41 +114,15 @@ import { apiClient } from './apiClient';
 export const projectSubmissionService = {
   /**
    * Submit startup project information
-   * @param {Object} projectData - Project submission object containing:
-   * @param {string} projectData.projectName - Project name (required)
-   * @param {string} projectData.shortDescription - Short description (required)
-   * @param {number} projectData.developmentStage - Development stage: 0=Idea, 1=MVP, 2=Growth (required)
-   * @param {number} projectData.industry - Industry ID 0-14 (required)
-   * @param {string} projectData.problemStatement - Problem statement (required)
-   * @param {string} projectData.solutionDescription - Solution description (required)
-   * @param {string} projectData.targetCustomers - Target customers description (required)
-   * @param {string} projectData.uniqueValueProposition - UVP (required for MVP/Growth)
-   * @param {number} projectData.marketSize - Market size in VND (0 or optional for Idea)
-   * @param {string} projectData.businessModel - Business model (required for MVP/Growth)
-   * @param {number} projectData.revenue - Current revenue in VND (0 or optional for Idea)
-   * @param {string} projectData.competitors - Competitors description (required for MVP/Growth)
-   * @param {string} projectData.teamMembers - Team members as comma-separated (required)
-   * @param {string} projectData.keySkills - Key skills/tags as comma-separated (required for MVP/Growth)
-   * @param {string} projectData.teamExperience - Team experience description (required for Growth)
-   * @param {File} projectData.projectImageFile - Project image file (optional, max 5MB)
+   * @param {Object} projectData - Form fields (PascalCase) + optional ProjectScorecard object (enums).
+   * @param {Object} [projectData.ProjectScorecard] - TeamSize, TeamExperience, HasTechnicalCofounder, ...
+   * Các field đã bỏ: marketSize, revenue, teamMembers, keySkills, teamExperience (text).
    * @returns {Promise<any>}
    */
   submitStartupInfo: async (projectData) => {
-    const formData = new FormData();
-    Object.keys(projectData).forEach(key => {
-      const value = projectData[key];
-      if (value !== null && value !== undefined) {
-        if (Array.isArray(value)) {
-          value.forEach(v => formData.append(key, v));
-        } else {
-          formData.append(key, value);
-        }
-      }
-    });
+    const formData = buildMultipartFormData(projectData);
 
-    const response = await apiClient.post('/api/Projects', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await apiClient.post('/api/Projects', formData, formDataRequestConfig());
     return response;
   },
 
@@ -51,21 +132,9 @@ export const projectSubmissionService = {
    * @returns {Promise<any>}
    */
   createProject: async (projectData) => {
-    const formData = new FormData();
-    Object.keys(projectData).forEach(key => {
-      const value = projectData[key];
-      if (value !== null && value !== undefined) {
-        if (Array.isArray(value)) {
-          value.forEach(v => formData.append(key, v));
-        } else {
-          formData.append(key, value);
-        }
-      }
-    });
+    const formData = buildMultipartFormData(projectData);
 
-    const response = await apiClient.post('/api/Projects', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await apiClient.post('/api/Projects', formData, formDataRequestConfig());
     return response;
   },
 
@@ -76,21 +145,9 @@ export const projectSubmissionService = {
    * @returns {Promise<any>}
    */
   updateProject: async (id, projectData) => {
-    const formData = new FormData();
-    Object.keys(projectData).forEach(key => {
-      const value = projectData[key];
-      if (value !== null && value !== undefined) {
-        if (Array.isArray(value)) {
-          value.forEach(v => formData.append(key, v));
-        } else {
-          formData.append(key, value);
-        }
-      }
-    });
+    const formData = buildMultipartFormData(projectData);
 
-    const response = await apiClient.put(`/api/Projects/${id}`, formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    });
+    const response = await apiClient.put(`/api/Projects/${id}`, formData, formDataRequestConfig());
     return response;
   },
 
@@ -116,12 +173,7 @@ export const projectSubmissionService = {
     formData.append('file', file);
     formData.append('documentType', documentType);
 
-    // Explicitly set multipart/form-data for this call
-    const response = await apiClient.post(`/api/projects/${projectId}/documents`, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-      },
-    });
+    const response = await apiClient.post(`/api/projects/${projectId}/documents`, formData, formDataRequestConfig());
     return response;
   },
 

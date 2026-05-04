@@ -7,7 +7,6 @@ import {
   Sword,
   FolderOpen,
   Users,
-  CurrencyDollar,
   ChartBar,
   Lightning,
   User,
@@ -42,6 +41,7 @@ import AIEvaluationModal from '../common/AIEvaluationModal';
 import InvestorAIHistoryModal from '../common/InvestorAIHistoryModal';
 import { getStageLabel } from '../../constants/ProjectStatus';
 import optionService from '../../services/optionService';
+import { getScorecardRowsForDisplay, getScorecardQuickStats } from '../../constants/projectScorecard';
 
 /* ─── Design tokens (hardcoded to guarantee correct rendering) ─── */
 const T = {
@@ -66,7 +66,6 @@ const T = {
 
 /* ─── Helpers ─────────────────────────────────────────────── */
 const DISP = (v, fb = 'Đang cập nhật') => (v && String(v).trim() ? v : fb);
-const FMT = (val) => Number(val).toLocaleString('vi-VN') + ' VND';
 
 const avatarGrad = tag => {
   const t = (tag || '').toLowerCase();
@@ -476,7 +475,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           ...projectData,
           name: projectData.projectName || 'Dự án',
           status: projectData.status || 'Pending',
-          tags: projectData.keySkills ? projectData.keySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
+          tags: [],
         });
 
         const [dRes, aRes, bRes] = await Promise.all([
@@ -551,7 +550,7 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           ...d,
           name: d.projectName || 'Dự án',
           status: d.status || 'Pending',
-          tags: d.keySkills ? d.keySkills.split(',').map(s => s.trim()).filter(Boolean) : [],
+          tags: [],
         });
         setShowUnlockConfirm(false);
         if (onUnlock) onUnlock(projectId);
@@ -643,6 +642,12 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
   const latestAI = aiHistory.length > 0
     ? (aiHistory[0].potentialScore ?? aiHistory[0].startupScore ?? null)
     : (project.startupPotentialScore ?? null);
+
+  const scQuick = getScorecardQuickStats(project);
+  const scRowsAll = getScorecardRowsForDisplay(project);
+  const scRowsTeam = scRowsAll.filter((r) => r.section === 'Đội ngũ sáng lập');
+  const scRowsRest = scRowsAll.filter((r) => r.section !== 'Đội ngũ sáng lập');
+  const showMetricLock = !scQuick && project.revenue === undefined && project.marketSize === undefined;
 
   const maxAiRequests = Number(currentPackage?.maxAiRequests ?? subscription?.maxAiRequests ?? 0);
   const usedAiRequests = Number(subscription?.usedAiRequests ?? 0);
@@ -828,8 +833,8 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
 
         <div style={{ width: '100%', display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', borderTop: `1px solid ${T.border}`, marginTop: isMobile ? 12 : 14, paddingTop: isMobile ? 6 : 14, gap: isMobile ? 0 : 12 }}>
           {[
-            { icon: <CurrencyDollar size={isMobile ? 20 : 22} weight="duotone" color={T.blue} />, val: project.revenue ? FMT(project.revenue) : (project.revenue === undefined ? <PremiumBadge /> : '—'), lbl: 'Doanh thu', color: T.blue },
-            { icon: <ChartBar size={isMobile ? 20 : 22} weight="duotone" color={T.green} />, val: project.marketSize ? FMT(project.marketSize) : (project.marketSize === undefined ? <PremiumBadge /> : '—'), lbl: 'Quy mô thị trường', color: T.green },
+            { icon: <TrendUp size={isMobile ? 20 : 22} weight="duotone" color={T.blue} />, val: scQuick ? scQuick.traction : (showMetricLock ? <PremiumBadge /> : '—'), lbl: 'Tình hình KD (traction)', color: T.blue },
+            { icon: <ChartBar size={isMobile ? 20 : 22} weight="duotone" color={T.green} />, val: scQuick ? scQuick.market : (showMetricLock ? <PremiumBadge /> : '—'), lbl: 'Quy mô TT (scorecard)', color: T.green },
             { icon: <Lightning size={isMobile ? 20 : 22} weight="duotone" color={latestAI != null ? T.amber : T.textDim} />, val: latestAI != null ? String(latestAI) : '—', lbl: 'Điểm AI Potential', color: latestAI != null ? T.amber : T.textDim }
           ].map((k, i, arr) => (
             <div key={i} style={{
@@ -882,8 +887,17 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
           </SectionCard>
 
           <SectionCard>
-            <SectionHeader><Users size={18} weight="duotone" /> Đội ngũ</SectionHeader>
-            <SectionBody>{project.teamMembers ? project.teamMembers.split(',').map((m, i) => <div key={i} style={{ padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>{m.trim()}</div>) : 'Đang cập nhật'}</SectionBody>
+            <SectionHeader><Users size={18} weight="duotone" /> Đội ngũ (scorecard)</SectionHeader>
+            <SectionBody>
+              {scRowsTeam.length > 0
+                ? scRowsTeam.map((row, i) => (
+                    <div key={i} style={{ padding: '8px 0', borderBottom: `1px solid ${T.border}` }}>
+                      <div style={{ fontSize: 11, color: T.textDim, marginBottom: 4 }}>{row.label}</div>
+                      <div style={{ fontWeight: 700 }}>{row.value}</div>
+                    </div>
+                  ))
+                : 'Đang cập nhật'}
+            </SectionBody>
           </SectionCard>
 
           <SectionCard>
@@ -924,9 +938,10 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
               <FieldGrid>
                 <Field label="Khách hàng mục tiêu">{DISP(project.targetCustomers)}</Field>
                 <Field label="UVP">{DISP(project.uniqueValueProposition)}</Field>
-                <Field label="Quy mô thị trường" accent>{FMT(project.marketSize)}</Field>
-                <Field label="Doanh thu" accent>{FMT(project.revenue)}</Field>
                 <Field label="Mô hình kinh doanh" full>{project.businessModel === undefined ? <PremiumBadge /> : DISP(project.businessModel)}</Field>
+                {scRowsRest.map((row, i) => (
+                  <Field key={i} label={row.label}>{row.value}</Field>
+                ))}
               </FieldGrid>
             </SectionBody>
           </SectionCard>
@@ -935,7 +950,6 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
             <SectionHeader><Sword size={18} weight="duotone" /> Cạnh tranh</SectionHeader>
             <SectionBody>
               <FieldGrid>
-                <Field label="Kinh nghiệm">{project.teamExperience === undefined ? <PremiumBadge /> : DISP(project.teamExperience)}</Field>
                 <Field label="Đối thủ">{project.competitors === undefined ? <PremiumBadge /> : DISP(project.competitors)}</Field>
               </FieldGrid>
             </SectionBody>

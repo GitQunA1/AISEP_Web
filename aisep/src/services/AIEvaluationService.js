@@ -4,6 +4,7 @@
  * Implements: BR-10, BR-11, BR-12, BR-13, BR-14
  */
 import { apiClient } from './apiClient';
+import { getProjectScorecardFromProject, getTeamHeadcountFromScorecard } from '../constants/projectScorecard';
 
 const requestCache = new Map();
 
@@ -98,6 +99,10 @@ class AIEvaluationService {
    */
   static _analyzeMetadata(project) {
     let score = 50; // Base score
+    const sc = getProjectScorecardFromProject(project) || {};
+    const traction = sc.currentTraction ?? sc.CurrentTraction;
+    const targetM = sc.targetMarketSize ?? sc.TargetMarketSize;
+    const { count: teamHeadcount } = getTeamHeadcountFromScorecard(project);
 
     // Positive factors
     if (project.projectName && project.projectName.length > 3) score += 5;
@@ -106,8 +111,12 @@ class AIEvaluationService {
     if (project.stage && ['growth', 'early'].includes(project.stage.toLowerCase())) score += 10;
     if (project.category) score += 5;
     if (project.industry) score += 5;
-    if (project.currentRevenue && project.currentRevenue !== '') score += 15;
-    if (project.marketSize && project.marketSize !== '') score += 10;
+    if (traction === 'ScalingOrProfitable' || traction === 'RevenueGenerating') score += 15;
+    else if (traction === 'UserAcquisition') score += 10;
+    else if (project.currentRevenue && project.currentRevenue !== '') score += 12;
+    if (targetM === 'Large') score += 10;
+    else if (targetM === 'Medium') score += 6;
+    else if (project.marketSize && project.marketSize !== '') score += 6;
     if (project.uniqueValueProposition && project.uniqueValueProposition.length > 20) score += 7;
 
     return {
@@ -116,9 +125,9 @@ class AIEvaluationService {
       hasDescription: !!project.shortDescription,
       hasSolution: !!project.solutionDescription,
       stage: project.stage,
-      hasRevenue: !!project.currentRevenue,
-      hasMarketSize: !!project.marketSize,
-      teamSize: project.teamMembers ? (project.teamMembers.match(/,/g) || []).length + 1 : 0
+      hasRevenue: !!(traction && traction !== 'PreRevenue') || !!(project.currentRevenue && project.currentRevenue !== ''),
+      hasMarketSize: !!targetM || !!(project.marketSize && project.marketSize !== ''),
+      teamSize: teamHeadcount || 0
     };
   }
 

@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Users, Database, ChevronRight, Loader2, ShieldCheck, Save, Plus, Factory, Milestone, Shield, History } from 'lucide-react';
+import { Users, Database, ChevronRight, Loader2, ShieldCheck, Save, Plus, Factory, Milestone, Shield, History, Settings } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import DashboardSection from '../components/common/DashboardSection';
 import adminService from '../services/adminService';
@@ -16,6 +16,7 @@ const ADMIN_SECTIONS = [
     { id: 'subscription_history', label: 'Lịch sử đăng ký gói', icon: History, description: 'Theo dõi lịch sử đăng ký gói người dùng.' },
     { id: 'industry_options', label: 'Ngành nghề', icon: Factory, description: 'Danh mục ngành (industry options) dùng trong form startup và hệ thống.' },
     { id: 'stage_options', label: 'Giai đoạn dự án', icon: Milestone, description: 'Các giai đoạn dự án (stage options): Idea, MVP, Growth, v.v.' },
+    { id: 'scorecard_config', label: 'Cấu hình chấm điểm AI', icon: Settings, description: 'Điều chỉnh trọng số scorecard dùng cho tính điểm AI.' },
     { id: 'validation_rules', label: 'Rule validate động', icon: ShieldCheck, description: 'Cấu hình validate theo từng formKey.' },
     { id: 'terms', label: 'Quản lý Điều khoản', icon: ShieldCheck, description: 'Cập nhật và quản lý lịch sử điều khoản hệ thống.' },
     { id: 'account_profile', label: 'Hồ sơ người dùng', icon: Users, description: 'Quản lý thông tin cá nhân và mật khẩu.' },
@@ -79,6 +80,19 @@ export default function AdminDashboard({ user, initialSection = 'users' }) {
     const [newStageActive, setNewStageActive] = useState(true);
     const [isSubmittingStage, setIsSubmittingStage] = useState(false);
     const [stageTogglingId, setStageTogglingId] = useState(null);
+    const [scorecardConfig, setScorecardConfig] = useState(null);
+    const [scorecardDraft, setScorecardDraft] = useState({
+        teamWeight: 25,
+        marketWeight: 25,
+        productWeight: 15,
+        competitionWeight: 10,
+        tractionWeight: 10,
+        investmentNeedWeight: 10
+    });
+    const [isLoadingScorecardConfig, setIsLoadingScorecardConfig] = useState(false);
+    const [isSavingScorecardConfig, setIsSavingScorecardConfig] = useState(false);
+    const [scorecardConfigError, setScorecardConfigError] = useState('');
+    const [scorecardConfigSuccess, setScorecardConfigSuccess] = useState('');
 
     const FORM_KEYS = [
         'startup.create',
@@ -271,6 +285,77 @@ export default function AdminDashboard({ user, initialSection = 'users' }) {
             setStageError(msg || 'Không thể cập nhật trạng thái giai đoạn.');
         } finally {
             setStageTogglingId(null);
+        }
+    };
+
+    const fetchScorecardConfig = async () => {
+        setIsLoadingScorecardConfig(true);
+        setScorecardConfigError('');
+        try {
+            const response = await adminService.getDefaultScorecardConfig();
+            const payload = response?.data || response || {};
+            const data = payload?.data || payload;
+            if (!data || !data.id) {
+                throw new Error('Không tìm thấy cấu hình scorecard mặc định.');
+            }
+            setScorecardConfig(data);
+            setScorecardDraft({
+                teamWeight: Number(data.teamWeight ?? 25),
+                marketWeight: Number(data.marketWeight ?? 25),
+                productWeight: Number(data.productWeight ?? 15),
+                competitionWeight: Number(data.competitionWeight ?? 10),
+                tractionWeight: Number(data.tractionWeight ?? 10),
+                investmentNeedWeight: Number(data.investmentNeedWeight ?? 10)
+            });
+        } catch (error) {
+            console.error('[AdminDashboard] Failed to fetch scorecard config:', error);
+            setScorecardConfig(null);
+            setScorecardConfigError(error?.message || 'Không thể tải cấu hình chấm điểm AI.');
+        } finally {
+            setIsLoadingScorecardConfig(false);
+        }
+    };
+
+    const handleScorecardDraftChange = (key, value) => {
+        setScorecardDraft((prev) => ({
+            ...prev,
+            [key]: value
+        }));
+    };
+
+    const handleSaveScorecardConfig = async () => {
+        if (!scorecardConfig?.id) return;
+        const keys = ['teamWeight', 'marketWeight', 'productWeight', 'competitionWeight', 'tractionWeight', 'investmentNeedWeight'];
+        const payload = {};
+        for (const key of keys) {
+            const n = Number(scorecardDraft[key]);
+            if (!Number.isFinite(n) || n < 0 || n > 100) {
+                setScorecardConfigError(`Giá trị ${key} phải trong khoảng 0-100.`);
+                setScorecardConfigSuccess('');
+                return;
+            }
+            payload[key] = n;
+        }
+        const sum = keys.reduce((acc, k) => acc + Number(payload[k] || 0), 0);
+        if (sum !== 100) {
+            setScorecardConfigError(`Tổng trọng số phải bằng 100 (hiện tại: ${sum}).`);
+            setScorecardConfigSuccess('');
+            return;
+        }
+
+        setIsSavingScorecardConfig(true);
+        setScorecardConfigError('');
+        setScorecardConfigSuccess('');
+        try {
+            await adminService.updateScorecardConfig(scorecardConfig.id, payload);
+            setScorecardConfigSuccess('Đã cập nhật cấu hình chấm điểm AI thành công.');
+            setTimeout(() => setScorecardConfigSuccess(''), 3500);
+            await fetchScorecardConfig();
+        } catch (error) {
+            console.error('[AdminDashboard] Failed to update scorecard config:', error);
+            setScorecardConfigError(error?.message || 'Không thể cập nhật cấu hình chấm điểm AI.');
+        } finally {
+            setIsSavingScorecardConfig(false);
         }
     };
 
@@ -483,6 +568,9 @@ export default function AdminDashboard({ user, initialSection = 'users' }) {
         }
         if (activeSection === 'stage_options') {
             fetchStageOptions(stageMeta.page, stageMeta.pageSize);
+        }
+        if (activeSection === 'scorecard_config') {
+            fetchScorecardConfig();
         }
     }, [activeSection]);
 
@@ -1383,6 +1471,91 @@ export default function AdminDashboard({ user, initialSection = 'users' }) {
         );
     };
 
+    const renderScorecardConfigSection = () => {
+        const fields = [
+            { key: 'teamWeight', label: 'Team Weight', hint: 'Trọng số đội ngũ sáng lập' },
+            { key: 'marketWeight', label: 'Market Weight', hint: 'Trọng số thị trường' },
+            { key: 'productWeight', label: 'Product Weight', hint: 'Trọng số sản phẩm & công nghệ' },
+            { key: 'competitionWeight', label: 'Competition Weight', hint: 'Trọng số cạnh tranh' },
+            { key: 'tractionWeight', label: 'Traction Weight', hint: 'Trọng số lực kéo thị trường' },
+            { key: 'investmentNeedWeight', label: 'Investment Need Weight', hint: 'Trọng số nhu cầu gọi vốn' }
+        ];
+        const totalWeight = fields.reduce((sum, f) => sum + Number(scorecardDraft[f.key] || 0), 0);
+
+        return (
+            <div className={styles.card} style={{ borderRadius: '14px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap', marginBottom: '14px' }}>
+                    <div>
+                        <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 700, color: 'var(--text-primary)' }}>Cấu hình chấm điểm AI</h3>
+                        <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                            API: <code>/api/admin/scorecard-configs/default</code> và <code>/api/admin/scorecard-configs/{'{id}'}</code>.
+                            Tổng trọng số phải bằng 100.
+                        </p>
+                    </div>
+                    <button className={styles.secondaryBtn} onClick={fetchScorecardConfig} disabled={isLoadingScorecardConfig || isSavingScorecardConfig}>
+                        {isLoadingScorecardConfig ? 'Đang tải...' : '↻ Làm mới'}
+                    </button>
+                </div>
+
+                {scorecardConfigSuccess && (
+                    <div style={{ padding: '10px 12px', marginBottom: '12px', borderRadius: '8px', backgroundColor: '#d1fae5', color: '#065f46', fontWeight: 600, fontSize: '13px' }}>
+                        {scorecardConfigSuccess}
+                    </div>
+                )}
+                {scorecardConfigError && (
+                    <div style={{ padding: '10px 12px', marginBottom: '12px', borderRadius: '8px', backgroundColor: '#fee2e2', color: '#991b1b', fontWeight: 600, fontSize: '13px' }}>
+                        {scorecardConfigError}
+                    </div>
+                )}
+
+                {isLoadingScorecardConfig ? (
+                    <div className={styles.loadingState}>
+                        <Loader2 size={24} className={styles.spinner} />
+                        <span>Đang tải cấu hình scorecard...</span>
+                    </div>
+                ) : !scorecardConfig ? (
+                    <div className={styles.emptyState}>
+                        <p style={{ margin: 0, color: 'var(--text-secondary)' }}>Không có dữ liệu cấu hình scorecard.</p>
+                    </div>
+                ) : (
+                    <>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', marginBottom: '16px' }}>
+                            {fields.map((field) => (
+                                <div key={field.key} style={{ border: '1px solid var(--border-color)', borderRadius: '10px', padding: '12px', background: 'var(--bg-secondary)' }}>
+                                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 700, color: 'var(--text-primary)', marginBottom: '4px' }}>{field.label}</label>
+                                    <p style={{ margin: '0 0 8px 0', fontSize: '11px', color: 'var(--text-secondary)' }}>{field.hint}</p>
+                                    <input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        step={1}
+                                        value={scorecardDraft[field.key]}
+                                        onChange={(e) => handleScorecardDraftChange(field.key, e.target.value)}
+                                        style={{ width: '100%', padding: '8px 10px', borderRadius: '8px', border: '1px solid var(--border-color)', background: 'var(--bg-primary)', color: 'var(--text-primary)' }}
+                                    />
+                                </div>
+                            ))}
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', flexWrap: 'wrap', borderTop: '1px solid var(--border-color)', paddingTop: '12px' }}>
+                            <div style={{ fontSize: '13px', fontWeight: 700, color: totalWeight === 100 ? '#065f46' : '#991b1b' }}>
+                                Tổng trọng số: {totalWeight}/100
+                            </div>
+                            <button
+                                className={styles.primaryBtn}
+                                onClick={handleSaveScorecardConfig}
+                                disabled={isSavingScorecardConfig || isLoadingScorecardConfig}
+                                style={{ minWidth: '160px' }}
+                            >
+                                {isSavingScorecardConfig ? <><Loader2 size={14} className={styles.spinner} /> Đang lưu...</> : <><Save size={14} /> Lưu cấu hình</>}
+                            </button>
+                        </div>
+                    </>
+                )}
+            </div>
+        );
+    };
+
     const renderAccountProfileSection = () => (
         <AccountProfileTab user={user} />
     );
@@ -1564,6 +1737,7 @@ export default function AdminDashboard({ user, initialSection = 'users' }) {
                      activeSection === 'subscription_history' ? renderSubscriptionHistorySection() : 
                      activeSection === 'industry_options' ? renderIndustryOptionsSection() : 
                      activeSection === 'stage_options' ? renderStageOptionsSection() : 
+                     activeSection === 'scorecard_config' ? renderScorecardConfigSection() : 
                      activeSection === 'validation_rules' ? renderValidationRulesSection() : 
                      activeSection === 'terms' ? renderTermsSection() :
                      activeSection === 'account_profile' ? renderAccountProfileSection() : 

@@ -136,6 +136,24 @@ const adminService = {
    */
   getTermsHistory: async (params = {}) => {
     return await apiClient.get('/api/admin/terms/history', { params });
+  },
+
+  /**
+   * Get default scorecard weight config
+   * GET /api/admin/scorecard-configs/default
+   */
+  getDefaultScorecardConfig: async () => {
+    return await apiClient.get('/api/admin/scorecard-configs/default');
+  },
+
+  /**
+   * Update scorecard weight config
+   * PUT /api/admin/scorecard-configs/{id}
+   * @param {number|string} id
+   * @param {{ teamWeight:number, marketWeight:number, productWeight:number, competitionWeight:number, tractionWeight:number, investmentNeedWeight:number }} payload
+   */
+  updateScorecardConfig: async (id, payload) => {
+    return await apiClient.put(`/api/admin/scorecard-configs/${id}`, payload);
   }
 };
 

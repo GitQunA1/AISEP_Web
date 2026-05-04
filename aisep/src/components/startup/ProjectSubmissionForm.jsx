@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, AlertCircle, Plus, Trash2, Upload, FileText, CheckCircle, Loader2 } from 'lucide-react';
+import { X, AlertCircle, Trash2, Upload, FileText, CheckCircle, Loader2, Info } from 'lucide-react';
 import styles from './ProjectSubmissionForm.module.css';
 import projectSubmissionService from '../../services/projectSubmissionService';
 import { getStageNumericValue } from '../../constants/ProjectStatus';
@@ -7,7 +7,21 @@ import CustomSelect from '../common/CustomSelect';
 import SuccessModal from '../common/SuccessModal';
 import validationService from '../../services/validationService';
 import optionService from '../../services/optionService';
-import enumService from '../../services/enumService';
+import ScorecardRadioGroup from './ScorecardRadioGroup';
+import {
+  SCORECARD_SECTIONS,
+  SCORECARD_BOOLEAN_FIELD,
+  SCORECARD_FORM_ENUM_KEYS,
+  scorecardFromApiToFormState,
+  getProjectScorecardFromProject,
+} from '../../constants/projectScorecard';
+import { formatIndustryOptionDisplayLabel, formatStageOptionDisplayLabel } from '../../utils/optionDisplayLabels';
+
+const STEP_TITLES = [
+  'Thông tin cơ bản',
+  'Giải pháp & mô hình kinh doanh',
+  'Bảng điểm dự án (Project Scorecard)',
+];
 
 /**
  * Get internal numeric value for industry from various formats
@@ -27,10 +41,10 @@ const getIndustryNumericValue = (industry, industries = []) => {
   }
 
   // If label (e.g., "Fintech")
-  const found = industries.find(i => 
+  const found = industries.find(i =>
     i.label.toLowerCase() === String(industry).toLowerCase() ||
-    i.label.replace('_', ' ').toLowerCase() === String(industry).toLowerCase() ||
-    i.label.replace(' ', '_').toLowerCase() === String(industry).toLowerCase()
+    i.label.replace(/_/g, ' ').toLowerCase() === String(industry).toLowerCase() ||
+    i.label.replace(/\s+/g, '_').toLowerCase() === String(industry).toLowerCase()
   );
   
   return found ? String(found.value) : String(industry);
@@ -49,14 +63,9 @@ const FIELD_LABEL_MAP = {
   'solutiondescription': 'Mô tả giải pháp',
   'targetcustomers': 'Khách hàng mục tiêu',
   'uniquevalueproposition': 'Giá trị độc đáo (UVP)',
-  'marketsize': 'Quy mô thị trường',
   'businessmodel': 'Mô hình kinh doanh',
-  'revenue': 'Doanh thu hiện thực',
   'competitors': 'Đối thủ cạnh tranh',
-  'teammembers': 'Thành viên đội ngũ',
-  'keyskills': 'Kỹ năng cốt lõi',
-  'teamexperience': 'Kinh nghiệm đội ngũ',
-  'projectimagefile': 'Hình ảnh dự án'
+  'projectimagefile': 'Hình ảnh dự án',
 };
 
 /**
@@ -86,14 +95,10 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     solutionDescription: '',
     targetCustomers: '',
     uniqueValueProposition: '',
-    marketSize: '',
     businessModel: '',
-    revenue: '',
     competitors: '',
-    teamMembers: [{ name: '', role: '' }],
-    keySkills: '',
-    teamExperience: '',
     projectImageFile: null,
+    ...scorecardFromApiToFormState(null),
   });
 
   // Fetch dynamic configuration
@@ -137,6 +142,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
           return found ? String(found.value) : (getStageNumericValue(stage) || '0');
         };
 
+        const scForm = scorecardFromApiToFormState(getProjectScorecardFromProject(initialData));
         setFormData({
           projectName: initialData.projectName || initialData.name || '',
           shortDescription: initialData.shortDescription || '',
@@ -146,24 +152,10 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
           solutionDescription: initialData.solutionDescription || '',
           targetCustomers: initialData.targetCustomers || '',
           uniqueValueProposition: initialData.uniqueValueProposition || '',
-          marketSize: initialData.marketSize || '',
           businessModel: initialData.businessModel || '',
-          revenue: initialData.revenue || '',
           competitors: initialData.competitors || '',
-          teamMembers: initialData.teamMembers 
-            ? initialData.teamMembers.split(',').map(m => {
-                const parts = m.trim().split('(');
-                const name = parts[0];
-                const role = parts[1];
-                return { 
-                  name: name.trim(), 
-                  role: role ? role.replace(')', '').trim() : '' 
-                };
-              })
-            : [{ name: '', role: '' }],
-          keySkills: initialData.keySkills || '',
-          teamExperience: initialData.teamExperience || '',
           projectImageFile: null,
+          ...scForm,
         });
       }
     } catch (err) {
@@ -186,10 +178,6 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
 
   const isFirstRender = React.useRef(true);
   const prevStageRef = React.useRef(formData.developmentStage);
-  const isIdea = String(formData.developmentStage) === '0';
-  const isMVP = String(formData.developmentStage) === '1';
-  const isGrowth = String(formData.developmentStage) === '2';
-
   // Reset fields in Step 2 and 3 when Stage changes in Step 1
   useEffect(() => {
     // Only reset if it's NOT the first render, we are on Step 1,
@@ -203,13 +191,9 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
           solutionDescription: '',
           targetCustomers: '',
           uniqueValueProposition: '',
-          marketSize: '',
           businessModel: '',
-          revenue: '',
           competitors: '',
-          teamMembers: [{ name: '', role: '' }],
-          keySkills: '',
-          teamExperience: '',
+          ...scorecardFromApiToFormState(null),
         }));
         setErrors({});
       }
@@ -280,27 +264,6 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     setImagePreview(null);
   };
 
-  const addTeamMember = () => {
-    setFormData(prev => ({
-      ...prev,
-      teamMembers: [...prev.teamMembers, { name: '', role: '' }]
-    }));
-  };
-
-  const removeTeamMember = (index) => {
-    if (formData.teamMembers.length <= 1) return;
-    const newMembers = [...formData.teamMembers];
-    newMembers.splice(index, 1);
-    setFormData(prev => ({ ...prev, teamMembers: newMembers }));
-  };
-
-  const handleMemberChange = (index, field, value) => {
-    const newMembers = [...formData.teamMembers];
-    newMembers[index][field] = value;
-    setFormData(prev => ({ ...prev, teamMembers: newMembers }));
-  };
-
-
   const validateStep = () => {
     if (!validationRules) return false;
     const newErrors = {};
@@ -308,8 +271,8 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     // Group fields by step for dynamic validation
     const stepFields = {
       1: ['projectName', 'shortDescription', 'developmentStage', 'industry', 'problemStatement'],
-      2: ['solutionDescription', 'targetCustomers', 'uniqueValueProposition', 'marketSize', 'revenue', 'businessModel'],
-      3: ['competitors', 'keySkills', 'teamExperience']
+      2: ['solutionDescription', 'targetCustomers', 'uniqueValueProposition', 'businessModel', 'competitors'],
+      3: [],
     };
 
     const currentFields = stepFields[currentStep] || [];
@@ -319,11 +282,13 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
       if (error) newErrors[name] = error;
     });
 
-    // Special check for team members (not a standard field in validationRules usually)
-    if (currentStep === 3) {
-      const hasEmptyMembers = formData.teamMembers.some(m => !m.name.trim());
-      if (hasEmptyMembers) newErrors.teamMembers = 'Vui lòng nhập tên thành viên';
-    }
+    const requireScore = (keys) => {
+      keys.forEach((k) => {
+        if (!formData[k]) newErrors[k] = 'Vui lòng chọn';
+      });
+    };
+
+    if (currentStep === 3) requireScore(SCORECARD_FORM_ENUM_KEYS);
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -353,34 +318,35 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     setIsSubmitting(true);
     try {
       const payload = {
-        ProjectName: formData.projectName.trim(),
-        ShortDescription: formData.shortDescription.trim(),
-        StageOptionId: formData.developmentStage ? parseInt(formData.developmentStage) : null,
-        ProblemStatement: formData.problemStatement.trim(),
-        SolutionDescription: formData.solutionDescription.trim(),
-        TargetCustomers: formData.targetCustomers.trim(),
-        UniqueValueProposition: formData.uniqueValueProposition.trim(),
-        MarketSize: formData.marketSize ? parseFloat(formData.marketSize) : null,
-        BusinessModel: formData.businessModel.trim(),
-        Revenue: formData.revenue ? parseFloat(formData.revenue) : null,
-        Competitors: formData.competitors.trim(),
-        TeamMembers: formData.teamMembers
-          .filter(m => m.name.trim())
-          .map(m => m.role.trim() ? `${m.name.trim()} (${m.role.trim()})` : m.name.trim())
-          .join(', '),
-        KeySkills: formData.keySkills.trim(),
-        TeamExperience: formData.teamExperience.trim(),
-        ProjectImageFile: formData.projectImageFile,
+        projectName: formData.projectName.trim(),
+        shortDescription: formData.shortDescription.trim(),
+        stageOptionId: formData.developmentStage ? parseInt(formData.developmentStage, 10) : null,
+        problemStatement: formData.problemStatement.trim(),
+        solutionDescription: formData.solutionDescription.trim(),
+        targetCustomers: formData.targetCustomers.trim(),
+        uniqueValueProposition: formData.uniqueValueProposition.trim(),
+        businessModel: formData.businessModel.trim(),
+        competitors: formData.competitors.trim(),
+        projectImageFile: formData.projectImageFile,
+        projectScorecard: {
+          teamSize: formData.teamSize,
+          teamExperience: formData.teamExperience,
+          hasTechnicalCofounder: !!formData.hasTechnicalCofounder,
+          targetMarketSize: formData.targetMarketSize,
+          marketGrowth: formData.marketGrowth,
+          productReadiness: formData.productReadiness,
+          iPProtection: formData.ipProtection,
+          barrierToEntry: formData.barrierToEntry,
+          currentTraction: formData.currentTraction,
+          runwayMonths: formData.runwayMonths,
+        },
       };
 
-      // Handle Industry properly: ID for active, Label for inactive
+      // Swagger: industryOptionId là integer đơn
       if (formData.industry) {
-        const activeOption = industries.find(opt => String(opt.value) === String(formData.industry));
-        if (activeOption) {
-          payload.IndustryOptionIds = [parseInt(formData.industry)];
-        } else {
-          // Send as label if no ID found (legacy/inactive)
-          payload.Industries = [formData.industry];
+        const parsedIndustry = parseInt(formData.industry, 10);
+        if (!Number.isNaN(parsedIndustry)) {
+          payload.industryOptionId = parsedIndustry;
         }
       }
 
@@ -437,12 +403,14 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
       {/* Form Modal - Show when not submitted successfully yet */}
       {!isSuccessModalOpen && (
         <div className={styles.modalOverlay}>
-          <div className={styles.modalContent}>
+          <div className={`${styles.modalContent} ${currentStep === 3 ? styles.modalContentWide : ''}`}>
             {/* Header */}
             <div className={styles.modalHeader}>
               <div>
                 <h2 className={styles.headerTitle}>{isEdit ? 'Cập nhật dự án' : 'Đăng Dự Án'}</h2>
-                <p className={styles.headerSubtitle}>Bước {currentStep} của {totalSteps}</p>
+                <p className={styles.headerSubtitle}>
+                  Bước {currentStep} / {totalSteps} — {STEP_TITLES[currentStep - 1]}
+                </p>
               </div>
               <button onClick={onClose} className={styles.closeButton}>
                 <X size={24} />
@@ -752,7 +720,10 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                           value={String(formData.developmentStage)}
                           onChange={handleInputChange}
                           placeholder="Chọn giai đoạn..."
-                          options={stages.map(s => ({ label: s.label, value: String(s.value) }))}
+                          options={stages.map((s) => ({
+                            label: formatStageOptionDisplayLabel(s.label),
+                            value: String(s.value),
+                          }))}
                         />
                         {errors.developmentStage && <span className={styles.errorText}>{errors.developmentStage}</span>}
                       </div>
@@ -764,7 +735,10 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                           value={String(formData.industry)}
                           onChange={handleInputChange}
                           placeholder="Chọn lĩnh vực..."
-                          options={industries.map(ind => ({ label: ind.label, value: String(ind.value) }))}
+                          options={industries.map((ind) => ({
+                            label: formatIndustryOptionDisplayLabel(ind.label),
+                            value: String(ind.value),
+                          }))}
                           disabled={!!(formData.industry && !industries.find(opt => String(opt.value) === String(formData.industry)))}
                         />
                         {/* Inactive Industry Warning */}
@@ -805,7 +779,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                     </>
                   )}
 
-                  {/* Step 2: Solution & Market */}
+                  {/* Step 2: Giải pháp, khách hàng, UVP, mô hình, đối thủ (mô tả — không gộp scorecard) */}
                   {currentStep === 2 && (
                     <>
                       <div className={styles.formGroup}>
@@ -850,35 +824,6 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                         {errors.uniqueValueProposition && <span className={styles.errorText}>{errors.uniqueValueProposition}</span>}
                       </div>
 
-                      {!isIdea && (
-                        <div className={styles.row}>
-                          <div className={styles.formGroup}>
-                            {renderFieldHeader('marketSize', 'Quy mô thị trường (VND)')}
-                            <input
-                              type="number"
-                              name="marketSize"
-                              value={formData.marketSize}
-                              onChange={handleInputChange}
-                              className={styles.input}
-                              placeholder="0"
-                            />
-                            {errors.marketSize && <span className={styles.errorText}>{errors.marketSize}</span>}
-                          </div>
-                          <div className={styles.formGroup}>
-                            {renderFieldHeader('revenue', 'Doanh thu hiện thực (VND)')}
-                            <input
-                              type="number"
-                              name="revenue"
-                              value={formData.revenue}
-                              onChange={handleInputChange}
-                              className={styles.input}
-                              placeholder="0"
-                            />
-                            {errors.revenue && <span className={styles.errorText}>{errors.revenue}</span>}
-                          </div>
-                        </div>
-                      )}
-
                       <div className={styles.formGroup}>
                         {renderFieldHeader('businessModel', 'Mô Hình Kinh Doanh')}
                         <textarea
@@ -892,12 +837,7 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                         {renderValidationHint('businessModel')}
                         {errors.businessModel && <span className={styles.errorText}>{errors.businessModel}</span>}
                       </div>
-                    </>
-                  )}
 
-                  {/* Step 3: Competition & Team */}
-                  {currentStep === 3 && (
-                    <>
                       <div className={styles.formGroup}>
                         {renderFieldHeader('competitors', 'Đối thủ cạnh tranh')}
                         <textarea
@@ -905,84 +845,77 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                           value={formData.competitors}
                           onChange={handleInputChange}
                           className={styles.textarea}
-                          placeholder="Liệt kê các đối thủ chính và điểm khác biệt của bạn"
-                          rows={2}
+                          placeholder="Liệt kê đối thủ chính và điểm khác biệt (mô tả tự do, bổ sung cho mục rào cản gia nhập ở bước Scorecard)."
+                          rows={3}
                         />
                         {renderValidationHint('competitors')}
                         {errors.competitors && <span className={styles.errorText}>{errors.competitors}</span>}
                       </div>
 
-                      <div className={styles.formGroup}>
-                        <div className={styles.labelRow}>
-                          {renderFieldHeader('teamMembers', 'Thành Viên Đội')}
-                          <button 
-                            type="button" 
-                            onClick={addTeamMember}
-                            className={styles.addMemberBtn}
-                          >
-                            <Plus size={14} /> Thêm người
-                          </button>
-                        </div>
-                        
-                        <div className={styles.membersList}>
-                          {formData.teamMembers.map((member, index) => (
-                            <div key={index} className={styles.memberRow}>
-                              <input
-                                type="text"
-                                placeholder="Họ và tên"
-                                value={member.name}
-                                onChange={(e) => handleMemberChange(index, 'name', e.target.value)}
-                                className={styles.input}
-                              />
-                              <input
-                                type="text"
-                                placeholder="Vai trò (VD: CEO, CTO)"
-                                value={member.role}
-                                onChange={(e) => handleMemberChange(index, 'role', e.target.value)}
-                                className={styles.input}
-                              />
-                              <button 
-                                type="button" 
-                                onClick={() => removeTeamMember(index)}
-                                className={styles.removeMemberBtn}
-                                disabled={formData.teamMembers.length <= 1}
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
+                      <p className={styles.scorecardIntro} style={{ marginTop: '8px' }}>
+                        <strong>Bước tiếp theo:</strong> bạn sẽ điền <strong>Bảng điểm dự án (Project Scorecard)</strong> — các lựa chọn dạng checklist/radio kèm mô tả từng mức theo hướng dẫn, đúng thứ tự: Đội ngũ → Thị trường → Sản phẩm → Cạnh tranh → Traction → Gọi vốn (runway).
+                      </p>
+                    </>
+                  )}
+
+                  {/* Step 3: Toàn bộ scorecard theo tài liệu (radio + helper từng lựa chọn; co-founder kỹ thuật: Có/Không) */}
+                  {currentStep === 3 && (
+                    <>
+                      <p className={styles.scorecardIntro}>
+                        <strong>Project Scorecard.</strong> Với mỗi tiêu chí, chọn <strong>đúng một</strong> mức. Dòng chữ nhỏ dưới mỗi lựa chọn là mô tả chi tiết (theo spec API/UI).
+                        Icon <strong>ℹ️</strong> cạnh tên tiêu chí gợi ý nhanh toàn bộ các mức. Trường <strong>calculatedScore</strong> không hiển thị và không gửi.
+                      </p>
+
+                      {SCORECARD_SECTIONS.map((section, secIdx) => (
+                        <div key={section.title} className={styles.scorecardSection}>
+                          <h3 className={styles.scorecardSectionTitle}>
+                            {secIdx + 1}. {section.title}
+                          </h3>
+                          <p className={styles.scorecardSectionSubtitle}>{section.subtitle}</p>
+
+                          {section.fields.map((field) => (
+                            <ScorecardRadioGroup
+                              key={field.key}
+                              label={field.label}
+                              name={field.key}
+                              value={formData[field.key]}
+                              onChange={handleInputChange}
+                              options={field.options}
+                              error={errors[field.key]}
+                            />
                           ))}
+
+                          {secIdx === 0 && (
+                            <div className={styles.boolToggleWrap}>
+                              <div className={styles.boolToggleLabel}>
+                                <span>{SCORECARD_BOOLEAN_FIELD.label}</span>
+                                <span className={styles.boolToggleLabelInfo} title={SCORECARD_BOOLEAN_FIELD.helper}>
+                                  <Info size={16} aria-hidden />
+                                </span>
+                              </div>
+                              <div className={styles.boolToggleRow} role="group" aria-label={SCORECARD_BOOLEAN_FIELD.label}>
+                                <button
+                                  type="button"
+                                  aria-pressed={!formData.hasTechnicalCofounder}
+                                  className={`${styles.boolToggleBtn} ${!formData.hasTechnicalCofounder ? styles.boolToggleBtnActive : ''}`}
+                                  onClick={() => setFormData((prev) => ({ ...prev, hasTechnicalCofounder: false }))}
+                                >
+                                  Không
+                                </button>
+                                <button
+                                  type="button"
+                                  aria-pressed={formData.hasTechnicalCofounder}
+                                  className={`${styles.boolToggleBtn} ${formData.hasTechnicalCofounder ? styles.boolToggleBtnActive : ''}`}
+                                  onClick={() => setFormData((prev) => ({ ...prev, hasTechnicalCofounder: true }))}
+                                >
+                                  Có
+                                </button>
+                              </div>
+                              <p className={styles.boolToggleHelper}>{SCORECARD_BOOLEAN_FIELD.helper}</p>
+                            </div>
+                          )}
                         </div>
-                        {errors.teamMembers && <span className={styles.errorText}>{errors.teamMembers}</span>}
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        {renderFieldHeader('keySkills', 'Kỹ năng cốt lõi')}
-                        <input
-                          type="text"
-                          name="keySkills"
-                          value={formData.keySkills}
-                          onChange={handleInputChange}
-                          className={styles.input}
-                          placeholder="Ví dụ: AI, Machine Learning, Quản lý chuỗi cung ứng..."
-                        />
-                        <span className={styles.hintText}>Tập trung vào các kỹ năng chuyên môn giúp startup thành công.</span>
-                        {renderValidationHint('keySkills')}
-                        {errors.keySkills && <span className={styles.errorText}>{errors.keySkills}</span>}
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        {renderFieldHeader('teamExperience', 'Kinh nghiệm đội ngũ')}
-                        <textarea
-                          name="teamExperience"
-                          value={formData.teamExperience}
-                          onChange={handleInputChange}
-                          className={styles.textarea}
-                          placeholder="Các dự án hoặc thành tựu nổi bật của các thành viên"
-                          rows={3}
-                        />
-                        {renderValidationHint('teamExperience')}
-                        {errors.teamExperience && <span className={styles.errorText}>{errors.teamExperience}</span>}
-                      </div>
+                      ))}
                     </>
                   )}
                 </>

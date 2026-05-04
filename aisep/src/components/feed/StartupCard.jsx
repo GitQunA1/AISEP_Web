@@ -21,6 +21,7 @@ import styles from './StartupCard.module.css';
 import followerService from '../../services/followerService';
 import RequestInfoModal from '../common/RequestInfoModal';
 import dealsService from '../../services/dealsService';
+import { getScorecardQuickStats } from '../../constants/projectScorecard';
 
 /**
  * StartupCard Component - "Visual Priority (Concept C)"
@@ -66,19 +67,23 @@ function StartupCard({
 
   // Initialize follow state from passed followedProjectIds (instant, no API call)
   React.useEffect(() => {
-    if (isInvestor && startup.id && followedProjectIds) {
-      const isFollowing = followedProjectIds.has(startup.id);
+    if (isInvestor && startup.id) {
+      const isFollowing = followedProjectIds
+        ? followedProjectIds.has(startup.id)
+        : !!startup.isFollowedByCurrentUser;
       setIsInterested(isFollowing);
     }
-  }, [isInvestor, startup.id, followedProjectIds]);
+  }, [isInvestor, startup.id, followedProjectIds, startup.isFollowedByCurrentUser]);
 
   // Initialize request state from passed sentConnectionIds (instant, no API call)
   React.useEffect(() => {
-    if (isInvestor && startup.id && sentConnectionIds) {
-      const hasRequest = sentConnectionIds.has(startup.id);
+    if (isInvestor && startup.id) {
+      const hasRequest = sentConnectionIds
+        ? sentConnectionIds.has(startup.id)
+        : !!startup.isConnectionRequestedByCurrentInvestor;
       setHasRequested(hasRequest);
     }
-  }, [isInvestor, startup.id, sentConnectionIds]);
+  }, [isInvestor, startup.id, sentConnectionIds, startup.isConnectionRequestedByCurrentInvestor]);
 
   // NEW: Fetch investment status for this project
   // DISABLED: This causes too much API spam when rendering many cards
@@ -465,29 +470,34 @@ function StartupCard({
         )}
       </div>
 
-      {/* 3. Three-column Highlight Grid */}
+      {/* 3. Three-column Highlight Grid (scorecard: traction, quy mô TT enum) */}
       <div className={styles.gridRow} onClick={(e) => e.stopPropagation()}>
-        {/* Revenue */}
+        {(() => {
+          const qs = getScorecardQuickStats(startup);
+          return (
+            <>
         <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(45, 126, 255, 0.08)', borderColor: 'rgba(45, 126, 255, 0.2)' }}>
           <div className={styles.boxIcon}><CurrencyDollar size={24} weight="duotone" style={{ color: '#2D7EFF' }} /></div>
-          {startup.revenue !== undefined ? (
-            <div className={`${styles.boxValue} ${styles.blueText}`} style={{ fontSize: '15px' }}>
-              {startup.revenue ? `${startup.revenue.toLocaleString('vi-VN')} VND` : '0 VND'}
+          {qs ? (
+            <div className={`${styles.boxValue} ${styles.blueText}`} style={{ fontSize: '14px', lineHeight: 1.3 }}>
+              {qs.traction}
             </div>
           ) : <PremiumLock />}
-          <div className={styles.boxLabel}>Doanh thu</div>
+          <div className={styles.boxLabel}>Tình hình KD</div>
         </div>
 
-        {/* Market Size */}
         <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(0, 186, 124, 0.08)', borderColor: 'rgba(0, 186, 124, 0.2)' }}>
           <div className={styles.boxIcon}><ChartBar size={24} weight="duotone" style={{ color: '#00ba7c' }} /></div>
-          {startup.marketSize !== undefined ? (
-            <div className={`${styles.boxValue} ${styles.greenText}`} style={{ fontSize: '15px' }}>
-              {startup.marketSize ? `${startup.marketSize.toLocaleString('vi-VN')} VND` : '0 VND'}
+          {qs ? (
+            <div className={`${styles.boxValue} ${styles.greenText}`} style={{ fontSize: '14px', lineHeight: 1.3 }}>
+              {qs.market}
             </div>
           ) : <PremiumLock />}
-          <div className={styles.boxLabel}>Thị trường</div>
+          <div className={styles.boxLabel}>Quy mô TT</div>
         </div>
+            </>
+          );
+        })()}
 
         {/* Competitors (Always Show) */}
         <div className={styles.highlightBox} style={{ backgroundColor: 'rgba(113, 118, 123, 0.08)', borderColor: 'rgba(113, 118, 123, 0.2)' }}>
@@ -525,13 +535,17 @@ function StartupCard({
         )}
       </div>
 
-      {/* 5. Team Line */}
-      {(startup.teamMembers === undefined || startup.teamMembers) && (
+      {/* 5. Team (scorecard: kích thước đội) */}
+      {(() => {
+        const qs = getScorecardQuickStats(startup);
+        if (!qs && startup.teamMembers === undefined) return null;
+        return (
         <div className={styles.teamLine}>
-          <strong style={{ color: 'var(--text-primary)' }}>Team:</strong>{' '}
-          {startup.teamMembers !== undefined ? startup.teamMembers : <PremiumLockText />}
+          <strong style={{ color: 'var(--text-primary)' }}>Đội ngũ:</strong>{' '}
+          {qs ? qs.teamSize : (startup.teamMembers !== undefined ? startup.teamMembers : <PremiumLockText />)}
         </div>
-      )}
+        );
+      })()}
 
       {/* 6. Action Buttons for Investors */}
       {isInvestor && (

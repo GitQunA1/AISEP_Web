@@ -145,11 +145,21 @@
     overflow: hidden;
     flex-shrink: 0;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    position: relative;
 }
 
 :global(html:not([data-theme='dark'])) .avatar {
     border-color: #ffffff !important;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+}
+
+.avatarImage {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
 }
 
 .initialText {
@@ -158,6 +168,8 @@
     justify-content: center;
     line-height: 1;
     margin-top: -1px;
+    width: 100%;
+    height: 100%;
 }
 
 .connectBtn {

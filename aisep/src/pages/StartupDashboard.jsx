@@ -27,6 +27,7 @@ import bookingService from '../services/bookingService';
 import projectAssignmentService from '../services/projectAssignmentService';
 import BookingWizard from '../components/booking/BookingWizard';
 import optionService from '../services/optionService';
+import { getScorecardRowsForDisplay } from '../constants/projectScorecard.js';
 
 import StartupProfileBanner from '../components/startup/StartupProfileBanner';
 import StartupBookings from '../components/startup/StartupBookings';
@@ -1673,17 +1674,6 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
             setIsSubmittingProject(false);
         }
     };
-    const parseTeamMembers = (text) => {
-        if (!text) return [];
-        const members = text.split(/[\n,]+/).map(m => m.trim()).filter(Boolean);
-        return members.map(m => {
-            const match = m.match(/^(.*?)\s*\((.*?)\)$/);
-            if (match) {
-                return { name: match[1].trim(), role: match[2].trim() };
-            }
-            return { name: m, role: 'Thành viên' };
-        });
-    };
 
     return (
         <div className={styles.container} style={activeSection === 'pr_news' ? { minHeight: 'auto' } : {}}>
@@ -2953,25 +2943,14 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                         </div>
                                     </section>
 
-                                    {/* Section 2: Market & Finance */}
+                                    {/* Section 2: Market, model & scorecard */}
                                     <section className={styles.projectDetailSection}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                                             <div style={{ width: '4px', height: '24px', backgroundColor: '#10b981', borderRadius: '4px' }} />
-                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>2. THỊ TRƯỜNG & TÀI CHÍNH</h3>
+                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>2. THỊ TRƯỜNG, MÔ HÌNH & BẢNG ĐIỂM (SCORECARD)</h3>
                                         </div>
 
-                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '24px', marginBottom: '32px' }}>
-                                            <div style={{ padding: '20px', backgroundColor: 'rgba(16, 185, 129, 0.05)', borderRadius: '20px', border: '1px solid rgba(16, 185, 129, 0.1)' }}>
-                                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Quy mô thị trường</label>
-                                                <p style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)' }}>{detailProject.marketSize ? Number(detailProject.marketSize).toLocaleString('vi-VN') + ' VND' : '—'}</p>
-                                            </div>
-                                            <div style={{ padding: '20px', backgroundColor: 'rgba(29, 155, 240, 0.05)', borderRadius: '20px', border: '1px solid rgba(29, 155, 240, 0.1)' }}>
-                                                <label style={{ display: 'block', fontSize: '10px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '6px' }}>Doanh thu dự kiến</label>
-                                                <p style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--primary-blue)' }}>{detailProject.revenue ? Number(detailProject.revenue).toLocaleString('vi-VN') + ' VND' : '—'}</p>
-                                            </div>
-                                        </div>
-
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', marginBottom: '24px' }}>
                                             <div>
                                                 <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px' }}>Khách hàng mục tiêu</label>
                                                 <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)' }}>{detailProject.targetCustomers}</p>
@@ -2982,59 +2961,40 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                                     {detailProject.uniqueValueProposition}
                                                 </p>
                                             </div>
-                                        </div>
-                                    </section>
-
-                                    {/* Section 3: Team */}
-                                    <section className={styles.projectDetailSection}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
-                                            <div style={{ width: '4px', height: '24px', backgroundColor: '#f59e0b', borderRadius: '4px' }} />
-                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>3. ĐỘI NGŨ SÁNG LẬP</h3>
-                                        </div>
-
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
-                                            <div>
-                                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '16px' }}>Thành viên & Vai trò</label>
-                                                <div className={styles.teamGrid}>
-                                                    {parseTeamMembers(detailProject.teamMembers).map((member, idx) => (
-                                                        <div key={idx} className={styles.teamMemberCard} style={{ backgroundColor: 'var(--bg-hover)' }}>
-                                                            <div className={styles.teamMemberAvatar}>
-                                                                <Users size={20} />
-                                                            </div>
-                                                            <div className={styles.teamMemberInfo}>
-                                                                <p className={styles.teamMemberName}>{member.name}</p>
-                                                                <span className={styles.teamMemberRole}>{member.role}</span>
-                                                            </div>
-                                                        </div>
-                                                    ))}
+                                            {detailProject.businessModel ? (
+                                                <div>
+                                                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '10px' }}>Mô hình kinh doanh</label>
+                                                    <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.7 }}>{detailProject.businessModel}</p>
                                                 </div>
-                                            </div>
+                                            ) : null}
+                                        </div>
+
+                                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '16px' }}>
+                                            {getScorecardRowsForDisplay(detailProject).map((row, idx) => (
+                                                <div key={idx} style={{ padding: '16px', backgroundColor: 'var(--bg-secondary)', borderRadius: '16px', border: '1px solid var(--border-color)' }}>
+                                                    <label style={{ display: 'block', fontSize: '10px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '8px' }}>{row.label}</label>
+                                                    <p style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.45 }}>{row.value}</p>
+                                                </div>
+                                            ))}
                                         </div>
                                     </section>
 
-                                    {/* Section 4: Competition [NEW] */}
+                                    {/* Section 3: Competition */}
                                     <section className={styles.projectDetailSection}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                                             <div style={{ width: '4px', height: '24px', backgroundColor: '#f43f5e', borderRadius: '4px' }} />
-                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>4. CẠNH TRANH</h3>
+                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>3. CẠNH TRANH</h3>
                                         </div>
-
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '32px' }}>
-                                            <div>
-                                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px' }}>Kinh nghiệm đội ngũ</label>
-                                                <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.8 }}>{detailProject.keySkills || '—'}</p>
-                                            </div>
-                                            <div>
-                                                <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px' }}>Đối thủ cạnh tranh</label>
-                                                <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.8 }}>{detailProject.competitors || '—'}</p>
-                                            </div>
+                                        <div>
+                                            <label style={{ display: 'block', fontSize: '11px', fontWeight: 900, color: 'var(--text-secondary)', textTransform: 'uppercase', marginBottom: '12px' }}>Đối thủ cạnh tranh</label>
+                                            <p style={{ margin: 0, fontSize: '15px', color: 'var(--text-primary)', lineHeight: 1.8 }}>{detailProject.competitors || '—'}</p>
                                         </div>
                                     </section>
 
                                     <section className={styles.projectDetailSection}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '24px' }}>
                                             <div style={{ width: '4px', height: '24px', backgroundColor: 'var(--primary-blue)', borderRadius: '4px' }} />
-                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>5. TÀI LIỆU DỰ ÁN</h3>
+                                            <h3 style={{ margin: 0, fontSize: '18px', fontWeight: 900, color: 'var(--text-primary)', letterSpacing: '0.02em' }}>4. TÀI LIỆU DỰ ÁN</h3>
                                         </div>
 
                                         {/* Upload Section */}

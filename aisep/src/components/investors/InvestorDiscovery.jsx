@@ -6,6 +6,7 @@ import InvestorDetail from './InvestorDetail';
 import investorService from '../../services/investorService';
 import NotificationCenter from '../common/NotificationCenter';
 import FloatingChatWidget from '../common/FloatingChatWidget';
+import Avatar from '../common/Avatar';
 import styles from './InvestorDiscovery.module.css';
 
 export default function InvestorDiscovery({ user, onShowLogin, onNotificationNavigate, startupBanner, investorBanner }) {
@@ -28,26 +29,33 @@ export default function InvestorDiscovery({ user, onShowLogin, onNotificationNav
             setIsLoading(true);
             try {
                 const response = await investorService.getAllInvestors();
-                if (response && response.items) {
-                    const formatted = response.items.map(inv => ({
+                const items = response?.items ?? response?.data?.items ?? [];
+                const formatted = items.map((inv) => {
+                    const industriesFromApi = Array.isArray(inv.industries) && inv.industries.length
+                        ? inv.industries
+                        : (typeof inv.focusIndustry === 'string' && inv.focusIndustry
+                            ? inv.focusIndustry.split(',').map((s) => s.trim()).filter(Boolean)
+                            : []);
+                    const profileUrl = (inv.profileImageUrl && String(inv.profileImageUrl).trim()) || '';
+                    return {
                         id: inv.investorId,
                         name: inv.organizationName || inv.userName,
                         userName: inv.userName,
                         thesis: inv.investmentTaste || 'Chưa cập nhật khẩu vị đầu tư.',
                         type: 'Quỹ đầu tư',
-                        industries: inv.focusIndustry ? inv.focusIndustry.split(',').map(s => s.trim()) : [],
+                        industries: industriesFromApi,
                         stages: [`Giai đoạn ${inv.preferredStage || 'sớm'}`],
                         fundingStatus: 'Đang hoạt động',
                         aiScore: 0,
                         matchScore: Math.floor(Math.random() * 20) + 75,
-                        avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(inv.organizationName || inv.userName)}&background=random`,
+                        profileImageUrl: profileUrl || null,
                         location: inv.investmentRegion || 'Hồ Chí Minh, VN',
                         portfolioSize: '25 portfolio',
-                        ticketSize: inv.investmentAmount ? `${(inv.investmentAmount/1000000).toFixed(0)}tr - ${(inv.investmentAmount/500000).toFixed(0)}tr USD` : '50K - 500K USD',
-                        verified: inv.status === 'Approved'
-                    }));
-                    setInvestors(formatted);
-                }
+                        ticketSize: inv.investmentAmount ? `${(inv.investmentAmount / 1000000).toFixed(0)}tr - ${(inv.investmentAmount / 500000).toFixed(0)}tr USD` : '50K - 500K USD',
+                        verified: inv.status === 'Approved',
+                    };
+                });
+                setInvestors(formatted);
             } catch (error) {
                 console.error("Failed to load investors:", error);
             } finally {
@@ -200,9 +208,13 @@ export default function InvestorDiscovery({ user, onShowLogin, onNotificationNav
                         <div key={investor.id} className={styles.investorCard} onClick={() => setSelectedInvestorId(investor.id)}>
                             {/* Avatar Section */}
                             <div className={styles.avatarContainer}>
-                                <div className={styles.avatar}>
-                                    {investor.name.charAt(0)}
-                                </div>
+                                <Avatar
+                                    src={investor.profileImageUrl}
+                                    name={investor.name || investor.userName || 'Nhà đầu tư'}
+                                    size="md"
+                                    alt=""
+                                    className={styles.listAvatar}
+                                />
                             </div>
 
                             {/* Content Section */}

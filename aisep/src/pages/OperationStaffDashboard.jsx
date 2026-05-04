@@ -17,6 +17,7 @@ import investorService from '../services/investorService';
 import AIEvaluationModal from '../components/common/AIEvaluationModal';
 import { STATUS_COLORS, STATUS_LABELS, getStageLabel } from '../constants/ProjectStatus';
 import optionService from '../services/optionService';
+import { getTeamHeadcountFromScorecard, getScorecardRowsForDisplay } from '../constants/projectScorecard';
 import AdvisorApprovalPage from '../components/advisor/AdvisorApprovalPage';
 import PackageManagement from '../components/staff/PackageManagement';
 import GlobalSubscriptionHistory from '../components/staff/GlobalSubscriptionHistory';
@@ -110,8 +111,7 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
     };
 
     const stageInfo = getDevStageTag(project, stages);
-    const teamSize = project?.teamMembers?.toString().split(',').length || 0;
-    const teamMembers = project?.teamMembers?.toString().split(',') || [];
+    const { count: teamCount, label: teamSizeLabel } = getTeamHeadcountFromScorecard(project);
 
     // Helper for mini avatars
     const avaClasses = [local.maB, local.maP, local.maG, local.maPk, local.maO];
@@ -147,18 +147,28 @@ const ProjectKanbanCard = ({ project, status, onDetail, onApprove, onReject, pro
                 </div>
 
                 <div className={local.bcardTeam}>
-                    {teamMembers.slice(0, 3).map((name, i) => (
-                        <div
-                            key={i}
-                            className={`${local.miniAva} ${avaClasses[i % avaClasses.length]}`}
-                            style={i > 0 ? { marginLeft: '-8px', border: '2px solid var(--bg-primary)' } : {}}
-                            title={name.trim()}
-                        >
-                            {name.trim().charAt(0).toUpperCase()}
-                        </div>
-                    ))}
-                    {teamSize > 3 && <span style={{ fontSize: '11px', opacity: 0.8 }}>+{teamSize - 3} thành viên</span>}
-                    {teamSize <= 3 && teamSize > 0 && <span style={{ fontSize: '11px', opacity: 0.8 }}>{teamSize} thành viên</span>}
+                    {teamCount > 0 ? (
+                        <>
+                            {Array.from({ length: Math.min(teamCount, 3) }).map((_, i) => (
+                                <div
+                                    key={i}
+                                    className={`${local.miniAva} ${avaClasses[i % avaClasses.length]}`}
+                                    style={i > 0 ? { marginLeft: '-8px', border: '2px solid var(--bg-primary)' } : {}}
+                                    title={teamSizeLabel || 'Đội ngũ'}
+                                >
+                                    {(teamSizeLabel || 'T').charAt(0).toUpperCase()}
+                                </div>
+                            ))}
+                            {teamCount > 3 && <span style={{ fontSize: '11px', opacity: 0.8 }}>+{teamCount - 3}</span>}
+                            {teamCount <= 3 && (
+                                <span style={{ fontSize: '11px', opacity: 0.8 }} title={teamSizeLabel || ''}>
+                                    {teamSizeLabel || `${teamCount} thành viên`}
+                                </span>
+                            )}
+                        </>
+                    ) : (
+                        <span style={{ fontSize: '11px', opacity: 0.6 }}>—</span>
+                    )}
                 </div>
 
                 <div className={local.bcardActions}>
@@ -4094,48 +4104,40 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                             </div>
                                         </div>
 
-                                        {/* Section: Market & Model */}
+                                        {/* Section: Market, model & scorecard */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '32px' }}>
                                             <h4 style={{ color: 'var(--primary-blue)', fontSize: '14px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <div style={{ width: '4px', height: '16px', background: 'var(--primary-blue)', borderRadius: '2px' }} /> 2. Thị trường & Mô hình
+                                                <div style={{ width: '4px', height: '16px', background: 'var(--primary-blue)', borderRadius: '2px' }} /> 2. Thị trường, mô hình & scorecard
                                             </h4>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
                                                 <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Khách hàng mục tiêu</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.targetCustomers || '—'}</p></div>
                                                 <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Giá trị độc đáo (UVP)</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.uniqueValueProposition || '—'}</p></div>
-                                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-                                                    <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Quy mô thị trường</label><p style={{ fontSize: '15px', fontWeight: 700 }}>{detailProject.marketSize ? `${detailProject.marketSize.toLocaleString()} VND` : '—'}</p></div>
-                                                    <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Doanh thu</label><p style={{ fontSize: '15px', fontWeight: 700 }}>{detailProject.revenue ? `${detailProject.revenue.toLocaleString()} VND` : '—'}</p></div>
-                                                </div>
                                                 <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Mô hình kinh doanh</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.businessModel || '—'}</p></div>
-                                            </div>
-                                        </div>
-
-                                        {/* Section: Team */}
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '32px' }}>
-                                            <h4 style={{ color: 'var(--primary-blue)', fontSize: '14px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <div style={{ width: '4px', height: '16px', background: 'var(--primary-blue)', borderRadius: '2px' }} /> 3. Đội ngũ
-                                            </h4>
-                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
-                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Thành viên & Vai trò</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6', whiteSpace: 'pre-wrap' }}>{detailProject.teamMembers || '—'}</p></div>
-                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Kỹ năng cốt lõi</label><p style={{ fontSize: '14px', color: 'var(--text-primary)' }}>{detailProject.keySkills || '—'}</p></div>
+                                                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '12px' }}>
+                                                    {getScorecardRowsForDisplay(detailProject).map((row, idx) => (
+                                                        <div key={idx} className={styles.formGroup} style={{ padding: '12px 14px', background: 'var(--bg-secondary)', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+                                                            <label style={{ fontSize: '10px', textTransform: 'uppercase', color: 'var(--text-secondary)', display: 'block', marginBottom: '6px' }}>{row.label}</label>
+                                                            <p style={{ margin: 0, fontSize: '14px', fontWeight: 700, color: 'var(--text-primary)', lineHeight: 1.4 }}>{row.value}</p>
+                                                        </div>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
 
                                         {/* Section: Competition */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '32px' }}>
                                             <h4 style={{ color: 'var(--primary-blue)', fontSize: '14px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <div style={{ width: '4px', height: '16px', background: 'var(--primary-blue)', borderRadius: '2px' }} /> 4. Cạnh tranh
+                                                <div style={{ width: '4px', height: '16px', background: 'var(--primary-blue)', borderRadius: '2px' }} /> 3. Cạnh tranh
                                             </h4>
                                             <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
-                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Kinh nghiệm đội ngũ</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.teamExperience || '—'}</p></div>
-                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Cạnh tranh viên</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.competitors || '—'}</p></div>
+                                                <div className={styles.formGroup}><label style={{ fontSize: '11px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Đối thủ cạnh tranh</label><p style={{ fontSize: '14px', color: 'var(--text-primary)', lineHeight: '1.6' }}>{detailProject.competitors || '—'}</p></div>
                                             </div>
                                         </div>
 
                                         {/* Section: Documents */}
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', borderTop: '1px solid var(--border-color)', paddingTop: '32px' }}>
                                             <h4 style={{ color: 'var(--primary-blue)', fontSize: '14px', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                <FileText size={18} /> 5. Tài liệu đính kèm
+                                                <FileText size={18} /> 4. Tài liệu đính kèm
                                             </h4>
                                             {isLoadingDocuments ? <Loader2 className={styles.spinner} size={24} /> : (
                                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>

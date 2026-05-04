@@ -34,6 +34,91 @@ import subscriptionService from '../services/subscriptionService';
 import paymentService from '../services/paymentService';
 import InvestorBookings from '../components/investor/InvestorBookings';
 import BlockchainOnchainResultModal from '../components/common/BlockchainOnchainResultModal';
+
+/** Hiển thị tên lĩnh vực: API dùng key kiểu AI_BigData → "AI BigData" */
+function formatIndustryDisplayLabel(label) {
+    if (label == null || typeof label !== 'string') return label;
+    return label.replace(/_/g, ' ');
+}
+
+/** Phân loại URL tài liệu deal để nhúng trong trang (không mở tab mới). */
+function getDealDocumentEmbedKind(url) {
+    if (!url || typeof url !== 'string') return 'iframe';
+    const path = url.split('?')[0].split('#')[0].toLowerCase();
+    if (/\.(png|jpe?g|webp|gif|bmp|svg)$/i.test(path)) return 'image';
+    if (/\.pdf$/i.test(path)) return 'pdf';
+    return 'iframe';
+}
+
+/** Xem PDF/ảnh tài liệu deal ngay trong modal (ưu tiên không dùng target=_blank). */
+function DealDocumentInlinePreview({ url }) {
+    const [imgError, setImgError] = React.useState(false);
+    React.useEffect(() => {
+        setImgError(false);
+    }, [url]);
+    const kind = getDealDocumentEmbedKind(url);
+    const frameStyle = { width: '100%', height: 'min(70vh, 620px)', border: 'none', display: 'block' };
+    const barStyle = {
+        display: 'flex',
+        flexWrap: 'wrap',
+        alignItems: 'center',
+        gap: '12px',
+        padding: '10px 14px',
+        fontSize: '12px',
+        color: 'var(--text-secondary)',
+        borderTop: '1px solid var(--border-color)',
+        backgroundColor: 'var(--bg-primary)',
+    };
+
+    if (kind === 'image' && !imgError) {
+        return (
+            <div style={{ backgroundColor: 'var(--bg-secondary)' }}>
+                <img
+                    src={url}
+                    alt="Tài liệu đính kèm"
+                    onError={() => setImgError(true)}
+                    style={{
+                        display: 'block',
+                        width: '100%',
+                        maxHeight: 'min(70vh, 620px)',
+                        objectFit: 'contain',
+                    }}
+                />
+                <div style={barStyle}>
+                    <a href={url} download rel="noreferrer" style={{ fontWeight: '700', color: 'var(--primary-blue)' }}>
+                        <Download size={14} style={{ verticalAlign: 'text-bottom', marginRight: '4px' }} />
+                        Tải xuống
+                    </a>
+                </div>
+            </div>
+        );
+    }
+
+    if (kind === 'image' && imgError) {
+        return (
+            <div style={{ padding: '16px', fontSize: '14px', color: 'var(--text-secondary)' }}>
+                <p style={{ margin: '0 0 12px' }}>Không thể hiển thị ảnh trực tiếp trên trang.</p>
+                <a href={url} download rel="noreferrer" style={{ fontWeight: '700', color: 'var(--primary-blue)' }}>
+                    Tải tệp về máy
+                </a>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ backgroundColor: 'var(--bg-secondary)' }}>
+            <iframe title="Tài liệu đính kèm" src={url} style={frameStyle} />
+            <div style={barStyle}>
+                <a href={url} download rel="noreferrer" style={{ fontWeight: '700', color: 'var(--primary-blue)' }}>
+                    <Download size={14} style={{ verticalAlign: 'text-bottom', marginRight: '4px' }} />
+                    Tải xuống
+                </a>
+                <span style={{ opacity: 0.85 }}>Nếu khung trên trống (PDF chặn nhúng), hãy dùng Tải xuống.</span>
+            </div>
+        </div>
+    );
+}
+
 /**
  * InvestorDashboard - Comprehensive dashboard for investors
  * Features: Portfolio overview, Watchlist, Sent interests, Active investments, Preferences
@@ -2028,20 +2113,19 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                             )}
 
                                                             {deal.documentUrl && (
-                                                                <a
-                                                                    href={deal.documentUrl}
-                                                                    target="_blank"
-                                                                    rel="noreferrer"
+                                                                <button
+                                                                    type="button"
                                                                     style={{
                                                                         ...btnStyle,
                                                                         backgroundColor: '#2D7EFF',
                                                                         color: '#fff',
                                                                         textDecoration: 'none'
                                                                     }}
+                                                                    onClick={() => handleShowDealDetail(deal)}
                                                                 >
                                                                     <FileText size={14} />
                                                                     Xem tài liệu
-                                                                </a>
+                                                                </button>
                                                             )}
 
                                                             {canReupload && (
@@ -2519,12 +2603,11 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                 width: '100%'
                                             }}
                                         />
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-                                            <span style={{ color: errors.organizationName ? '#f4212e' : 'var(--text-secondary)', fontSize: '11px', fontWeight: '500' }}>
-                                                {errors.organizationName || 'Tối đa 255 ký tự, không chứa ký tự đặc biệt.'}
+                                        {errors.organizationName && (
+                                            <span style={{ display: 'block', marginTop: '6px', color: '#f4212e', fontSize: '11px', fontWeight: '600' }}>
+                                                {errors.organizationName}
                                             </span>
-                                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{prefFormData.organizationName?.length || 0}/255</span>
-                                        </div>
+                                        )}
                                     </div>
 
                                     <div className={styles.formGroup}>
@@ -2591,12 +2674,11 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                 width: '100%'
                                             }}
                                         />
-                                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px' }}>
-                                            <span style={{ color: errors.investmentRegion ? '#f4212e' : 'var(--text-secondary)', fontSize: '11px', fontWeight: '500' }}>
-                                                {errors.investmentRegion || 'Tối đa 255 ký tự.'}
+                                        {errors.investmentRegion && (
+                                            <span style={{ display: 'block', marginTop: '6px', color: '#f4212e', fontSize: '11px', fontWeight: '600' }}>
+                                                {errors.investmentRegion}
                                             </span>
-                                            <span style={{ fontSize: '10px', color: 'var(--text-secondary)' }}>{prefFormData.investmentRegion?.length || 0}/255</span>
-                                        </div>
+                                        )}
                                     </div>
                                 </div>
 
@@ -2663,7 +2745,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                         fontSize: '13px', fontWeight: '600', cursor: 'pointer', transition: 'all 0.2s'
                                                     }}
                                                 >
-                                                    {ind.label}
+                                                    {formatIndustryDisplayLabel(ind.label)}
                                                     {preferredIndustries.includes(ind.label) ? <X size={12} /> : <Plus size={12} />}
                                                 </button>
                                             ))}
@@ -2686,7 +2768,7 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                         }}
                                                         title="Lĩnh vực này hiện đã ngừng hỗ trợ và không thể thay đổi"
                                                     >
-                                                        {label}
+                                                        {formatIndustryDisplayLabel(label)}
                                                         <Lock size={12} />
                                                     </div>
                                                 ))
@@ -3036,7 +3118,16 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                 {/* Standardized Detail Modal */}
                 {showDetailModal && selectedItem && (
                     <div className={styles.modalOverlay} onClick={handleCloseDetailModal}>
-                        <div className={styles.modalContent} style={{ maxWidth: '600px', height: 'auto', maxHeight: '85vh' }} onClick={e => e.stopPropagation()}>
+                        <div
+                            className={styles.modalContent}
+                            style={{
+                                maxWidth: detailType === 'deal' && selectedItem?.documentUrl ? 'min(92vw, 900px)' : '600px',
+                                width: '100%',
+                                height: 'auto',
+                                maxHeight: '85vh',
+                            }}
+                            onClick={e => e.stopPropagation()}
+                        >
                             {/* Unified Modal Header */}
                             <div className={styles.modalSplitDesktopHeader} style={{ padding: '20px 24px' }}>
                                 <div>
@@ -3114,15 +3205,9 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--text-secondary)', fontSize: '11px', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                                                     <FileText size={14} /> Tài liệu thỏa thuận
                                                 </div>
-                                                <a
-                                                    href={selectedItem.documentUrl}
-                                                    target="_blank"
-                                                    rel="noreferrer"
-                                                    style={{ display: 'inline-flex', alignItems: 'center', gap: '8px', fontSize: '14px', fontWeight: '700', color: 'var(--primary-blue)', textDecoration: 'none' }}
-                                                >
-                                                    <Download size={16} />
-                                                    Xem tài liệu đã tải lên
-                                                </a>
+                                                <div style={{ borderRadius: '12px', overflow: 'hidden', border: '1px solid var(--border-color)' }}>
+                                                    <DealDocumentInlinePreview url={selectedItem.documentUrl} />
+                                                </div>
                                             </div>
                                         )}
                                     </div>

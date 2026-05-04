@@ -33,6 +33,11 @@
   overflow: hidden; /* Ensures child elements don't break the rounded corners */
 }
 
+/* Bước scorecard: form rộng hơn cho nhóm radio + mô tả */
+.modalContentWide {
+  max-width: min(820px, 100vw - 40px);
+}
+
 .modalHeader {
   display: flex;
   justify-content: space-between;
@@ -444,6 +449,193 @@
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+/* —— Project scorecard (radio + helper từng lựa chọn) —— */
+.scorecardIntro {
+  margin: 0 0 20px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
+.scorecardSection {
+  margin-bottom: 28px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.scorecardSection:last-of-type {
+  border-bottom: none;
+  margin-bottom: 8px;
+}
+
+.scorecardSectionTitle {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.scorecardSectionSubtitle {
+  margin: 0 0 16px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.scorecardFieldset {
+  border: none;
+  margin: 0 0 20px;
+  padding: 0;
+  min-width: 0;
+}
+
+.scorecardFieldset:last-child {
+  margin-bottom: 0;
+}
+
+.scorecardLegend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary);
+  margin-bottom: 10px;
+  padding: 0;
+}
+
+.scorecardLegendText {
+  line-height: 1.3;
+}
+
+.scorecardLegendInfo {
+  display: inline-flex;
+  color: var(--text-secondary);
+  cursor: help;
+  flex-shrink: 0;
+}
+
+.scorecardOptions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scorecardOption {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-primary);
+  cursor: pointer;
+  transition: border-color 0.2s, background 0.2s, box-shadow 0.2s;
+}
+
+.scorecardOption:hover {
+  border-color: rgba(29, 155, 240, 0.45);
+  background: var(--bg-secondary);
+}
+
+.scorecardOptionActive {
+  border-color: var(--primary-blue);
+  background: rgba(29, 155, 240, 0.07);
+  box-shadow: 0 0 0 1px rgba(29, 155, 240, 0.2);
+}
+
+.scorecardOptionInput {
+  margin-top: 3px;
+  accent-color: var(--primary-blue);
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.scorecardOptionBody {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.scorecardOptionTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+
+.scorecardOptionHelper {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.boolToggleWrap {
+  margin-top: 4px;
+  margin-bottom: 8px;
+}
+
+.boolToggleLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 13px;
+  font-weight: 800;
+  color: var(--text-primary);
+}
+
+.boolToggleLabelInfo {
+  display: inline-flex;
+  color: var(--text-secondary);
+  cursor: help;
+}
+
+.boolToggleRow {
+  display: flex;
+  max-width: 300px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1.5px solid var(--border-color);
+}
+
+.boolToggleBtn {
+  flex: 1;
+  padding: 10px 16px;
+  border: none;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.boolToggleBtn + .boolToggleBtn {
+  border-left: 1px solid var(--border-color);
+}
+
+.boolToggleBtnActive {
+  background: var(--primary-blue);
+  color: #fff;
+}
+
+.boolToggleHelper {
+  margin-top: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  max-width: 520px;
 }
 
 @media (max-width: 768px) {

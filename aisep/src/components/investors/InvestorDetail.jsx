@@ -11,6 +11,11 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState(null);
     const [activeTab, setActiveTab] = useState('overview');
+    const [profileImageFailed, setProfileImageFailed] = useState(false);
+
+    useEffect(() => {
+        setProfileImageFailed(false);
+    }, [investorId, investor?.profileImageUrl]);
 
     useEffect(() => {
         const fetchInvestorDetails = async () => {
@@ -103,7 +108,17 @@ export default function InvestorDetail({ investorId, onBack, user, onShowLogin }
             <div className={styles.profileCard}>
                 <div className={styles.cardHeaderRow}>
                     <div className={styles.avatar}>
-                        <div className={styles.initialText}>{initial}</div>
+                        {investor.profileImageUrl && !profileImageFailed ? (
+                            <img
+                                src={investor.profileImageUrl}
+                                alt=""
+                                className={styles.avatarImage}
+                                onError={() => setProfileImageFailed(true)}
+                            />
+                        ) : null}
+                        {(!investor.profileImageUrl || profileImageFailed) && (
+                            <div className={styles.initialText}>{initial}</div>
+                        )}
                     </div>
                     <div className={styles.headerActions}>
                         {/* Connect button removed as per user requirement */}

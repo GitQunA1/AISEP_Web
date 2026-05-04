@@ -6,6 +6,7 @@ import validationService from '../../services/validationService';
 import enumService from '../../services/enumService';
 import optionService from '../../services/optionService';
 import CustomSelect from '../common/CustomSelect';
+import { formatIndustryOptionDisplayLabel } from '../../utils/optionDisplayLabels';
 
 /**
  * Mapping of backend field keys to Vietnamese labels for startup profile localization.
@@ -105,7 +106,7 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
 
           const foundByLabel = options.find(i =>
             i.label.toLowerCase() === String(industryField).toLowerCase() ||
-            i.label.replace('_', ' ').toLowerCase() === String(industryField).toLowerCase()
+            i.label.replace(/_/g, ' ').toLowerCase() === String(industryField).toLowerCase()
           );
           return foundByLabel ? String(foundByLabel.value) : String(industryField); // Keep label if no ID found
         };
@@ -508,7 +509,10 @@ export default function StartupProfileForm({ initialData, user, onSuccess }) {
                   name="industry"
                   value={formData.industry}
                   onChange={handleInputChange}
-                  options={industries}
+                  options={industries.map((ind) => ({
+                    label: formatIndustryOptionDisplayLabel(ind.label),
+                    value: String(ind.value),
+                  }))}
                   placeholder="Chọn lĩnh vực..."
                   disabled={!!(formData.industry && !industries.find(opt => String(opt.value) === String(formData.industry)))}
                 />

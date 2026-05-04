@@ -516,15 +516,30 @@ function MainLayout({
                 name: p.projectName,
                 description: p.shortDescription,
                 stage: getStageLabel(p.stageOptionId || p.StageOptionId || p.developmentStage || p.DevelopmentStage, stages),
-                industry: (() => {
+                industries: (() => {
+                  const inds = p.industries || p.Industries;
+                  if (Array.isArray(inds) && inds.length > 0) return inds;
                   const ind = p.industry || p.Industry;
-                  if (ind) return Array.isArray(ind) ? ind[0] : ind;
+                  if (Array.isArray(ind)) return ind;
+                  if (ind) return [ind];
+                  return [];
+                })(),
+                industry: (() => {
                   const inds = p.industries || p.Industries;
                   if (Array.isArray(inds) && inds.length > 0) return inds[0];
+                  const ind = p.industry || p.Industry;
+                  if (Array.isArray(ind) && ind.length > 0) return ind[0];
+                  if (ind) return ind;
                   return 'Chưa cập nhật';
                 })(),
                 imageUrl: p.projectImageUrl,
-                tags: [], // No tags from new API
+                tags: (() => {
+                  const inds = p.industries || p.Industries;
+                  if (Array.isArray(inds)) return inds;
+                  const ind = p.industry || p.Industry;
+                  if (Array.isArray(ind)) return ind;
+                  return ind ? [ind] : [];
+                })(),
                 aiScore: p.startupPotentialScore,
                 score: p.startupPotentialScore,
                 timestamp: p.createdAt ? new Date(p.createdAt).toLocaleDateString('vi-VN') : new Date().toLocaleDateString('vi-VN'),
@@ -536,15 +551,20 @@ function MainLayout({
                 solutionDescription: p.solutionDescription,
                 targetCustomers: p.targetCustomers,
                 uniqueValueProposition: p.uniqueValueProposition,
-                marketSize: p.marketSize,
                 businessModel: p.businessModel,
-                revenue: p.revenue,
                 competitors: p.competitors,
-                teamMembers: p.teamMembers,
-                teamExperience: p.teamExperience,
+                projectScorecard: p.projectScorecard || p.ProjectScorecard,
                 status: p.status,
                 viewCount: p.viewCount,
-                followerCount: p.followerCount || 0
+                followerCount: p.followerCount || 0,
+                isFollowedByCurrentUser: !!p.isFollowedByCurrentUser,
+                isConnectionRequestedByCurrentInvestor: !!p.isConnectionRequestedByCurrentInvestor,
+                isUnlockedByCurrentUser: !!p.isUnlockedByCurrentUser,
+                assignedAdvisorId: p.assignedAdvisorId,
+                assignedAdvisorName: p.assignedAdvisorName,
+                assignedAdvisorHourlyRate: p.assignedAdvisorHourlyRate,
+                assignedAdvisorRating: p.assignedAdvisorRating,
+                assignedAdvisorIndustries: p.assignedAdvisorIndustries || [],
               };
             });
 
@@ -695,7 +715,10 @@ function MainLayout({
 
   const feedIndustryCounts = useMemo(() => {
     return allStartups.reduce((acc, s) => {
-      (s.tags || []).forEach((tag) => {
+      const tags = (s.tags && s.tags.length > 0)
+        ? s.tags
+        : (Array.isArray(s.industries) ? s.industries : (s.industry ? [s.industry] : []));
+      tags.forEach((tag) => {
         acc[tag] = (acc[tag] || 0) + 1;
       });
       return acc;

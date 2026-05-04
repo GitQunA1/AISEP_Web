@@ -4,6 +4,8 @@
  * Implements BR-03: Project Status States
  */
 
+import { formatStageOptionDisplayLabel } from '../utils/optionDisplayLabels';
+
 // Define all valid project statuses
 const PROJECT_STATUS = {
   DRAFT: 'Draft',
@@ -23,7 +25,7 @@ const DEVELOPMENT_STAGE = {
 
 const DEVELOPMENT_STAGE_LABELS = {
   [DEVELOPMENT_STAGE.IDEA]: 'Ý tưởng',
-  [DEVELOPMENT_STAGE.MVP]: 'MVP',
+  [DEVELOPMENT_STAGE.MVP]: 'MVP (sản phẩm khả thi tối thiểu)',
   [DEVELOPMENT_STAGE.GROWTH]: 'Tăng trưởng'
 };
 
@@ -207,10 +209,10 @@ function getStageLabel(stage, dynamicStages = null) {
     );
     
     if (dynamicMatch) {
-      const label = dynamicMatch.label || dynamicMatch.value || '';
-      if (label.toLowerCase() === 'idea') return 'Ý tưởng';
-      if (label.toLowerCase() === 'growth') return 'Tăng trưởng';
-      return label;
+      const src = dynamicMatch.label != null && dynamicMatch.label !== ''
+        ? dynamicMatch.label
+        : String(dynamicMatch.value ?? '');
+      return formatStageOptionDisplayLabel(src);
     }
   }
 
@@ -220,8 +222,7 @@ function getStageLabel(stage, dynamicStages = null) {
 
   // Fallback for unexpected string values
   if (typeof stage === 'string') {
-    if (stage.toLowerCase() === 'idea') return 'Ý tưởng';
-    if (stage.toLowerCase() === 'growth') return 'Tăng trưởng';
+    return formatStageOptionDisplayLabel(stage);
   }
 
   return stage.toString();

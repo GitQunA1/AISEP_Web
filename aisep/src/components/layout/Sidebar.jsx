@@ -78,6 +78,7 @@ function Sidebar({
         { icon: History, label: 'AdminSubscriptionHistory', displayLabel: 'Lịch sử đăng ký gói', href: '#', showWhenLoggedIn: true },
         { icon: Factory, label: 'AdminIndustryOptions', displayLabel: 'Ngành nghề', href: '#', showWhenLoggedIn: true },
         { icon: Milestone, label: 'AdminStageOptions', displayLabel: 'Giai đoạn dự án', href: '#', showWhenLoggedIn: true },
+        { icon: Settings, label: 'AdminScorecardConfig', displayLabel: 'Cấu hình chấm điểm AI', href: '#', showWhenLoggedIn: true },
         { icon: Settings, label: 'AdminValidationRules', displayLabel: 'Rule validate động', href: '#', showWhenLoggedIn: true },
         { icon: ShieldCheck, label: 'AdminTerms', displayLabel: 'Quản lý Điều khoản', href: '#', showWhenLoggedIn: true },
         { icon: User, label: 'AccountProfile', displayLabel: 'Hồ sơ người dùng', href: '#', showWhenLoggedIn: true },
@@ -286,6 +287,9 @@ function Sidebar({
     if (label === 'AdminStageOptions' && onShowDashboard) {
       onShowDashboard('stage_options');
     }
+    if (label === 'AdminScorecardConfig' && onShowDashboard) {
+      onShowDashboard('scorecard_config');
+    }
     if (label === 'AdminValidationRules' && onShowDashboard) {
       onShowDashboard('validation_rules');
     }
@@ -434,6 +438,7 @@ function Sidebar({
                       if (activeView === 'dashboard_transactions') return 'AdminTransactions';
                       if (activeView === 'dashboard_industry_options') return 'AdminIndustryOptions';
                       if (activeView === 'dashboard_stage_options') return 'AdminStageOptions';
+                      if (activeView === 'dashboard_scorecard_config') return 'AdminScorecardConfig';
                       if (activeView === 'dashboard_validation_rules') return 'AdminValidationRules';
                       if (activeView === 'dashboard_account_profile') return 'AccountProfile';
                       if (activeView === 'dashboard_terms') {
