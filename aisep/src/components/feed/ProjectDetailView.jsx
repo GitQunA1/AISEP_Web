@@ -38,7 +38,7 @@ import paymentService from '../../services/paymentService';
 import UnlockConfirmationModal from '../common/UnlockConfirmationModal';
 import AIAnalyzeConfirmationModal from '../common/AIAnalyzeConfirmationModal';
 import AIEvaluationModal from '../common/AIEvaluationModal';
-import InvestorAIHistoryModal from '../common/InvestorAIHistoryModal';
+import { translateAIResults } from '../../utils/translateAIResults.js';
 import { getStageLabel } from '../../constants/ProjectStatus';
 import optionService from '../../services/optionService';
 import { getScorecardRowsForDisplay, getScorecardQuickStats } from '../../constants/projectScorecard';
@@ -362,7 +362,15 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     try {
       const res = await AIEvaluationService.getInvestorAnalysisHistory(projectId);
       if (res.success && res.data) {
-        setInvestorAIResults(res.data);
+        const mapped = res.data.map((item) => {
+          try {
+            const { analysisResult } = translateAIResults({ success: true, data: item }, null);
+            return analysisResult?.data ?? item;
+          } catch {
+            return item;
+          }
+        });
+        setInvestorAIResults(mapped);
       }
     } catch (err) {
       console.error('[ProjectDetailView] Error fetching AI history:', err);
@@ -399,8 +407,13 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
     try {
       const res = await AIEvaluationService.analyzeProjectByInvestorAPI(projectId);
       if (res.success && res.data) {
-        setInvestorAIResults([res.data]);
-        setActiveAIResult(res.data);
+        let row = res.data;
+        try {
+          const { analysisResult } = translateAIResults({ success: true, data: res.data }, null);
+          row = analysisResult?.data ?? res.data;
+        } catch { /* giữ raw */ }
+        setInvestorAIResults([row]);
+        setActiveAIResult(row);
         setShowAIResultModal(true);
         setShowAIConfirmModal(false);
         fetchQuotaData();
@@ -989,11 +1002,26 @@ export default function ProjectDetailView({ projectId, onBack, user, isPaidUser 
         </div>
       )}
       <AIAnalyzeConfirmationModal isOpen={showAIConfirmModal} onClose={() => setShowAIConfirmModal(false)} onConfirm={handleAIAnalyze} isAnalyzing={isAnalyzingAI} isLoadingQuota={isLoadingQuota} projectName={project?.name} remainingAiRequests={remainingAiRequests} packageName={currentPackage?.packageName || subscription?.packageName} />
-      {user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1 ? (
-        <InvestorAIHistoryModal isOpen={showAIResultModal} onClose={() => setShowAIResultModal(false)} selectedAIReport={activeAIResult} projectName={project?.name} showViewProjectButton={false} onReanalyze={() => { setShowAIResultModal(false); fetchQuotaData().then(() => setShowAIConfirmModal(true)); }} />
-      ) : (
-        <AIEvaluationModal isOpen={showAIResultModal} onCancel={() => setShowAIResultModal(false)} analysisResult={activeAIResult} projectName={project?.name} viewerRole={user?.role} isHistoryMode={investorAIResults.some(r => r.id === activeAIResult?.id)} isEvaluationOnly={true} />
-      )}
+      <AIEvaluationModal
+        isOpen={showAIResultModal}
+        onCancel={() => setShowAIResultModal(false)}
+        analysisResult={activeAIResult}
+        projectName={project?.name}
+        viewerRole={user?.role}
+        uiVariant={user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1 ? 'investor' : 'startup'}
+        isHistoryMode={investorAIResults.some(
+          (r) => (r.analysisId ?? r.id) === (activeAIResult?.analysisId ?? activeAIResult?.id)
+        )}
+        isEvaluationOnly={true}
+        onReanalyze={
+          user?.role?.toString().toLowerCase() === 'investor' || Number(user?.role) === 1
+            ? () => {
+                setShowAIResultModal(false);
+                fetchQuotaData().then(() => setShowAIConfirmModal(true));
+              }
+            : undefined
+        }
+      />
     </div>
   );
 }

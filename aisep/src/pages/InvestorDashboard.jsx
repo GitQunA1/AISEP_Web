@@ -28,7 +28,8 @@ import BlockchainOwnershipModal from '../components/common/BlockchainOwnershipMo
 import AccountProfileTab from '../components/common/AccountProfileTab';
 import { isEthereumAddress, isValidProfileString } from '../utils/validation';
 import CustomSelect from '../components/common/CustomSelect';
-import InvestorAIHistoryModal from '../components/common/InvestorAIHistoryModal';
+import AIEvaluationModal from '../components/common/AIEvaluationModal';
+import { translateAIResults } from '../utils/translateAIResults.js';
 import AIAnalyzeConfirmationModal from '../components/common/AIAnalyzeConfirmationModal';
 import subscriptionService from '../services/subscriptionService';
 import paymentService from '../services/paymentService';
@@ -684,9 +685,17 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
 
                 setDeals(enhancedDeals);
 
-                // Handle AI Reports
+                // Handle AI Reports (dịch payload giống Startup)
                 if (aiReportsRes?.data?.items) {
-                    setAiReports(aiReportsRes.data.items);
+                    const items = aiReportsRes.data.items.map((item) => {
+                        try {
+                            const { analysisResult } = translateAIResults({ success: true, data: item }, null);
+                            return analysisResult?.data ?? item;
+                        } catch {
+                            return item;
+                        }
+                    });
+                    setAiReports(items);
                 }
 
                 // Handle Project Map for matching
@@ -1459,8 +1468,12 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
         try {
             const res = await AIEvaluationService.analyzeProjectByInvestorAPI(pendingReanalyzeProjectId);
             if (res.success && res.data) {
-                // Success: Show the report modal right here
-                setSelectedAIReport(res.data);
+                let row = res.data;
+                try {
+                    const { analysisResult } = translateAIResults({ success: true, data: res.data }, null);
+                    row = analysisResult?.data ?? res.data;
+                } catch { /* giữ raw */ }
+                setSelectedAIReport(row);
                 setShowAIReportModal(true);
                 setShowAIConfirmModal(false);
                 setPendingReanalyzeProjectId(null);
@@ -3103,13 +3116,18 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                     />
                 )}
 
-                {/* AI Report Detail Modal - Redesigned Sleek/Twitter Aesthetic */}
-                <InvestorAIHistoryModal
-                    isOpen={showAIReportModal}
-                    onClose={() => setShowAIReportModal(false)}
-                    selectedAIReport={selectedAIReport}
+                <AIEvaluationModal
+                    isOpen={showAIReportModal && !!selectedAIReport}
+                    onCancel={() => {
+                        setShowAIReportModal(false);
+                        setSelectedAIReport(null);
+                    }}
+                    analysisResult={selectedAIReport}
                     projectName={projectMap[selectedAIReport?.projectId]?.projectName}
-                    onViewProject={(projId) => onViewProject ? onViewProject(projId, activeSection) : window.location.href = `/project/${projId}`}
+                    viewerRole={user?.role}
+                    uiVariant="investor"
+                    isHistoryMode
+                    isEvaluationOnly
                     onReanalyze={handleReanalyzeClick}
                 />
 

@@ -3,13 +3,16 @@
  */
 
 const componentNameMap = {
-  'Team': 'Đội Ngũ',
-  'Opportunity': 'Cơ Hội Thị Trường',
-  'Product': 'Sản Phẩm',
-  'Competition': 'Cạnh Tranh',
-  'Marketing': 'Marketing',
-  'Investment': 'Đầu Tư',
-  'Other': 'Khác'
+  Team: 'Đội ngũ',
+  Market: 'Thị trường',
+  Product: 'Sản phẩm',
+  Competition: 'Cạnh tranh',
+  Traction: 'Traction / độ chấp nhận thị trường',
+  InvestmentNeed: 'Nhu cầu đầu tư & runway',
+  Opportunity: 'Cơ hội thị trường',
+  Marketing: 'Marketing',
+  Investment: 'Đầu tư',
+  Other: 'Khác',
 };
 
 const commonPhrases = {
@@ -163,60 +166,91 @@ const translateAnalysisReason = (reason) => {
  * @returns {object} - Translated results
  */
 export const translateAIResults = (analysisResult, eligibilityResult) => {
-  if (!analysisResult?.data) return { analysisResult, eligibilityResult };
+  const payload = analysisResult?.data ?? analysisResult;
+  if (!payload || typeof payload !== 'object') {
+    return { analysisResult, eligibilityResult };
+  }
 
-  const translatedAnalysis = { ...analysisResult };
-  const data = { ...analysisResult.data };
+  const hasDataWrapper = analysisResult && typeof analysisResult === 'object' && 'data' in analysisResult && analysisResult.data != null;
+  const data = hasDataWrapper ? { ...analysisResult.data } : { ...payload };
+  const translatedAnalysis = hasDataWrapper ? { ...analysisResult, data } : { ...payload };
 
-  // Translate strengths
+  // Translate strengths (top-level legacy)
   if (Array.isArray(data.strengths)) {
     data.strengths = data.strengths.map(translateStrength);
   }
 
-  // Translate weaknesses
+  // Translate weaknesses (top-level legacy)
   if (Array.isArray(data.weaknesses)) {
     data.weaknesses = data.weaknesses.map(translateWeakness);
   }
 
-  // Translate recommendations
+  // Translate recommendations (legacy name)
   if (Array.isArray(data.recommendations)) {
     data.recommendations = data.recommendations.map(translateRecommendation);
   }
 
-  // Translate score breakdown component names
+  // Translate score breakdown component names (legacy)
   if (Array.isArray(data.scoreBreakdown)) {
-    data.scoreBreakdown = data.scoreBreakdown.filter(item => item !== null).map(item => ({
+    data.scoreBreakdown = data.scoreBreakdown.filter((item) => item !== null).map((item) => ({
       ...item,
-      component: translateComponent(item.component)
+      component: translateComponent(item.component),
     }));
   }
 
-  // Translate analysis details
-  if (typeof data.analysis === 'object' && data.analysis !== null) {
-    const translatedSections = {};
+  // Nested analysis (API mới: analysis.auditedItems, strengths, weaknesses, advice)
+  if (data.analysis && typeof data.analysis === 'object' && !Array.isArray(data.analysis)) {
+    const na = { ...data.analysis };
 
-    Object.entries(data.analysis).forEach(([key, section]) => {
-      const translatedSection = { ...section };
+    if (Array.isArray(na.strengths)) {
+      na.strengths = na.strengths.map(translateStrength);
+    }
+    if (Array.isArray(na.weaknesses)) {
+      na.weaknesses = na.weaknesses.map(translateWeakness);
+    }
+    if (Array.isArray(na.advice)) {
+      na.advice = na.advice.map(translateRecommendation);
+    }
+    if (Array.isArray(na.auditedItems)) {
+      na.auditedItems = na.auditedItems.map((item) => ({
+        ...item,
+        criteria: item.criteria ? translateComponent(item.criteria) : item.criteria,
+        finding: item.finding ? translateAnalysisReason(item.finding) : item.finding,
+      }));
+    }
 
-      if (translatedSection.reason) {
-        translatedSection.reason = translateAnalysisReason(translatedSection.reason);
-      }
-
-      if (Array.isArray(translatedSection.evidence)) {
-        translatedSection.evidence = translatedSection.evidence.map(e =>
-          typeof e === 'string' ? translateAnalysisReason(e) : e
-        );
-      }
-
-      translatedSections[translateComponent(key)] = translatedSection;
+    // Legacy shape: các key Team/Market dạng object có .score / .reason
+    const legacyKeys = Object.keys(na).filter((k) => {
+      const v = na[k];
+      return (
+        v &&
+        typeof v === 'object' &&
+        !Array.isArray(v) &&
+        ('score' in v || 'reason' in v) &&
+        !['auditedItems', 'strengths', 'weaknesses', 'advice'].includes(k)
+      );
     });
+    if (legacyKeys.length > 0) {
+      legacyKeys.forEach((key) => {
+        const section = { ...na[key] };
+        if (section.reason) section.reason = translateAnalysisReason(section.reason);
+        if (Array.isArray(section.evidence)) {
+          section.evidence = section.evidence.map((e) =>
+            typeof e === 'string' ? translateAnalysisReason(e) : e
+          );
+        }
+        delete na[key];
+        na[translateComponent(key)] = section;
+      });
+    }
 
-    data.analysis = translatedSections;
+    data.analysis = na;
   }
 
-  translatedAnalysis.data = data;
-
-  return { analysisResult: translatedAnalysis, eligibilityResult };
+  if (hasDataWrapper) {
+    return { analysisResult: { ...analysisResult, data }, eligibilityResult };
+  }
+  return { analysisResult: data, eligibilityResult };
 };
 
 export default translateAIResults;

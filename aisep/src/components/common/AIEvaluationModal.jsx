@@ -1,7 +1,12 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
-import { CheckCircle, AlertCircle, TrendingUp, X, AlertTriangle, BarChart3, Brain, Sparkles, ChevronRight, Loader2 } from 'lucide-react';
+import { CheckCircle, AlertCircle, TrendingUp, X, AlertTriangle, Brain, Sparkles, ChevronRight, HelpCircle } from 'lucide-react';
 import styles from './AIEvaluationModal.module.css';
+import { normalizeAIAnalysisPayload } from '../../utils/normalizeAIAnalysisPayload.js';
+import AIAnalysisRadarChart from './AIAnalysisRadarChart.jsx';
+
+const ADJUSTMENT_TOOLTIP =
+  'Sự sai lệch giữa Form khai báo và File PDF đính kèm — AI điều chỉnh theo bằng chứng trích xuất được.';
 
 /**
  * AIEvaluationModal - Display AI analysis and eligibility evaluation results
@@ -20,7 +25,12 @@ export default function AIEvaluationModal({
     isHistoryMode = false,
     isEvaluationOnly = false,
     onSubmit,
-    onCancel
+    onCancel,
+    /** 'auto' = theo role; 'investor' = Due diligence; 'startup' = coaching */
+    uiVariant = 'auto',
+    onReanalyze,
+    onEditProfileClick,
+    onUploadPdfClick,
 }) {
     const [expandedSections, setExpandedSections] = React.useState({});
 
@@ -33,22 +43,40 @@ export default function AIEvaluationModal({
 
     if (!isOpen) return null;
 
-    // Extract data from analysis result with fallbacks
-    const analysisData = analysisResult?.data || analysisResult || {};
-    const analysis = analysisData?.analysis || analysisResult?.analysis || {};
-    const scoreBreakdown = analysisData?.scoreBreakdown || analysisResult?.scoreBreakdown || [];
+    const {
+        analysisData,
+        finalPotentialScore,
+        baseScore,
+        aiAdjustmentScore,
+        strengths,
+        weaknesses,
+        recommendations,
+        auditedItems,
+        legacyScoreBreakdown,
+        legacyDetailEntries,
+        chaosScore,
+        summary,
+    } = normalizeAIAnalysisPayload(analysisResult);
 
-    // Look everywhere for scores and highlights
-    const potentialScore = analysisData?.potentialScore || analysis?.potentialScore || analysisResult?.potentialScore || 0;
-    const chaosScore = analysisData?.chaosScore || analysis?.chaosScore || analysisResult?.chaosScore || 0;
-    const strengths = analysisData?.strengths || analysis?.strengths || analysisResult?.strengths || [];
-    const weaknesses = analysisData?.weaknesses || analysis?.weaknesses || analysisResult?.weaknesses || [];
-    const summary = analysisData?.summary || analysis?.summary || analysisResult?.summary || '';
-    const recommendations = analysisData?.recommendations || analysis?.recommendations || analysisResult?.recommendations || [];
+    const scoreBreakdown = legacyScoreBreakdown;
 
-    // Determine if can submit based on score > 0
-    const canSubmit = potentialScore > 0;
-    const showLowScoreWarning = potentialScore > 0 && potentialScore < 50;
+    const canSubmit =
+        analysisData.evaluationId != null ||
+        analysisData.analysisId != null ||
+        analysisData.projectId != null ||
+        typeof analysisData.isEligibleStartup === 'boolean' ||
+        typeof analysisData.is_eligible_startup === 'boolean' ||
+        auditedItems.length > 0 ||
+        strengths.length > 0 ||
+        weaknesses.length > 0 ||
+        recommendations.length > 0 ||
+        legacyDetailEntries.length > 0 ||
+        legacyScoreBreakdown.length > 0 ||
+        Number.isFinite(finalPotentialScore);
+
+    const showLowScoreWarning = finalPotentialScore > 0 && finalPotentialScore < 50;
+    const showZeroFinalNotice =
+        finalPotentialScore === 0 && (baseScore > 0 || auditedItems.length > 0);
 
     const roleStr = viewerRole?.toString().toLowerCase?.() || '';
     const roleNum = Number(viewerRole);
@@ -58,6 +86,9 @@ export default function AIEvaluationModal({
         ['staff', 'operationstaff', 'operation_staff', 'advisor', 'admin'].includes(roleStr) ||
         [2, 3, 4, 5].includes(roleNum);
     const isNonStartupViewer = (isInvestorViewer || isStaffOrAdvisorViewer) && !isStartupViewer;
+
+    const resolvedUiVariant =
+        uiVariant === 'auto' ? (isInvestorViewer ? 'investor' : 'startup') : uiVariant;
 
     // Determine if this is a staff-initiated eligibility report
     // Priority: explicit _type tag from caller > field-sniffing
@@ -75,20 +106,23 @@ export default function AIEvaluationModal({
 
     const translateKey = (k) => {
         const map = {
-            'team': 'Đội ngũ',
-            'opportunity': 'Cơ hội thị trường',
-            'product': 'Sản phẩm',
-            'market': 'Thị trường',
-            'competition': 'Cạnh tranh',
-            'financials': 'Tài chính',
-            'strategy': 'Chiến lược',
-            'execution': 'Thực thi',
-            'marketing': 'Tiếp thị',
-            'growth': 'Tăng trưởng',
-            'risk': 'Rủi ro',
-            'investment': 'Huy động vốn'
+            team: 'Đội ngũ',
+            opportunity: 'Cơ hội thị trường',
+            product: 'Sản phẩm',
+            market: 'Thị trường',
+            competition: 'Cạnh tranh',
+            traction: 'Traction',
+            investmentneed: 'Nhu cầu đầu tư',
+            financials: 'Tài chính',
+            strategy: 'Chiến lược',
+            execution: 'Thực thi',
+            marketing: 'Tiếp thị',
+            growth: 'Tăng trưởng',
+            risk: 'Rủi ro',
+            investment: 'Huy động vốn',
         };
-        return map[k.toLowerCase()] || k.charAt(0).toUpperCase() + k.slice(1);
+        const lower = String(k).toLowerCase();
+        return map[lower] || k.charAt(0).toUpperCase() + k.slice(1);
     };
 
     const translateAIString = (str) => {
@@ -172,30 +206,173 @@ export default function AIEvaluationModal({
             );
         }
 
-        return (
-            <div className={styles.content}>
-                {/* 1. Overall Score */}
-                <div className={styles.section}>
-                    <h3 className={styles.sectionTitle}>📊 Điểm Đánh Giá Hệ Thống</h3>
+        const fmtScore = (v) =>
+            typeof v === 'number'
+                ? Number.isInteger(v)
+                    ? v
+                    : Math.round(v * 100) / 100
+                : v;
 
-                    <div className={styles.scoreBox}>
-                        <div className={styles.scoreValue}>
-                            {potentialScore}
-                            <span className={styles.scoreMax}>/100</span>
-                        </div>
-                        <div className={styles.scoreLabel}>Chỉ số Tiềm năng Dự án</div>
-                        <div className={styles.scoreSubtitle}>Điểm Rối loạn (Hệ số rủi ro): {chaosScore}</div>
-                    </div>
+        const hasAuditedTable = auditedItems.length > 0;
 
-                    {/* Score Breakdown */}
-                    {scoreBreakdown.length > 0 && (
+        const radarBlock = hasAuditedTable ? (
+            <div className={styles.section}>
+                <div className={styles.radarSection}>
+                    <h3 className={styles.radarTitle}>So sánh Khai báo vs Thực tế AI</h3>
+                    <AIAnalysisRadarChart auditedItems={auditedItems} labelMapper={translateKey} />
+                </div>
+            </div>
+        ) : null;
+
+        const chaosNote =
+            !hasAuditedTable &&
+            chaosScore != null &&
+            Number(chaosScore) !== Number(aiAdjustmentScore) ? (
+                <p style={{ margin: '10px 0 0', fontSize: '12px', color: 'var(--text-secondary)' }}>
+                    Điểm rối loạn (định dạng cũ): {chaosScore}
+                </p>
+            ) : null;
+
+        const investorAuditTable = hasAuditedTable ? (
+            <div className={styles.section}>
+                <h3 className={styles.sectionTitleMinimal}>Chi tiết kiểm toán (Due diligence)</h3>
+                <div className={styles.auditTableWrap}>
+                    <table className={styles.auditTable}>
+                        <thead>
+                            <tr>
+                                <th>Tiêu chí</th>
+                                <th className={styles.auditNums}>Max</th>
+                                <th className={styles.auditNums}>Gốc</th>
+                                <th className={`${styles.auditNums} ${styles.thTooltip}`} title={ADJUSTMENT_TOOLTIP}>
+                                    <span style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: 4 }}>
+                                        Điều chỉnh <HelpCircle size={13} aria-hidden />
+                                    </span>
+                                </th>
+                                <th className={styles.auditNums}>Cuối</th>
+                                <th>Nhận xét</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {auditedItems.map((row, idx) => {
+                                const crit = row.criteria ?? row.Criteria ?? '';
+                                const maxS = row.maxScore ?? row.MaxScore;
+                                const baseS = row.baseScore ?? row.BaseScore;
+                                const adj = row.adjustment ?? row.Adjustment;
+                                const fin = row.finalScore ?? row.FinalScore;
+                                const finding = row.finding ?? row.Finding ?? '';
+                                return (
+                                    <tr key={`inv-audit-${idx}`}>
+                                        <td className={styles.auditCriteria}>{translateKey(crit)}</td>
+                                        <td className={styles.auditNums}>{maxS ?? '—'}</td>
+                                        <td className={styles.auditNums}>{baseS ?? '—'}</td>
+                                        <td
+                                            className={`${styles.auditNums} ${styles.thTooltip}`}
+                                            title={ADJUSTMENT_TOOLTIP}
+                                        >
+                                            <span className={Number(adj) < 0 ? styles.scoreboardValueRisk : ''}>
+                                                {adj != null ? (Number(adj) > 0 ? '+' : '') + adj : '—'}
+                                            </span>
+                                        </td>
+                                        <td className={styles.auditNums}>{fin ?? '—'}</td>
+                                        <td className={styles.auditFinding}>{translateAIString(finding)}</td>
+                                    </tr>
+                                );
+                            })}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        ) : null;
+
+        const startupAuditAccordion = hasAuditedTable ? (
+            <div className={styles.section}>
+                <h3 className={styles.sectionTitleMinimal}>Chi tiết kiểm toán theo tiêu chí</h3>
+                <div className={styles.analysisList}>
+                    {auditedItems.map((row, idx) => {
+                        const crit = row.criteria ?? row.Criteria ?? '';
+                        const maxS = row.maxScore ?? row.MaxScore;
+                        const baseS = row.baseScore ?? row.BaseScore;
+                        const adj = row.adjustment ?? row.Adjustment;
+                        const fin = row.finalScore ?? row.FinalScore;
+                        const finding = row.finding ?? row.Finding ?? '';
+                        const key = `st-audit-${idx}-${crit}`;
+                        const isExpanded = expandedSections[key];
+                        return (
+                            <div key={key} className={`${styles.analysisItem} ${isExpanded ? styles.expanded : ''}`}>
+                                <div
+                                    className={styles.analysisItemHeader}
+                                    onClick={() => toggleSection(key)}
+                                    style={{ cursor: 'pointer' }}
+                                >
+                                    <div className={styles.analysisItemTitleGroup}>
+                                        <ChevronRight
+                                            size={16}
+                                            className={`${styles.chevron} ${isExpanded ? styles.chevronExpanded : ''}`}
+                                        />
+                                        <h5 style={{ margin: 0, fontSize: '15px', fontWeight: '800' }}>
+                                            {translateKey(crit)}
+                                        </h5>
+                                    </div>
+                                    <span className={styles.analysisScore}>
+                                        {fin != null ? `Cuối: ${fin}` : ''}
+                                        {maxS != null ? ` / Max ${maxS}` : ''}
+                                    </span>
+                                </div>
+                                <div className={`${styles.analysisDetailsContent} ${isExpanded ? styles.show : ''}`}>
+                                    <div className={styles.detailSection} style={{ fontSize: '13px' }}>
+                                        <div className={styles.detailLabel}>Điểm & điều chỉnh</div>
+                                        <p style={{ margin: '4px 0 0 0' }}>
+                                            Gốc: <strong>{baseS ?? '—'}</strong>
+                                            {' · '}
+                                            Điều chỉnh:{' '}
+                                            <strong className={styles.scoreboardValueWarm}>
+                                                {adj != null ? (Number(adj) > 0 ? '+' : '') + adj : '—'}
+                                            </strong>
+                                        </p>
+                                        {finding ? (
+                                            <div className={styles.feedbackBox}>{translateAIString(finding)}</div>
+                                        ) : null}
+                                        {Number(adj) < 0 ? (
+                                            <div className={styles.ctaRow}>
+                                                <button
+                                                    type="button"
+                                                    className={styles.ctaGhost}
+                                                    onClick={() => onEditProfileClick?.()}
+                                                >
+                                                    Cập nhật lại Form
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    className={styles.ctaGhost}
+                                                    onClick={() => onUploadPdfClick?.()}
+                                                >
+                                                    Tải lên PDF mới
+                                                </button>
+                                            </div>
+                                        ) : null}
+                                    </div>
+                                </div>
+                                {!isExpanded && finding ? (
+                                    <div className={styles.previewText}>
+                                        {translateAIString(finding).substring(0, 80)}
+                                        {translateAIString(finding).length > 80 ? '…' : ''}
+                                    </div>
+                                ) : null}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
+        ) : null;
+
+        const legacyBlocks = (
+            <>
+                {!hasAuditedTable && scoreBreakdown.length > 0 && (
+                    <div className={styles.section}>
+                        <h3 className={styles.sectionTitleMinimal}>Cấu trúc điểm thành phần</h3>
                         <div className={styles.scoreBreakdown}>
-                            <h4 style={{ margin: '0 0 12px 0', fontSize: '13px', fontWeight: '600', color: 'var(--text-secondary)' }}>
-                                <BarChart3 size={14} style={{ marginRight: '6px', display: 'inline' }} />
-                                Cấu trúc điểm số thành phần
-                            </h4>
                             <div className={styles.breakdownGrid}>
-                                {scoreBreakdown.filter(item => item !== null).map((item, idx) => (
+                                {scoreBreakdown.filter((item) => item !== null).map((item, idx) => (
                                     <div key={idx} className={styles.breakdownItem}>
                                         <span className={styles.componentName}>{item.component}</span>
                                         <div className={styles.scoreBar}>
@@ -209,15 +386,14 @@ export default function AIEvaluationModal({
                                 ))}
                             </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
 
-                {/* 2. Analysis Details (Single Column List) */}
-                {Object.keys(analysis).length > 0 && (
+                {!hasAuditedTable && legacyDetailEntries.length > 0 && (
                     <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>🔍 Chi Tiết Phân Phối Điểm</h3>
+                        <h3 className={styles.sectionTitleMinimal}>Chi tiết phân tích (định dạng cũ)</h3>
                         <div className={styles.analysisList}>
-                            {Object.entries(analysis).map(([key, section]) => {
+                            {legacyDetailEntries.map(([key, section]) => {
                                 if (section == null || typeof section !== 'object' || !section.score) return null;
 
                                 const isExpanded = expandedSections[key];
@@ -291,74 +467,15 @@ export default function AIEvaluationModal({
                     </div>
                 )}
 
-                {/* 3. Summary Section */}
                 {summary && (
                     <div className={styles.section}>
+                        <h3 className={styles.sectionTitleMinimal}>Tóm tắt</h3>
                         <div className={styles.summaryBox}>
-                            <div className={styles.summaryHeader}>
-                                <Sparkles size={20} className={styles.summaryIcon} />
-                                <h3 className={styles.summaryTitle}>📝 Phân Tích Tổng Quan Từ AI</h3>
-                            </div>
                             <p className={styles.summaryText}>{summary}</p>
                         </div>
                     </div>
                 )}
 
-                {/* 4. Highlights: Strengths & Weaknesses */}
-                {(strengths.length > 0 || weaknesses.length > 0) && (
-                    <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>⭐ Ưu Điểm & Thách Thức</h3>
-                        <div className={styles.highlightsGrid}>
-                            {strengths.length > 0 && (
-                                <div className={styles.highlightSection}>
-                                    <div className={`${styles.highlightTitle} ${styles.strengthTitle}`}>
-                                        <CheckCircle size={18} /> Điểm mạnh
-                                    </div>
-                                    <ul className={styles.highlightList}>
-                                        {strengths.map((s, idx) => (
-                                            <li key={idx} className={styles.highlightItem}>
-                                                <Sparkles size={14} className={styles.highlightIcon} style={{ color: '#10b981' }} /> {s}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-
-                            {weaknesses.length > 0 && (
-                                <div className={styles.highlightSection}>
-                                    <div className={`${styles.highlightTitle} ${styles.weaknessTitle}`}>
-                                        <AlertCircle size={18} /> Cần cải thiện
-                                    </div>
-                                    <ul className={styles.highlightList}>
-                                        {weaknesses.map((w, idx) => (
-                                            <li key={idx} className={styles.highlightItem}>
-                                                <AlertTriangle size={14} className={styles.highlightIcon} style={{ color: '#f59e0b' }} /> {w}
-                                            </li>
-                                        ))}
-                                    </ul>
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                )}
-
-                {/* 5. AI Recommendations */}
-                {recommendations.length > 0 && (
-                    <div className={styles.section}>
-                        <h3 className={styles.sectionTitle}>💡 Khuyến Nghị Hành Động</h3>
-                        <div className={styles.highlightSection} style={{ borderLeft: '4px solid var(--primary-blue)', background: 'rgba(0, 102, 255, 0.03)' }}>
-                            <ul className={styles.highlightList}>
-                                {recommendations.slice(0, 10).map((rec, idx) => (
-                                    <li key={idx} className={styles.highlightItem} style={{ marginBottom: '10px' }}>
-                                        <TrendingUp size={16} style={{ color: 'var(--primary-blue)', flexShrink: 0, marginTop: '2px' }} /> {rec}
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
-                )}
-
-                {/* Low Score Warning */}
                 {showLowScoreWarning && (
                     <div className={styles.section}>
                         <div className={styles.warningBox}>
@@ -368,9 +485,9 @@ export default function AIEvaluationModal({
                                     <div className={styles.warningTitle}>⚠️ Cảnh báo: Điểm Đánh Giá Thấp</div>
                                     <div className={styles.warningText}>
                                         {isStartupViewer ? (
-                                            <>Dự án của bạn có điểm {potentialScore}/100. Bạn vẫn có thể nộp dự án, nhưng hãy cân nhắc cải thiện các điểm yếu được nhấn mạnh ở trên để tăng khả năng được cấp vốn.</>
+                                            <>Dự án của bạn có điểm {finalPotentialScore}/100. Bạn vẫn có thể nộp dự án, nhưng hãy cân nhắc cải thiện các điểm yếu được nhấn mạnh ở trên để tăng khả năng được cấp vốn.</>
                                         ) : (
-                                            <>Dự án có điểm {potentialScore}/100. Hãy cân nhắc các điểm cần cải thiện được nhấn mạnh ở trên để giảm rủi ro và tăng khả năng thu hút đầu tư.</>
+                                            <>Dự án có điểm {finalPotentialScore}/100. Hãy cân nhắc các điểm cần cải thiện được nhấn mạnh ở trên để giảm rủi ro và tăng khả năng thu hút đầu tư.</>
                                         )}
                                     </div>
                                 </div>
@@ -378,9 +495,194 @@ export default function AIEvaluationModal({
                         </div>
                     </div>
                 )}
+            </>
+        );
+
+        if (resolvedUiVariant === 'investor') {
+            return (
+                <div className={styles.content}>
+                    <div className={styles.section}>
+                        <div className={styles.scoreboardRow}>
+                            <div className={`${styles.scoreboardTile} ${styles.scoreboardTileNeutral}`}>
+                                <span className={styles.scoreboardLabel}>Điểm Startup Khai Báo</span>
+                                <span className={styles.scoreboardValue}>{fmtScore(baseScore)}</span>
+                            </div>
+                            <div className={`${styles.scoreboardTile} ${styles.scoreboardTileRisk}`}>
+                                <span className={styles.scoreboardLabel}>AI Điều Chỉnh Rủi Ro</span>
+                                <span className={`${styles.scoreboardValue} ${styles.scoreboardValueRisk}`}>
+                                    {aiAdjustmentScore > 0 ? '+' : ''}
+                                    {fmtScore(aiAdjustmentScore)}
+                                </span>
+                            </div>
+                            <div className={`${styles.scoreboardTile} ${styles.scoreboardTileBrand}`}>
+                                <span className={styles.scoreboardLabel}>Điểm Thực Tế Thẩm Định</span>
+                                <span className={`${styles.scoreboardValue} ${styles.scoreboardValueHero}`}>
+                                    {fmtScore(finalPotentialScore)}
+                                </span>
+                            </div>
+                        </div>
+                        {showZeroFinalNotice && (
+                            <p className={styles.scoreInlineNote}>
+                                Chênh lệch lớn giữa khai báo và bằng chứng PDF — điểm thực tế sau kiểm toán AI có thể về 0. Xem bảng
+                                chi tiết và mục rủi ro.
+                            </p>
+                        )}
+                        {chaosNote}
+                    </div>
+
+                    {radarBlock}
+
+                    {weaknesses.length > 0 && (
+                        <div className={styles.section}>
+                            <div className={styles.investorRiskPanel}>
+                                <h3 className={styles.panelTitleInvestorRisk}>Cảnh báo rủi ro &amp; Mâu thuẫn</h3>
+                                <ul className={styles.highlightList}>
+                                    {weaknesses.map((w, idx) => (
+                                        <li key={idx} className={styles.highlightItem} style={{ color: 'var(--text-primary)' }}>
+                                            <AlertTriangle size={14} style={{ color: '#dc2626', flexShrink: 0, marginTop: 3 }} /> {w}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    )}
+
+                    {strengths.length > 0 && (
+                        <div className={styles.section}>
+                            <div className={styles.investorStrengthPanel}>
+                                <h3 className={styles.panelTitleInvestorStrength}>Lợi thế cạnh tranh được xác thực</h3>
+                                <ul className={styles.highlightList}>
+                                    {strengths.map((s, idx) => (
+                                        <li key={idx} className={styles.highlightItem} style={{ color: 'var(--text-primary)' }}>
+                                            <CheckCircle size={14} style={{ color: '#059669', flexShrink: 0, marginTop: 3 }} /> {s}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        </div>
+                    )}
+
+                    {recommendations.length > 0 && (
+                        <div className={styles.section}>
+                            <div className={styles.investorAdvicePanel}>
+                                <h3 className={styles.panelTitleInvestorAdvice}>Bộ câu hỏi chất vấn đề xuất</h3>
+                                <p style={{ margin: '0 0 12px', fontSize: '12px', color: 'var(--text-secondary)', lineHeight: 1.5 }}>
+                                    AI gợi ý các hướng hỏi sâu để làm rõ lỗ hổng khi đối thoại / pitching với startup.
+                                </p>
+                                <div className={styles.adviceList}>
+                                    {recommendations.map((rec, idx) => (
+                                        <div key={idx} className={styles.adviceItem} style={{ background: 'var(--bg-primary)' }}>
+                                            <TrendingUp size={16} className={styles.adviceIcon} />
+                                            <span>{rec}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {investorAuditTable}
+                    {legacyBlocks}
+                </div>
+            );
+        }
+
+        return (
+            <div className={styles.content}>
+                <div className={styles.section}>
+                    <div className={styles.scoreboardRow}>
+                        <div className={`${styles.scoreboardTile} ${styles.scoreboardTileNeutral}`}>
+                            <span className={styles.scoreboardLabel}>Điểm Form Tự Đánh Giá</span>
+                            <span className={styles.scoreboardValue}>{fmtScore(baseScore)}</span>
+                        </div>
+                        <div className={`${styles.scoreboardTile} ${styles.scoreboardTileWarm}`}>
+                            <span className={styles.scoreboardLabel}>AI Hiệu Chỉnh</span>
+                            <span className={`${styles.scoreboardValue} ${styles.scoreboardValueWarm}`}>
+                                {aiAdjustmentScore > 0 ? '+' : ''}
+                                {fmtScore(aiAdjustmentScore)}
+                            </span>
+                        </div>
+                        <div className={`${styles.scoreboardTile} ${styles.scoreboardTileSuccess}`}>
+                            <span className={styles.scoreboardLabel}>Điểm AI Phê Duyệt</span>
+                            <span className={`${styles.scoreboardValue} ${styles.scoreboardValueGreen}`}>
+                                {fmtScore(finalPotentialScore)}
+                            </span>
+                        </div>
+                    </div>
+
+                    {showZeroFinalNotice && (
+                        <p className={styles.scoreInlineNote}>
+                            Điểm cuối về 0 sau điều chỉnh AI (đối chiếu checklist với tài liệu). Chi tiết từng tiêu chí nằm bên dưới;
+                            ưu tiên làm theo Action Plan.
+                        </p>
+                    )}
+
+                    {chaosNote}
+                </div>
+
+                {radarBlock}
+
+                {recommendations.length > 0 && (
+                    <div className={styles.section}>
+                        <div className={styles.startupActionPanel}>
+                            <h3 className={styles.panelTitleStartupAction}>Hướng dẫn nâng cấp Hồ sơ (Action Plan)</h3>
+                            <div className={styles.adviceList}>
+                                {recommendations.map((rec, idx) => (
+                                    <div key={idx} className={styles.adviceItem}>
+                                        <TrendingUp size={16} className={styles.adviceIcon} />
+                                        <span>{rec}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {weaknesses.length > 0 && (
+                    <div className={styles.section}>
+                        <h3 className={styles.sectionTitleMinimal}>Các điểm bất hợp lý AI phát hiện</h3>
+                        <div className={styles.highlightSection}>
+                            <ul className={styles.highlightList}>
+                                {weaknesses.map((w, idx) => (
+                                    <li key={idx} className={styles.highlightItem}>
+                                        <AlertTriangle size={14} className={styles.highlightIcon} style={{ color: '#f59e0b' }} /> {w}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                )}
+
+                {strengths.length > 0 && (
+                    <div className={styles.section}>
+                        <h3 className={styles.sectionTitleMinimal}>Các điểm sáng cần giữ vững</h3>
+                        <div className={styles.highlightSection}>
+                            <ul className={styles.highlightList}>
+                                {strengths.map((s, idx) => (
+                                    <li key={idx} className={styles.highlightItem}>
+                                        <Sparkles size={14} className={styles.highlightIcon} style={{ color: '#10b981' }} /> {s}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                )}
+
+                {startupAuditAccordion}
+
+                {legacyBlocks}
             </div>
         );
     };
+
+    const headerTitle =
+        resolvedUiVariant === 'investor'
+            ? isHistoryMode
+                ? 'Due Diligence AI — Lịch sử'
+                : 'Báo cáo Due Diligence AI'
+            : isHistoryMode
+              ? 'Lịch Sử Kết Quả Đánh Giá AI'
+              : 'Kết Quả Đánh Giá AI';
 
     return createPortal(
         <div className={styles.backdrop} onClick={onCancel}>
@@ -389,7 +691,7 @@ export default function AIEvaluationModal({
                 <div className={styles.header}>
                     <h2 className={styles.title}>
                         <TrendingUp size={24} className={styles.recommendationIcon} />
-                        {isHistoryMode ? 'Lịch Sử Kết Quả Đánh Giá AI' : 'Kết Quả Đánh Giá AI'}
+                        {headerTitle}
                     </h2>
                     <button className={styles.closeBtn} onClick={onCancel}>
                         <X size={24} />
@@ -445,13 +747,20 @@ export default function AIEvaluationModal({
                 {!isLoading && (
                     <div className={styles.footer}>
                         {isHistoryMode ? (
-                            <button
-                                className={styles.secondaryBtn}
-                                onClick={onCancel}
-                                style={{ width: '100%', maxWidth: '200px' }}
-                            >
-                                Đóng
-                            </button>
+                            <>
+                                <button
+                                    className={styles.secondaryBtn}
+                                    onClick={onCancel}
+                                    style={{ maxWidth: '200px' }}
+                                >
+                                    Đóng
+                                </button>
+                                {onReanalyze && (
+                                    <button className={styles.primaryBtn} type="button" onClick={onReanalyze}>
+                                        Phân tích lại
+                                    </button>
+                                )}
+                            </>
                         ) : (!isEvaluationOnly && isNonStartupViewer) ? (
                             <button
                                 className={styles.secondaryBtn}
@@ -469,9 +778,9 @@ export default function AIEvaluationModal({
                                     className={styles.primaryBtn}
                                     onClick={onSubmit}
                                     disabled={!canSubmit}
-                                    title={!canSubmit ? 'Dự án phải có điểm > 0' : ''}
+                                    title={!canSubmit ? 'Chưa có kết quả đánh giá hợp lệ để lưu' : ''}
                                 >
-                                    {canSubmit ? (isEligibilityReport ? 'Lưu Kết Quả' : '🚀 Lưu Kết Quả') : 'Không thể lưu (Điểm = 0)'}
+                                    {canSubmit ? (isEligibilityReport ? 'Lưu Kết Quả' : '🚀 Lưu Kết Quả') : 'Không thể lưu (thiếu kết quả)'}
                                 </button>
                             </>
                         ) : (
@@ -483,9 +792,15 @@ export default function AIEvaluationModal({
                                     className={styles.primaryBtn}
                                     onClick={onSubmit}
                                     disabled={!canSubmit}
-                                    title={!canSubmit ? 'Dự án phải có điểm > 0 để nộp' : showLowScoreWarning ? 'Chú ý: Điểm thấp hơn 50%' : ''}
+                                    title={
+                                        !canSubmit
+                                            ? 'Chưa có kết quả đánh giá hợp lệ để nộp'
+                                            : showLowScoreWarning
+                                              ? 'Chú ý: Điểm thấp hơn 50%'
+                                              : ''
+                                    }
                                 >
-                                    {canSubmit ? (isEligibilityReport ? 'Nộp dự án' : '🚀 Nộp dự án') : 'Không thể nộp (Điểm = 0)'}
+                                    {canSubmit ? (isEligibilityReport ? 'Nộp dự án' : '🚀 Nộp dự án') : 'Không thể nộp (thiếu kết quả)'}
                                 </button>
                             </>
                         )}

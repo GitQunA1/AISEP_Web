@@ -611,9 +611,15 @@ class AIEvaluationService {
       console.log('[INVESTOR AI HISTORY] Fetching for project:', projectId);
       
       const result = await apiClient.get(`/api/InvestorAIAnalysis/${projectId}`);
-      const rawData = result.data || result;
-      // Backend returns a single object for investor analysis GET {projectId}, or null
-      const normalizedData = rawData ? [rawData] : [];
+      const rawData = result.data ?? result;
+      let normalizedData = [];
+      if (Array.isArray(rawData)) {
+        normalizedData = rawData;
+      } else if (rawData?.items && Array.isArray(rawData.items)) {
+        normalizedData = rawData.items;
+      } else if (rawData && typeof rawData === 'object') {
+        normalizedData = [rawData];
+      }
       
       return {
         success: true,

@@ -265,7 +265,10 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
   };
 
   const validateStep = () => {
-    if (!validationRules) return false;
+    if (!validationRules) {
+      setSubmitError('Chưa tải xong cấu hình form (validation). Vui lòng đợi vài giây hoặc đóng và mở lại form.');
+      return false;
+    }
     const newErrors = {};
 
     // Group fields by step for dynamic validation
@@ -276,8 +279,8 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     };
 
     const currentFields = stepFields[currentStep] || [];
-    
-    currentFields.forEach(name => {
+
+    currentFields.forEach((name) => {
       const error = validateField(name, formData[name]);
       if (error) newErrors[name] = error;
     });
@@ -291,7 +294,11 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     if (currentStep === 3) requireScore(SCORECARD_FORM_ENUM_KEYS);
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    const ok = Object.keys(newErrors).length === 0;
+    if (!ok) {
+      setSubmitError('Vui lòng kiểm tra các ô được đánh dấu lỗi (viền đỏ / chữ đỏ) trước khi gửi hoặc chuyển bước.');
+    }
+    return ok;
   };
 
   const handleNext = () => {
@@ -311,7 +318,9 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
     if (!validateStep()) return;
 
     if (!isEdit && !isApproved) {
-      onRestrictedAction?.('Bạn cần được phê duyệt hồ sơ Startup để tạo dự án mới.');
+      const msg = 'Bạn cần được phê duyệt hồ sơ Startup để tạo dự án mới.';
+      setSubmitError(msg);
+      onRestrictedAction?.(msg);
       return;
     }
 
@@ -921,39 +930,38 @@ export default function ProjectSubmissionForm({ onClose, onSuccess, user, initia
                 </>
               );
             })()}
-          </form>
-        </div>
 
-        {/* Actions Footer */}
-        <div className={styles.actions}>
-          {currentStep > 1 && (
-            <button
-              type="button"
-              onClick={handlePrevious}
-              className={styles.secondaryBtn}
-            >
-              Quay lại
-            </button>
-          )}
-          
-          {currentStep < totalSteps ? (
-            <button
-              type="button"
-              onClick={handleNext}
-              className={styles.primaryBtn}
-            >
-              Tiếp theo
-            </button>
-          ) : (
-            <button
-              type="submit"
-              onClick={handleSubmit}
-              disabled={isSubmitting || isConfigLoading || !!configError}
-              className={styles.successBtn}
-            >
-              {isSubmitting ? '⏳ Đang gửi...' : 'Gửi Dự Án'}
-            </button>
-          )}
+            {/* Footer nút nằm trong <form> để submit/Enter hoạt động đúng */}
+            <div className={styles.actions}>
+              {currentStep > 1 && (
+                <button
+                  type="button"
+                  onClick={handlePrevious}
+                  className={styles.secondaryBtn}
+                >
+                  Quay lại
+                </button>
+              )}
+
+              {currentStep < totalSteps ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className={styles.primaryBtn}
+                >
+                  Tiếp theo
+                </button>
+              ) : (
+                <button
+                  type="submit"
+                  disabled={isSubmitting || isConfigLoading || !!configError}
+                  className={styles.successBtn}
+                >
+                  {isSubmitting ? '⏳ Đang gửi...' : 'Gửi Dự Án'}
+                </button>
+              )}
+            </div>
+          </form>
         </div>
           </div>
         </div>

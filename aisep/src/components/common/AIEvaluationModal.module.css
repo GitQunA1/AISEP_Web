@@ -24,7 +24,7 @@
     border: 1px solid var(--border-color);
     border-radius: 16px;
     box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-    max-width: 720px;
+    max-width: 800px;
     width: 100%;
     max-height: 85vh;
     display: flex;
@@ -408,6 +408,382 @@
 
 .warningTitle { font-size: 14px; font-weight: 800; color: #f59e0b; margin-bottom: 2px; }
 .warningText { font-size: 13px; color: rgba(245, 158, 11, 0.8); line-height: 1.4; }
+
+/* —— Gọn cho API mới (auditedItems) —— */
+.compactScoreCard {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 18px 20px;
+    border-radius: 14px;
+    background: linear-gradient(135deg, rgba(29, 155, 240, 0.11) 0%, rgba(118, 75, 162, 0.08) 100%);
+    border: 1px solid rgba(29, 155, 240, 0.22);
+}
+
+.compactScoreLeft {
+    flex: 1;
+    min-width: 140px;
+}
+
+.compactScoreBig {
+    font-size: 40px;
+    font-weight: 900;
+    color: var(--text-primary);
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+}
+
+.compactScoreMax {
+    font-size: 18px;
+    font-weight: 600;
+    opacity: 0.5;
+    margin-left: 4px;
+}
+
+.compactScoreCaption {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-top: 6px;
+}
+
+.compactScoreRight {
+    display: flex;
+    gap: 10px;
+    align-items: stretch;
+    flex-wrap: wrap;
+}
+
+.miniStat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 14px;
+    background: var(--bg-primary);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    min-width: 108px;
+}
+
+.miniStatLabel {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.miniStatValue {
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+}
+
+.adjNeg { color: #ef4444 !important; }
+.adjPos { color: #10b981 !important; }
+
+.scoreInlineNote {
+    margin: 0;
+    padding: 10px 14px;
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+    background: rgba(245, 158, 11, 0.07);
+    border-left: 3px solid #f59e0b;
+    border-radius: 0 10px 10px 0;
+}
+
+.sectionTitleMinimal {
+    margin: 0 0 12px 0;
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-primary);
+    letter-spacing: -0.02em;
+}
+
+.auditTableWrap {
+    overflow-x: auto;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    -webkit-overflow-scrolling: touch;
+}
+
+.auditTable {
+    width: 100%;
+    min-width: 520px;
+    border-collapse: collapse;
+    font-size: 13px;
+}
+
+.auditTable th {
+    text-align: left;
+    padding: 10px 12px;
+    font-weight: 800;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--text-secondary);
+    background: var(--bg-primary);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.auditTable th.num {
+    text-align: right;
+}
+
+.auditTable td {
+    padding: 11px 12px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    line-height: 1.45;
+}
+
+.auditTable tr:last-child td {
+    border-bottom: none;
+}
+
+.auditCriteria {
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.auditNums {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+}
+
+.auditTable thead .auditNums {
+    text-align: right;
+}
+
+.auditFinding {
+    min-width: 180px;
+    max-width: 420px;
+}
+
+.adviceList {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.adviceItem {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 12px 14px;
+    background: var(--bg-secondary);
+    border-radius: 10px;
+    border: 1px solid var(--border-color);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.adviceIcon {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--primary-blue);
+}
+
+/* —— Due diligence investor vs startup coaching —— */
+.scoreboardRow {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+}
+
+@media (max-width: 640px) {
+    .scoreboardRow {
+        grid-template-columns: 1fr;
+    }
+}
+
+.scoreboardTile {
+    padding: 14px 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.scoreboardTileNeutral {
+    border-color: rgba(100, 116, 139, 0.35);
+}
+
+.scoreboardTileRisk {
+    border-color: rgba(239, 68, 68, 0.45);
+    background: rgba(239, 68, 68, 0.06);
+}
+
+.scoreboardTileWarm {
+    border-color: rgba(245, 158, 11, 0.45);
+    background: rgba(245, 158, 11, 0.08);
+}
+
+.scoreboardTileBrand {
+    border-color: rgba(29, 155, 240, 0.45);
+    background: rgba(29, 155, 240, 0.08);
+}
+
+.scoreboardTileSuccess {
+    border-color: rgba(16, 185, 129, 0.45);
+    background: rgba(16, 185, 129, 0.08);
+}
+
+.scoreboardLabel {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+}
+
+.scoreboardValue {
+    font-size: 26px;
+    font-weight: 900;
+    color: var(--text-primary);
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+}
+
+.scoreboardValueHero {
+    font-size: 34px;
+    color: var(--primary-blue, #0066ff);
+}
+
+.scoreboardValueGreen {
+    color: #059669;
+}
+
+.scoreboardValueRisk {
+    color: #dc2626;
+}
+
+.scoreboardValueWarm {
+    color: #d97706;
+}
+
+.investorRiskPanel {
+    border-radius: 12px;
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.06);
+    padding: 16px;
+}
+
+.investorStrengthPanel {
+    border-radius: 12px;
+    border: 1px solid rgba(16, 185, 129, 0.35);
+    background: rgba(16, 185, 129, 0.06);
+    padding: 16px;
+}
+
+.investorAdvicePanel {
+    border-radius: 12px;
+    border: 1px solid rgba(59, 130, 246, 0.35);
+    background: rgba(59, 130, 246, 0.06);
+    padding: 16px;
+}
+
+.panelTitleInvestorRisk {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 900;
+    color: #b91c1c;
+    letter-spacing: -0.02em;
+}
+
+.panelTitleInvestorStrength {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 900;
+    color: #047857;
+}
+
+.panelTitleInvestorAdvice {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 900;
+    color: #1d4ed8;
+}
+
+.startupActionPanel {
+    border-radius: 12px;
+    border: 1px solid rgba(29, 155, 240, 0.35);
+    background: rgba(29, 155, 240, 0.07);
+    padding: 16px;
+}
+
+.panelTitleStartupAction {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 900;
+    color: var(--primary-blue);
+}
+
+.feedbackBox {
+    margin-top: 10px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: var(--bg-primary);
+    border: 1px dashed var(--border-color);
+    font-size: 13px;
+    line-height: 1.5;
+    color: var(--text-secondary);
+}
+
+.ctaRow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.ctaGhost {
+    padding: 8px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    border: 1px solid var(--border-color);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.ctaGhost:hover {
+    border-color: var(--primary-blue);
+    background: rgba(29, 155, 240, 0.06);
+}
+
+.radarSection {
+    padding: 16px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: var(--bg-secondary);
+}
+
+.radarTitle {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    font-weight: 800;
+    color: var(--text-primary);
+}
+
+.thTooltip {
+    cursor: help;
+    border-bottom: 1px dotted var(--text-secondary);
+}
 
 /* Footer */
 .footer {
