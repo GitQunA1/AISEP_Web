@@ -357,7 +357,17 @@ export const projectSubmissionService = {
   deleteDocument: async (documentId) => {
     const response = await apiClient.delete(`/api/documents/${documentId}`);
     return response;
-  }
+  },
+
+  /**
+   * Lấy mẫu tài liệu Due Diligence cho Startup điền và nộp lại dưới dạng PDF
+   * GET /api/admin/due-diligence-template
+   * @returns {Promise<any>}
+   */
+  getDueDiligenceTemplate: async () => {
+    const response = await apiClient.get('/api/admin/due-diligence-template');
+    return response;
+  },
 };
 
 export default projectSubmissionService;

@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User, Crown, DollarSign, Info, Download, Check } from 'lucide-react';
+import { TrendingUp, Users, FileText, CheckCircle, AlertCircle, Calendar, MessageSquare, PlusCircle, Eye, Shield, Send, Zap, Sparkles, RefreshCw, X, ArrowRight, Loader2, Upload, ExternalLink, Trash2, History, Search, Maximize2, User, Crown, DollarSign, Info, Check } from 'lucide-react';
 import styles from '../styles/SharedDashboard.module.css';
 import CompleteStartupInfoForm from '../components/startup/CompleteStartupInfoForm';
 import StartupProfileForm from '../components/startup/StartupProfileForm';
 import SuccessModal from '../components/common/SuccessModal';
 import ProjectSubmissionForm from '../components/startup/ProjectSubmissionForm';
+import DueDiligenceFormModal from '../components/startup/DueDiligenceFormModal';
 import BlockchainVerificationModal from '../components/common/BlockchainVerificationModal';
 import BlockchainOnchainResultModal from '../components/common/BlockchainOnchainResultModal';
 import AIEvaluationModal from '../components/common/AIEvaluationModal';
@@ -176,6 +177,11 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
     const [showSuccessModal, setShowSuccessModal] = React.useState(false);
     const [isLoadingDocuments, setIsLoadingDocuments] = React.useState(false);
     const [isUploading, setIsUploading] = React.useState(false);
+    const [isUploadingDueDiligencePdf, setIsUploadingDueDiligencePdf] = React.useState(false);
+    const [showDueDiligenceFormModal, setShowDueDiligenceFormModal] = React.useState(false);
+    const [dueDiligenceTemplateData, setDueDiligenceTemplateData] = React.useState(null);
+    const [isLoadingDueDiligenceTemplate, setIsLoadingDueDiligenceTemplate] = React.useState(false);
+    const [lastDueDiligenceDocUrl, setLastDueDiligenceDocUrl] = React.useState('');
     const [verifyingDocId, setVerifyingDocId] = React.useState(null);
     const [documentType, setDocumentType] = React.useState('PitchDeck');
     const [dragActive, setDragActive] = React.useState(false);
@@ -1066,6 +1072,7 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                     name: truncateName(doc.fileName || doc.documentType),
                     fullName: doc.fileName || doc.documentType, // Keep full name for title/tooltips
                     type: doc.documentType,
+                    uploadedAtRaw: doc.uploadedAt || doc.verifiedAt || null,
                     uploadDate: new Date(doc.uploadedAt || doc.verifiedAt || new Date()).toLocaleString('vi-VN', {
                         year: 'numeric',
                         month: '2-digit',
@@ -1081,18 +1088,25 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                     url: doc.fileUrl
                 }));
                 setDocuments(mappedDocs);
+                const latestBusinessPlan = [...mappedDocs]
+                    .filter((d) => String(d.type || '').toLowerCase() === 'businessplan')
+                    .sort((a, b) => new Date(b.uploadedAtRaw || 0) - new Date(a.uploadedAtRaw || 0))[0];
+                setLastDueDiligenceDocUrl(latestBusinessPlan?.url || '');
 
                 // Auto-verify all documents on blockchain (BR-08)
                 docItems.forEach(doc => {
                     const docId = doc.id || doc.documentId;
                     if (docId) verifyDocOnBlockchain(docId);
                 });
+                return mappedDocs;
             } else {
                 setDocuments([]);
+                return [];
             }
         } catch (error) {
             console.error('Error fetching documents:', error);
             setDocuments([]);
+            return [];
         } finally {
             setIsLoadingDocuments(false);
         }
@@ -1180,6 +1194,84 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
         const file = e.target.files[0];
         if (file) {
             uploadFile(file);
+        }
+    };
+
+    const parseDueDiligenceTemplateJson = (contentJson) => {
+        if (!contentJson || typeof contentJson !== 'string') return null;
+        try {
+            return JSON.parse(contentJson);
+        } catch {
+            return JSON.parse(String(contentJson).trim());
+        }
+    };
+
+    const ensureDueDiligenceTemplateLoaded = async () => {
+        if (dueDiligenceTemplateData?.sections?.length > 0) return dueDiligenceTemplateData;
+        setIsLoadingDueDiligenceTemplate(true);
+        try {
+            const response = await projectSubmissionService.getDueDiligenceTemplate();
+            const templateData = response?.data;
+            const parsed = parseDueDiligenceTemplateJson(templateData?.contentJson);
+            if (!parsed || !Array.isArray(parsed.sections)) {
+                throw new Error('Mẫu Due Diligence trả về không hợp lệ.');
+            }
+            setDueDiligenceTemplateData(parsed);
+            return parsed;
+        } finally {
+            setIsLoadingDueDiligenceTemplate(false);
+        }
+    };
+
+    const handleOpenDueDiligenceFormModal = async () => {
+        try {
+            await ensureDueDiligenceTemplateLoaded();
+            setShowDueDiligenceFormModal(true);
+        } catch (error) {
+            console.error('Error loading due diligence template for modal:', error);
+            setSuccessModalType('error');
+            setSuccessTitle('Không thể mở form Due Diligence');
+            setSuccessMessage('Lỗi tải mẫu biểu: ' + translateError(error));
+            setShowSuccessModal(true);
+        }
+    };
+
+    const handleGenerateDueDiligencePdfAndUpload = async (file) => {
+        if (!detailProject) return;
+        const projectId = detailProject.projectId || detailProject.id;
+        setIsUploadingDueDiligencePdf(true);
+        try {
+            const res = await projectSubmissionService.uploadDocument(projectId, file, 'BusinessPlan');
+            if (res && (res.success || res.isSuccess)) {
+                const responseUrl =
+                    res?.data?.fileUrl ||
+                    res?.data?.url ||
+                    res?.data?.documentUrl ||
+                    '';
+
+                setShowDueDiligenceFormModal(false);
+                setSuccessModalType('success');
+                setSuccessTitle('Nộp Due Diligence thành công');
+                setSuccessMessage('Đã xuất PDF và tải lên tài liệu Due Diligence thành công.');
+                setShowSuccessModal(true);
+                const mappedDocs = await fetchProjectDocuments(projectId);
+                const latestBusinessPlan = [...mappedDocs]
+                    .filter((d) => String(d.type || '').toLowerCase() === 'businessplan')
+                    .sort((a, b) => new Date(b.uploadedAtRaw || 0) - new Date(a.uploadedAtRaw || 0))[0];
+                const bestUrl = responseUrl || latestBusinessPlan?.url || '';
+                setLastDueDiligenceDocUrl(bestUrl);
+            } else {
+                throw new Error(res?.message || 'Không thể tải lên PDF Due Diligence.');
+            }
+        } catch (error) {
+            console.error('Error uploading generated due diligence pdf:', error);
+            setSuccessModalType('error');
+            setSuccessTitle('Không thể tải lên PDF');
+            setSuccessMessage('Lỗi tải lên tài liệu Due Diligence: ' + translateError(error));
+            setShowSuccessModal(true);
+            throw error;
+        } finally {
+            setIsUploadingDueDiligencePdf(false);
         }
     };
 
@@ -3044,10 +3136,55 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                                     <Upload size={24} className={styles.uploadIcon} />
                                                     <div>
                                                         <p className={styles.uploadTitle}>Tải lên tài liệu mới</p>
-                                                        <p className={styles.uploadSubtitle}>Kéo thả hoặc click để chọn file (PDF, Docx, Image)</p>
+                                                        <p className={styles.uploadSubtitle}>Điền trực tiếp biểu mẫu Due Diligence, xuất PDF và nộp lại ngay tại đây.</p>
                                                     </div>
                                                 </div>
                                                 <div className={styles.uploadActions}>
+                                                    <button
+                                                        className={styles.primaryBtn}
+                                                        style={{
+                                                            padding: '8px 12px',
+                                                            borderRadius: '10px',
+                                                            fontSize: '12px',
+                                                            whiteSpace: 'nowrap',
+                                                        }}
+                                                        onClick={(e) => {
+                                                            e.preventDefault();
+                                                            e.stopPropagation();
+                                                            handleOpenDueDiligenceFormModal();
+                                                        }}
+                                                        disabled={
+                                                            detailProject.status !== 'Draft' ||
+                                                            isLoadingDueDiligenceTemplate ||
+                                                            isUploadingDueDiligencePdf
+                                                        }
+                                                        title="Điền mẫu Due Diligence trực tiếp và hệ thống tự xuất PDF"
+                                                    >
+                                                        {isLoadingDueDiligenceTemplate ? (
+                                                            <><Loader2 size={14} className={styles.spinner} /> Đang mở biểu mẫu...</>
+                                                        ) : (
+                                                            <><FileText size={14} /> Điền & xuất PDF</>
+                                                        )}
+                                                    </button>
+                                                    {lastDueDiligenceDocUrl && (
+                                                        <button
+                                                            className={styles.secondaryBtn}
+                                                            style={{
+                                                                padding: '8px 12px',
+                                                                borderRadius: '10px',
+                                                                fontSize: '12px',
+                                                                whiteSpace: 'nowrap',
+                                                            }}
+                                                            onClick={(e) => {
+                                                                e.preventDefault();
+                                                                e.stopPropagation();
+                                                                window.open(lastDueDiligenceDocUrl, '_blank');
+                                                            }}
+                                                            title="Xem lại tài liệu Due Diligence vừa gửi"
+                                                        >
+                                                            <><ExternalLink size={14} /> Xem PDF vừa gửi</>
+                                                        </button>
+                                                    )}
                                                     <select
                                                         className={styles.selectSmall}
                                                         value={documentType}
@@ -3487,6 +3624,17 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                     isEvaluationOnly={true}
                     onSubmit={handleSaveAIResults}
                     onCancel={handleCancelAIEvaluation}
+                />
+            )}
+
+            {showDueDiligenceFormModal && (
+                <DueDiligenceFormModal
+                    isOpen={showDueDiligenceFormModal}
+                    template={dueDiligenceTemplateData}
+                    projectName={detailProject?.projectName || detailProject?.name}
+                    isGenerating={isUploadingDueDiligencePdf}
+                    onClose={() => setShowDueDiligenceFormModal(false)}
+                    onGeneratePdfAndUpload={handleGenerateDueDiligencePdfAndUpload}
                 />
             )}
 

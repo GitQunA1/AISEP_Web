@@ -1547,13 +1547,17 @@
 .uploadActions {
     display: flex;
     align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
     gap: 12px;
     width: 100%;
-    max-width: 400px;
+    max-width: 100%;
 }
 
 .selectSmall {
-    flex: 1;
+    flex: 1 1 220px;
+    min-width: 180px;
+    max-width: 260px;
     padding: 8px 12px;
     border: 1px solid var(--border-color);
     border-radius: 8px;
@@ -1572,6 +1576,12 @@
     font-size: 14px;
     cursor: pointer;
     white-space: nowrap;
+}
+
+.uploadActions .primaryBtn,
+.uploadActions .secondaryBtn,
+.uploadActions .uploadBtn {
+    flex: 0 0 auto;
 }
 
 .uploadBtn:disabled {
