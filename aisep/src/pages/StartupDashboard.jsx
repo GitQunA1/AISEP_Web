@@ -3405,7 +3405,6 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                                                 <tr>
                                                                     <th>Tên tài liệu</th>
                                                                     <th>Loại</th>
-                                                                    <th>Ngày tải</th>
                                                                     <th>Xác thực</th>
                                                                     <th>Thao tác</th>
                                                                 </tr>
@@ -3420,7 +3419,6 @@ export default function StartupDashboard({ user, initialSection = 'my-projects',
                                                                             </div>
                                                                         </td>
                                                                         <td>{doc.type}</td>
-                                                                        <td>{doc.uploadDate}</td>
                                                                         <td>
                                                                             {(() => {
                                                                                 const verification = blockchainVerifications[doc.id];

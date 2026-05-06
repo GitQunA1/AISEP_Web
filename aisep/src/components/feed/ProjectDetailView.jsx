@@ -203,8 +203,6 @@ const MobileDocCard = ({ doc }) => (
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 11.5, color: T.textMuted }}>{doc.type}</span>
-        <span style={{ fontSize: 11, color: T.textDim }}>·</span>
-        <span style={{ fontSize: 11.5, color: T.textMuted }}>{doc.date}</span>
         <span style={{
           display: 'inline-flex', alignItems: 'center', gap: 3,
           fontSize: 11, fontWeight: 700, color: T.green,
@@ -257,8 +255,6 @@ const DocumentCard = ({ doc }) => (
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4 }}>
         <span style={{ fontSize: 12, color: T.textMuted }}>{doc.type}</span>
-        <span style={{ fontSize: 10, color: T.textDim }}>●</span>
-        <span style={{ fontSize: 12, color: T.textMuted }}>{doc.date}</span>
       </div>
     </div>
     <button style={{
