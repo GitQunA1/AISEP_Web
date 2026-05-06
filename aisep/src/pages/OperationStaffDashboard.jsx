@@ -1179,7 +1179,6 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                     id: doc.documentId,
                     name: doc.fileName || doc.documentType,
                     type: doc.documentType,
-                    uploadDate: new Date(doc.uploadedAt || doc.verifiedAt || new Date()).toLocaleDateString('vi-VN'),
                     url: doc.fileUrl
                 })));
             }
@@ -4180,7 +4179,7 @@ const OperationStaffDashboard = ({ user, onLogout, initialSection = 'statistics'
                                                                 <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: 'rgba(29, 155, 240, 0.08)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--primary-blue)', flexShrink: 0 }}><FileText size={20} /></div>
                                                                 <div style={{ overflow: 'hidden', maxWidth: isMobile ? '160px' : '450px' }}>
                                                                     <div title={doc.name} style={{ fontSize: '14px', fontWeight: '800', color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.name}</div>
-                                                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>{doc.type.toUpperCase()} • {doc.uploadDate}</div>
+                                                                    <div style={{ fontSize: '11px', color: 'var(--text-secondary)', marginTop: '2px' }}>{doc.type.toUpperCase()}</div>
                                                                 </div>
                                                             </div>
                                                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
