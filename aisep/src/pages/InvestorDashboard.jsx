@@ -1767,6 +1767,34 @@ export default function InvestorDashboard({ user, initialSection = 'investments'
                                                                 flex: 1,
                                                                 minWidth: '140px',
                                                                 padding: '8px 12px',
+                                                                backgroundColor: 'rgba(16, 185, 129, 0.10)',
+                                                                color: '#10b981',
+                                                                border: '1px solid rgba(16, 185, 129, 0.35)',
+                                                                borderRadius: '4px',
+                                                                fontSize: '12px',
+                                                                fontWeight: '800',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                gap: '6px',
+                                                            }}
+                                                            onClick={() => {
+                                                                if (!request.projectId) return;
+                                                                window.dispatchEvent(new CustomEvent('aisep_go_main_focus_project', { detail: { projectId: request.projectId } }));
+                                                            }}
+                                                            title="Mở nhanh dự án để đầu tư"
+                                                        >
+                                                            <ExternalLink size={14} />
+                                                            Đi tới dự án
+                                                        </button>
+
+                                                        <button
+                                                            type="button"
+                                                            style={{
+                                                                flex: 1,
+                                                                minWidth: '140px',
+                                                                padding: '8px 12px',
                                                                 backgroundColor: 'rgba(45,126,255,0.10)',
                                                                 color: 'var(--primary-blue)',
                                                                 border: '1px solid rgba(45,126,255,0.35)',

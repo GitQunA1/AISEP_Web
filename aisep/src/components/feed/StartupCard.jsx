@@ -46,6 +46,7 @@ function StartupCard({
   myStartupProfileId = null,
   /** Khi true (feed nhà đầu tư): chỉ mở đầu tư sau khi đã gửi yêu cầu thông tin (đồng bộ BE). */
   requireConnectionBeforeInvest = false,
+  style,
 }) {
   const [isLoading, setIsLoading] = useState(false);
   const [isInterested, setIsInterested] = useState(false);
@@ -338,11 +339,13 @@ function StartupCard({
   return (
     <article
       key={startup.id}
+      id={`project-card-${startup.id}`}
       className={styles.card}
       onClick={() => onViewProject && onViewProject(startup.id)}
       style={{
         cursor: onViewProject ? 'pointer' : 'default',
         '--index': index,
+        ...(style || {}),
         ...(isReturning ? { animation: 'none', opacity: 1, transform: 'none' } : {})
       }}
     >

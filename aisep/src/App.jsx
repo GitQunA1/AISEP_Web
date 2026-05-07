@@ -37,6 +37,7 @@ function App() {
   const [lastInvestorBookingFilter, setLastInvestorBookingFilter] = useState('all');
   const [lastDashboardSection, setLastDashboardSection] = useState('investments');
   const [dashboardTargetId, setDashboardTargetId] = useState(null);
+  const [mainTargetProjectId, setMainTargetProjectId] = useState(null);
   const [restrictedActionMsg, setRestrictedActionMsg] = useState('');
 
   const { initProfile, isInvestorApproved } = useProfile();
@@ -50,6 +51,23 @@ function App() {
 
     window.addEventListener('session_expired', handleSessionExpired);
     return () => window.removeEventListener('session_expired', handleSessionExpired);
+  }, []);
+
+  // Global navigation: from dashboards -> go to main feed and focus a project card
+  useEffect(() => {
+    const handler = (evt) => {
+      const projectId = evt?.detail?.projectId;
+      if (!projectId) return;
+      setMainTargetProjectId(projectId);
+      startTransition(() => setCurrentView('main'));
+      try {
+        window.history.pushState({}, '', '/');
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('aisep_go_main_focus_project', handler);
+    return () => window.removeEventListener('aisep_go_main_focus_project', handler);
   }, []);
 
   useEffect(() => {
@@ -324,6 +342,8 @@ function App() {
           showAI={currentView === 'ai'}
           activeView={currentView}
           isFullWidthContent={currentView.startsWith('dashboard_project_') && currentView !== 'dashboard_project_management'}
+          focusProjectId={mainTargetProjectId}
+          onFocusProjectConsumed={() => setMainTargetProjectId(null)}
         >
           <>
             {currentView === 'subscription' && <SubscriptionManagement user={user} />}

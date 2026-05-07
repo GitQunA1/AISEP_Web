@@ -62,7 +62,9 @@ function MainLayout({
   showAI = false,
   activeView = 'main',
   isFullWidthContent = false,
-  onNotificationNavigate
+  onNotificationNavigate,
+  focusProjectId = null,
+  onFocusProjectConsumed,
 }) {
   const token = localStorage.getItem('aisep_token') || sessionStorage.getItem('token');
   const [userSubscription, setUserSubscription] = useState(null);
@@ -84,6 +86,7 @@ function MainLayout({
   const [myStartupProfileId, setMyStartupProfileId] = useState(null);
   const [showRestrictedModal, setShowRestrictedModal] = useState(false);
   const [restrictedActionMessage, setRestrictedActionMessage] = useState('');
+  const [highlightedProjectId, setHighlightedProjectId] = useState(null);
 
   // ---- Global profile state from ProfileContext ----
   const {
@@ -141,6 +144,31 @@ function MainLayout({
     };
     window.addEventListener('aisep_open_investor_profile', handler);
     return () => window.removeEventListener('aisep_open_investor_profile', handler);
+  }, []);
+
+  // Global navigation: open Project detail from any dashboard/component.
+  useEffect(() => {
+    const handler = (evt) => {
+      const projectId = evt?.detail?.projectId;
+      if (!projectId) return;
+
+      // Save scroll position for returning later
+      const isMobile = window.innerWidth < 1024;
+      const scrollPos = isMobile ? window.scrollY : (mainContentRef.current ? mainContentRef.current.scrollTop : 0);
+      homeScrollPos.current = scrollPos;
+
+      setSelectedStartupProfileId(null);
+      setSelectedInvestorProfileId(null);
+      setSelectedAdvisor(null);
+      setSelectedProjectId(projectId);
+      try {
+        window.history.pushState({}, '', `/projects/${projectId}`);
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('aisep_open_project', handler);
+    return () => window.removeEventListener('aisep_open_project', handler);
   }, []);
 
   // Scroll Management: Persistence & Scroll-to-Top
@@ -226,6 +254,28 @@ function MainLayout({
       activeView: activeView
     };
   }, [selectedProjectId, selectedStartupProfileId, selectedAdvisor, activeView, showAI]);
+
+  // Focus a project card in the main feed (used by Investor dashboard shortcut)
+  useEffect(() => {
+    if (!focusProjectId) return;
+    if (activeView !== 'main' && activeView !== '') return;
+    if (selectedProjectId || selectedStartupProfileId || selectedInvestorProfileId || selectedAdvisor) return;
+
+    const id = `project-card-${focusProjectId}`;
+    const el = document.getElementById(id);
+    if (!el) return;
+
+    try {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch {
+      // ignore
+    }
+
+    setHighlightedProjectId(String(focusProjectId));
+    const t = setTimeout(() => setHighlightedProjectId(null), 2000);
+    onFocusProjectConsumed?.();
+    return () => clearTimeout(t);
+  }, [focusProjectId, activeView, selectedProjectId, selectedStartupProfileId, selectedInvestorProfileId, selectedAdvisor, onFocusProjectConsumed]);
 
   // Handle Browser Back/Forward and URL sync
   useEffect(() => {
@@ -1155,6 +1205,8 @@ function MainLayout({
                       onRestrictedAction={showRestrictedActionModal}
                       myStartupProfileId={myStartupProfileId}
                       isReturning={isReturning}
+                      // Highlight effect when focusing from dashboard shortcut
+                      style={highlightedProjectId && String(startup.id) === String(highlightedProjectId) ? { outline: '2px solid rgba(16,185,129,0.7)', boxShadow: '0 0 0 6px rgba(16,185,129,0.15)' } : undefined}
                       onViewProfile={(id, type = 'startup') => {
                         // Save scroll position
                         const isMobile = window.innerWidth < 1024;
